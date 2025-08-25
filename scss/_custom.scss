@@ -99,13 +99,20 @@ $font-family-serif: 'Roboto', serif !default;
 .navbar {
     font-family: 'Poppins', sans-serif; /* Exemple de police */
     color: #1F4924; /* Couleur du texte */
+    display: flex; /* Aligne le logo et le texte horizontalement */
+    align-items: center; /* Centre verticalement le logo et le texte */
+}
+
+/* Ajoute de l'espace entre les éléments de la navbar */
+.navbar .nav-item {
+    margin-right: 20px; /* Ajoute un espace de 20px entre chaque élément */
 }
 
 /* Style pour les liens de la navbar */
 .navbar .nav-link {
     font-family: 'Poppins', sans-serif;
     font-weight: 500;
-    font-size: 24px; // Taille pour les textes de la navbar
+    font-size: 24px; /* Taille pour les textes de la navbar */
     line-height: 1.3;
     color: $color-dark-green;
     transition: color 0.3s ease;
@@ -121,10 +128,31 @@ $font-family-serif: 'Roboto', serif !default;
     color: #1F4924; /* Couleur de la marque */
     font-weight: 800; // ExtraBold
     font-size: 40px; /* Taille de la police */
+    display: flex; /* Aligne le logo et le texte horizontalement */
+    align-items: center; /* Centre verticalement le logo et le texte */
+    gap: 20px; /* Ajoute un espace de 20px entre les éléments */
 }
 
 .navbar-brand:hover {
     color: #4B8A47; /* Couleur au survol */
+}
+
+
+/* Style pour le logo */
+.logo {
+    width: 100px; /* Largeur du logo */
+    height: 100px; /* Hauteur du logo */
+    border-radius: 50%; /* Rend le conteneur circulaire */
+    box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25); /* Ombre */
+    overflow: hidden; /* Cache les parties qui dépassent */
+}
+
+/* Style pour le texte "EcoRide" */
+.brand-text {
+    font-family: 'EB Garamond', serif; /* Police pour le texte */
+    font-weight: 800; /* ExtraBold */
+    font-size: 40px; /* Taille de la police */
+    color: #1F4924; /* Couleur du texte */
 }
 
 /* Style pour le menu déroulant */
@@ -137,4 +165,70 @@ $font-family-serif: 'Roboto', serif !default;
 .dropdown-item:hover {
     background-color: $color-very-light-beige; /* Couleur légèrement différente au survol */
     color: $color-dark-green; /* Couleur du texte au survol */
+}
+
+/* Style spécifique pour l'élément "Connexion" */
+.dropdown-item.connexion {
+    color: $color-dark-green !important; /* Force la couleur en vert foncé */
+    font-family: 'Poppins', sans-serif; /* Harmonisation avec le reste du site */
+    font-size: 16px; /* Taille du texte */
+    transition: color 0.3s ease; /* Animation fluide */
+}
+
+.dropdown-item.connexion:hover,
+.dropdown-item.connexion:focus,
+.dropdown-item.connexion:active {
+    background-color: $color-very-light-beige; /* Couleur légèrement différente au survol */
+    color: $color-dark-green !important; /* Force la couleur au survol ou sélectionné */
+}
+
+button.nav-link.dropdown-toggle {
+    color: $color-dark-green !important; /* Couleur par défaut en vert foncé */
+    font-family: 'Poppins', sans-serif; /* Harmonisation avec le reste du site */
+    font-size: 24px; /* Taille du texte */
+    transition: color 0.3s ease; /* Animation fluide */
+}
+
+button.nav-link.dropdown-toggle:hover {
+    color: $color-medium-green !important; /* Couleur au survol */
+}
+
+button.nav-link.dropdown-toggle:focus:not(.show),
+button.nav-link.dropdown-toggle:active:not(.show) {
+    color: $color-dark-green !important; /* Rétablit la couleur par défaut lorsque la liste est fermée */
+}
+
+/* Priorité au hover sur focus et active */
+button.nav-link.dropdown-toggle:hover:focus,
+button.nav-link.dropdown-toggle:hover:active {
+    color: $color-medium-green !important; /* Couleur au survol */
+}
+
+/* Marges générales pour main et footer */
+main, footer {
+    margin-left: 100px;
+    margin-right: 100px;
+}
+
+/* Supprime les marges pour le fond du header */
+header {
+    margin-left: 0;
+    margin-right: 0;
+    background-color: $color-light-beige; /* Fond beige clair (#F1E7D1) */
+}
+
+/* Ajoute des marges uniquement au contenu interne du header */
+header .container-fluid {
+    margin-left: 100px;
+    margin-right: 100px;
+}
+
+header .navbar-brand,
+header .navbar .nav-link {
+    transition: transform 0.3s ease; /* Animation fluide */
+}
+
+header .navbar-brand:hover,
+header .navbar .nav-link:hover {
+    transform: scale(1.1); /* Zoom de 10% au survol */
 }

@@ -11,6 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Roboto:wght@400&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="scss/main.css">
+    <link rel="stylesheet" href="scss/_custom.scss">
     
 
    
@@ -18,17 +19,20 @@
 </head>
 <body>
 
-    <header>
+    <header class="ms-100 me-100">
         <nav class="navbar navbar-expand-lg " style="background-color: #F1E7D1;" data-bs-theme="light">
             <div class="container-fluid">
-              <a class="navbar-brand" href="#">EcoRide</a>
+              <a class="navbar-brand" href="#">
+                <img src="images/Logo-EcoRide.PNG" alt="EcoRide Logo" class="logo">
+                EcoRide
+              </a>
               <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
               </button>
               <div class="collapse navbar-collapse" id="navbarNavDropdown">
                 <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                   <li class="nav-item">
-                    <a class="nav-link" href="/">Acceuil</a>
+                    <a class="nav-link" href="/">Accueil</a>
                   </li>
                   <li class="nav-item">
                     <a class="nav-link" href="#">Covoiturage</a>
@@ -40,10 +44,11 @@
                     <a class="nav-link" href="#">Contact</a>
                   </li>
                   <li class="nav-item dropdown">
-                    <button class="nav-link dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" onKeyDown="handleKeyDown(event)">
+                    <button class="nav-link dropdown-toggle" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
                         Connexion
-                    </a>
+                    </button>
                     <ul class="dropdown-menu">
+                      <li class="dropdown-item connexion">Connexion</li>
                       <li><a class="dropdown-item" href="#">S'inscrire</a></li>
                       <li><a class="dropdown-item" href="#">Se connecter</a></li>
                       <li><a class="dropdown-item" href="#">Espace employé</a></li>
@@ -56,11 +61,15 @@
           </nav>
     </header>
 
-    <main id="main-page">
-        <!--Le contenu de la page sera injectée ici-->
+    <main id="main-page" class="ms-100 me-100">
+        <!--Le contenu de la page sera injecté ici-->
     </main>
 
-    <footer>Le footer de mon site <i class="bi bi-facebook"></i><footer>
+    <footer class="ms-100 me-100">
+
+        Le footer de mon site <i class="bi bi-facebook"></i>
+    
+    </footer>
 
     <script type="module" src="Router/router.js"></script>
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>

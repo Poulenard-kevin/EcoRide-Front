@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Roboto:wght@400&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="scss/main.css">
     
 
@@ -17,7 +18,43 @@
 </head>
 <body>
 
-    <header>Le menu</header>
+    <header>
+        <nav class="navbar navbar-expand-lg " style="background-color: #F1E7D1;" data-bs-theme="light">
+            <div class="container-fluid">
+              <a class="navbar-brand" href="#">EcoRide</a>
+              <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+              </button>
+              <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                  <li class="nav-item">
+                    <a class="nav-link" href="/">Acceuil</a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link" href="#">Covoiturage</a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link" href="#">Espace utilisateur</a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link" href="#">Contact</a>
+                  </li>
+                  <li class="nav-item dropdown">
+                    <button class="nav-link dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" onKeyDown="handleKeyDown(event)">
+                        Connexion
+                    </a>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item" href="#">S'inscrire</a></li>
+                      <li><a class="dropdown-item" href="#">Se connecter</a></li>
+                      <li><a class="dropdown-item" href="#">Espace employé</a></li>
+                      <li><a class="dropdown-item" href="#">Espace administrateur</a></li>
+                    </ul>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </nav>
+    </header>
 
     <main id="main-page">
         <!--Le contenu de la page sera injectée ici-->

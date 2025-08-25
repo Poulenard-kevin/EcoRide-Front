@@ -1,6 +1,6 @@
 @charset "UTF-8";
-@import url("/node_modules/bootstrap-icons/font/bootstrap-icons.css");
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Roboto:wght@400;700&display=swap");
+@import url("/node_modules/bootstrap-icons/font/bootstrap-icons.css");
 /*!
  * Bootstrap  v5.3.7 (https://getbootstrap.com/)
  * Copyright 2011-2025 The Bootstrap Authors
@@ -12030,6 +12030,7 @@ h3, .h3 {
   font-weight: 500;
   font-size: 24px;
   line-height: 1.3;
+  color: #1F4924;
 }
 
 p {
@@ -12045,4 +12046,48 @@ p {
   font-size: 14px;
   line-height: 1.4;
   color: #1F4924;
+}
+
+/* Style pour la navbar */
+.navbar {
+  font-family: "Poppins", sans-serif; /* Exemple de police */
+  color: #1F4924; /* Couleur du texte */
+}
+
+/* Style pour les liens de la navbar */
+.navbar .nav-link {
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 1.3;
+  color: #1F4924;
+  transition: color 0.3s ease;
+}
+
+.navbar .nav-link:hover {
+  color: #4B8A47; /* Couleur au survol */
+}
+
+/* Style pour la marque (brand) */
+.navbar-brand {
+  font-family: "EB Garamond", serif; /* Exemple de police différente */
+  color: #1F4924; /* Couleur de la marque */
+  font-weight: 800;
+  font-size: 40px; /* Taille de la police */
+}
+
+.navbar-brand:hover {
+  color: #4B8A47; /* Couleur au survol */
+}
+
+/* Style pour le menu déroulant */
+.dropdown-menu {
+  background-color: #F1E7D1; /* Utilise la variable définie pour #F1E7D1 */
+  border: none; /* Supprime la bordure si nécessaire */
+}
+
+/* Style pour les éléments du menu déroulant au survol */
+.dropdown-item:hover {
+  background-color: #F8F0E5; /* Couleur légèrement différente au survol */
+  color: #1F4924; /* Couleur du texte au survol */
 }/*# sourceMappingURL=main.css.map */

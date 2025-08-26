@@ -20,7 +20,7 @@
 <body>
 
     <header style="background-color: #F1E7D1;">
-      <nav class="navbar navbar-expand-lg" data-bs-theme="light">
+      <nav class="navbar navbar-expand-lg" data-bs-theme="light" aria-label="Main navigation">
         <a class="navbar-brand" href="#">
           <img src="images/Logo-EcoRide.PNG" alt="EcoRide Logo" class="logo">
           EcoRide
@@ -55,10 +55,10 @@
         </div>
       </nav>
     </header>
-
+<!--ici le menu pour tablette et portable-->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
       <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="offcanvasNavbarLabel">Menu</h5>
+        <h5 class="offcanvas-title" id="offcanvasNavbarLabel">Menu EcoRide</h5>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
       </div>
       <div class="offcanvas-body">
@@ -91,14 +91,19 @@
       </div>
     </div>
 
-    <main id="main-page" class="ms-100 me-100">
-        <!--Le contenu de la page sera injecté ici-->
+    <main>
+        <p>Contenu minimal</p>
     </main>
 
-    <footer class="ms-100 me-100">
-
-        Le footer de mon site <i class="bi bi-facebook"></i>
-    
+    <footer class="footer-responsive">
+      <div class="contact">contact@ecoride.fr</div>
+      <div class="social-icons">
+        <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+        <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+        <a href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+        <a href="#" aria-label="Twitter"><i class="bi bi-twitter"></i></a>
+      </div>
+      <div class="mentions">Mentions légales</div>
     </footer>
 
     <script type="module" src="Router/router.js"></script>

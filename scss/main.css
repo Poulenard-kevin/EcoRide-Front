@@ -12048,7 +12048,15 @@ p {
   color: #1F4924;
 }
 
-/* === RESPONSIVES === */
+.navigation-text {
+  font-family: "Poppins", sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #F1E7D1;
+}
+
+/* === RESPONSIVES HEADER === */
 /* Ajoute de l'espace entre les éléments de la navbar */
 .navbar .nav-item {
   margin-right: 5px; /* Ajoute un espace de 20px entre chaque élément */
@@ -12158,15 +12166,6 @@ button.nav-link.dropdown-toggle:hover:active {
   margin-left: auto; /* Place le bouton à droite */
 }
 
-/* Background plein largeur */
-header {
-  width: 100vw;
-  background-color: #F1E7D1; /* fond beige plein écran */
-  margin: 0; /* pas de marge sur le header */
-  padding: 0; /* pas de padding */
-  position: relative;
-}
-
 /* === MARGES RESPONSIVES === */
 main, footer {
   margin-left: 100px;
@@ -12197,6 +12196,175 @@ header .navbar {
 }
 @media (max-width: 576px) {
   header .navbar {
+    margin-left: 25px;
+    margin-right: 25px;
+  }
+}
+
+/* === RESPONSIVES FOOTER === */
+.footer-responsive {
+  background-color: #1F4924; /* Couleur de fond */
+  color: #F1E7D1; /* Couleur du texte */
+  width: 100%; /* Pleine largeur */
+  height: 120px;
+  padding-top: 0;
+  padding-bottom: 0;
+  /* Marges internes responsives */
+  padding-left: 100px;
+  padding-right: 100px;
+  display: flex;
+  justify-content: space-between; /* Espace entre les 3 blocs */
+  align-items: center; /* Centrage vertical */
+  flex-wrap: wrap; /* Permet de passer à la ligne si trop petit */
+  text-align: left; /* Texte aligné à gauche dans chaque bloc */
+  font-family: "Poppins", sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  position: relative;
+}
+.footer-responsive .contact, .footer-responsive .mentions {
+  flex: 0 0 auto;
+}
+.footer-responsive .social-icons {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  font-size: 24px;
+}
+.footer-responsive .social-icons a {
+  color: #F1E7D1 !important;
+  transition: color 0.3s ease;
+}
+.footer-responsive .social-icons a:hover {
+  color: white !important;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* Assure que le body occupe toute la hauteur de la fenêtre */
+}
+
+main {
+  flex: 1; /* Permet au contenu principal de prendre tout l'espace disponible */
+}
+
+@media (max-width: 768px) { /* Tablette */
+  .footer-responsive {
+    height: 120px;
+    padding-left: 50px;
+    padding-right: 50px;
+  }
+}
+@media (max-width: 576px) { /* Mobile */
+  .footer-responsive {
+    height: 120px;
+    padding-left: 25px;
+    padding-right: 25px;
+    position: relative;
+    display: flex; /* Utilisation de flexbox pour aligner les éléments */
+    flex-direction: row; /* Les éléments sont alignés horizontalement */
+    justify-content: space-between; /* Espace entre les éléments */
+    align-items: flex-start; /* Aligne les éléments en haut */
+  }
+  .footer-responsive .contact,
+  .footer-responsive .mentions {
+    position: relative; /* Permet d'utiliser `top` */
+    top: 20px; /* À 20px du haut */
+    flex: 0 0 auto; /* Les éléments prennent uniquement la place nécessaire */
+    margin: 0; /* Supprime les marges inutiles */
+  }
+  .footer-responsive .contact {
+    text-align: left; /* Aligne le texte à gauche */
+  }
+  .footer-responsive .mentions {
+    text-align: right; /* Aligne le texte à droite */
+  }
+  .footer-responsive .social-icons {
+    position: absolute;
+    bottom: 20px; /* À 20px du bas */
+    left: 50%; /* Centré horizontalement */
+    transform: translateX(-50%); /* Ajuste pour centrer */
+    display: flex;
+    gap: 10px;
+    font-size: 24px;
+  }
+}
+@media (max-width: 338px) { /* Écrans très petits */
+  .footer-responsive {
+    display: flex;
+    flex-direction: column; /* Empile les éléments verticalement */
+    align-items: center; /* Centre les éléments horizontalement */
+    justify-content: space-between; /* Répartit les éléments verticalement */
+    height: 120px; /* Hauteur fixe du footer */
+    padding: 0; /* Supprime les marges internes */
+  }
+  .footer-responsive .contact {
+    position: relative;
+    top: 20px; /* À 20px du haut */
+    text-align: center; /* Centre le texte horizontalement */
+    width: 100%; /* Prend toute la largeur disponible */
+  }
+  .footer-responsive .mentions {
+    display: none; /* Cache les mentions légales */
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Assure que le body occupe toute la hauteur de la fenêtre */
+  }
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+}
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+html, body {
+  height: 100%; /* Assure que le body occupe toute la hauteur de la fenêtre */
+  display: flex; /* Utilise Flexbox pour organiser le contenu */
+  flex-direction: column; /* Organise les éléments verticalement */
+}
+
+main {
+  flex: 1; /* Permet au contenu principal de prendre tout l'espace disponible */
+}
+
+footer {
+  margin-top: auto; /* Positionne le footer en bas de la page */
+  background-color: #1F4924; /* Couleur de fond */
+  color: #F1E7D1; /* Couleur du texte */
+  text-align: center;
+  padding: 50px 0; /* Ajoute de l'espace vertical */
+}
+
+header, footer {
+  width: 100vw;
+  background-color: #F1E7D1; /* ou $color-dark-green pour le footer */
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+header .container, footer .container {
+  margin-left: 100px;
+  margin-right: 100px;
+}
+@media (max-width: 768px) {
+  header .container, footer .container {
+    margin-left: 50px;
+    margin-right: 50px;
+  }
+}
+@media (max-width: 576px) {
+  header .container, footer .container {
     margin-left: 25px;
     margin-right: 25px;
   }

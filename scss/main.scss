@@ -6,3 +6,39 @@
 
 // Import des variables et styles personnalisés
 @import 'custom';
+
+html{
+    position: relative;
+    min-height: 100%;
+}
+
+html, body {
+    height: 100%; /* Assure que le body occupe toute la hauteur de la fenêtre */
+    display: flex; /* Utilise Flexbox pour organiser le contenu */
+    flex-direction: column; /* Organise les éléments verticalement */
+}
+
+main {
+    flex: 1; /* Permet au contenu principal de prendre tout l'espace disponible */
+}
+
+footer {
+    margin-top: auto; /* Positionne le footer en bas de la page */
+    background-color: #1F4924; /* Couleur de fond */
+    color: #F1E7D1; /* Couleur du texte */
+    text-align: center;
+    padding: 50px 0; /* Ajoute de l'espace vertical */
+}
+
+header, footer {
+    width: 100vw;
+    background-color: $color-light-beige; /* ou $color-dark-green pour le footer */
+    margin: 0;
+    padding: 0;
+    position: relative;
+  
+    .container {
+      @include responsive-margin(100px, 50px, 25px);
+    }
+  }
+

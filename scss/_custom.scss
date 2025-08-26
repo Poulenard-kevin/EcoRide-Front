@@ -95,7 +95,15 @@ $font-family-serif: 'Roboto', serif !default;
     color: $color-dark-green; // ou une autre couleur secondaire
   }
 
-  /* === RESPONSIVES === */
+  .navigation-text {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400; // Regular
+    font-size: 16px;
+    line-height: 1.5;
+    color: $color-light-beige; // Couleur du texte
+  }
+
+  /* === RESPONSIVES HEADER === */
 
   
 /* Ajoute de l'espace entre les éléments de la navbar */
@@ -210,16 +218,6 @@ button.nav-link.dropdown-toggle:hover:active {
     margin-left: auto; /* Place le bouton à droite */
 }
 
-/* Background plein largeur */
-header {
-  width: 100vw;
-  background-color: $color-light-beige; /* fond beige plein écran */
-  margin: 0; /* pas de marge sur le header */
-  padding: 0; /* pas de padding */
-  position: relative;
-  
-  }
-  
   /* === MARGES RESPONSIVES === */
 
 @mixin responsive-margin($desktop, $tablet, $mobile) {
@@ -243,4 +241,146 @@ main, footer {
 
 header .navbar {
   @include responsive-margin(100px, 50px, 25px);
+}
+
+/* === RESPONSIVES FOOTER === */
+
+.footer-responsive {
+    background-color: $color-dark-green; /* Couleur de fond */
+    color: $color-light-beige; /* Couleur du texte */
+    width: 100%; /* Pleine largeur */
+    height: 120px;
+    padding-top: 0;
+    padding-bottom: 0;
+  
+    /* Marges internes responsives */
+    padding-left: 100px;
+    padding-right: 100px;
+  
+    display: flex;
+    justify-content: space-between; /* Espace entre les 3 blocs */
+    align-items: center; /* Centrage vertical */
+    flex-wrap: wrap; /* Permet de passer à la ligne si trop petit */
+    text-align: left; /* Texte aligné à gauche dans chaque bloc */
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    position: relative;
+
+    .contact, .mentions {
+        flex: 0 0 auto;
+      }
+  
+    .social-icons {
+     position: absolute;
+     left: 50%;
+     transform: translateX(-50%);
+     display: flex;
+     gap: 10px;
+     font-size: 24px;
+
+     a {
+       color: $color-light-beige !important;
+       transition: color 0.3s ease;
+
+       &:hover {
+         color: lighten($color-light-beige, 20%) !important;
+       }
+     }
+   }
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* Assure que le body occupe toute la hauteur de la fenêtre */
+}
+
+main {
+  flex: 1; /* Permet au contenu principal de prendre tout l'espace disponible */
+}
+
+@media (max-width: 768px) { /* Tablette */
+    .footer-responsive {
+      height: 120px;
+      padding-left: 50px;
+      padding-right: 50px;
+    }
+  }
+
+  @media (max-width: 576px) { /* Mobile */
+    .footer-responsive {
+      height: 120px;
+      padding-left: 25px;
+      padding-right: 25px;
+      position: relative;
+
+      display: flex; /* Utilisation de flexbox pour aligner les éléments */
+      flex-direction: row; /* Les éléments sont alignés horizontalement */
+      justify-content: space-between; /* Espace entre les éléments */
+      align-items: flex-start; /* Aligne les éléments en haut */
+
+      .contact,
+      .mentions {
+        position: relative; /* Permet d'utiliser `top` */
+        top: 20px; /* À 20px du haut */
+        flex: 0 0 auto; /* Les éléments prennent uniquement la place nécessaire */
+        margin: 0; /* Supprime les marges inutiles */
+      }
+
+      .contact {
+        text-align: left; /* Aligne le texte à gauche */
+      }
+
+      .mentions {
+        text-align: right; /* Aligne le texte à droite */
+      }
+
+      .social-icons {
+        position: absolute;
+        bottom: 20px; /* À 20px du bas */
+        left: 50%; /* Centré horizontalement */
+        transform: translateX(-50%); /* Ajuste pour centrer */
+        display: flex;
+        gap: 10px;
+        font-size: 24px;
+      }
+    }
+  }
+
+  @media (max-width: 338px) { /* Écrans très petits */
+    .footer-responsive {
+      display: flex;
+      flex-direction: column; /* Empile les éléments verticalement */
+      align-items: center; /* Centre les éléments horizontalement */
+      justify-content: space-between; /* Répartit les éléments verticalement */
+      height: 120px; /* Hauteur fixe du footer */
+      padding: 0; /* Supprime les marges internes */
+
+      .contact {
+        position: relative;
+        top: 20px; /* À 20px du haut */
+        text-align: center; /* Centre le texte horizontalement */
+        width: 100%; /* Prend toute la largeur disponible */
+
+      }
+
+      .mentions {
+        display: none; /* Cache les mentions légales */
+    }
+  }
+
+    html, body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Assure que le body occupe toute la hauteur de la fenêtre */
+    }
+
+    * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    }
 }

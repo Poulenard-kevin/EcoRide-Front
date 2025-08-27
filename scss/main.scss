@@ -17,13 +17,68 @@ html, body {
     padding: 0;
     display: flex;
     flex-direction: column;
-    min-height: 100vh; /* Assure que le body occupe toute la hauteur de la fenêtre */
+    min-height: 100%; /* Assure que le body occupe toute la hauteur de la fenêtre */
 }
+
+body {
+  background-color: $color-light-beige; /* Couleur de fond général */
+}
+
+header {
+    background-color: $color-light-beige; /* Couleur de fond */
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+  
+  .hero-scene {
+    margin-top: 0;
+    margin-bottom: 50px; /* espace sous le hero, ajuste la valeur */
+    padding-top: 0;
+    position: relative;
+    overflow: visible;
+    height: 720px; /* Desktop et tablette */
+    
+    
+    @media (max-width: 768px) { /* Tablette */
+      height: 720px; /* même hauteur que desktop, tu peux ajuster si besoin */
+    }
+  
+    @media (max-width: 576px) { /* Mobile */
+      height: 400px; /* Hauteur réduite pour mobile, modifiable */
+    }
+  }
+
+  .hero-scene::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
+    height: 750px; /* Desktop et tablette */
+    background-image: url('../images/Hero-scene.png');
+    background-size: cover;
+    background-position: 50% 65%;
+    background-repeat: no-repeat;
+
+    *{
+        //positionner les éléments au-dessus ::before
+        position: relative;
+    }
+  
+    @media (max-width: 768px) { /* Tablette */
+      height: 720px; /* même hauteur que desktop, modifiable */
+    }
+  
+    @media (max-width: 576px) { /* Mobile */
+      height: 400px; /* Hauteur réduite pour mobile, modifiable */
+    }
+  }
 
 main {
     flex: 1; /* Permet au contenu principal de prendre tout l'espace disponible */
     margin-bottom: 50px; /* Espace pour le footer */
-    margin-top: 50px; /* Espace pour le header */
+    margin-top: 0px; /* Espace pour le header */
 }
 
 footer {
@@ -43,15 +98,118 @@ footer.footer{
     width: 100%;
 }
 
-header, footer {
-    width: 100vw;
-    background-color: $color-light-beige; /* ou $color-dark-green pour le footer */
-    margin: 0;
-    padding: 0;
-    position: relative;
+ /* === MARGES RESPONSIVES === */
+
+ @mixin responsive-margin($desktop, $tablet, $mobile) {
+    margin-left: $desktop;
+    margin-right: $desktop;
   
-    .container {
-      @include responsive-margin(100px, 50px, 25px);
+    @media (max-width: 768px) {
+      margin-left: $tablet;
+      margin-right: $tablet;
+    }
+  
+    @media (max-width: 576px) {
+      margin-left: $mobile;
+      margin-right: $mobile;
     }
   }
+  
+  main, footer {
+    padding-left: 100px;
+    padding-right: 100px;
+  
+    @media (max-width: 768px) {
+      padding-left: 50px;
+      padding-right: 50px;
+    }
+  
+    @media (max-width: 576px) {
+      padding-left: 25px;
+      padding-right: 25px;
+    }
+  }
+  
+  header .navbar {
+    padding-left: 100px;
+    padding-right: 100px;
+  
+    @media (max-width: 768px) {
+      padding-left: 50px;
+      padding-right: 50px;
+    }
+  
+    @media (max-width: 576px) {
+      padding-left: 25px;
+      padding-right: 25px;
+    }
+  }
+  
+  /* === SECTION AVANTAGES === */
+.avantages {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 50px 100px;
+    background-color: $color-light-beige; /* Couleur de fond */
+  
+    @media (max-width: 768px) {
+      padding: 30px 50px;
+    }
+  
+    @media (max-width: 576px) {
+      padding: 20px 25px;
+    }
+  
+      .cards {
+        display: flex;
+        justify-content: space-between;
+      }
+    }
 
+   /* === SECTION PRÉSENTATION === */
+.presentation {
+  padding: 0; /* Supprime tout padding supplémentaire */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  .background-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 35px;
+    padding-bottom: 35px;
+    padding-left: 90px;
+    padding-right: 90px;
+    background-color: #CACFAA; /* Couleur de fond vert clair */
+    border-radius: 30px; /* Coins arrondis */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ombre portée */
+    width: 100%; /* Utilise toute la largeur disponible */
+    margin: 0; /* Supprime les marges spécifiques */
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+
+      @media (max-width: 768px) {
+        flex-direction: column;
+      }
+
+      .text {
+        flex: 1;
+        text-align: center;
+        color: $color-dark-green; /* Couleur du texte */
+        margin-right: 20px;
+        
+      }
+    }
+  }
+}

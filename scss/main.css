@@ -12004,9 +12004,16 @@ textarea.form-control-lg {
   border-radius: 0.25rem;
 }
 
+.big-title-accueil {
+  font-family: "Playfair Display", sans-serif;
+  font-weight: 400;
+  font-size: 50px;
+  line-height: 1.2;
+}
+
 .big-title {
-  font-family: "Poppins", sans-serif;
-  font-weight: 600;
+  font-family: "Playfair Display", sans-serif;
+  font-weight: 700;
   font-size: 64px;
   line-height: 1.2;
 }
@@ -12056,7 +12063,7 @@ p {
   color: #F1E7D1;
 }
 
-/* === RESPONSIVES HEADER === */
+/* === RESPONSIVES HEADER + NAVBAR === */
 /* Ajoute de l'espace entre les éléments de la navbar */
 .navbar .nav-item {
   margin-right: 5px; /* Ajoute un espace de 20px entre chaque élément */
@@ -12084,9 +12091,9 @@ p {
   padding: 0;
   align-items: center; /* Centre verticalement le logo et le texte */
   gap: 20px; /* Ajoute un espace entre le logo et le texte */
-  font-family: "EB Garamond", serif; /* Exemple de police différente */
+  font-family: "Playfair Display", serif; /* Exemple de police différente */
   color: #1F4924; /* Couleur de la marque */
-  font-weight: 800;
+  font-weight: 400;
   font-size: 40px; /* Taille de la police */
 }
 
@@ -12102,14 +12109,6 @@ p {
   height: 100px; /* Hauteur du logo */
   border-radius: 50%; /* Rend le conteneur circulaire */
   box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25); /* Ombre */
-}
-
-/* Style pour le texte "EcoRide" */
-.brand-text {
-  font-family: "EB Garamond", serif; /* Police pour le texte */
-  font-weight: 800; /* ExtraBold */
-  font-size: 40px; /* Taille de la police */
-  color: #1F4924; /* Couleur du texte */
 }
 
 /* Style pour le menu déroulant */
@@ -12166,41 +12165,6 @@ button.nav-link.dropdown-toggle:hover:active {
   margin-left: auto; /* Place le bouton à droite */
 }
 
-/* === MARGES RESPONSIVES === */
-main, footer {
-  margin-left: 100px;
-  margin-right: 100px;
-}
-@media (max-width: 768px) {
-  main, footer {
-    margin-left: 50px;
-    margin-right: 50px;
-  }
-}
-@media (max-width: 576px) {
-  main, footer {
-    margin-left: 25px;
-    margin-right: 25px;
-  }
-}
-
-header .navbar {
-  margin-left: 100px;
-  margin-right: 100px;
-}
-@media (max-width: 768px) {
-  header .navbar {
-    margin-left: 50px;
-    margin-right: 50px;
-  }
-}
-@media (max-width: 576px) {
-  header .navbar {
-    margin-left: 25px;
-    margin-right: 25px;
-  }
-}
-
 /* === RESPONSIVES FOOTER === */
 .footer-responsive {
   background-color: #1F4924; /* Couleur de fond */
@@ -12252,17 +12216,6 @@ header .navbar {
 .footer-responsive .mentions a:hover {
   color: white !important; /* Couleur légèrement plus claire au survol */
   transform: scale(1.1); /* Zoom de 10% au survol */
-}
-
-body {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh; /* Assure que le body occupe toute la hauteur de la fenêtre */
-  background-color: #F1E7D1; /* Assure que le fond du body reste beige */
-}
-
-main {
-  flex: 1; /* Permet au contenu principal de prendre tout l'espace disponible */
 }
 
 @media (max-width: 768px) { /* Tablette */
@@ -12329,7 +12282,7 @@ main {
     padding: 0;
     display: flex;
     flex-direction: column;
-    min-height: 100vh; /* Assure que le body occupe toute la hauteur de la fenêtre */
+    min-height: 100%; /* Assure que le body occupe toute la hauteur de la fenêtre */
   }
   * {
     margin: 0;
@@ -12337,6 +12290,12 @@ main {
     box-sizing: border-box;
   }
 }
+/* === RESPONSIVES HERO SCENE === */
+.hero-scene-content {
+  padding-top: 50px; /* ajuste selon besoin */
+  position: relative;
+}
+
 html {
   position: relative;
   min-height: 100%;
@@ -12347,13 +12306,69 @@ html, body {
   padding: 0;
   display: flex;
   flex-direction: column;
-  min-height: 100vh; /* Assure que le body occupe toute la hauteur de la fenêtre */
+  min-height: 100%; /* Assure que le body occupe toute la hauteur de la fenêtre */
+}
+
+body {
+  background-color: #F1E7D1; /* Couleur de fond général */
+}
+
+header {
+  background-color: #F1E7D1; /* Couleur de fond */
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.hero-scene {
+  margin-top: 0;
+  margin-bottom: 50px; /* espace sous le hero, ajuste la valeur */
+  padding-top: 0;
+  position: relative;
+  overflow: visible;
+  height: 720px; /* Desktop et tablette */
+}
+@media (max-width: 768px) {
+  .hero-scene { /* Tablette */
+    height: 720px; /* même hauteur que desktop, tu peux ajuster si besoin */
+  }
+}
+@media (max-width: 576px) {
+  .hero-scene { /* Mobile */
+    height: 400px; /* Hauteur réduite pour mobile, modifiable */
+  }
+}
+
+.hero-scene::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  height: 750px; /* Desktop et tablette */
+  background-image: url("../images/Hero-scene.png");
+  background-size: cover;
+  background-position: 50% 65%;
+  background-repeat: no-repeat;
+}
+.hero-scene::before * {
+  position: relative;
+}
+@media (max-width: 768px) {
+  .hero-scene::before { /* Tablette */
+    height: 720px; /* même hauteur que desktop, modifiable */
+  }
+}
+@media (max-width: 576px) {
+  .hero-scene::before { /* Mobile */
+    height: 400px; /* Hauteur réduite pour mobile, modifiable */
+  }
 }
 
 main {
   flex: 1; /* Permet au contenu principal de prendre tout l'espace disponible */
   margin-bottom: 50px; /* Espace pour le footer */
-  margin-top: 50px; /* Espace pour le header */
+  margin-top: 0px; /* Espace pour le header */
 }
 
 footer {
@@ -12373,26 +12388,105 @@ footer.footer {
   width: 100%;
 }
 
-header, footer {
-  width: 100vw;
-  background-color: #F1E7D1; /* ou $color-dark-green pour le footer */
-  margin: 0;
-  padding: 0;
-  position: relative;
-}
-header .container, footer .container {
-  margin-left: 100px;
-  margin-right: 100px;
+/* === MARGES RESPONSIVES === */
+main, footer {
+  padding-left: 100px;
+  padding-right: 100px;
 }
 @media (max-width: 768px) {
-  header .container, footer .container {
-    margin-left: 50px;
-    margin-right: 50px;
+  main, footer {
+    padding-left: 50px;
+    padding-right: 50px;
   }
 }
 @media (max-width: 576px) {
-  header .container, footer .container {
-    margin-left: 25px;
-    margin-right: 25px;
+  main, footer {
+    padding-left: 25px;
+    padding-right: 25px;
   }
+}
+
+header .navbar {
+  padding-left: 100px;
+  padding-right: 100px;
+}
+@media (max-width: 768px) {
+  header .navbar {
+    padding-left: 50px;
+    padding-right: 50px;
+  }
+}
+@media (max-width: 576px) {
+  header .navbar {
+    padding-left: 25px;
+    padding-right: 25px;
+  }
+}
+
+/* === SECTION AVANTAGES === */
+.avantages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 50px 100px;
+  background-color: #F1E7D1; /* Couleur de fond */
+}
+@media (max-width: 768px) {
+  .avantages {
+    padding: 30px 50px;
+  }
+}
+@media (max-width: 576px) {
+  .avantages {
+    padding: 20px 25px;
+  }
+}
+.avantages .cards {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* === SECTION PRÉSENTATION === */
+.presentation {
+  padding: 0; /* Supprime tout padding supplémentaire */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.presentation .background-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 35px;
+  padding-bottom: 35px;
+  padding-left: 90px;
+  padding-right: 90px;
+  background-color: #CACFAA; /* Couleur de fond vert clair */
+  border-radius: 30px; /* Coins arrondis */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ombre portée */
+  width: 100%; /* Utilise toute la largeur disponible */
+  margin: 0; /* Supprime les marges spécifiques */
+}
+@media (max-width: 768px) {
+  .presentation .background-container {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+.presentation .background-container .content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+@media (max-width: 768px) {
+  .presentation .background-container .content {
+    flex-direction: column;
+  }
+}
+.presentation .background-container .content .text {
+  flex: 1;
+  text-align: center;
+  color: #1F4924; /* Couleur du texte */
+  margin-right: 20px;
 }/*# sourceMappingURL=main.css.map */

@@ -51,9 +51,16 @@ $font-family-serif: 'Roboto', serif !default;
 
 // 5. Styles typographiques
 
+.big-title-accueil {
+    font-family: 'Playfair Display', sans-serif;
+    font-weight: 400; // Regular
+    font-size: 50px;
+    line-height: 1.2;
+  }
+
 .big-title {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 600; // SemiBold
+    font-family: 'Playfair Display', sans-serif;
+    font-weight: 700; // Bold
     font-size: 64px;
     line-height: 1.2;
   }
@@ -103,7 +110,7 @@ $font-family-serif: 'Roboto', serif !default;
     color: $color-light-beige; // Couleur du texte
   }
 
-  /* === RESPONSIVES HEADER === */
+  /* === RESPONSIVES HEADER + NAVBAR === */
 
   
 /* Ajoute de l'espace entre les éléments de la navbar */
@@ -135,11 +142,12 @@ $transition-default: color 0.3s ease, transform 0.3s ease;
     padding: 0;
     align-items: center; /* Centre verticalement le logo et le texte */
     gap: 20px; /* Ajoute un espace entre le logo et le texte */
-    font-family: 'EB Garamond', serif; /* Exemple de police différente */
+    font-family: 'Playfair Display', serif; /* Exemple de police différente */
     color: #1F4924; /* Couleur de la marque */
-    font-weight: 800; // ExtraBold
+    font-weight: 400; // Regular
     font-size: 40px; /* Taille de la police */
 }
+
 
 .navbar-brand:hover {
     color: #4B8A47; /* Couleur au survol */
@@ -154,14 +162,6 @@ $transition-default: color 0.3s ease, transform 0.3s ease;
     border-radius: 50%; /* Rend le conteneur circulaire */
     box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25); /* Ombre */
     
-}
-
-/* Style pour le texte "EcoRide" */
-.brand-text {
-    font-family: 'EB Garamond', serif; /* Police pour le texte */
-    font-weight: 800; /* ExtraBold */
-    font-size: 40px; /* Taille de la police */
-    color: #1F4924; /* Couleur du texte */
 }
 
 /* Style pour le menu déroulant */
@@ -218,30 +218,7 @@ button.nav-link.dropdown-toggle:hover:active {
     margin-left: auto; /* Place le bouton à droite */
 }
 
-  /* === MARGES RESPONSIVES === */
-
-@mixin responsive-margin($desktop, $tablet, $mobile) {
-  margin-left: $desktop;
-  margin-right: $desktop;
-
-  @media (max-width: 768px) {
-    margin-left: $tablet;
-    margin-right: $tablet;
-  }
-
-  @media (max-width: 576px) {
-    margin-left: $mobile;
-    margin-right: $mobile;
-  }
-}
-
-main, footer {
-  @include responsive-margin(100px, 50px, 25px);
-}
-
-header .navbar {
-  @include responsive-margin(100px, 50px, 25px);
-}
+ 
 
 /* === RESPONSIVES FOOTER === */
 
@@ -301,17 +278,6 @@ header .navbar {
     color: lighten($color-light-beige, 20%) !important; /* Couleur légèrement plus claire au survol */
     transform: scale(1.1); /* Zoom de 10% au survol */
   }
-}
-
-body {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh; /* Assure que le body occupe toute la hauteur de la fenêtre */
-  background-color: $color-light-beige; /* Assure que le fond du body reste beige */
-}
-
-main {
-  flex: 1; /* Permet au contenu principal de prendre tout l'espace disponible */
 }
 
 @media (max-width: 768px) { /* Tablette */
@@ -389,7 +355,7 @@ main {
     padding: 0;
     display: flex;
     flex-direction: column;
-    min-height: 100vh; /* Assure que le body occupe toute la hauteur de la fenêtre */
+    min-height: 100%; /* Assure que le body occupe toute la hauteur de la fenêtre */
     }
 
     * {
@@ -398,3 +364,11 @@ main {
     box-sizing: border-box;
     }
 }
+
+/* === RESPONSIVES HERO SCENE === */
+
+.hero-scene-content {
+  padding-top: 50px; /* ajuste selon besoin */
+  position: relative;
+}
+

@@ -12230,21 +12230,35 @@ header .navbar {
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 10px;
+  gap: 15px;
   font-size: 24px;
 }
 .footer-responsive .social-icons a {
   color: #F1E7D1 !important;
-  transition: color 0.3s ease;
+  transition: color 0.3s ease, transform 0.3s ease; /* Animation fluide pour la couleur et le zoom */
 }
 .footer-responsive .social-icons a:hover {
   color: white !important;
+  transform: scale(1.3); /* Zoom de 10% au survol */
+}
+
+.footer-responsive .contact a,
+.footer-responsive .mentions a {
+  display: inline-block; /* Permet le zoom */
+  color: #F1E7D1 !important; /* Couleur par défaut */
+  transition: color 0.3s ease, transform 0.3s ease; /* Animation fluide pour la couleur et le zoom */
+}
+.footer-responsive .contact a:hover,
+.footer-responsive .mentions a:hover {
+  color: white !important; /* Couleur légèrement plus claire au survol */
+  transform: scale(1.1); /* Zoom de 10% au survol */
 }
 
 body {
   display: flex;
   flex-direction: column;
   min-height: 100vh; /* Assure que le body occupe toute la hauteur de la fenêtre */
+  background-color: #F1E7D1; /* Assure que le fond du body reste beige */
 }
 
 main {
@@ -12288,7 +12302,7 @@ main {
     left: 50%; /* Centré horizontalement */
     transform: translateX(-50%); /* Ajuste pour centrer */
     display: flex;
-    gap: 10px;
+    gap: 15px;
     font-size: 24px;
   }
 }
@@ -12329,21 +12343,34 @@ html {
 }
 
 html, body {
-  height: 100%; /* Assure que le body occupe toute la hauteur de la fenêtre */
-  display: flex; /* Utilise Flexbox pour organiser le contenu */
-  flex-direction: column; /* Organise les éléments verticalement */
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* Assure que le body occupe toute la hauteur de la fenêtre */
 }
 
 main {
   flex: 1; /* Permet au contenu principal de prendre tout l'espace disponible */
+  margin-bottom: 50px; /* Espace pour le footer */
+  margin-top: 50px; /* Espace pour le header */
 }
 
 footer {
-  margin-top: auto; /* Positionne le footer en bas de la page */
   background-color: #1F4924; /* Couleur de fond */
   color: #F1E7D1; /* Couleur du texte */
-  text-align: center;
-  padding: 50px 0; /* Ajoute de l'espace vertical */
+  width: 100%; /* Pleine largeur */
+  height: 120px; /* Hauteur fixe */
+  display: flex;
+  justify-content: space-between; /* Espace entre les éléments */
+  align-items: center; /* Centrage vertical */
+}
+
+footer.footer {
+  padding: 15px; /* Ajoute de l'espace horizontal */
+  position: absolute;
+  bottom: 0;
+  width: 100%;
 }
 
 header, footer {

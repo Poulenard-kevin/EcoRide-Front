@@ -276,24 +276,38 @@ header .navbar {
      left: 50%;
      transform: translateX(-50%);
      display: flex;
-     gap: 10px;
+     gap: 15px;
      font-size: 24px;
 
      a {
        color: $color-light-beige !important;
-       transition: color 0.3s ease;
+       transition: color 0.3s ease, transform 0.3s ease; /* Animation fluide pour la couleur et le zoom */
 
        &:hover {
          color: lighten($color-light-beige, 20%) !important;
+         transform: scale(1.3); /* Zoom de 10% au survol */
        }
      }
    }
+}
+
+.footer-responsive .contact a,
+.footer-responsive .mentions a {
+  display: inline-block; /* Permet le zoom */
+  color: $color-light-beige !important; /* Couleur par défaut */
+  transition: color 0.3s ease, transform 0.3s ease; /* Animation fluide pour la couleur et le zoom */
+
+  &:hover {
+    color: lighten($color-light-beige, 20%) !important; /* Couleur légèrement plus claire au survol */
+    transform: scale(1.1); /* Zoom de 10% au survol */
+  }
 }
 
 body {
   display: flex;
   flex-direction: column;
   min-height: 100vh; /* Assure que le body occupe toute la hauteur de la fenêtre */
+  background-color: $color-light-beige; /* Assure que le fond du body reste beige */
 }
 
 main {
@@ -342,7 +356,7 @@ main {
         left: 50%; /* Centré horizontalement */
         transform: translateX(-50%); /* Ajuste pour centrer */
         display: flex;
-        gap: 10px;
+        gap: 15px;
         font-size: 24px;
       }
     }

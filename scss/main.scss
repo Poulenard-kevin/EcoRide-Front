@@ -13,21 +13,34 @@ html{
 }
 
 html, body {
-    height: 100%; /* Assure que le body occupe toute la hauteur de la fenêtre */
-    display: flex; /* Utilise Flexbox pour organiser le contenu */
-    flex-direction: column; /* Organise les éléments verticalement */
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Assure que le body occupe toute la hauteur de la fenêtre */
 }
 
 main {
     flex: 1; /* Permet au contenu principal de prendre tout l'espace disponible */
+    margin-bottom: 50px; /* Espace pour le footer */
+    margin-top: 50px; /* Espace pour le header */
 }
 
 footer {
-    margin-top: auto; /* Positionne le footer en bas de la page */
-    background-color: #1F4924; /* Couleur de fond */
-    color: #F1E7D1; /* Couleur du texte */
-    text-align: center;
-    padding: 50px 0; /* Ajoute de l'espace vertical */
+    background-color: $color-dark-green; /* Couleur de fond */
+    color: $color-light-beige; /* Couleur du texte */
+    width: 100%; /* Pleine largeur */
+    height: 120px; /* Hauteur fixe */
+    display: flex;
+    justify-content: space-between; /* Espace entre les éléments */
+    align-items: center; /* Centrage vertical */
+}
+
+footer.footer{
+    padding: 15px; /* Ajoute de l'espace horizontal */
+    position: absolute;
+    bottom: 0;
+    width: 100%;
 }
 
 header, footer {

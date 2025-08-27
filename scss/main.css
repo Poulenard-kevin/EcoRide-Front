@@ -12319,6 +12319,12 @@ header {
   padding-bottom: 0;
 }
 
+.logo {
+  width: 80px; /* taille du logo, à ajuster */
+  height: auto;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1)); /* optionnel : ombre légère */
+}
+
 .hero-scene {
   margin-top: 0;
   margin-bottom: 50px; /* espace sous le hero, ajuste la valeur */
@@ -12423,6 +12429,142 @@ header .navbar {
   }
 }
 
+/* === SECTION BARRE DE RECHERCHE === */
+.search-bar {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+}
+
+.search-container {
+  display: flex;
+  background-color: #cacfaa;
+  border-radius: 30px;
+  padding: 10px 90px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%; /* prend toute la largeur disponible */
+  max-width: none; /* on enlève la limite max */
+  box-sizing: border-box;
+  gap: 70px;
+  align-items: center;
+}
+
+/* Responsive pour tablettes */
+@media (max-width: 1024px) {
+  .search-bar {
+    padding-left: 50px;
+    padding-right: 50px;
+  }
+}
+/* Responsive pour mobiles */
+@media (max-width: 480px) {
+  .search-bar {
+    padding-left: 25px;
+    padding-right: 25px;
+  }
+}
+.search-input {
+  flex: 1;
+  border: none;
+  border-radius: 20px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #1F4924;
+  background-color: #F8F0E5;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  outline: none;
+  transition: box-shadow 0.3s ease;
+}
+
+.search-input::-moz-placeholder {
+  color: #7a8a6f; /* gris-vert clair */
+}
+
+.search-input::placeholder {
+  color: #7a8a6f; /* gris-vert clair */
+}
+
+.search-input:focus {
+  box-shadow: 0 0 5px 2px #1F4924;
+}
+
+.search-btn {
+  padding: 12px 30px;
+  border: none;
+  border-radius: 20px;
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
+  transition: background-color 0.3s ease;
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 1.3;
+}
+
+.search-btn:hover {
+  background-color: #1F4924;
+}
+
+/* === SECTION PRÉSENTATION === */
+.presentation {
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0;
+}
+
+.background-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 35px 90px;
+  background-color: #cacfaa; /* vert clair */
+  border-radius: 30px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+.logo-1 {
+  width: 200px; /* taille du logo, à ajuster */
+  height: auto;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1)); /* optionnel : ombre légère */
+}
+
+.text {
+  flex: 1;
+  text-align: center;
+  color: #2f4f2f; /* couleur vert foncé, à ajuster */
+  margin: 0 20px;
+}
+
+.text h1, .text .h1 {
+  margin-bottom: 15px;
+  font-weight: 700;
+}
+
+.text h3, .text .h3 {
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .background-container {
+    flex-direction: column;
+    padding: 20px 30px;
+  }
+  .logo {
+    margin: 15px 0;
+  }
+  .text {
+    margin: 0;
+  }
+}
 /* === SECTION AVANTAGES === */
 .avantages {
   display: flex;
@@ -12444,49 +12586,4 @@ header .navbar {
 .avantages .cards {
   display: flex;
   justify-content: space-between;
-}
-
-/* === SECTION PRÉSENTATION === */
-.presentation {
-  padding: 0; /* Supprime tout padding supplémentaire */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.presentation .background-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 35px;
-  padding-bottom: 35px;
-  padding-left: 90px;
-  padding-right: 90px;
-  background-color: #CACFAA; /* Couleur de fond vert clair */
-  border-radius: 30px; /* Coins arrondis */
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ombre portée */
-  width: 100%; /* Utilise toute la largeur disponible */
-  margin: 0; /* Supprime les marges spécifiques */
-}
-@media (max-width: 768px) {
-  .presentation .background-container {
-    flex-direction: column;
-    text-align: center;
-  }
-}
-.presentation .background-container .content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
-@media (max-width: 768px) {
-  .presentation .background-container .content {
-    flex-direction: column;
-  }
-}
-.presentation .background-container .content .text {
-  flex: 1;
-  text-align: center;
-  color: #1F4924; /* Couleur du texte */
-  margin-right: 20px;
 }/*# sourceMappingURL=main.css.map */

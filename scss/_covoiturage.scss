@@ -1,0 +1,7 @@
+@use '../custom'; // on utilise les variables / mixins définies dans custom
+
+.covoiturage-container {
+  background-color: custom.$color-light-beige;
+  color: custom.$color-dark-green;
+}
+

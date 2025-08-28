@@ -35,53 +35,8 @@ header {
     height: auto;
     filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1)); /* optionnel : ombre légère */
   }
-  
-  .hero-scene {
-    margin-top: 0;
-    margin-bottom: 50px; /* espace sous le hero, ajuste la valeur */
-    padding-top: 0;
-    position: relative;
-    overflow: visible;
-    height: 720px; /* Desktop et tablette */
-    
-    
-    @media (max-width: 768px) { /* Tablette */
-      height: 720px; /* même hauteur que desktop, tu peux ajuster si besoin */
-    }
-  
-    @media (max-width: 576px) { /* Mobile */
-      height: 400px; /* Hauteur réduite pour mobile, modifiable */
-    }
-  }
 
-  .hero-scene::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100vw;
-    height: 750px; /* Desktop et tablette */
-    background-image: url('../images/Hero-scene.png');
-    background-size: cover;
-    background-position: 50% 65%;
-    background-repeat: no-repeat;
-
-    *{
-        //positionner les éléments au-dessus ::before
-        position: relative;
-    }
-  
-    @media (max-width: 768px) { /* Tablette */
-      height: 720px; /* même hauteur que desktop, modifiable */
-    }
-  
-    @media (max-width: 576px) { /* Mobile */
-      height: 400px; /* Hauteur réduite pour mobile, modifiable */
-    }
-  }
-
-main {
+  main {
     flex: 1; /* Permet au contenu principal de prendre tout l'espace disponible */
     margin-bottom: 50px; /* Espace pour le footer */
     margin-top: 0px; /* Espace pour le header */
@@ -103,242 +58,423 @@ footer.footer{
     bottom: 0;
     width: 100%;
 }
+  
+   .navbar {
+    padding-left: 100px;
+    padding-right: 100px;
+  
+    @media (max-width: 768px) {
+      padding-left: 50px;
+      padding-right: 50px;
+    }
+  
+    @media (max-width: 576px) {
+      padding-left: 25px;
+      padding-right: 25px;
+    }
+  }
 
  /* === MARGES RESPONSIVES === */
 
  @mixin responsive-margin($desktop, $tablet, $mobile) {
-    margin-left: $desktop;
-    margin-right: $desktop;
-  
-    @media (max-width: 768px) {
-      margin-left: $tablet;
-      margin-right: $tablet;
-    }
-  
-    @media (max-width: 576px) {
-      margin-left: $mobile;
-      margin-right: $mobile;
-    }
+  margin-left: $desktop;
+  margin-right: $desktop;
+
+  @media (max-width: 768px) {
+    margin-left: $tablet;
+    margin-right: $tablet;
   }
-  
-  main, footer {
-    padding-left: 100px;
-    padding-right: 100px;
-  
-    @media (max-width: 768px) {
-      padding-left: 50px;
-      padding-right: 50px;
-    }
-  
-    @media (max-width: 576px) {
-      padding-left: 25px;
-      padding-right: 25px;
-    }
+
+  @media (max-width: 576px) {
+    margin-left: $mobile;
+    margin-right: $mobile;
   }
+}
+
+
+
+  /* === HERO SCENE === */
+  /* === HERO SCENE === */
+  /* === HERO SCENE === */
+  /* === HERO SCENE === */
+
+
   
-  header .navbar {
-    padding-left: 100px;
-    padding-right: 100px;
-  
-    @media (max-width: 768px) {
-      padding-left: 50px;
-      padding-right: 50px;
+  .hero-scene {
+    margin-top: 0;
+    margin-bottom: 20px; /* espace sous le hero, ajuste la valeur */
+    padding-top: 0;
+    position: relative;
+    overflow: visible;
+    height: 720px; /* Desktop et tablette */
+    
+    
+    @media (max-width: 768px) { /* Tablette */
+      height: 500px; /* même hauteur que desktop, tu peux ajuster si besoin */
+      margin-bottom: 20px
     }
   
-    @media (max-width: 576px) {
-      padding-left: 25px;
-      padding-right: 25px;
+    @media (max-width: 576px) { /* Mobile */
+      height: 400px; /* Hauteur réduite pour mobile, modifiable */
+      margin-bottom: 20px
     }
   }
 
+  .hero-scene::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    height: 720px; /* Desktop et tablette */
+    background-image: url('../images/Hero-scene.png');
+    background-size: cover;
+    background-position: 50% 65%;
+    background-repeat: no-repeat;
+
+    *{
+        //positionner les éléments au-dessus ::before
+        position: relative;
+    }
+  
+    @media (max-width: 768px) { /* Tablette */
+      height: 500px; /* même hauteur que desktop, modifiable */
+    }
+  
+    @media (max-width: 576px) { /* Mobile */
+      height: 400px; /* Hauteur réduite pour mobile, modifiable */
+    }
+  }
+
+  .big-title-accueil {
+    font-size: $font-size-big-title-accueil; /* Taille par défaut pour les écrans larges */
+    font-weight: $weight-regular;
+    color: $color-dark-green;
+    text-align: left; /* Aligne le texte à gauche */
+    margin: 0; /* Supprime les marges par défaut */
+    padding-bottom: 35px; /* Ajoute un espace en bas */
+    margin-left: 100px; /* Marge par défaut pour les écrans larges */
+    margin-right: 100px; /* Marge par défaut pour les écrans larges */
+  
+    @media (max-width: 1240px) {
+      font-size: $font-size-h1; /* Réduit la taille du texte pour les écrans moyens */
+    }
+  
+    @media (max-width: 768px) {
+      font-size: $font-size-h2; /* Réduit encore la taille pour les écrans de tablette */
+      margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
+      margin-right: 50px;
+      margin-top: -10px; /* Monte le texte de 10px */
+    }
+  
+    @media (max-width: 576px) {
+      font-size: $font-size-h3; /* Réduit encore la taille pour les écrans mobiles */
+      margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
+      margin-right: 25px;
+      margin-top: -30px; /* Conserve l'augmentation de 10px */
+    }
+  }
+
+  
+
+ /* === SECTION BARRE DE RECHERCHE === */
+  /* === SECTION BARRE DE RECHERCHE === */
+  /* === SECTION BARRE DE RECHERCHE === */
   /* === SECTION BARRE DE RECHERCHE === */
 
-  .search-bar {
-    width: 100%;
-    box-sizing: border-box;
-    display: flex;
-    justify-content: center;
-  }
+
+
+.search-bar {
   
-  .search-container {
-    display: flex;
-    background-color: #cacfaa;
-    border-radius: 30px;
-    padding: 10px 90px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    width: 100%; /* prend toute la largeur disponible */
-    max-width: none; /* on enlève la limite max */
-    box-sizing: border-box;
-    gap: 70px;
-    align-items: center;
-  }
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px; /* Ajoute une marge fixe entre la barre de recherche et la section suivante */
+}
+
+
+.search-container {
+  display: flex;
+  background-color: $color-background;
+  border-radius: 30px;
+  padding: 10px 90px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
   
-  /* Responsive pour tablettes */
-  @media (max-width: 1024px) {
-    .search-bar {
-      padding-left: 50px;
-      padding-right: 50px;
-    }
-  }
-  
-  /* Responsive pour mobiles */
-  @media (max-width: 480px) {
-    .search-bar {
-      padding-left: 25px;
-      padding-right: 25px;
-    }
-  }
-  
-  .search-input {
-    flex: 1;
-    border: none;
-    border-radius: 20px;
-    padding: 12px 20px;
-    font-weight: $weight-semibold;
-    font-size: $font-size-nav;
-    color: $color-dark-green; 
-    background-color: $color-very-light-beige; 
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-    outline: none;
-    transition: box-shadow 0.3s ease;
-  }
-  
-  .search-input::placeholder {
-    color: #7a8a6f; /* gris-vert clair */
-  }
-  
-  .search-input:focus {
-    box-shadow: 0 0 5px 2px $color-dark-green; 
-  }
-  
-  .search-btn {
-    padding: 12px 30px;
-    border: none;
-    border-radius: 20px;
-    background-color: $color-medium-green;
-    color: $color-light-beige; 
-    cursor: pointer;
-    box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
-    transition: background-color 0.3s ease;
-    font-family: $font-title;
-    font-weight: $weight-medium; // Medium
-    font-size: $font-size-h3;
-    line-height: $line-height-normal;
-  }
-  
-  .search-btn:hover {
-    background-color: $color-dark-green;
+  gap: 20px;
+  align-items: center;
+  margin-left: 100px;
+  margin-right: 100px;
+
+  @media (max-width: 1240px) {
+    flex-direction: column; /* Passe les éléments en colonne */
+    gap: 15px;
+    padding: 20px;
+    margin-left: 100px;
+    margin-right: 100px;
   }
 
+  @media (max-width: 768px) {
+    flex-direction: column; /* Passe les éléments en colonne */
+    gap: 15px;
+    padding: 20px;
+    margin-left: 50px;
+    margin-right: 50px;
+  }
+
+  @media (max-width: 576px) {
+    flex-direction: column;
+    gap: 15px;
+    padding: 20px;
+    margin-left: 25px;
+    margin-right: 25px;
+  }
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  border-radius: 20px;
+  padding: 12px 20px;
+  font-weight: $weight-semibold;
+  font-size: $font-size-nav;
+  color: $color-dark-green;
+  background-color: $color-very-light-beige;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  outline: none;
+  transition: box-shadow 0.3s ease;
+
+  @media (max-width: 1240px) {
+    width: 500px; /* Prend toute la largeur disponible */
+    gap: 15px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  @media (max-width: 768px) {
+    width: 100%; /* Prend toute la largeur disponible */
+    flex-direction: column; /* Passe les éléments en colonne */
+    gap: 15px;
+    padding-left: 20px;
+    padding-right: 20px;
+    
+  }
+
+  @media (max-width: 576px) {
+    width: 100%; /* Prend toute la largeur disponible */
+    flex-direction: column;
+    gap: 15px;
+    padding-left: 20px;
+    padding-right: 20px;
+    
+  }
+}
+
+.search-input::placeholder {
+  color: #7a8a6f;
+}
+
+.search-input:focus {
+  box-shadow: 0 0 5px 2px $color-dark-green;
+}
+
+.search-btn {
+  padding: 12px 30px;
+  border: none;
+  border-radius: 20px;
+  background-color: $color-medium-green;
+  color: $color-light-beige;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
+  transition: background-color 0.3s ease;
+  font-family: $font-title;
+  font-weight: $weight-medium;
+  font-size: $font-size-h3;
+  line-height: $line-height-normal;
+
+  &:hover {
+    background-color: $color-dark-green;
+  }
+}
+
+.reserver-btn {
+  width: 150px !important; /* Largeur fixe avec !important pour éviter les conflits */
+  height: 50px !important; /* Hauteur fixe avec !important pour éviter les conflits */
+  padding: 12px 30px; /* Espacement interne */
+  border: none;
+  border-radius: 20px;
+  background-color: $color-medium-green;
+  color: $color-light-beige;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
+  transition: background-color 0.3s ease;
+  font-family: $font-title;
+  font-weight: $weight-medium;
+  font-size: $font-size-h3;
+  line-height: $line-height-normal;
+
+  &:hover {
+    background-color: $color-dark-green;
+  }
+}
+
+  
    /* === SECTION PRÉSENTATION === */
+   /* === SECTION PRÉSENTATION === */
+   /* === SECTION PRÉSENTATION === */
+   /* === SECTION PRÉSENTATION === */
+
+
+
 .presentation {
   padding: 0;
   display: flex;
-  justify-content: center;
-  align-items: center;
+  justify-content: center; /* Centre horizontalement la section */
+  align-items: center; /* Centre verticalement la section */
   margin: 20px 0;
 }
 
 .background-container {
+  position: relative;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  padding: 35px 90px;
-  background-color: $color-background; /* vert clair */
+  padding: 35px;
+  background-color: $color-background;
   border-radius: 30px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  width: 100%
+  width: calc(100% - 50px); /* Ajuste la largeur pour prendre en compte les marges */
+  margin-left: 100px;
+  margin-right: 100px;
+
+  @media (max-width: 768px) {
+    margin-left: 50px;
+    margin-right: 50px;
+  }
+
+  @media (max-width: 576px) {
+    width: calc(100% - 50px); /* Ajuste la largeur pour les petits écrans */
+    margin-left: 25px;
+    margin-right: 25px;
+  }
 }
 
 .logo-1 {
-  width: 200px; /* taille du logo, à ajuster */
+  position: absolute; /* Permet de placer le logo à gauche */
+  top: 50%; /* Centre verticalement par rapport au conteneur */
+  left: 35px; /* Ajoute un padding de 20px à gauche */
+  transform: translateY(-50%); /* Ajuste le centrage vertical */
+  width: 200px; /* Taille du logo */
   height: auto;
-  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1)); /* optionnel : ombre légère */
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1)); /* Optionnel : ombre légère */
 }
 
-.text {
-  flex: 1;
-  text-align: center;
-  color: $color-dark-green; /* couleur vert foncé, à ajuster */
-  margin: 0 20px;
+.logo-2 {
+  position: absolute; /* Permet de placer le logo à droite */
+  top: 50%; /* Centre verticalement par rapport au conteneur */
+  right: 35px; /* Ajoute un padding de 20px à droite */
+  transform: translateY(-50%); /* Ajuste le centrage vertical */
+  width: 200px; /* Taille du logo */
+  height: auto;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1)); /* Optionnel : ombre légère */
 }
 
-
-/* Responsive */
-@media (max-width: 768px) {
-  .background-container {
-    flex-direction: column;
-    padding: 20px 30px;
-  }
-
-  .logo {
-    margin: 15px 0;
-  }
-
-  .text {
-    margin: 0;
+@media (max-width: 1240px) {
+  .logo-1,
+  .logo-2 {
+    display: none; /* Cache les logos */
   }
 }
 
-  /* === SECTION AVANTAGES === */
-  .avantages {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 35px 90px;
-    background-color: $color-background; /* Couleur de fond */
-    border-radius: 30px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    width: 100%;
-  
-    @media (max-width: 768px) {
-      padding: 50px 50px;
-      margin: 50px 0;
-    }
-  
-    @media (max-width: 576px) {
-      padding: 25px 25px;
-      margin: 25px 0;
-    }
-  
-      .cards {
-        display: flex;
-        justify-content: space-around;
-        gap: 30px;
+.card-1 {
+  max-width: auto;
+  min-width: 290px;
+  max-height: auto;
+  background-color: $color-light-beige;
+  border-radius: 30px;
+  padding: 30px 30px;
+  box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.1);
+  display: flex; /* Utilise Flexbox pour centrer le contenu */
+  flex-direction: column; /* Aligne les éléments verticalement */
+  justify-content: center; /* Centre verticalement le texte */
+  align-items: center; /* Centre horizontalement le texte */
+  text-align: center; /* Centre le texte à l'intérieur */
+}
 
-        @media (max-width: 768px) {
-          gap: 50px;
-          margin: 50px 0;
-        }
+.presentation h1 {
+  text-align: center; /* Centre le texte horizontalement */
+  font-size: $font-size-h1; /* Taille du texte */
+  color: $color-dark-green; /* Couleur du texte */
+  font-weight: $weight-semibold; /* Rend le texte plus visible */
+  margin: 0; /* Supprime les marges par défaut */
+  padding-bottom: 35px; /* Ajoute un espace de 35px en bas */
+  width: 100%; /* Assure que le titre occupe toute la largeur disponible */
+  word-wrap: break-word; /* Permet au texte de se diviser en plusieurs lignes si nécessaire */
+}
 
-        @media (max-width: 576px) {
-          flex-direction: column !important; 
-          align-items: center; // alignement vertical sur petit écran
-          gap: 25px;
-          margin: 25px 0;
-        }
-      }
 
-      .card {
-        background-color: $color-light-beige;
-        border-radius: 30px;
-        padding: 15px 25px;
-        width: 300px;
-        box-shadow: 2px 4px 8px rgba(0,0,0,0.1);
 
-        @media (max-width: 768px) {
-          margin: 50px 0;
-        }
 
-        @media (max-width: 576px) {
-          margin: 25px 0;
-          width: 100%;  // prend toute la largeur disponible sur mobile
-        }
-      }
+/* === SECTION AVANTAGES === */
+/* === SECTION AVANTAGES === */
+/* === SECTION AVANTAGES === */
+/* === SECTION AVANTAGES === */
 
-      .icon {
-        font-size: 45px;
-        margin-bottom: 15px;
-        color: $color-medium-green;
-      }
-    }
+
+
+.avantages {
+  padding: 35px;              // Ajoute un espace interne autour de la section
+  background-color: $color-background;  // Couleur de fond
+  border-radius: 30px;        // Coins arrondis
+  margin-left: 100px;         // Marge externe par défaut pour les écrans larges
+  margin-right: 100px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  @media (max-width: 768px) { // Tablette
+    margin-left: 50px;
+    margin-right: 50px;
+  }
+
+  @media (max-width: 576px) { // Mobile
+    margin-left: 25px;
+    margin-right: 25px;
+  }
+}
+
+.avantages h1 {
+  text-align: center;         // Centre le titre horizontalement
+  font-size: $font-size-h1;          // Taille du texte
+  color: $color-dark-green;             // Couleur du texte
+  font-weight: $weight-semibold;          // Rend le texte plus visible
+}
+
+.avantages-inner {
+  display: flex;              // Utilise Flexbox pour les cartes
+  flex-wrap: wrap;            // Permet aux cartes de passer à la ligne
+  justify-content: center;    // Centre les cartes horizontalement
+  gap: 30px;                  // Espace entre les cartes
+}
+
+.card {
+  max-width: 350px;
+  min-width: 300px;
+  max-height: auto;
+  background-color: $color-light-beige;
+  border-radius: 30px;
+  padding: 15px 25px;
+  box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.icon {
+  font-size: 45px;
+  margin-bottom: 15px;
+  color: $color-medium-green; /* Couleur de l'icône */
+}
+
+
+

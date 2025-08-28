@@ -1,0 +1,405 @@
+// Custom.scss
+
+// 1. Définition des couleurs personnalisées
+$color-dark-green: #1F4924;
+$color-medium-green: #4B8A47;
+$color-light-beige: #F1E7D1;
+$color-very-light-beige: #F8F0E5;
+$color-background: #CACFAA;
+
+// 2. Surcharge des variables Bootstrap AVANT l'import
+$primary: $color-medium-green;
+$secondary: $color-light-beige;
+$success: $color-dark-green;
+$light: $color-very-light-beige;
+$body-bg: $color-background;
+$body-color: $color-dark-green;
+$font-family-sans-serif: 'Poppins', sans-serif !default;
+$font-family-serif: 'Roboto', serif !default;
+
+// 3. Import de Bootstrap
+@import "../node_modules/bootstrap/scss/bootstrap";
+
+// 4. Classes personnalisées APRES l'import
+.text-dark-on-light {
+  color: $color-dark-green;
+  background-color: $color-very-light-beige;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.text-dark-on-beige {
+  color: $color-dark-green;
+  background-color: $color-light-beige;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.text-light-on-medium-green {
+  color: $color-light-beige;
+  background-color: $color-medium-green;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.text-light-on-dark-green {
+  color: $color-light-beige;
+  background-color: $color-dark-green;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+}
+
+// 5. Styles typographiques
+
+  // Variables pour les polices
+
+  // Fonts
+$font-title: 'Poppins', sans-serif;
+$font-display: 'Playfair Display', sans-serif;
+$font-body: 'Roboto', sans-serif;
+
+// Weights
+$weight-regular: 400;
+$weight-medium: 500;
+$weight-semibold: 600;
+$weight-bold: 700;
+
+// Sizes
+$font-size-big-title: 64px;
+$font-size-big-title-accueil: 50px;
+$font-size-h1: 36px;
+$font-size-h2: 28px;
+$font-size-h3: 24px;
+$font-size-body: 20px;
+$font-size-small: 14px;
+$font-size-nav: 16px;
+
+// Line heights
+$line-height-tight: 1.2;
+$line-height-normal: 1.3;
+$line-height-loose: 1.5;
+
+// Application des styles
+
+.big-title-accueil {
+    font-family: 'Playfair Display', sans-serif;
+    font-weight: 400; // Regular
+    font-size: 50px;
+    line-height: 1.2;
+  }
+
+.big-title {
+    font-family: 'Playfair Display', sans-serif;
+    font-weight: 700; // Bold
+    font-size: 64px;
+    line-height: 1.2;
+  }
+  
+  h1 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600; // SemiBold
+    font-size: 36px;
+    line-height: 1.3;
+    margin-bottom: 35px;
+  }
+  
+  h2 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600; // SemiBold
+    font-size: 28px;
+    line-height: 1.3;
+  }
+  
+  h3 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500; // Medium
+    font-size: 24px;
+    line-height: 1.3;
+    color: $color-dark-green; // Couleur du texte
+  }
+  
+  p {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 400; // Regular
+    font-size: 20px;
+    line-height: 1.5;
+  }
+  
+  .text-secondary {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 400; // Regular
+    font-size: 14px;
+    line-height: 1.4;
+    color: $color-dark-green; // ou une autre couleur secondaire
+  }
+
+  .navigation-text {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400; // Regular
+    font-size: 16px;
+    line-height: 1.5;
+    color: $color-light-beige; // Couleur du texte
+  }
+
+  /* === RESPONSIVES HEADER + NAVBAR === */
+
+  
+/* Ajoute de l'espace entre les éléments de la navbar */
+.navbar .nav-item {
+    margin-right: 5px; /* Ajoute un espace de 20px entre chaque élément */
+}
+
+/* Style pour les liens de la navbar */
+$transition-default: color 0.3s ease, transform 0.3s ease;
+
+.navbar .nav-link {
+    font-family: $font-title;
+    font-weight: $weight-medium;
+    font-size: $font-size-h3; /* Taille pour les textes de la navbar */
+    line-height: $line-height-normal;
+    color: $color-dark-green;
+    transition: $transition-default;
+    white-space: nowrap; /* Empêche les retours à la ligne */
+}
+
+.navbar .nav-link:hover {
+    color: $color-medium-green; /* Couleur au survol */
+    transform: scale(1.1); /* Zoom de 10% au survol */
+}
+
+/* Style pour la marque (brand) */
+.navbar-brand {
+    margin: 0;
+    padding: 0;
+    align-items: center; /* Centre verticalement le logo et le texte */
+    gap: 20px; /* Ajoute un espace entre le logo et le texte */
+    font-family: $font-display; /* Exemple de police différente */
+    color: $color-dark-green; /* Couleur de la marque */
+    font-weight: $weight-regular; // Regular
+    font-size: 40px; /* Taille de la police */
+}
+
+
+.navbar-brand:hover {
+    color: $color-medium-green; /* Couleur au survol */
+    transform: scale(1.1); /* Zoom de 10% au survol */
+    transition: $transition-default;
+}
+
+/* Style pour le logo */
+.logo {
+    width: 100px; /* Largeur du logo */
+    height: 100px; /* Hauteur du logo */
+    border-radius: 50%; /* Rend le conteneur circulaire */
+    box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25); /* Ombre */
+    
+}
+
+/* Style pour le menu déroulant */
+.dropdown-menu {
+    background-color: $color-light-beige; /* Utilise la variable définie pour #F1E7D1 */
+    border: none; /* Supprime la bordure si nécessaire */
+    z-index: 1050 !important;
+}
+
+/* Style pour les éléments du menu déroulant au survol */
+.dropdown-item:hover {
+    background-color: $color-very-light-beige; /* Couleur légèrement différente au survol */
+    color: $color-dark-green; /* Couleur du texte au survol */
+}
+
+/* Style spécifique pour l'élément "Connexion" */
+.dropdown-item.connexion {
+    color: $color-dark-green !important; /* Force la couleur en vert foncé */
+    font-family: 'Poppins', sans-serif; /* Harmonisation avec le reste du site */
+    font-size: 16px; /* Taille du texte */
+    transition: color 0.3s ease; /* Animation fluide */
+}
+
+.dropdown-item.connexion:hover,
+.dropdown-item.connexion:focus,
+.dropdown-item.connexion:active {
+    background-color: $color-very-light-beige; /* Couleur légèrement différente au survol */
+    color: $color-dark-green !important; /* Force la couleur au survol ou sélectionné */
+}
+
+button.nav-link.dropdown-toggle {
+    color: $color-dark-green !important; /* Couleur par défaut en vert foncé */
+    font-family: 'Poppins', sans-serif; /* Harmonisation avec le reste du site */
+    font-size: 24px; /* Taille du texte */
+    transition: color 0.3s ease; /* Animation fluide */
+}
+
+button.nav-link.dropdown-toggle:hover {
+    color: $color-medium-green !important; /* Couleur au survol */
+}
+
+button.nav-link.dropdown-toggle:focus:not(.show),
+button.nav-link.dropdown-toggle:active:not(.show) {
+    color: $color-dark-green !important; /* Rétablit la couleur par défaut lorsque la liste est fermée */
+}
+
+/* Priorité au hover sur focus et active */
+button.nav-link.dropdown-toggle:hover:focus,
+button.nav-link.dropdown-toggle:hover:active {
+    color: $color-medium-green !important; /* Couleur au survol */
+}
+
+.navbar-toggler {
+    margin-left: auto; /* Place le bouton à droite */
+}
+
+ 
+
+/* === RESPONSIVES FOOTER === */
+
+.footer-responsive {
+    background-color: $color-dark-green; /* Couleur de fond */
+    color: $color-light-beige; /* Couleur du texte */
+    width: 100%; /* Pleine largeur */
+    height: 120px;
+    padding-top: 0;
+    padding-bottom: 0;
+  
+    /* Marges internes responsives */
+    padding-left: 100px;
+    padding-right: 100px;
+  
+    display: flex;
+    justify-content: space-between; /* Espace entre les 3 blocs */
+    align-items: center; /* Centrage vertical */
+    flex-wrap: wrap; /* Permet de passer à la ligne si trop petit */
+    text-align: left; /* Texte aligné à gauche dans chaque bloc */
+    font-family: $font-title;
+    font-weight: $weight-regular;
+    font-size: $font-size-nav;
+    position: relative;
+
+    .contact, .mentions {
+        flex: 0 0 auto;
+      }
+  
+    .social-icons {
+     position: absolute;
+     left: 50%;
+     transform: translateX(-50%);
+     display: flex;
+     gap: 15px;
+     font-size: 24px;
+
+     a {
+       color: $color-light-beige !important;
+       transition: color 0.3s ease, transform 0.3s ease; /* Animation fluide pour la couleur et le zoom */
+
+       &:hover {
+         color: lighten($color-light-beige, 20%) !important;
+         transform: scale(1.3); /* Zoom de 10% au survol */
+       }
+     }
+   }
+}
+
+.footer-responsive .contact a,
+.footer-responsive .mentions a {
+  display: inline-block; /* Permet le zoom */
+  color: $color-light-beige !important; /* Couleur par défaut */
+  transition: color 0.3s ease, transform 0.3s ease; /* Animation fluide pour la couleur et le zoom */
+
+  &:hover {
+    color: lighten($color-light-beige, 20%) !important; /* Couleur légèrement plus claire au survol */
+    transform: scale(1.1); /* Zoom de 10% au survol */
+  }
+}
+
+@media (max-width: 768px) { /* Tablette */
+    .footer-responsive {
+      height: 120px;
+      padding-left: 50px;
+      padding-right: 50px;
+    }
+  }
+
+  @media (max-width: 576px) { /* Mobile */
+    .footer-responsive {
+      height: 120px;
+      padding-left: 25px;
+      padding-right: 25px;
+      position: relative;
+
+      display: flex; /* Utilisation de flexbox pour aligner les éléments */
+      flex-direction: row; /* Les éléments sont alignés horizontalement */
+      justify-content: space-between; /* Espace entre les éléments */
+      align-items: flex-start; /* Aligne les éléments en haut */
+
+      .contact,
+      .mentions {
+        position: relative; /* Permet d'utiliser `top` */
+        top: 20px; /* À 20px du haut */
+        flex: 0 0 auto; /* Les éléments prennent uniquement la place nécessaire */
+        margin: 0; /* Supprime les marges inutiles */
+      }
+
+      .contact {
+        text-align: left; /* Aligne le texte à gauche */
+      }
+
+      .mentions {
+        text-align: right; /* Aligne le texte à droite */
+      }
+
+      .social-icons {
+        position: absolute;
+        bottom: 20px; /* À 20px du bas */
+        left: 50%; /* Centré horizontalement */
+        transform: translateX(-50%); /* Ajuste pour centrer */
+        display: flex;
+        gap: 15px;
+        font-size: 24px;
+      }
+    }
+  }
+
+  @media (max-width: 338px) { /* Écrans très petits */
+    .footer-responsive {
+      display: flex;
+      flex-direction: column; /* Empile les éléments verticalement */
+      align-items: center; /* Centre les éléments horizontalement */
+      justify-content: space-between; /* Répartit les éléments verticalement */
+      height: 120px; /* Hauteur fixe du footer */
+      padding: 0; /* Supprime les marges internes */
+
+      .contact {
+        position: relative;
+        top: 20px; /* À 20px du haut */
+        text-align: center; /* Centre le texte horizontalement */
+        width: 100%; /* Prend toute la largeur disponible */
+
+      }
+
+      .mentions {
+        display: none; /* Cache les mentions légales */
+    }
+  }
+
+    html, body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%; /* Assure que le body occupe toute la hauteur de la fenêtre */
+    }
+
+    * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    }
+}
+
+/* === RESPONSIVES HERO SCENE === */
+
+.hero-scene-content {
+  padding-top: 50px; /* ajuste selon besoin */
+  position: relative;
+}
+

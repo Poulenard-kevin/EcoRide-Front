@@ -12023,6 +12023,7 @@ h1, .h1 {
   font-weight: 600;
   font-size: 36px;
   line-height: 1.3;
+  margin-bottom: 35px;
 }
 
 h2, .h2 {
@@ -12091,7 +12092,7 @@ p {
   padding: 0;
   align-items: center; /* Centre verticalement le logo et le texte */
   gap: 20px; /* Ajoute un espace entre le logo et le texte */
-  font-family: "Playfair Display", serif; /* Exemple de police différente */
+  font-family: "Playfair Display", sans-serif; /* Exemple de police différente */
   color: #1F4924; /* Couleur de la marque */
   font-weight: 400;
   font-size: 40px; /* Taille de la police */
@@ -12470,7 +12471,7 @@ header .navbar {
   border-radius: 20px;
   padding: 12px 20px;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 16px;
   color: #1F4924;
   background-color: #F8F0E5;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -12523,7 +12524,7 @@ header .navbar {
   justify-content: space-between;
   align-items: center;
   padding: 35px 90px;
-  background-color: #cacfaa; /* vert clair */
+  background-color: #CACFAA; /* vert clair */
   border-radius: 30px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   width: 100%;
@@ -12538,18 +12539,8 @@ header .navbar {
 .text {
   flex: 1;
   text-align: center;
-  color: #2f4f2f; /* couleur vert foncé, à ajuster */
+  color: #1F4924; /* couleur vert foncé, à ajuster */
   margin: 0 20px;
-}
-
-.text h1, .text .h1 {
-  margin-bottom: 15px;
-  font-weight: 700;
-}
-
-.text h3, .text .h3 {
-  font-weight: 400;
-  line-height: 1.4;
 }
 
 /* Responsive */
@@ -12570,20 +12561,63 @@ header .navbar {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 50px 100px;
-  background-color: #F1E7D1; /* Couleur de fond */
+  padding: 35px 90px;
+  background-color: #CACFAA; /* Couleur de fond */
+  border-radius: 30px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
 }
 @media (max-width: 768px) {
   .avantages {
-    padding: 30px 50px;
+    padding: 50px 50px;
+    margin: 50px 0;
   }
 }
 @media (max-width: 576px) {
   .avantages {
-    padding: 20px 25px;
+    padding: 25px 25px;
+    margin: 25px 0;
   }
 }
 .avantages .cards {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-around;
+  gap: 30px;
+}
+@media (max-width: 768px) {
+  .avantages .cards {
+    gap: 50px;
+    margin: 50px 0;
+  }
+}
+@media (max-width: 576px) {
+  .avantages .cards {
+    flex-direction: column !important;
+    align-items: center;
+    gap: 25px;
+    margin: 25px 0;
+  }
+}
+.avantages .card {
+  background-color: #F1E7D1;
+  border-radius: 30px;
+  padding: 15px 25px;
+  width: 300px;
+  box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.1);
+}
+@media (max-width: 768px) {
+  .avantages .card {
+    margin: 50px 0;
+  }
+}
+@media (max-width: 576px) {
+  .avantages .card {
+    margin: 25px 0;
+    width: 100%;
+  }
+}
+.avantages .icon {
+  font-size: 45px;
+  margin-bottom: 15px;
+  color: #4B8A47;
 }/*# sourceMappingURL=main.css.map */

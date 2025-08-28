@@ -51,6 +51,34 @@ $font-family-serif: 'Roboto', serif !default;
 
 // 5. Styles typographiques
 
+  // Variables pour les polices
+
+  // Fonts
+$font-title: 'Poppins', sans-serif;
+$font-display: 'Playfair Display', sans-serif;
+$font-body: 'Roboto', sans-serif;
+
+// Weights
+$weight-regular: 400;
+$weight-medium: 500;
+$weight-semibold: 600;
+$weight-bold: 700;
+
+// Sizes
+$font-size-h1: 36px;
+$font-size-h2: 28px;
+$font-size-h3: 24px;
+$font-size-body: 20px;
+$font-size-small: 14px;
+$font-size-nav: 16px;
+
+// Line heights
+$line-height-tight: 1.2;
+$line-height-normal: 1.3;
+$line-height-loose: 1.5;
+
+// Application des styles
+
 .big-title-accueil {
     font-family: 'Playfair Display', sans-serif;
     font-weight: 400; // Regular
@@ -70,6 +98,7 @@ $font-family-serif: 'Roboto', serif !default;
     font-weight: 600; // SemiBold
     font-size: 36px;
     line-height: 1.3;
+    margin-bottom: 35px;
   }
   
   h2 {
@@ -122,17 +151,17 @@ $font-family-serif: 'Roboto', serif !default;
 $transition-default: color 0.3s ease, transform 0.3s ease;
 
 .navbar .nav-link {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 500;
-    font-size: 24px; /* Taille pour les textes de la navbar */
-    line-height: 1.3;
+    font-family: $font-title;
+    font-weight: $weight-medium;
+    font-size: $font-size-h3; /* Taille pour les textes de la navbar */
+    line-height: $line-height-normal;
     color: $color-dark-green;
     transition: $transition-default;
     white-space: nowrap; /* Empêche les retours à la ligne */
 }
 
 .navbar .nav-link:hover {
-    color: #4B8A47; /* Couleur au survol */
+    color: $color-medium-green; /* Couleur au survol */
     transform: scale(1.1); /* Zoom de 10% au survol */
 }
 
@@ -142,15 +171,15 @@ $transition-default: color 0.3s ease, transform 0.3s ease;
     padding: 0;
     align-items: center; /* Centre verticalement le logo et le texte */
     gap: 20px; /* Ajoute un espace entre le logo et le texte */
-    font-family: 'Playfair Display', serif; /* Exemple de police différente */
-    color: #1F4924; /* Couleur de la marque */
-    font-weight: 400; // Regular
+    font-family: $font-display; /* Exemple de police différente */
+    color: $color-dark-green; /* Couleur de la marque */
+    font-weight: $weight-regular; // Regular
     font-size: 40px; /* Taille de la police */
 }
 
 
 .navbar-brand:hover {
-    color: #4B8A47; /* Couleur au survol */
+    color: $color-medium-green; /* Couleur au survol */
     transform: scale(1.1); /* Zoom de 10% au survol */
     transition: $transition-default;
 }
@@ -239,9 +268,9 @@ button.nav-link.dropdown-toggle:hover:active {
     align-items: center; /* Centrage vertical */
     flex-wrap: wrap; /* Permet de passer à la ligne si trop petit */
     text-align: left; /* Texte aligné à gauche dans chaque bloc */
-    font-family: 'Poppins', sans-serif;
-    font-weight: 400;
-    font-size: 16px;
+    font-family: $font-title;
+    font-weight: $weight-regular;
+    font-size: $font-size-nav;
     position: relative;
 
     .contact, .mentions {

@@ -38,11 +38,12 @@
     gap: 20px; /* Espacement entre les éléments */
     background-color: $color-background;
     border-radius: 30px;
-    padding: 20px;
+    padding: 30px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     width: 100%;
     margin-left: 100px;
     margin-right: 100px;
+    
 
     @media (max-width: 768px) {
       grid-template-columns: 1fr; /* Passe à une seule colonne */
@@ -103,3 +104,308 @@
     }
   }
 }
+
+/* === SECTION LISTE DE COVOITURAGE === */
+/* === SECTION LISTE DE COVOITURAGE === */
+/* === SECTION LISTE DE COVOITURAGE === */
+/* === SECTION LISTE DE COVOITURAGE === */
+
+.covoiturage-results {
+  padding: 30px;
+  padding-top: 35px;
+  padding-bottom: 0px;
+  background-color: $color-background;
+  border-radius: 30px;
+  margin-left: 100px;
+  margin-right: 100px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  .results-title {
+    text-align: center; /* Centre le titre horizontalement */
+    font-size: 2rem; /* Taille du titre */
+    color: $color-dark-green; /* Couleur du titre */
+    font-weight: 600; /* Poids du texte */
+    margin-bottom: 75px; /* Espacement sous le titre */
+  }
+
+  .results-container {
+    display: flex; /* Utilise Flexbox pour aligner les filtres et les résultats côte à côte */
+    gap: 30px; /* Ajoute un espacement entre les filtres et les résultats */
+    
+
+    .filters {
+      flex: 1; /* Les filtres occupent 1 part de l'espace disponible */
+      background-color: $color-light-beige;
+      border-radius: 20px;
+      padding: 20px;
+      padding-bottom: 20px;
+      max-width: 300px;
+      height: auto;
+      margin-bottom: 60px;
+
+      .filter-group {
+        margin-bottom: 20px;
+
+        .filters .filter-group input[type="text"]#prix-max {
+          background-color: $color-very-light-beige; /* Applique la couleur de fond */
+          border: 1px solid $color-medium-green; /* Bordure de l'input */
+          border-radius: 5px; /* Ajoute des coins arrondis */
+          padding: 10px; /* Ajoute un espace interne */
+          width: 100%; /* L'input occupe toute la largeur disponible */
+          color: $color-dark-green; /* Couleur du texte */
+        }
+
+        label {
+          display: flex; /* Aligne la case à cocher et le texte sur la même ligne */
+          align-items: center;
+          gap: 10px; /* Ajoute un espacement entre la case et le texte */
+          color: $color-dark-green; /* Couleur du texte */
+          margin-bottom: 10px; /* Ajoute une marge en bas */
+        }
+
+        input[type="checkbox"] {
+          width: 13px;
+          height: 13px;
+          appearance: none;
+          background-color: $color-very-light-beige;
+          border: 2px solid $color-medium-green;
+          border-radius: 4px;
+          cursor: pointer;
+          position: relative;
+
+          &:checked {
+            background-color: $color-medium-green;
+            border-color: $color-medium-green;
+
+            &::after {
+              content: '✔';
+              color: $color-light-beige;
+              font-size: 10px;
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+            }
+          }
+        }
+
+        input[type="text"] {
+          background-color: $color-very-light-beige; /* Applique la couleur de fond */
+          border: 1px solid $color-medium-green; /* Bordure par défaut */
+          border-radius: 5px; /* Ajoute des coins arrondis */
+          padding: 10px; /* Ajoute un espace interne */
+          width: 100%; /* L'input occupe toute la largeur disponible */
+          color: $color-dark-green; /* Couleur du texte */
+          font-size: 1rem; /* Taille du texte */
+          transition: border-color 0.3s ease; /* Ajoute une transition pour un effet fluide */
+
+          &:focus {
+            outline: none; /* Supprime le contour par défaut */
+            border-color: $color-medium-green; /* Change la couleur de la bordure en vert */
+            box-shadow: 0 0 5px $color-medium-green; /* Ajoute un effet lumineux autour */
+          }
+        }
+
+        .filters .filter-group input[type="checkbox"] {
+          background-color: $color-very-light-beige; /* Change la couleur de fond */
+          border: 1px solid $color-dark-green; /* Bordure de la case */
+          border-radius: 4px; /* Ajoute des coins arrondis */
+          cursor: pointer; /* Ajoute un curseur pointer */
+          appearance: none; /* Supprime le style par défaut du navigateur */
+          position: relative; /* Nécessaire pour le pseudo-élément */
+        
+          &:checked {
+            background-color: $color-medium-green; /* Couleur de fond pour une case cochée */
+            border-color: $color-dark-green; /* Change la couleur de la bordure */
+            
+            &::after {
+              content: '✔'; /* Symbole de validation */
+              color: $color-light-beige; /* Couleur du symbole */
+              font-size: 14px; /* Taille du symbole */
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%); /* Centre le symbole */
+            }
+          }
+        }
+
+        select#note-mini {
+          background-color: $color-very-light-beige; /* Applique la couleur de fond */
+          border: 1px solid $color-dark-green; /* Bordure du select */
+          border-radius: 5px; /* Ajoute des coins arrondis */
+          padding: 10px; /* Ajoute un espace interne */
+          width: 100%; /* Le select occupe toute la largeur disponible */
+          color: $color-dark-green; /* Couleur du texte */
+          font-size: 1rem; /* Taille du texte */
+          transition: border-color 0.3s ease; /* Ajoute une transition fluide */
+          border-color: $color-medium-green;
+        
+          &:focus {
+            outline: none; /* Supprime le contour par défaut */
+            border-color: $color-medium-green; /* Change la couleur de la bordure en vert moyen */
+            box-shadow: 0 0 5px $color-medium-green; /* Ajoute un effet lumineux autour */
+          }
+        
+          option {
+            background-color: $color-medium-green; /* Fond des options */
+            color: $color-light-beige; /* Couleur du texte des options */
+            border: 1px solid $color-dark-green; /* Bordure des options */
+            padding: 5px; /* Ajoute un espace interne */
+          }
+        }
+      }
+
+      .filter-buttons {
+        display: flex;
+        gap: 10px;
+
+        .apply-btn, .reset-btn {
+          flex: 1;
+          padding: 10px;
+          border: none;
+          border-radius: 20px;
+          cursor: pointer;
+        }
+
+        .apply-btn {
+          background-color: $color-medium-green;
+          color: $color-light-beige;
+        }
+
+        .reset-btn {
+          background-color: $color-light-beige;
+          color: $color-medium-green;
+          border: 1px solid $color-medium-green;
+        }
+      }
+    }
+
+
+    .results {
+      flex: 2; /* Les résultats occupent 2 parts de l'espace disponible */
+      background-color: transparent; /* Supprime le fond beige */
+      
+      .result-card {
+        position: relative; /* Nécessaire pour positionner les éléments */
+        background-color: $color-light-beige; /* Fond beige */
+        border-radius: 20px; /* Coins arrondis */
+        padding: 20px; /* Espacement interne */
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ombre légère */
+        margin-bottom: 60px; /* Espacement entre les cartes */
+
+        .result-header {
+          position: absolute; /* Positionne au-dessus de .result-card */
+          top: -40px; /* Ajuste la position verticale */
+          left: 20px; /* Ajuste la position horizontale */
+          display: flex; /* Utilise Flexbox pour organiser les éléments */
+          justify-content: flex-start; /* Aligne les éléments à gauche */
+          align-items: center; /* Centre verticalement les éléments */
+          margin-bottom: 15px; /* Ajoute un espacement sous la date */
+
+          .date, .time {
+            background-color: $color-medium-green; /* Fond vert moyen */
+            color: $color-light-beige; /* Texte beige */
+            padding: 5px 15px; /* Ajuste l'espacement interne */
+            border-radius: 20px; /* Coins arrondis */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+            text-align: center; /* Centre le texte horizontalement */
+            white-space: nowrap; /* Empêche le texte de passer à la ligne */
+          }
+
+          .date {
+            font-weight: bold; /* Met en valeur la date */
+          }
+        }
+
+        .result-body {
+          display: flex; /* Active Flexbox */
+          align-items: center; /* Centre les éléments verticalement */
+          gap: 15px; /* Ajoute un espacement entre les éléments */
+
+          .profile-photo {
+            width: 120px; /* Taille de la photo */
+            height: 120px; /* Taille de la photo */
+            object-fit: cover; /* Ajuste l'image à la taille définie */
+            border-radius: 50%; /* Rend la photo circulaire */
+            border: 4px solid $color-medium-green; /* Bordure verte */
+          }
+
+          .info {
+            flex: 1; /* Prend tout l'espace disponible */
+            display: flex;
+            flex-direction: column; /* Organise les éléments verticalement */
+            align-items: center; /* Centre les éléments horizontalement */
+            justify-content: center; /* Centre les éléments verticalement */
+            gap:5px; /* Ajoute un espacement uniforme entre les éléments */
+
+            .pseudo {
+              margin-bottom: 5px; /* Espacement sous le pseudo */
+            }
+
+            .rating {
+              color: $color-medium-green; /* Couleur des étoiles */
+              font-size: 30px; /* Taille des étoiles */
+              margin-bottom: 5px; /* Espacement sous le pseudo */
+            }
+
+            .type {
+              background-color: $color-background; /* Applique le fond défini */
+              border-radius: 5px; /* Ajoute des coins arrondis */
+              padding: 5px 10px; /* Ajoute un espacement interne */
+              color: $color-dark-green; /* Couleur du texte */
+              display: inline-block; /* Permet au cadre de s'adapter au contenu */
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+              text-align: center; /* Centre le texte horizontalement */
+              margin-bottom: 5px; /* Espacement sous le pseudo */
+            }
+          }
+
+          .details {
+            flex: 1; /* Prend tout l'espace disponible */
+            text-align: left; /* Aligne le texte à gauche */
+            display: flex;
+            flex-direction: column;
+            gap: 5px; /* Espacement entre les lignes */
+
+            p {
+              display: flex; /* Active Flexbox pour aligner le texte et l'heure */
+              justify-content: space-between; /* Place le texte et l'heure aux extrémités */
+
+              .time {
+                font-weight: bold; /* Met en valeur les heures */
+              }
+            }
+          }
+
+          .detail-btn {
+            background-color: $color-medium-green; /* Fond vert moyen */
+            color: $color-light-beige; /* Texte beige */
+            border: none;
+            border-radius: 20px; /* Coins arrondis */
+            padding: 10px 20px; /* Ajuste l'espacement interne */
+            width: 120px; /* Fixe une largeur standard */
+            height: 50px; /* Fixe une hauteur standard */
+            text-align: center; /* Centre le texte horizontalement */
+            display: flex; /* Utilise Flexbox */
+            align-items: center; /* Centre le texte verticalement */
+            justify-content: center; /* Centre le texte horizontalement */
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+            transition: background-color 0.3s ease; /* Ajoute une transition fluide */
+            align-self: flex-end; /* Positionne le bouton en bas à droite */
+            font-size: 20px; /* Taille du texte */
+            
+
+            &:hover {
+              background-color: darken($color-medium-green, 10%); /* Fonce le vert au survol */
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+

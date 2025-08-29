@@ -5,11 +5,141 @@
 </div>
 
 <section class="covoiturage-search-bar">
-  <div class="search-container">
-    <input type="text" class="search-input" placeholder="Lieux de départ">
-    <input type="text" class="search-input" placeholder="Lieux d'arrivée">
-    <input type="text" class="search-input" placeholder="Heure et date de départ">
-    <input type="text" class="search-input" placeholder="Nombre de passagers">
-    <button class="search-btn reserve-btn">Réserver</button>
-  </div>
+    <div class="search-container">
+        <input type="text" class="search-input" placeholder="Lieux de départ">
+        <input type="text" class="search-input" placeholder="Lieux d'arrivée">
+        <input type="text" class="search-input" placeholder="Heure et date de départ">
+        <input type="text" class="search-input" placeholder="Nombre de passagers">
+        <button class="search-btn reserve-btn">Réserver</button>
+    </div>
+</section>
+
+<section class="covoiturage-results">
+    <h1 class="results-title">Liste de covoiturage</h1>
+    <div class="results-container">
+        <div class="filters">
+            <h2>Filtres</h2>
+            <form>
+                <div class="filter-group">
+                    <label>
+                        <input type="checkbox" checked> Voiture électrique
+                    </label>
+                    <label>
+                        <input type="checkbox" checked> Voiture hybride
+                    </label>
+                    <label>
+                        <input type="checkbox"> Voiture Thermique
+                    </label>
+                </div>
+                <div class="filter-group">
+                    <label for="prix-max">Prix max (€)</label>
+                    <input type="text" id="prix-max" placeholder="____">
+                </div>
+                <div class="filter-group">
+                    <label for="duree-max">Durée max</label>
+                    <input type="text" id="duree-max" placeholder="____ [ min ]">
+                </div>
+                <div class="filter-group">
+                    <label for="note-mini">Note mini</label>
+                    <select id="note-mini" name="note-mini">
+                        <option value="5">★★★★★</option>
+                        <option value="4">★★★★☆</option>
+                        <option value="3">★★★☆☆</option>
+                        <option value="2">★★☆☆☆</option>
+                        <option value="1">★☆☆☆☆</option>
+                    </select>
+                </div>
+                <div class="filter-buttons">
+                    <button type="button" class="apply-btn">Appliquer</button>
+                    <button type="reset" class="reset-btn">Réinitialiser</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="results">
+            <div class="result-card">
+                <div class="result-header">
+                    <p class="date">Vendredi 16 septembre</p>
+                </div>
+                <div class="result-body">
+                    <img src="images/profil1.png" alt="Profil" class="profile-photo">
+                    <div class="info">
+                        <p class="pseudo">Pseudo</p>
+                        <p class="rating">★★★★☆</p>
+                        <p class="type">Economique</p>
+                    </div>
+                    <div class="details">
+                        <p>Paris <span class="time">16h00</span></p>
+                        <p>Lyon <span class="time">20h30</span></p>
+                        <p>30€</p>
+                        <p>Place disponible : 2</p>
+                    </div>
+                    <button class="detail-btn">Détail</button>
+                </div>
+            </div>
+
+            <div class="result-card">
+                <div class="result-header">
+                    <p class="date">Vendredi 16 septembre</p>
+                </div>
+                <div class="result-body">
+                    <img src="images/profil1.png" alt="Profil" class="profile-photo">
+                    <div class="info">
+                        <p class="pseudo">Pseudo</p>
+                        <p class="rating">★★★★☆</p>
+                        <p class="type">Economique</p>
+                    </div>
+                    <div class="details">
+                        <p>Paris <span class="time">16h00</span></p>
+                        <p>Lyon <span class="time">20h30</span></p>
+                        <p>30€</p>
+                        <p>Place disponible : 2</p>
+                    </div>
+                    <button class="detail-btn">Détail</button>
+                </div>
+            </div>
+
+            <div class="result-card">
+                <div class="result-header">
+                    <p class="date">Vendredi 16 septembre</p>
+                </div>
+                <div class="result-body">
+                    <img src="images/profil1.png" alt="Profil" class="profile-photo">
+                    <div class="info">
+                        <p class="pseudo">Pseudo</p>
+                        <p class="rating">★★★★☆</p>
+                        <p class="type">Economique</p>
+                    </div>
+                    <div class="details">
+                        <p>Paris <span class="time">16h00</span></p>
+                        <p>Lyon <span class="time">20h30</span></p>
+                        <p>30€</p>
+                        <p>Place disponible : 2</p>
+                    </div>
+                    <button class="detail-btn">Détail</button>
+                </div>
+            </div>
+
+            <div class="result-card">
+                <div class="result-header">
+                    <p class="date">Vendredi 16 septembre</p>
+                </div>
+                <div class="result-body">
+                    <img src="images/profil1.png" alt="Profil" class="profile-photo">
+                    <div class="info">
+                        <p class="pseudo">Pseudo</p>
+                        <p class="rating">★★★★☆</p>
+                        <p class="type">Economique</p>
+                    </div>
+                    <div class="details">
+                        <p>Paris <span class="time">16h00</span></p>
+                        <p>Lyon <span class="time">20h30</span></p>
+                        <p>30€</p>
+                        <p>Place disponible : 2</p>
+                    </div>
+                    <button class="detail-btn">Détail</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </section>

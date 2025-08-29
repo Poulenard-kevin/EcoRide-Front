@@ -90,9 +90,13 @@ $line-height-loose: 1.5;
 
 .big-title {
     font-family: 'Playfair Display', sans-serif;
-    font-weight: 700; // Bold
+    font-weight: 600; // SemiBold
     font-size: 64px;
     line-height: 1.2;
+    display: inline; // Nécessaire pour que le surlignement s'adapte au texte
+    text-decoration: underline; // Ajoute un surlignement
+    text-decoration-thickness: 2px; // Épaisseur du surlignement
+    text-underline-offset: 4px; // Décalage du surlignement par rapport au texte
   }
   
   h1 {

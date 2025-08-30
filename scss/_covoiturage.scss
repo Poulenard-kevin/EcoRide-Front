@@ -134,12 +134,13 @@
     text-align: center; /* Centre le titre horizontalement */
     color: $color-dark-green; /* Couleur du titre */
     font-weight: 600; /* Poids du texte */
-    padding-bottom: 35px; /* Espacement sous le titre */
+    margin-bottom: 35px;
   }
 
   .results-container {
     display: flex; /* Utilise Flexbox pour aligner les filtres et les résultats côte à côte */
     gap: 30px; /* Ajoute un espacement entre les filtres et les résultats */
+    margin-top: 85px; /* Ajoute un espacement entre le bouton et les résultats */
 
 
     /* === FILTRES === */
@@ -163,7 +164,7 @@
         display: block; /* Visible par défaut */
       }
 
-      @media (max-width: 1240px) {
+      @media (max-width: 1290px) {
         background-color: transparent; /* Supprime le fond beige */
         padding: 0; /* Supprime le padding */
         margin-bottom: 0; /* Supprime la marge en bas */
@@ -364,6 +365,57 @@
           margin-bottom: 20px; 
         }
 
+        @media (max-width: 990px) {
+          display: flex; /* Utilise Flexbox pour organiser les éléments */
+          flex-direction: column; /* Passe les éléments en disposition verticale */
+          align-items: center; /* Centre les éléments horizontalement */
+          padding: 15px; /* Réduit le padding interne */
+          gap: 20px; /* Ajoute un espacement entre les sections */
+
+          .profile-column {
+            display: flex; /* Utilise Flexbox pour organiser les éléments horizontalement */
+            align-items: center; /* Centre les éléments verticalement */
+            gap: 20px; /* Ajoute un espacement entre la photo et les autres éléments */
+            padding-bottom: 40px;
+            border-bottom: 1px solid $color-medium-green; /* Ligne de séparation en bas */
+            padding-right: none;
+            border-right: none 
+          }
+          
+          .result-body {
+            display: flex; /* Active Flexbox */
+            flex-direction: column; /* Passe les colonnes en disposition verticale */
+            align-items: center; /* Centre les colonnes horizontalement */
+            gap: 15px; /* Réduit l'espacement entre les colonnes */
+
+            .profile-photo {
+              margin: 0 auto; /* Centre la photo horizontalement */
+            }
+
+            .details {
+              display: grid; /* Utilise Grid Layout pour organiser les colonnes */
+              grid-template-columns: 1fr 1fr; /* Deux colonnes de largeur égale */
+              gap: 10px; /* Ajoute un espacement entre les colonnes */
+              width: 100%; /* Les colonnes occupent toute la largeur disponible */
+
+              .column {
+                text-align: center; /* Centre le texte dans chaque colonne */
+              }
+            }
+          }
+
+          .result-header {
+            flex-direction: column; /* Passe les éléments en disposition verticale */
+            align-items: center; /* Centre les éléments horizontalement */
+            gap: 10px; /* Ajoute un espacement entre les éléments */
+          }
+
+          .detail-btn {
+            width: 100%; /* Le bouton occupe toute la largeur disponible */
+            max-width: 200px; /* Fixe une largeur maximale */
+          }
+        }
+
         .result-header {
           position: absolute; /* Positionne au-dessus de .result-card */
           top: -50px; /* Ajuste la position verticale */
@@ -386,101 +438,147 @@
         .result-body {
           display: flex; /* Active Flexbox */
           align-items: center; /* Centre les éléments verticalement */
-          gap: 10px; /* Ajoute un espacement entre les éléments */
+          gap: 30px; /* Ajoute un espacement entre les éléments */
 
           .profile-photo {
-            width: 100px; /* Taille de la photo */
-            height: 140px; /* Taille de la photo */
+            width: 120px; /* Taille fixe de la largeur */
+            height: 120px; /* Taille fixe de la hauteur */
             object-fit: cover; /* Ajuste l'image à la taille définie */
-            object-position: center 30%; /* Décale l'image vers le bas (ajustez la valeur si nécessaire) */
+            object-position: center; /* Centre l'image */
             border-radius: 50%; /* Rend la photo circulaire */
             border: 4px solid $color-medium-green; /* Bordure verte */
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+            margin-left: 10px; /* Ajoute un espacement à gauche */
+            flex-shrink: 0; /* Empêche la photo de se réduire */
+
+            @media (max-width: 768px) {
+              width: 100px; /* Réduit la taille pour les petits écrans */
+              height: 100px; /* Réduit la taille pour les petits écrans */
+            }
+
+            @media (max-width: 576px) {
+              width: 80px; /* Réduit davantage la taille pour les très petits écrans */
+              height: 80px; /* Réduit davantage la taille pour les très petits écrans */
+            }
           }
+
+          .pseudo-rating {
+            display: flex; /* Organise Pseudo et Rating horizontalement */
+            flex-direction: column; /* Organise les éléments verticalement */
+            justify-content: center; /* Centre les éléments verticalement */
+            gap: 5px; /* Ajoute un espacement entre Pseudo et Rating */
           
+          }
+
           .details {
-            display: grid; /* Utilise Grid Layout pour organiser les colonnes */
-            grid-template-columns: repeat(5, 1fr); /* Crée 5 colonnes de largeur égale */
-            gap: 20px; /* Gap par défaut pour les écrans larges */
+            display: flex; /* Utilise Flexbox pour organiser les colonnes en ligne */
+            justify-content: space-between; /* Ajoute un espacement uniforme entre les colonnes */
+            gap: 10px; /* Espacement fixe entre les colonnes */
             text-align: center; /* Centre le texte horizontalement */
+            width: 100%; /* Assure que le conteneur prend toute la largeur disponible */
+            align-items: center; /* Aligne les colonnes au même niveau horizontal */
 
             .column {
+              flex: 1; /* Permet à chaque colonne de s'étendre pour occuper l'espace disponible */
               display: flex; /* Utilise Flexbox pour organiser les éléments verticalement */
-              flex-direction: column; /* Organise les éléments verticalement */
+              flex-direction: column; /* Organise les éléments verticalement dans chaque colonne */
               align-items: center; /* Centre les éléments horizontalement */
               gap: 10px; /* Ajoute un espacement entre les lignes */
-            }
 
-           
-            @media (max-width: 1024px) {
-              gap: 15px; 
-            }
-          
-            @media (max-width: 768px) {
-              gap: 10px; 
-            }
-           
-            @media (max-width: 576px) {
-              gap: 5px; 
+            .pseudo, .rating {
+              display: flex; /* Organise Pseudo et Rating horizontalement */
+              flex-direction: row; /* Aligne les éléments en ligne */
+              justify-content: flex-start; /* Aligne les éléments à gauche */
+              gap: 10px; /* Ajoute un espacement entre Pseudo et Rating */
             }
           }
+        }
 
-          .pseudo {
-            font-weight: bold; /* Met en valeur le pseudo */
-            margin-bottom: 5px; /* Ajoute un espacement sous le pseudo */
-            padding-top: 20px;
+        .pseudo {
+          font-weight: bold; /* Met en valeur le pseudo */
+          margin-bottom: 5px; /* Ajoute un espacement sous le pseudo */
+          padding-top: 10px;
 
-          }
+        }
 
-          .rating {
-            padding-top: 50px;
-            color: $color-medium-green; /* Couleur des étoiles */
-            margin-bottom: 10px; /* Ajoute un espacement sous les étoiles */
-          }
-          
-          .time {
-            font-weight: bold; /* Met en valeur l'heure */
-            color: $color-dark-green; /* Couleur du texte */
-          }
-          .type {
-            background-color: $color-background; /* Applique le fond défini */
-            border-radius: 5px; /* Ajoute des coins arrondis */
-            color: $color-dark-green; /* Couleur du texte */
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
-            text-align: center; /* Centre le texte horizontalement */
-            padding: 5px; /* Ajuste l'espacement interne */
-          }
+        .rating {
+          padding-top: 40px;
+          color: $color-medium-green; /* Couleur des étoiles */
+          margin-bottom: 10px; /* Ajoute un espacement sous les étoiles */
+        }
+        
+        .time {
+          font-weight: bold; /* Met en valeur l'heure */
+          color: $color-dark-green; /* Couleur du texte */
+        }
+        .type {
+          background-color: $color-background; /* Applique le fond défini */
+          border-radius: 5px; /* Ajoute des coins arrondis */
+          color: $color-dark-green; /* Couleur du texte */
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+          text-align: center; /* Centre le texte horizontalement */
+          padding: 5px; /* Ajuste l'espacement interne */
+        }
 
-          .places {
-            color: $color-dark-green; /* Couleur du texte */
-          }
+        .places {
+          color: $color-dark-green; /* Couleur du texte */
+        }
 
-          .price {
-            font-weight: bold; /* Met en valeur le prix */
-            color: $color-dark-green; /* Couleur du texte */
-          }
+        .price {
+          margin-top: 20px;
+          margin-bottom: 16px;
+          font-weight: bold; /* Met en valeur le prix */
+          color: $color-dark-green; /* Couleur du texte */
+        }
 
-          .detail-btn {
-            background-color: $color-medium-green; /* Fond vert moyen */
-            color: $color-light-beige; /* Texte beige */
-            border: none;
-            border-radius: 20px; /* Coins arrondis */
-            padding: 10px 20px; /* Ajuste l'espacement interne */
-            width: 120px; /* Fixe une largeur standard */
-            height: 50px; /* Fixe une hauteur standard */
-            text-align: center; /* Centre le texte horizontalement */
-            display: flex; /* Utilise Flexbox */
-            align-items: center; /* Centre le texte verticalement */
-            justify-content: center; /* Centre le texte horizontalement */
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
-            transition: background-color 0.3s ease; /* Ajoute une transition fluide */
-            font-size: 20px; /* Taille du texte */
+        .detail-btn {
+          background-color: $color-medium-green; /* Fond vert moyen */
+          color: $color-light-beige; /* Texte beige */
+          border: none;
+          border-radius: 20px; /* Coins arrondis */
+          padding: 10px 20px; /* Ajuste l'espacement interne */
+          width: 120px; /* Fixe une largeur standard */
+          height: 50px; /* Fixe une hauteur standard */
+          text-align: center; /* Centre le texte horizontalement */
+          display: flex; /* Utilise Flexbox */
+          align-items: center; /* Centre le texte verticalement */
+          justify-content: center; /* Centre le texte horizontalement */
+          cursor: pointer;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+          transition: background-color 0.3s ease; /* Ajoute une transition fluide */
+          font-size: 20px; /* Taille du texte */
+          margin-top: 16px;
 
-            &:hover {
-              background-color: $color-dark-green; /* Change la couleur de fond au survol */
-            }
+          &:hover {
+            background-color: $color-dark-green; /* Change la couleur de fond au survol */
+}
           }
+        }
+      }
+
+      .profile-column {
+        display: flex; /* Utilise Flexbox pour organiser les éléments horizontalement */
+        align-items: center; /* Centre les éléments verticalement */
+        gap: 20px; /* Ajoute un espacement entre la photo et les autres éléments */
+        padding-right: 40px;
+        border-right: 1px solid $color-medium-green; /* Ligne de séparation en bas */
+
+        .profile-photo {
+          width: 120px; /* Taille fixe de la largeur */
+          height: 120px; /* Taille fixe de la hauteur */
+          object-fit: cover; /* Ajuste l'image à la taille définie */
+          object-position: center; /* Centre l'image */
+          border-radius: 50%; /* Rend la photo circulaire */
+          border: 4px solid $color-medium-green; /* Bordure verte */
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+          flex-shrink: 0; /* Empêche la photo de se réduire */
+        }
+
+        .pseudo-rating, .column {
+          display: flex; /* Utilise Flexbox pour organiser les éléments verticalement */
+          flex-direction: column; /* Organise les éléments verticalement */
+          justify-content: center; /* Centre les éléments verticalement */
+          text-align: left; /* Aligne le texte à gauche */
         }
       }
     }
@@ -488,10 +586,14 @@
 }
 
 .filters-toggle {
-  display: none; /* Masqué par défaut */
+  display: none; /* Affiche le bouton */
+
+  &:hover {
+    background-color: $color-dark-green;
+  }
 }
 
-@media (max-width: 1240px) {
+@media (max-width: 1290px) {
   .filters {
     background-color: transparent; /* Supprime le fond beige */
     padding: 0; /* Supprime le padding */
@@ -500,8 +602,10 @@
   }
 
   .filters-toggle {
-    display: block; /* Affiche le bouton pour les petits écrans */
-    margin: 30px 0; /* Ajoute un espacement vertical */
+    display: block; /* Affiche le bouton */
+    margin-bottom: 0px; /* Ajoute un espacement de 20px au-dessus de .result-card */
+    margin-left: auto; /* Centre le bouton horizontalement */
+    margin-right: auto; /* Centre le bouton horizontalement */
     background-color: $color-medium-green;
     color: $color-light-beige;
     border: none;
@@ -519,7 +623,7 @@
     }
 
     /* Positionnement à droite */
-    @media (max-width: 1240px) {
+    @media (max-width: 1290px) {
     margin-left: auto; /* Pousse le bouton à la fin (droite) */
     margin-right: 0; /* Supprime tout espacement à gauche */
     }

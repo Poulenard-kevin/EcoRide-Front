@@ -24730,11 +24730,12 @@ button.nav-link.dropdown-toggle:hover:active {
   text-align: center; /* Centre le titre horizontalement */
   color: #1F4924; /* Couleur du titre */
   font-weight: 600; /* Poids du texte */
-  padding-bottom: 35px; /* Espacement sous le titre */
+  margin-bottom: 35px;
 }
 .covoiturage-results .results-container {
   display: flex; /* Utilise Flexbox pour aligner les filtres et les résultats côte à côte */
   gap: 30px; /* Ajoute un espacement entre les filtres et les résultats */
+  margin-top: 85px; /* Ajoute un espacement entre le bouton et les résultats */
   /* === FILTRES === */
   /* === FILTRES === */
   /* === FILTRES === */
@@ -24758,7 +24759,7 @@ button.nav-link.dropdown-toggle:hover:active {
 .covoiturage-results .results-container .filters .filters-content {
   display: block; /* Visible par défaut */
 }
-@media (max-width: 1240px) {
+@media (max-width: 1290px) {
   .covoiturage-results .results-container .filters {
     background-color: transparent; /* Supprime le fond beige */
     padding: 0; /* Supprime le padding */
@@ -24937,6 +24938,51 @@ button.nav-link.dropdown-toggle:hover:active {
     margin-bottom: 20px;
   }
 }
+@media (max-width: 990px) {
+  .covoiturage-results .results-container .results .result-card {
+    display: flex; /* Utilise Flexbox pour organiser les éléments */
+    flex-direction: column; /* Passe les éléments en disposition verticale */
+    align-items: center; /* Centre les éléments horizontalement */
+    padding: 15px; /* Réduit le padding interne */
+    gap: 20px; /* Ajoute un espacement entre les sections */
+  }
+  .covoiturage-results .results-container .results .result-card .profile-column {
+    display: flex; /* Utilise Flexbox pour organiser les éléments horizontalement */
+    align-items: center; /* Centre les éléments verticalement */
+    gap: 20px; /* Ajoute un espacement entre la photo et les autres éléments */
+    padding-bottom: 40px;
+    border-bottom: 1px solid #4B8A47; /* Ligne de séparation en bas */
+    padding-right: none;
+    border-right: none;
+  }
+  .covoiturage-results .results-container .results .result-card .result-body {
+    display: flex; /* Active Flexbox */
+    flex-direction: column; /* Passe les colonnes en disposition verticale */
+    align-items: center; /* Centre les colonnes horizontalement */
+    gap: 15px; /* Réduit l'espacement entre les colonnes */
+  }
+  .covoiturage-results .results-container .results .result-card .result-body .profile-photo {
+    margin: 0 auto; /* Centre la photo horizontalement */
+  }
+  .covoiturage-results .results-container .results .result-card .result-body .details {
+    display: grid; /* Utilise Grid Layout pour organiser les colonnes */
+    grid-template-columns: 1fr 1fr; /* Deux colonnes de largeur égale */
+    gap: 10px; /* Ajoute un espacement entre les colonnes */
+    width: 100%; /* Les colonnes occupent toute la largeur disponible */
+  }
+  .covoiturage-results .results-container .results .result-card .result-body .details .column {
+    text-align: center; /* Centre le texte dans chaque colonne */
+  }
+  .covoiturage-results .results-container .results .result-card .result-header {
+    flex-direction: column; /* Passe les éléments en disposition verticale */
+    align-items: center; /* Centre les éléments horizontalement */
+    gap: 10px; /* Ajoute un espacement entre les éléments */
+  }
+  .covoiturage-results .results-container .results .result-card .detail-btn {
+    width: 100%; /* Le bouton occupe toute la largeur disponible */
+    max-width: 200px; /* Fixe une largeur maximale */
+  }
+}
 .covoiturage-results .results-container .results .result-card .result-header {
   position: absolute; /* Positionne au-dessus de .result-card */
   top: -50px; /* Ajuste la position verticale */
@@ -24956,53 +25002,67 @@ button.nav-link.dropdown-toggle:hover:active {
 .covoiturage-results .results-container .results .result-card .result-body {
   display: flex; /* Active Flexbox */
   align-items: center; /* Centre les éléments verticalement */
-  gap: 10px; /* Ajoute un espacement entre les éléments */
+  gap: 30px; /* Ajoute un espacement entre les éléments */
 }
 .covoiturage-results .results-container .results .result-card .result-body .profile-photo {
-  width: 100px; /* Taille de la photo */
-  height: 140px; /* Taille de la photo */
+  width: 120px; /* Taille fixe de la largeur */
+  height: 120px; /* Taille fixe de la hauteur */
   -o-object-fit: cover;
      object-fit: cover; /* Ajuste l'image à la taille définie */
-  -o-object-position: center 30%;
-     object-position: center 30%; /* Décale l'image vers le bas (ajustez la valeur si nécessaire) */
+  -o-object-position: center;
+     object-position: center; /* Centre l'image */
   border-radius: 50%; /* Rend la photo circulaire */
   border: 4px solid #4B8A47; /* Bordure verte */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
-}
-.covoiturage-results .results-container .results .result-card .result-body .details {
-  display: grid; /* Utilise Grid Layout pour organiser les colonnes */
-  grid-template-columns: repeat(5, 1fr); /* Crée 5 colonnes de largeur égale */
-  gap: 20px; /* Gap par défaut pour les écrans larges */
-  text-align: center; /* Centre le texte horizontalement */
-}
-.covoiturage-results .results-container .results .result-card .result-body .details .column {
-  display: flex; /* Utilise Flexbox pour organiser les éléments verticalement */
-  flex-direction: column; /* Organise les éléments verticalement */
-  align-items: center; /* Centre les éléments horizontalement */
-  gap: 10px; /* Ajoute un espacement entre les lignes */
-}
-@media (max-width: 1024px) {
-  .covoiturage-results .results-container .results .result-card .result-body .details {
-    gap: 15px;
-  }
+  margin-left: 10px; /* Ajoute un espacement à gauche */
+  flex-shrink: 0; /* Empêche la photo de se réduire */
 }
 @media (max-width: 768px) {
-  .covoiturage-results .results-container .results .result-card .result-body .details {
-    gap: 10px;
+  .covoiturage-results .results-container .results .result-card .result-body .profile-photo {
+    width: 100px; /* Réduit la taille pour les petits écrans */
+    height: 100px; /* Réduit la taille pour les petits écrans */
   }
 }
 @media (max-width: 576px) {
-  .covoiturage-results .results-container .results .result-card .result-body .details {
-    gap: 5px;
+  .covoiturage-results .results-container .results .result-card .result-body .profile-photo {
+    width: 80px; /* Réduit davantage la taille pour les très petits écrans */
+    height: 80px; /* Réduit davantage la taille pour les très petits écrans */
   }
+}
+.covoiturage-results .results-container .results .result-card .result-body .pseudo-rating {
+  display: flex; /* Organise Pseudo et Rating horizontalement */
+  flex-direction: column; /* Organise les éléments verticalement */
+  justify-content: center; /* Centre les éléments verticalement */
+  gap: 5px; /* Ajoute un espacement entre Pseudo et Rating */
+}
+.covoiturage-results .results-container .results .result-card .result-body .details {
+  display: flex; /* Utilise Flexbox pour organiser les colonnes en ligne */
+  justify-content: space-between; /* Ajoute un espacement uniforme entre les colonnes */
+  gap: 10px; /* Espacement fixe entre les colonnes */
+  text-align: center; /* Centre le texte horizontalement */
+  width: 100%; /* Assure que le conteneur prend toute la largeur disponible */
+  align-items: center; /* Aligne les colonnes au même niveau horizontal */
+}
+.covoiturage-results .results-container .results .result-card .result-body .details .column {
+  flex: 1; /* Permet à chaque colonne de s'étendre pour occuper l'espace disponible */
+  display: flex; /* Utilise Flexbox pour organiser les éléments verticalement */
+  flex-direction: column; /* Organise les éléments verticalement dans chaque colonne */
+  align-items: center; /* Centre les éléments horizontalement */
+  gap: 10px; /* Ajoute un espacement entre les lignes */
+}
+.covoiturage-results .results-container .results .result-card .result-body .details .column .pseudo, .covoiturage-results .results-container .results .result-card .result-body .details .column .rating {
+  display: flex; /* Organise Pseudo et Rating horizontalement */
+  flex-direction: row; /* Aligne les éléments en ligne */
+  justify-content: flex-start; /* Aligne les éléments à gauche */
+  gap: 10px; /* Ajoute un espacement entre Pseudo et Rating */
 }
 .covoiturage-results .results-container .results .result-card .result-body .pseudo {
   font-weight: bold; /* Met en valeur le pseudo */
   margin-bottom: 5px; /* Ajoute un espacement sous le pseudo */
-  padding-top: 20px;
+  padding-top: 10px;
 }
 .covoiturage-results .results-container .results .result-card .result-body .rating {
-  padding-top: 50px;
+  padding-top: 40px;
   color: #4B8A47; /* Couleur des étoiles */
   margin-bottom: 10px; /* Ajoute un espacement sous les étoiles */
 }
@@ -25022,6 +25082,8 @@ button.nav-link.dropdown-toggle:hover:active {
   color: #1F4924; /* Couleur du texte */
 }
 .covoiturage-results .results-container .results .result-card .result-body .price {
+  margin-top: 20px;
+  margin-bottom: 16px;
   font-weight: bold; /* Met en valeur le prix */
   color: #1F4924; /* Couleur du texte */
 }
@@ -25041,16 +25103,45 @@ button.nav-link.dropdown-toggle:hover:active {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
   transition: background-color 0.3s ease; /* Ajoute une transition fluide */
   font-size: 20px; /* Taille du texte */
+  margin-top: 16px;
 }
 .covoiturage-results .results-container .results .result-card .result-body .detail-btn:hover {
   background-color: #1F4924; /* Change la couleur de fond au survol */
 }
-
-.filters-toggle {
-  display: none; /* Masqué par défaut */
+.covoiturage-results .results-container .results .profile-column {
+  display: flex; /* Utilise Flexbox pour organiser les éléments horizontalement */
+  align-items: center; /* Centre les éléments verticalement */
+  gap: 20px; /* Ajoute un espacement entre la photo et les autres éléments */
+  padding-right: 40px;
+  border-right: 1px solid #4B8A47; /* Ligne de séparation en bas */
+}
+.covoiturage-results .results-container .results .profile-column .profile-photo {
+  width: 120px; /* Taille fixe de la largeur */
+  height: 120px; /* Taille fixe de la hauteur */
+  -o-object-fit: cover;
+     object-fit: cover; /* Ajuste l'image à la taille définie */
+  -o-object-position: center;
+     object-position: center; /* Centre l'image */
+  border-radius: 50%; /* Rend la photo circulaire */
+  border: 4px solid #4B8A47; /* Bordure verte */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+  flex-shrink: 0; /* Empêche la photo de se réduire */
+}
+.covoiturage-results .results-container .results .profile-column .pseudo-rating, .covoiturage-results .results-container .results .profile-column .column {
+  display: flex; /* Utilise Flexbox pour organiser les éléments verticalement */
+  flex-direction: column; /* Organise les éléments verticalement */
+  justify-content: center; /* Centre les éléments verticalement */
+  text-align: left; /* Aligne le texte à gauche */
 }
 
-@media (max-width: 1240px) {
+.filters-toggle {
+  display: none; /* Affiche le bouton */
+}
+.filters-toggle:hover {
+  background-color: #1F4924;
+}
+
+@media (max-width: 1290px) {
   .filters {
     background-color: transparent; /* Supprime le fond beige */
     padding: 0; /* Supprime le padding */
@@ -25058,8 +25149,10 @@ button.nav-link.dropdown-toggle:hover:active {
     display: none; /* Masque la div "Filtres" sur les petits écrans */
   }
   .filters-toggle {
-    display: block; /* Affiche le bouton pour les petits écrans */
-    margin: 30px 0; /* Ajoute un espacement vertical */
+    display: block; /* Affiche le bouton */
+    margin-bottom: 0px; /* Ajoute un espacement de 20px au-dessus de .result-card */
+    margin-left: auto; /* Centre le bouton horizontalement */
+    margin-right: auto; /* Centre le bouton horizontalement */
     background-color: #4B8A47;
     color: #F1E7D1;
     border: none;
@@ -25077,7 +25170,7 @@ button.nav-link.dropdown-toggle:hover:active {
     color: #F1E7D1;
   }
 }
-@media (max-width: 1240px) and (max-width: 1240px) {
+@media (max-width: 1290px) and (max-width: 1290px) {
   .filters-toggle {
     margin-left: auto; /* Pousse le bouton à la fin (droite) */
     margin-right: 0; /* Supprime tout espacement à gauche */

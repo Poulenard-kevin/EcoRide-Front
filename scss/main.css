@@ -24714,16 +24714,35 @@ button.nav-link.dropdown-toggle:hover:active {
   margin-right: 100px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
+@media (max-width: 768px) {
+  .covoiturage-results {
+    margin-left: 50px;
+    margin-right: 50px;
+  }
+}
+@media (max-width: 576px) {
+  .covoiturage-results {
+    margin-left: 25px;
+    margin-right: 25px;
+  }
+}
 .covoiturage-results .results-title {
   text-align: center; /* Centre le titre horizontalement */
-  font-size: 2rem; /* Taille du titre */
   color: #1F4924; /* Couleur du titre */
   font-weight: 600; /* Poids du texte */
-  margin-bottom: 75px; /* Espacement sous le titre */
+  padding-bottom: 35px; /* Espacement sous le titre */
 }
 .covoiturage-results .results-container {
   display: flex; /* Utilise Flexbox pour aligner les filtres et les résultats côte à côte */
   gap: 30px; /* Ajoute un espacement entre les filtres et les résultats */
+  /* === FILTRES === */
+  /* === FILTRES === */
+  /* === FILTRES === */
+  /* === FILTRES === */
+  /* === Liste === */
+  /* === Liste === */
+  /* === Liste === */
+  /* === Liste === */
 }
 .covoiturage-results .results-container .filters {
   flex: 1; /* Les filtres occupent 1 part de l'espace disponible */
@@ -24734,6 +24753,18 @@ button.nav-link.dropdown-toggle:hover:active {
   max-width: 300px;
   height: auto;
   margin-bottom: 60px;
+  display: block; /* Visible par défaut sur les grands écrans */
+}
+.covoiturage-results .results-container .filters .filters-content {
+  display: block; /* Visible par défaut */
+}
+@media (max-width: 1240px) {
+  .covoiturage-results .results-container .filters {
+    background-color: transparent; /* Supprime le fond beige */
+    padding: 0; /* Supprime le padding */
+    margin-bottom: 0; /* Supprime la marge en bas */
+    display: none; /* Masque la div "Filtres" sur les petits écrans */
+  }
 }
 .covoiturage-results .results-container .filters .filter-group {
   margin-bottom: 20px;
@@ -24853,10 +24884,26 @@ button.nav-link.dropdown-toggle:hover:active {
   background-color: #4B8A47;
   color: #F1E7D1;
 }
+.covoiturage-results .results-container .filters .filter-buttons .apply-btn:hover {
+  background-color: #1F4924;
+}
 .covoiturage-results .results-container .filters .filter-buttons .reset-btn {
   background-color: #F1E7D1;
   color: #4B8A47;
   border: 1px solid #4B8A47;
+}
+.covoiturage-results .results-container .filters .filter-buttons .reset-btn:hover {
+  background-color: #1F4924;
+  color: #F1E7D1;
+}
+@media (max-width: 768px) {
+  .covoiturage-results .results-container .filters {
+    display: none; /* Masque la div "Filtres" sur les petits écrans */
+  }
+  .covoiturage-results .results-container .filters-toggle {
+    display: block; /* Affiche le bouton "Filtres" pour les petits écrans */
+    margin: 10px 20px; /* Centre le bouton horizontalement */
+  }
 }
 .covoiturage-results .results-container .results {
   flex: 2; /* Les résultats occupent 2 parts de l'espace disponible */
@@ -24869,80 +24916,114 @@ button.nav-link.dropdown-toggle:hover:active {
   padding: 20px; /* Espacement interne */
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ombre légère */
   margin-bottom: 60px; /* Espacement entre les cartes */
+  width: 100%; /* La carte occupe toute la largeur de son conteneur */
+  max-width: 100%; /* Empêche la carte de dépasser son conteneur */
+}
+@media (max-width: 1024px) {
+  .covoiturage-results .results-container .results .result-card {
+    padding: 15px;
+    margin-bottom: 40px;
+  }
+}
+@media (max-width: 768px) {
+  .covoiturage-results .results-container .results .result-card {
+    padding: 10px;
+    margin-bottom: 30px;
+  }
+}
+@media (max-width: 576px) {
+  .covoiturage-results .results-container .results .result-card {
+    padding: 5px;
+    margin-bottom: 20px;
+  }
 }
 .covoiturage-results .results-container .results .result-card .result-header {
   position: absolute; /* Positionne au-dessus de .result-card */
-  top: -40px; /* Ajuste la position verticale */
+  top: -50px; /* Ajuste la position verticale */
   left: 20px; /* Ajuste la position horizontale */
   display: flex; /* Utilise Flexbox pour organiser les éléments */
   justify-content: flex-start; /* Aligne les éléments à gauche */
   align-items: center; /* Centre verticalement les éléments */
   margin-bottom: 15px; /* Ajoute un espacement sous la date */
 }
-.covoiturage-results .results-container .results .result-card .result-header .date, .covoiturage-results .results-container .results .result-card .result-header .time {
+.covoiturage-results .results-container .results .result-card .result-header .date {
   background-color: #4B8A47; /* Fond vert moyen */
   color: #F1E7D1; /* Texte beige */
-  padding: 5px 15px; /* Ajuste l'espacement interne */
+  padding: 10px 15px; /* Ajuste l'espacement interne */
   border-radius: 20px; /* Coins arrondis */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
-  text-align: center; /* Centre le texte horizontalement */
-  white-space: nowrap; /* Empêche le texte de passer à la ligne */
-}
-.covoiturage-results .results-container .results .result-card .result-header .date {
-  font-weight: bold; /* Met en valeur la date */
 }
 .covoiturage-results .results-container .results .result-card .result-body {
   display: flex; /* Active Flexbox */
   align-items: center; /* Centre les éléments verticalement */
-  gap: 15px; /* Ajoute un espacement entre les éléments */
+  gap: 10px; /* Ajoute un espacement entre les éléments */
 }
 .covoiturage-results .results-container .results .result-card .result-body .profile-photo {
-  width: 120px; /* Taille de la photo */
-  height: 120px; /* Taille de la photo */
+  width: 100px; /* Taille de la photo */
+  height: 140px; /* Taille de la photo */
   -o-object-fit: cover;
      object-fit: cover; /* Ajuste l'image à la taille définie */
+  -o-object-position: center 30%;
+     object-position: center 30%; /* Décale l'image vers le bas (ajustez la valeur si nécessaire) */
   border-radius: 50%; /* Rend la photo circulaire */
   border: 4px solid #4B8A47; /* Bordure verte */
-}
-.covoiturage-results .results-container .results .result-card .result-body .info {
-  flex: 1; /* Prend tout l'espace disponible */
-  display: flex;
-  flex-direction: column; /* Organise les éléments verticalement */
-  align-items: center; /* Centre les éléments horizontalement */
-  justify-content: center; /* Centre les éléments verticalement */
-  gap: 5px; /* Ajoute un espacement uniforme entre les éléments */
-}
-.covoiturage-results .results-container .results .result-card .result-body .info .pseudo {
-  margin-bottom: 5px; /* Espacement sous le pseudo */
-}
-.covoiturage-results .results-container .results .result-card .result-body .info .rating {
-  color: #4B8A47; /* Couleur des étoiles */
-  font-size: 30px; /* Taille des étoiles */
-  margin-bottom: 5px; /* Espacement sous le pseudo */
-}
-.covoiturage-results .results-container .results .result-card .result-body .info .type {
-  background-color: #CACFAA; /* Applique le fond défini */
-  border-radius: 5px; /* Ajoute des coins arrondis */
-  padding: 5px 10px; /* Ajoute un espacement interne */
-  color: #1F4924; /* Couleur du texte */
-  display: inline-block; /* Permet au cadre de s'adapter au contenu */
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
-  text-align: center; /* Centre le texte horizontalement */
-  margin-bottom: 5px; /* Espacement sous le pseudo */
 }
 .covoiturage-results .results-container .results .result-card .result-body .details {
-  flex: 1; /* Prend tout l'espace disponible */
-  text-align: left; /* Aligne le texte à gauche */
-  display: flex;
-  flex-direction: column;
-  gap: 5px; /* Espacement entre les lignes */
+  display: grid; /* Utilise Grid Layout pour organiser les colonnes */
+  grid-template-columns: repeat(5, 1fr); /* Crée 5 colonnes de largeur égale */
+  gap: 20px; /* Gap par défaut pour les écrans larges */
+  text-align: center; /* Centre le texte horizontalement */
 }
-.covoiturage-results .results-container .results .result-card .result-body .details p {
-  display: flex; /* Active Flexbox pour aligner le texte et l'heure */
-  justify-content: space-between; /* Place le texte et l'heure aux extrémités */
+.covoiturage-results .results-container .results .result-card .result-body .details .column {
+  display: flex; /* Utilise Flexbox pour organiser les éléments verticalement */
+  flex-direction: column; /* Organise les éléments verticalement */
+  align-items: center; /* Centre les éléments horizontalement */
+  gap: 10px; /* Ajoute un espacement entre les lignes */
 }
-.covoiturage-results .results-container .results .result-card .result-body .details p .time {
-  font-weight: bold; /* Met en valeur les heures */
+@media (max-width: 1024px) {
+  .covoiturage-results .results-container .results .result-card .result-body .details {
+    gap: 15px;
+  }
+}
+@media (max-width: 768px) {
+  .covoiturage-results .results-container .results .result-card .result-body .details {
+    gap: 10px;
+  }
+}
+@media (max-width: 576px) {
+  .covoiturage-results .results-container .results .result-card .result-body .details {
+    gap: 5px;
+  }
+}
+.covoiturage-results .results-container .results .result-card .result-body .pseudo {
+  font-weight: bold; /* Met en valeur le pseudo */
+  margin-bottom: 5px; /* Ajoute un espacement sous le pseudo */
+  padding-top: 20px;
+}
+.covoiturage-results .results-container .results .result-card .result-body .rating {
+  padding-top: 50px;
+  color: #4B8A47; /* Couleur des étoiles */
+  margin-bottom: 10px; /* Ajoute un espacement sous les étoiles */
+}
+.covoiturage-results .results-container .results .result-card .result-body .time {
+  font-weight: bold; /* Met en valeur l'heure */
+  color: #1F4924; /* Couleur du texte */
+}
+.covoiturage-results .results-container .results .result-card .result-body .type {
+  background-color: #CACFAA; /* Applique le fond défini */
+  border-radius: 5px; /* Ajoute des coins arrondis */
+  color: #1F4924; /* Couleur du texte */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+  text-align: center; /* Centre le texte horizontalement */
+  padding: 5px; /* Ajuste l'espacement interne */
+}
+.covoiturage-results .results-container .results .result-card .result-body .places {
+  color: #1F4924; /* Couleur du texte */
+}
+.covoiturage-results .results-container .results .result-card .result-body .price {
+  font-weight: bold; /* Met en valeur le prix */
+  color: #1F4924; /* Couleur du texte */
 }
 .covoiturage-results .results-container .results .result-card .result-body .detail-btn {
   background-color: #4B8A47; /* Fond vert moyen */
@@ -24959,11 +25040,174 @@ button.nav-link.dropdown-toggle:hover:active {
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
   transition: background-color 0.3s ease; /* Ajoute une transition fluide */
-  align-self: flex-end; /* Positionne le bouton en bas à droite */
   font-size: 20px; /* Taille du texte */
 }
 .covoiturage-results .results-container .results .result-card .result-body .detail-btn:hover {
-  background-color: rgb(56.6985645933, 104.3253588517, 53.6746411483); /* Fonce le vert au survol */
+  background-color: #1F4924; /* Change la couleur de fond au survol */
+}
+
+.filters-toggle {
+  display: none; /* Masqué par défaut */
+}
+
+@media (max-width: 1240px) {
+  .filters {
+    background-color: transparent; /* Supprime le fond beige */
+    padding: 0; /* Supprime le padding */
+    margin-bottom: 0; /* Supprime la marge en bas */
+    display: none; /* Masque la div "Filtres" sur les petits écrans */
+  }
+  .filters-toggle {
+    display: block; /* Affiche le bouton pour les petits écrans */
+    margin: 30px 0; /* Ajoute un espacement vertical */
+    background-color: #4B8A47;
+    color: #F1E7D1;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 20px;
+    cursor: pointer;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease;
+    font-size: 20px;
+    /* Positionnement à droite */
+  }
+  .filters-toggle:hover {
+    background-color: #1F4924;
+    color: #F1E7D1;
+  }
+}
+@media (max-width: 1240px) and (max-width: 1240px) {
+  .filters-toggle {
+    margin-left: auto; /* Pousse le bouton à la fin (droite) */
+    margin-right: 0; /* Supprime tout espacement à gauche */
+  }
+}
+/* Styles pour l'Offcanvas */
+/* Styles pour l'Offcanvas */
+/* Styles pour l'Offcanvas */
+/* Styles pour l'Offcanvas */
+.offcanvas {
+  background-color: #F1E7D1; /* Fond beige similaire à .filters */
+  border-radius: 20px; /* Coins arrondis */
+  padding: 20px; /* Espacement interne */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+  color: #1F4924; /* Couleur du texte */
+  max-width: 300px; /* Largeur similaire à .filters */
+  margin: 0 auto; /* Centre l'Offcanvas horizontalement */
+}
+.offcanvas .offcanvas-header {
+  border-bottom: 1px solid #4B8A47; /* Ajoute une bordure en bas */
+  margin-bottom: 20px; /* Espacement sous le header */
+}
+.offcanvas .offcanvas-header h5, .offcanvas .offcanvas-header .h5 {
+  font-size: 1.5rem; /* Taille du titre */
+  font-weight: bold; /* Met en valeur le titre */
+  color: #1F4924; /* Couleur du titre */
+}
+.offcanvas .offcanvas-body .filter-group {
+  margin-bottom: 20px;
+}
+.offcanvas .offcanvas-body .filter-group label {
+  display: flex; /* Aligne la case à cocher et le texte sur la même ligne */
+  align-items: center;
+  gap: 10px; /* Ajoute un espacement entre la case et le texte */
+  color: #1F4924; /* Couleur du texte */
+  margin-bottom: 10px; /* Ajoute une marge en bas */
+}
+.offcanvas .offcanvas-body .filter-group input[type=checkbox] {
+  width: 13px;
+  height: 13px;
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
+  background-color: #F8F0E5;
+  border: 2px solid #4B8A47;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+}
+.offcanvas .offcanvas-body .filter-group input[type=checkbox]:checked {
+  background-color: #4B8A47;
+  border-color: #4B8A47;
+}
+.offcanvas .offcanvas-body .filter-group input[type=checkbox]:checked::after {
+  content: "✔";
+  color: #F1E7D1;
+  font-size: 10px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.offcanvas .offcanvas-body .filter-group input[type=text] {
+  background-color: #F8F0E5; /* Applique la couleur de fond */
+  border: 1px solid #4B8A47; /* Bordure par défaut */
+  border-radius: 5px; /* Ajoute des coins arrondis */
+  padding: 10px; /* Ajoute un espace interne */
+  width: 100%; /* L'input occupe toute la largeur disponible */
+  color: #1F4924; /* Couleur du texte */
+  font-size: 1rem; /* Taille du texte */
+  transition: border-color 0.3s ease; /* Ajoute une transition pour un effet fluide */
+}
+.offcanvas .offcanvas-body .filter-group input[type=text]:focus {
+  outline: none; /* Supprime le contour par défaut */
+  border-color: #4B8A47; /* Change la couleur de la bordure en vert */
+  box-shadow: 0 0 5px #4B8A47; /* Ajoute un effet lumineux autour */
+}
+.offcanvas .offcanvas-body .filter-group select#note-mini {
+  background-color: #F8F0E5; /* Applique la couleur de fond */
+  border: 1px solid #1F4924; /* Bordure du select */
+  border-radius: 5px; /* Ajoute des coins arrondis */
+  padding: 10px; /* Ajoute un espace interne */
+  width: 100%; /* Le select occupe toute la largeur disponible */
+  color: #1F4924; /* Couleur du texte */
+  font-size: 1rem; /* Taille du texte */
+  transition: border-color 0.3s ease; /* Ajoute une transition fluide */
+  border-color: #4B8A47;
+}
+.offcanvas .offcanvas-body .filter-group select#note-mini:focus {
+  outline: none; /* Supprime le contour par défaut */
+  border-color: #4B8A47; /* Change la couleur de la bordure en vert moyen */
+  box-shadow: 0 0 5px #4B8A47; /* Ajoute un effet lumineux autour */
+}
+.offcanvas .offcanvas-body .filter-group select#note-mini option {
+  background-color: #4B8A47; /* Fond des options */
+  color: #F1E7D1; /* Couleur du texte des options */
+  border: 1px solid #1F4924; /* Bordure des options */
+  padding: 5px; /* Ajoute un espace interne */
+}
+.offcanvas .offcanvas-body .filter-buttons {
+  display: flex;
+  gap: 10px;
+}
+.offcanvas .offcanvas-body .filter-buttons .apply-btn, .offcanvas .offcanvas-body .filter-buttons .reset-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+}
+.offcanvas .offcanvas-body .filter-buttons .apply-btn {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+}
+.offcanvas .offcanvas-body .filter-buttons .apply-btn:hover {
+  background-color: #1F4924;
+}
+.offcanvas .offcanvas-body .filter-buttons .reset-btn {
+  background-color: #F1E7D1;
+  color: #4B8A47;
+  border: 1px solid #4B8A47;
+}
+.offcanvas .offcanvas-body .filter-buttons .reset-btn:hover {
+  background-color: #1F4924;
+  color: #F1E7D1;
+}
+
+.filters-title {
+  margin-bottom: 20px; /* Ajoute un espacement sous le titre */
+  text-align: center; /* Centre le texte horizontalement */
 }
 
 html {

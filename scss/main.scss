@@ -6,6 +6,8 @@
 
 // Import des variables et styles personnalisés
 @import 'custom';
+@import 'covoiturage';
+
 
 html{
     position: relative;
@@ -197,7 +199,7 @@ footer.footer{
   display: flex;
   background-color: $color-background;
   border-radius: 30px;
-  padding: 10px 90px;
+  padding: 30px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   width: 100%;
   
@@ -209,7 +211,7 @@ footer.footer{
   @media (max-width: 1240px) {
     flex-direction: column; /* Passe les éléments en colonne */
     gap: 15px;
-    padding: 20px;
+    padding: 30px;
     margin-left: 100px;
     margin-right: 100px;
   }
@@ -245,7 +247,7 @@ footer.footer{
   transition: box-shadow 0.3s ease;
 
   @media (max-width: 1240px) {
-    width: 500px; /* Prend toute la largeur disponible */
+    width: 500px; /* Prend toute la largeur à 500px */
     gap: 15px;
     padding-left: 20px;
     padding-right: 20px;
@@ -475,6 +477,5 @@ footer.footer{
   margin-bottom: 15px;
   color: $color-medium-green; /* Couleur de l'icône */
 }
-
 
 

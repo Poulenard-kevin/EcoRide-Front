@@ -24923,19 +24923,20 @@ button.nav-link.dropdown-toggle:hover:active {
 @media (max-width: 1024px) {
   .covoiturage-results .results-container .results .result-card {
     padding: 15px;
-    margin-bottom: 40px;
+    padding-bottom: 20px;
+    margin-bottom: 60px;
   }
 }
 @media (max-width: 768px) {
   .covoiturage-results .results-container .results .result-card {
     padding: 10px;
-    margin-bottom: 30px;
+    margin-bottom: 60px;
   }
 }
 @media (max-width: 576px) {
   .covoiturage-results .results-container .results .result-card {
     padding: 5px;
-    margin-bottom: 20px;
+    margin-bottom: 60px;
   }
 }
 @media (max-width: 990px) {
@@ -24952,7 +24953,7 @@ button.nav-link.dropdown-toggle:hover:active {
     gap: 20px; /* Ajoute un espacement entre la photo et les autres éléments */
     padding-bottom: 40px;
     border-bottom: 1px solid #4B8A47; /* Ligne de séparation en bas */
-    padding-right: none;
+    padding-right: 0px;
     border-right: none;
   }
   .covoiturage-results .results-container .results .result-card .result-body {
@@ -25135,12 +25136,61 @@ button.nav-link.dropdown-toggle:hover:active {
 }
 
 .filters-toggle {
-  display: none; /* Affiche le bouton */
-}
-.filters-toggle:hover {
-  background-color: #1F4924;
+  display: none; /* Masqué par défaut */
 }
 
+@media (max-width: 576px) {
+  .result-card .detail-btn {
+    padding: 10px 14px !important; /* Réduit le padding du bouton */
+    font-size: 14px !important; /* Ajuste la taille de la police */
+    width: auto !important; /* Ajuste automatiquement la largeur */
+    height: auto !important; /* Ajuste automatiquement la hauteur */
+  }
+  .result-card .details {
+    display: grid; /* Utilise Grid Layout */
+    grid-template-columns: 1fr; /* Passe à une seule colonne */
+    gap: 10px; /* Ajoute un espacement entre les éléments */
+    width: 100%; /* Les colonnes occupent toute la largeur disponible */
+  }
+  .result-card .details .column {
+    text-align: center; /* Centre le texte horizontalement */
+    font-size: 12px; /* Réduit la taille de la police */
+  }
+  .filters-toggle {
+    display: none; /* Masqué par défaut */
+    font-size: 14px !important; /* Réduit la taille de la police */
+    padding: 8px 12px !important; /* Réduit le padding interne */
+    width: 100px !important; /* Réduit la largeur du bouton */
+    height: auto !important; /* Ajuste automatiquement la hauteur */
+  }
+  .filters-toggle:hover {
+    background-color: #1F4924;
+  }
+  .covoiturage-results {
+    width: 90%; /* Réduit la largeur à 90% de l'écran */
+  }
+  .pseudo {
+    font-size: 14px; /* Taille réduite pour le pseudo */
+  }
+  .rating {
+    font-size: 12px; /* Taille réduite pour les étoiles */
+  }
+  .time {
+    margin-top: 8px;
+    margin-bottom: 20px;
+  }
+  .price {
+    margin-bottom: 20px;
+  }
+  .type, .places, .time {
+    font-size: 12px; /* Taille réduite pour les autres textes */
+  }
+  .date {
+    font-size: 14px !important; /* Taille réduite pour la date */
+    padding: 8px 12px !important; /* Ajuste le padding pour une meilleure lisibilité */
+    margin-top: 12px;
+  }
+}
 @media (max-width: 1290px) {
   .filters {
     background-color: transparent; /* Supprime le fond beige */

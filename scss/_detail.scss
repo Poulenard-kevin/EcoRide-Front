@@ -1,0 +1,218 @@
+@import 'custom'; // on utilise les variables / mixins définies dans custom
+
+.big-title {
+    position: relative;
+    top: -20px; // Positionne à 100px du haut
+    margin-left: 100px; // Positionne à 50px de la gauche
+    margin-bottom: 25px; // Ajoute une marge de 25px en bas
+    text-align: left; // Aligne le texte à gauche
+    transform: none; // Supprime la transformation pour le centrage
+  
+    @media (max-width: 768px) {
+      font-size: $font-size-h1; /* Réduit encore la taille pour les écrans de tablette */
+      margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
+      margin-right: 50px;
+    }
+  
+    @media (max-width: 576px) {
+      font-size: $font-size-h2; /* Réduit encore la taille pour les écrans mobiles */
+      margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
+      margin-right: 25px;
+    }
+  }
+
+
+  .detail-container {
+    max-width: 600px;
+    background-color: $color-background;
+    border-radius: 15px;
+    padding: 2rem;
+    font-family: $font-body;
+    color: $color-dark-green;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    margin-left: 100px;
+    margin-right: 100px;
+  
+    .profile-section {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      background-color: $color-light-beige;
+      padding: 1rem 2rem;
+      border-radius: 15px;
+  
+      .profile-photo img {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        box-shadow: 0 0 8px rgba(0,0,0,0.15);
+      }
+  
+      .profile-info {
+        flex-grow: 1;
+  
+        .pseudo {
+          font-family: $font-title;
+          font-weight: $weight-semibold;
+          font-size: 1.5rem;
+          margin-bottom: 0.25rem;
+        }
+  
+        .rating {
+          font-size: 1.25rem;
+          color: $color-medium-green;
+        }
+      }
+  
+      .btn-reserver {
+        background-color: $color-medium-green;
+        color: $color-light-beige;
+        border: none;
+        padding: 0.5rem 1.5rem;
+        border-radius: 25px;
+        font-weight: $weight-semibold;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+  
+        &:hover {
+          background-color: $color-dark-green;
+        }
+      }
+  
+      .badge-economique {
+        background-color: $color-light-beige;
+        color: $color-dark-green;
+        padding: 0.25rem 1rem;
+        border-radius: 20px;
+        font-weight: $weight-semibold;
+        font-size: 0.9rem;
+        margin-left: 1rem;
+        align-self: flex-start;
+      }
+    }
+  
+    .trip-dates {
+      background-color: $color-light-beige;
+      border-radius: 15px;
+      margin: 1.5rem 0;
+      padding: 1rem 2rem;
+      text-align: center;
+  
+      .badge-date {
+        background-color: $color-medium-green;
+        color: $color-light-beige;
+        padding: 0.3rem 1.2rem;
+        border-radius: 20px;
+        font-weight: $weight-semibold;
+        font-size: 1rem;
+        display: inline-block;
+        margin-bottom: 1rem;
+      }
+  
+      .locations, .times {
+        display: flex;
+        justify-content: space-around;
+        margin-bottom: 0.5rem;
+  
+        span {
+          background-color: $color-light-beige;
+          padding: 0.3rem 1.2rem;
+          border-radius: 20px;
+          font-weight: $weight-semibold;
+          font-size: 1rem;
+          min-width: 80px;
+          text-align: center;
+        }
+      }
+    }
+  
+    .info-preferences {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+  
+      .info, .preferences {
+        background-color: $color-light-beige;
+        border-radius: 15px;
+        padding: 1rem 1.5rem;
+        flex: 1;
+  
+        h3 {
+          font-family: $font-title;
+          font-weight: $weight-semibold;
+          margin-bottom: 1rem;
+          color: $color-dark-green;
+        }
+  
+        p {
+          background-color: $color-light-beige;
+          border-radius: 15px;
+          padding: 0.5rem 1rem;
+          margin-bottom: 0.5rem;
+          font-weight: $weight-regular;
+          font-size: 1rem;
+        }
+      }
+    }
+  
+    .vehicle-info {
+      background-color: $color-light-beige;
+      border-radius: 15px;
+      padding: 1rem 1.5rem;
+      margin-bottom: 1.5rem;
+  
+      h3 {
+        font-family: $font-title;
+        font-weight: $weight-semibold;
+        margin-bottom: 1rem;
+        color: $color-dark-green;
+      }
+  
+      p {
+        background-color: $color-light-beige;
+        border-radius: 15px;
+        padding: 0.5rem 1rem;
+        margin-bottom: 0.5rem;
+        font-weight: $weight-regular;
+        font-size: 1rem;
+        max-width: 200px;
+      }
+    }
+  
+    .driver-reviews {
+      h3 {
+        font-family: $font-title;
+        font-weight: $weight-semibold;
+        margin-bottom: 1rem;
+        color: $color-dark-green;
+      }
+  
+      .review {
+        background-color: $color-light-beige;
+        border-radius: 15px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 1rem;
+        font-style: italic;
+        font-size: 1rem;
+        line-height: 1.4;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+    }
+  
+    @media (max-width: 768px) {
+      .info-preferences {
+        flex-direction: column;
+      }
+      .profile-section {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+  
+        .btn-reserver {
+          width: 100%;
+        }
+      }
+    }
+  }

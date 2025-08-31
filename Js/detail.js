@@ -1,13 +1,22 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  const params = new URLSearchParams(window.location.search);
-  const id = params.get('id');
+  // Récupérer l'id depuis pathname (/detail/1)
+  const segments = window.location.pathname.split('/').filter(Boolean); // ["detail", "1"]
+  let id = segments.length >= 2 ? decodeURIComponent(segments[1]) : null;
+
+  // Fallback : si pas d'id dans pathname, chercher dans query string (/detail?id=1)
+  if (!id) {
+    const q = new URLSearchParams(window.location.search);
+    if (q.has('id')) {
+      id = q.get('id');
+    }
+  }
 
   if (!id) {
-    console.warn("Aucun ID trouvé dans l'URL");
+    console.warn("Aucun id trouvé dans l'URL");
     return;
   }
 
-  // Exemple de données mock — à remplacer par fetch('/api/trips/' + id)
+  // Données mock — remplace par fetch réel si disponible
   const tripsMock = [
     {
       id: "1",
@@ -27,15 +36,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         "Trajet agréable et efficace. Le chauffeur était courtois et la conduite souple. Parfait pour mes déplacements quotidiens."
       ]
     }
+    // Ajoute d'autres trajets mock si besoin
   ];
 
   const trip = tripsMock.find(t => String(t.id) === String(id));
   if (!trip) {
-    document.getElementById('main-page').innerHTML = '<p>Trajet non trouvé.</p>';
+    const mainPage = document.getElementById('main-page');
+    if (mainPage) mainPage.innerHTML = '<p>Trajet non trouvé.</p>';
     return;
   }
 
-  // Injection dans le DOM — adapte les sélecteurs selon ton HTML
+  // Sélecteurs DOM
   const pseudoEl = document.querySelector('.pseudo');
   const ratingEl = document.querySelector('.rating');
   const photoEl = document.querySelector('.profile-photo img') || document.querySelector('.profile-photo');
@@ -58,24 +69,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (dateBadge) dateBadge.textContent = trip.date;
   if (fromEl) fromEl.textContent = trip.from;
   if (toEl) toEl.textContent = trip.to;
-  if (timeEls && timeEls.length >= 2) {
+  if (timeEls.length >= 2) {
     timeEls[0].textContent = trip.timeStart;
     timeEls[1].textContent = trip.timeEnd;
   }
 
-  if (infoItems && infoItems.length >= 3) {
+  if (infoItems.length >= 3) {
     infoItems[0].textContent = `Prix : ${trip.price}`;
     infoItems[1].textContent = `Durée : ${trip.duration}`;
     infoItems[2].textContent = `Place disponible : ${trip.seats}`;
   }
 
-  if (prefItems && prefItems.length) {
+  if (prefItems.length) {
     for (let i = 0; i < prefItems.length; i++) {
       prefItems[i].textContent = trip.prefs[i] || "";
     }
   }
 
-  if (vehicleItems && vehicleItems.length >= 2) {
+  if (vehicleItems.length >= 2) {
     vehicleItems[0].textContent = trip.vehicle.model;
     vehicleItems[1].textContent = trip.vehicle.type;
   }

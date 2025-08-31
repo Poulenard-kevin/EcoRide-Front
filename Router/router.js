@@ -29,7 +29,9 @@ const getRouteByPathname = (pathname) => {
   const exact = allRoutes.find(r => r.url === pathname);
   if (exact) return exact;
   for (const r of allRoutes) {
-    if (r.url !== "/" && pathname.startsWith(r.url + "/")) return r;
+    if (r.url !== "/" && pathname.startsWith(r.url + "/")) {
+      return r;
+    }
   }
   return route404;
 };
@@ -72,10 +74,14 @@ const LoadContentPage = async () => {
     if (!res.ok) throw new Error("HTML non trouvé");
     const html = await res.text();
 
-    if (mainPage) mainPage.innerHTML = html;
+    if (mainPage) {
+      mainPage.innerHTML = html;
+    }
 
+    // Supprimer scripts injectés précédemment
     document.querySelectorAll('script[data-route-script]').forEach(s => s.remove());
 
+    // Injecter script associé à la route (si indiqué)
     if (route.pathJS && route.pathJS.trim() !== "") {
       const scriptTag = document.createElement("script");
       scriptTag.type = "text/javascript";
@@ -98,7 +104,9 @@ const LoadContentPage = async () => {
 
     document.title = `${route.title} - ${websiteName}`;
   } catch (err) {
-    if (mainPage) mainPage.innerHTML = '<p style="color:red; text-align:center;">Erreur lors du chargement de la page.</p>';
+    if (mainPage) {
+      mainPage.innerHTML = '<p style="color:red; text-align:center;">Erreur lors du chargement de la page.</p>';
+    }
     console.error("Erreur fetch page:", err);
   } finally {
     hideLoader();

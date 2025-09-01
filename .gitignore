@@ -10,4 +10,4 @@ scss/main.css.map
 
 # Autres fichiers temporaires ou IDE (exemple)
 .vscode/
-*.log
+*.logscss/*.bak

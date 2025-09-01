@@ -12104,7 +12104,7 @@ p {
 
 .navbar-brand:hover {
   color: #4B8A47; /* Couleur au survol */
-  transform: scale(1.1); /* Zoom de 10% au survol */
+  transform: scale(1.03); /* Zoom de 10% au survol */
   transition: color 0.3s ease, transform 0.3s ease;
 }
 
@@ -24404,7 +24404,7 @@ p {
 
 .navbar-brand:hover {
   color: #4B8A47; /* Couleur au survol */
-  transform: scale(1.1); /* Zoom de 10% au survol */
+  transform: scale(1.03); /* Zoom de 10% au survol */
   transition: color 0.3s ease, transform 0.3s ease;
 }
 
@@ -25353,9 +25353,349 @@ button.nav-link.dropdown-toggle:hover:active {
   text-align: center; /* Centre le texte horizontalement */
 }
 
+.detail-container {
+  display: flex;
+  flex-direction: column; /* Empile les sections verticalement */
+  align-items: center; /* Centre horizontalement les éléments */
+  padding: 100px;
+  padding-top: 35px;
+  padding-bottom: 0px;
+  background-color: #CACFAA;
+  border-radius: 30px;
+  font-family: "Roboto", sans-serif;
+  color: #1F4924;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin-left: 100px;
+  margin-right: 100px;
+}
+@media (max-width: 990px) {
+  .detail-container {
+    margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
+    margin-right: 50px;
+    padding-left: 50px;
+    padding-right: 50px;
+  }
+}
+@media (max-width: 768px) {
+  .detail-container {
+    display: flex;
+    margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
+    margin-right: 50px;
+    padding: 50px;
+    padding-top: 35px;
+    padding-bottom: 0px;
+    flex-direction: column; /* Empile les sections verticalement */
+    gap: 1rem; /* Ajoute un espace entre les sections */
+  }
+}
+@media (max-width: 576px) {
+  .detail-container {
+    display: flex;
+    margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
+    margin-right: 25px;
+    padding: 20px;
+    padding-top: 35px;
+    padding-bottom: 0px;
+  }
+}
+.detail-container h1, .detail-container .h1 {
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-size: 36px; /* Ajustez la taille si nécessaire */
+  color: #1F4924;
+  margin-bottom: 3.5rem; /* Ajoute un espace sous le titre */
+  text-align: center;
+}
+.detail-container .profile-section {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem 2rem;
+  border-radius: 15px;
+  width: 100%;
+}
+.detail-container .profile-section .profile-photo img {
+  width: 150px; /* Taille fixe de la largeur */
+  height: 150px; /* Taille fixe de la hauteur */
+  -o-object-fit: cover;
+     object-fit: cover; /* Ajuste l'image à la taille définie */
+  -o-object-position: center;
+     object-position: center; /* Centre l'image */
+  border-radius: 50%; /* Rend la photo circulaire */
+  border: 4px solid #4B8A47; /* Bordure verte */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+  flex-shrink: 0; /* Empêche la photo de se réduire */
+}
+.detail-container .profile-section .profile-info {
+  flex-grow: 1;
+}
+.detail-container .profile-section .profile-info .pseudo {
+  margin-bottom: 0.25rem;
+}
+.detail-container .profile-section .profile-info .rating {
+  font-size: 2.8rem;
+  color: #4B8A47;
+  margin-bottom: 0;
+}
+.detail-container .profile-section .actions {
+  display: flex;
+  flex-direction: column; /* Empile les éléments verticalement */
+  align-items: center; /* Centre les éléments horizontalement */
+  gap: 5rem; /* Ajoute un espace entre le bouton et le badge */
+}
+.detail-container .profile-section .badge-economique {
+  background-color: #F1E7D1;
+  padding: 0.5rem 1.5rem;
+  border-radius: 5px;
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-size: 24px;
+  color: #1F4924;
+}
+.detail-container .profile-section .search-btn {
+  width: 200px; /* Fixe la largeur du bouton */
+  padding: 12px 30px; /* Ajuste le padding pour un bon rendu */
+  border: none;
+  border-radius: 20px;
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
+  transition: background-color 0.3s ease;
+}
+.detail-container .profile-section .search-btn:hover {
+  background-color: #1F4924;
+}
+.detail-container .trip-dates {
+  background-color: #F1E7D1;
+  border-radius: 30px;
+  margin-top: 3.5rem;
+  margin-bottom: 3.5rem;
+  padding: 2rem;
+  text-align: center;
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-size: 24px;
+  width: 100%;
+}
+.detail-container .trip-dates .badge-date {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  padding: 0.3rem 1.2rem;
+  border-radius: 20px;
+  display: inline-block;
+  margin-bottom: 2rem;
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-size: 2.8rem;
+}
+.detail-container .trip-dates .times {
+  background-color: #CACFAA;
+  color: #1F4924;
+  padding: 0.3rem 1.2rem;
+  border-radius: 20px;
+}
+.detail-container .trip-dates .locations, .detail-container .trip-dates .times {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 0.5rem;
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-size: 24px;
+}
+.detail-container .trip-dates .locations span, .detail-container .trip-dates .times span {
+  min-width: 80px;
+  text-align: center;
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-size: 24px;
+}
+.detail-container .section-titles {
+  display: flex; /* Aligne les sections horizontalement */
+  justify-content: space-between; /* Ajoute de l'espace entre les sections */
+  gap: 1rem; /* Ajoute un espace entre les deux sections */
+  width: 100%;
+}
+.detail-container .section-titles .info-title, .detail-container .section-titles .preferences-title {
+  flex: 1; /* Les deux sections occupent une largeur égale */
+  max-width: 48%; /* Limite la largeur pour éviter qu'elles ne débordent */
+  text-align: center;
+}
+.detail-container .info-preferences {
+  display: flex; /* Aligne les sections horizontalement */
+  justify-content: space-between; /* Ajoute de l'espace entre les sections */
+  gap: 1rem; /* Ajoute un espace entre les deux sections */
+  width: 100%;
+}
+.detail-container .info-preferences .info, .detail-container .info-preferences .preferences {
+  background-color: #F1E7D1;
+  border-radius: 30px;
+  padding: 2rem;
+  flex: 1; /* Les deux sections occupent une largeur égale */
+  max-width: 48%; /* Limite la largeur pour éviter qu'elles ne débordent */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+  text-align: center;
+  width: 100%;
+  min-width: 200px;
+  margin-bottom: 3.5rem; /* Ajoute une marge en bas */
+}
+.detail-container .vehicle-info {
+  margin: 0 auto;
+  background-color: #F1E7D1;
+  border-radius: 30px;
+  padding: 2rem;
+  margin-bottom: 3.5rem;
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-size: 24px;
+  text-align: center;
+  max-width: 600px; /* La div ne dépassera pas 300px */
+  width: 100%; /* Elle occupe toute la largeur disponible jusqu'à max-width */
+}
+.detail-container .driver-reviews {
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  margin-bottom: 6rem;
+  color: #1F4924;
+  background-color: #F1E7D1;
+  border-radius: 30px;
+  padding-top: 3.5rem;
+  padding-bottom: 2rem;
+  padding-left: 2rem;
+  padding-right: 2rem;
+  width: 100%;
+}
+.detail-container .driver-reviews .review {
+  background-color: #CACFAA;
+  border-radius: 30px;
+  padding: 2rem;
+  font-style: italic;
+  line-height: 1.4;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-family: "Roboto", sans-serif;
+  font-weight: 400;
+  font-size: 20px;
+  margin-bottom: 1.5rem;
+}
+@media (max-width: 990px) {
+  .detail-container {
+    /* Déplacer Avis du conducteur et driver-reviews en dessous */
+  }
+  .detail-container .vehicle-info {
+    margin-left: 0px;
+    margin-right: 0px;
+    width: 100%;
+    max-width: 100%;
+  }
+  .detail-container .info-preferences {
+    display: contents;
+  }
+  .detail-container .info-preferences .info {
+    order: 2;
+    width: 100%;
+    max-width: 100%;
+  }
+  .detail-container .info-preferences .preferences {
+    order: 4;
+    width: 100%;
+    max-width: 100%;
+  }
+  .detail-container .info-preferences .info-preferences .info,
+  .detail-container .info-preferences .info-preferences .preferences {
+    order: initial;
+  }
+  .detail-container .section-titles {
+    display: contents;
+  }
+  .detail-container .section-titles .info-title {
+    order: 1;
+    width: 100%;
+    max-width: 100%;
+  }
+  .detail-container .section-titles .preferences-title {
+    order: 3;
+    width: 100%;
+    max-width: 100%;
+  }
+  .detail-container .section-titles .section-titles .info-title,
+  .detail-container .section-titles .section-titles .preferences-title {
+    order: initial;
+  }
+  .detail-container .trip-dates {
+    margin-top: 20px; /* Supprime la marge supérieure */
+  }
+  .detail-container .profile-section {
+    display: flex;
+    flex-direction: column; /* Empile les éléments verticalement */
+    align-items: center; /* Centre horizontalement */
+    justify-content: center; /* Centre verticalement */
+    gap: 1.5rem; /* Ajoute un espace entre les éléments */
+    width: 100%; /* Prend toute la largeur disponible */
+    margin: 0 auto; /* Centre la section horizontalement */
+  }
+  .detail-container .profile-section .profile-photo {
+    order: 1; /* Place la photo en premier */
+  }
+  .detail-container .profile-section .profile-info {
+    order: 2; /* Place les informations du profil en second */
+  }
+  .detail-container .profile-section .pseudo {
+    text-align: center;
+  }
+  .detail-container .profile-section .rating {
+    text-align: center;
+  }
+  .detail-container .profile-section .actions {
+    display: flex;
+    flex-direction: column; /* Empile les éléments verticalement */
+    align-items: center; /* Centre les éléments horizontalement */
+    gap: 2rem; /* Ajoute un espace entre les éléments */
+  }
+  .detail-container .profile-section .actions .search-btn {
+    order: 1; /* Place le bouton Réserver en second */
+  }
+  .detail-container .profile-section .actions .badge-economique {
+    order: 2; /* Place le badge Economique en premier */
+  }
+  .detail-container h1:nth-of-type(2), .detail-container .h1:nth-of-type(2) {
+    order: 5; /* Place le titre Avis du conducteur après les autres sections */
+    width: 100%;
+    max-width: 100%;
+  }
+  .detail-container .driver-reviews {
+    order: 6; /* Place la section driver-reviews après le titre Avis du conducteur */
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .detail-container h1, .detail-container .h1 {
+    font-size: 22px; /* Réduit la taille des titres h1 */
+  }
+  .detail-container h2, .detail-container .h2 {
+    font-size: 20px; /* Réduit la taille des titres h2 */
+  }
+  .detail-container h3, .detail-container .h3 {
+    font-size: 16px; /* Réduit la taille des titres h3 */
+  }
+  .detail-container p, .detail-container span {
+    font-size: 16px; /* Réduit la taille des paragraphes et spans */
+  }
+  .detail-container .badge-date {
+    font-size: 18px !important; /* Force la réduction de la taille pour .badge-date */
+  }
+  .detail-container .location, .detail-container .time-depart, .detail-container .time-arrivee {
+    font-size: 16px !important;
+  }
+  .detail-container .review {
+    font-size: 16px !important; /* Réduit la taille des avis */
+  }
+}
 html {
   position: relative;
   min-height: 100%;
+  font-size: 62.5%; /* Définit 1rem = 10px si la taille de police par défaut du navigateur est de 16px */
 }
 
 html, body {
@@ -25504,6 +25844,29 @@ footer.footer {
     margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
     margin-right: 25px;
     margin-top: -30px; /* Conserve l'augmentation de 10px */
+  }
+}
+
+.big-title {
+  position: relative;
+  top: -20px;
+  margin-left: 100px;
+  margin-bottom: 25px;
+  text-align: left;
+  transform: none;
+}
+@media (max-width: 768px) {
+  .big-title {
+    font-size: 36px; /* Réduit encore la taille pour les écrans de tablette */
+    margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
+    margin-right: 50px;
+  }
+}
+@media (max-width: 576px) {
+  .big-title {
+    font-size: 28px; /* Réduit encore la taille pour les écrans mobiles */
+    margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
+    margin-right: 25px;
   }
 }
 

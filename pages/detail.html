@@ -5,18 +5,20 @@
 </div>
 
 
-<main class="detail-container">
+<section class="detail-container">
+
     <div class="profile-section">
       <div class="profile-photo">
-        <!-- Photo profil circulaire -->
         <img src="/images/profil1.png" alt="Profil" />
       </div>
       <div class="profile-info">
-        <p class="pseudo">Pseudo</p>
+        <h2 class="pseudo">Pseudo</h2>
         <p class="rating">★★★★☆</p>
       </div>
-      <button class="btn btn-success btn-reserver">Réserver</button>
-      <span class="badge badge-economique">Economique</span>
+      <div class="actions">
+        <button class="search-btn reserve-btn">Réserver</button>
+        <span class="badge badge-economique">Economique</span>
+      </div>
     </div>
 
     <div class="trip-dates">
@@ -26,36 +28,45 @@
         <span class="location">Lyon</span>
       </div>
       <div class="times">
-        <span class="time">16h00</span>
-        <span class="time">20h30</span>
+        <span class="time-depart">16h00</span>
+        <span class="time-arrivee">20h30</span>
       </div>
     </div>
 
-    <div class="info-preferences">
-      <div class="info">
-        <h3>Informations</h3>
-        <p class="info-item">Prix : 30€</p>
-        <p class="info-item">Durée : 4h30</p>
-        <p class="info-item">Place disponible : 2</p>
-      </div>
-      <div class="preferences">
-        <h3>Préférences</h3>
-        <p class="pref-item">Non-fumeur</p>
-        <p class="pref-item">Animaux acceptés</p>
-        <p class="pref-item">Musique</p>
-      </div>
+  <div class="section-titles">
+    <div class="info-title">
+      <h1>Informations</h1>
     </div>
+    <div class="preferences-title">
+      <h1>Préférences</h1> 
+    </div>
+  </div>
 
-    <div class="vehicle-info">
-      <h3>Véhicule</h3>
-      <p class="vehicle-item">Peugeot 308</p>
-      <p class="vehicle-item">Électrique</p>
+  <div class="info-preferences">
+    <div class="info">
+      <h3 class="info-item">Prix : 30€</h3>
+      <h3 class="info-item">Durée : 4h30</h3>
+      <h3 class="info-item">Place disponible : 2</h3>
     </div>
+    <div class="preferences">
+      <h3 class="pref-item">Non-fumeur</h3>
+      <h3 class="pref-item">Animaux acceptés</h3>
+      <h3 class="pref-item">Musique</h3>
+    </div>
+  </div>
 
-    <div class="driver-reviews">
-      <h3>Avis du conducteur</h3>
-      <blockquote class="review">"Super expérience avec EcoRide ! Le conducteur était très ponctuel et la voiture impeccable. Je recommande !"</blockquote>
-      <blockquote class="review">"Trajet agréable et efficace. Le chauffeur était courtois et la conduite souple. Parfait pour mes déplacements quotidiens."</blockquote>
-      <blockquote class="review">"EcoRide, c'est l'assurance d'un trajet serein. Mon conducteur était professionnel et très sympathique. À refaire sans hésiter."</blockquote>
-    </div>
-  </main>
+  <h1>Véhicule</h1>
+  <div class="vehicle-info">
+    <h3 class="vehicle-item">Peugeot 308</h3>
+    <h3 class="vehicle-item">Bleu</h3>
+    <h3 class="vehicle-item">Électrique</h3>
+  </div>
+
+  <h1>Avis du conducteur</h1>
+  <div class="driver-reviews">
+    <blockquote class="review">"Super expérience avec EcoRide ! Le conducteur était très ponctuel et la voiture impeccable. Je recommande !"</blockquote>
+    <blockquote class="review">"Trajet agréable et efficace. Le chauffeur était courtois et la conduite souple. Parfait pour mes déplacements quotidiens."</blockquote>
+    <blockquote class="review">"EcoRide, c'est l'assurance d'un trajet serein. Mon conducteur était professionnel et très sympathique. À refaire sans hésiter."</blockquote>
+  </div>
+
+</section>

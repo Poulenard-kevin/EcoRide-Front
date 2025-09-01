@@ -1,27 +1,3 @@
-@import 'custom'; // on utilise les variables / mixins définies dans custom
-
-
-.big-title {
-  position: relative;
-  top: -20px; // Positionne à 100px du haut
-  margin-left: 100px; // Positionne à 50px de la gauche
-  margin-bottom: 25px; // Ajoute une marge de 25px en bas
-  text-align: left; // Aligne le texte à gauche
-  transform: none; // Supprime la transformation pour le centrage
-
-  @media (max-width: 768px) {
-    font-size: $font-size-h1; /* Réduit encore la taille pour les écrans de tablette */
-    margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
-    margin-right: 50px;
-  }
-
-  @media (max-width: 576px) {
-    font-size: $font-size-h2; /* Réduit encore la taille pour les écrans mobiles */
-    margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
-    margin-right: 25px;
-  }
-}
-
   /* === SECTION BARRE DE RECHERCHE === */
   /* === SECTION BARRE DE RECHERCHE === */
   /* === SECTION BARRE DE RECHERCHE === */
@@ -38,17 +14,22 @@
     gap: 20px; /* Espacement entre les éléments */
     background-color: $color-background;
     border-radius: 30px;
-    padding: 30px;
+    padding: 100px;
+    padding-top: 35px;
+    padding-bottom: 35px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     width: 100%;
     margin-left: 100px;
     margin-right: 100px;
-    
 
+    @media (max-width: 1440px) {
+      padding: 35px;
+    }
+    
     @media (max-width: 768px) {
       grid-template-columns: 1fr; /* Passe à une seule colonne */
       gap: 15px; /* Réduit l'espacement entre les éléments */
-      padding: 20px;
+      padding: 35px;
       margin-left: 50px;
       margin-right: 50px;
 
@@ -61,7 +42,7 @@
     @media (max-width: 576px) {
       grid-template-columns: 1fr; /* Une seule colonne pour les petits écrans */
       gap: 15px;
-      padding: 20px;
+      padding: 35px;
       margin-left: 25px;
       margin-right: 25px;
 
@@ -111,7 +92,7 @@
 /* === SECTION LISTE DE COVOITURAGE === */
 
 .covoiturage-results {
-  padding: 30px;
+  padding: 100px;
   padding-top: 35px;
   padding-bottom: 0px;
   background-color: $color-background;
@@ -119,6 +100,11 @@
   margin-left: 100px;
   margin-right: 100px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  @media (max-width: 1440px) {
+    padding: 30px;
+    padding-bottom: 0px;
+  }
 
   @media (max-width: 768px) {
     margin-left: 50px;
@@ -227,6 +213,7 @@
           color: $color-dark-green; /* Couleur du texte */
           font-size: $font-size-nav;
           transition: border-color 0.3s ease; /* Ajoute une transition pour un effet fluide */
+
 
           &:focus {
             outline: none; /* Supprime le contour par défaut */
@@ -378,7 +365,7 @@
           .profile-column {
             display: flex; /* Utilise Flexbox pour organiser les éléments horizontalement */
             align-items: center; /* Centre les éléments verticalement */
-            gap: 20px; /* Ajoute un espacement entre la photo et les autres éléments */
+            gap: 15px; /* Ajoute un espacement entre la photo et les autres éléments */
             padding-bottom: 40px;
             border-bottom: 1px solid $color-medium-green; /* Ligne de séparation en bas */
             padding-right: 0px;
@@ -562,7 +549,7 @@
       .profile-column {
         display: flex; /* Utilise Flexbox pour organiser les éléments horizontalement */
         align-items: center; /* Centre les éléments verticalement */
-        gap: 20px; /* Ajoute un espacement entre la photo et les autres éléments */
+        gap: 15px; /* Ajoute un espacement entre la photo et les autres éléments */
         padding-right: 40px;
         border-right: 1px solid $color-medium-green; /* Ligne de séparation en bas */
 
@@ -604,7 +591,7 @@
   .result-card .details {
     display: grid; /* Utilise Grid Layout */
     grid-template-columns: 1fr; /* Passe à une seule colonne */
-    gap: 10px; /* Ajoute un espacement entre les éléments */
+    gap: 5px; /* Ajoute un espacement entre les éléments */
     width: 100%; /* Les colonnes occupent toute la largeur disponible */
 
     .column {
@@ -639,7 +626,7 @@
 
     .time {
       margin-top: 8px;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
 
     .price {
@@ -717,12 +704,13 @@
   color: $color-dark-green; /* Couleur du texte */
   max-width: 300px; /* Largeur similaire à .filters */
   margin: 0 auto; /* Centre l'Offcanvas horizontalement */
+  font-size: 16px;
 
   .offcanvas-header {
     border-bottom: 1px solid $color-medium-green; /* Ajoute une bordure en bas */
     margin-bottom: 20px; /* Espacement sous le header */
     h5 {
-      font-size: 1.5rem; /* Taille du titre */
+      font-size: 1.6rem; /* Taille du titre */
       font-weight: bold; /* Met en valeur le titre */
       color: $color-dark-green; /* Couleur du titre */
     }
@@ -738,6 +726,7 @@
         gap: 10px; /* Ajoute un espacement entre la case et le texte */
         color: $color-dark-green; /* Couleur du texte */
         margin-bottom: 10px; /* Ajoute une marge en bas */
+        font-size: 1.6rem;
       }
 
       input[type="checkbox"] {
@@ -773,7 +762,7 @@
         padding: 10px; /* Ajoute un espace interne */
         width: 100%; /* L'input occupe toute la largeur disponible */
         color: $color-dark-green; /* Couleur du texte */
-        font-size: 1rem; /* Taille du texte */
+        font-size: 1.6rem; /* Taille du texte */
         transition: border-color 0.3s ease; /* Ajoute une transition pour un effet fluide */
 
         &:focus {
@@ -790,7 +779,7 @@
         padding: 10px; /* Ajoute un espace interne */
         width: 100%; /* Le select occupe toute la largeur disponible */
         color: $color-dark-green; /* Couleur du texte */
-        font-size: 1rem; /* Taille du texte */
+        font-size: 1.6rem; /* Taille du texte */
         transition: border-color 0.3s ease; /* Ajoute une transition fluide */
         border-color: $color-medium-green;
 
@@ -819,6 +808,7 @@
         border: none;
         border-radius: 20px;
         cursor: pointer;
+        font-size: 1.6rem;
       }
 
       .apply-btn {

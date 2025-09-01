@@ -24404,7 +24404,7 @@ p {
 
 .navbar-brand:hover {
   color: #4B8A47; /* Couleur au survol */
-  transform: scale(1.03); /* Zoom de 10% au survol */
+  transform: scale(1.1); /* Zoom de 10% au survol */
   transition: color 0.3s ease, transform 0.3s ease;
 }
 
@@ -24639,17 +24639,24 @@ button.nav-link.dropdown-toggle:hover:active {
   gap: 20px; /* Espacement entre les éléments */
   background-color: #CACFAA;
   border-radius: 30px;
-  padding: 30px;
+  padding: 100px;
+  padding-top: 35px;
+  padding-bottom: 35px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   width: 100%;
   margin-left: 100px;
   margin-right: 100px;
 }
+@media (max-width: 1440px) {
+  .covoiturage-search-bar .search-container {
+    padding: 35px;
+  }
+}
 @media (max-width: 768px) {
   .covoiturage-search-bar .search-container {
     grid-template-columns: 1fr; /* Passe à une seule colonne */
     gap: 15px; /* Réduit l'espacement entre les éléments */
-    padding: 20px;
+    padding: 35px;
     margin-left: 50px;
     margin-right: 50px;
   }
@@ -24662,7 +24669,7 @@ button.nav-link.dropdown-toggle:hover:active {
   .covoiturage-search-bar .search-container {
     grid-template-columns: 1fr; /* Une seule colonne pour les petits écrans */
     gap: 15px;
-    padding: 20px;
+    padding: 35px;
     margin-left: 25px;
     margin-right: 25px;
   }
@@ -24705,7 +24712,7 @@ button.nav-link.dropdown-toggle:hover:active {
 /* === SECTION LISTE DE COVOITURAGE === */
 /* === SECTION LISTE DE COVOITURAGE === */
 .covoiturage-results {
-  padding: 30px;
+  padding: 100px;
   padding-top: 35px;
   padding-bottom: 0px;
   background-color: #CACFAA;
@@ -24713,6 +24720,12 @@ button.nav-link.dropdown-toggle:hover:active {
   margin-left: 100px;
   margin-right: 100px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+@media (max-width: 1440px) {
+  .covoiturage-results {
+    padding: 30px;
+    padding-bottom: 0px;
+  }
 }
 @media (max-width: 768px) {
   .covoiturage-results {
@@ -24755,6 +24768,7 @@ button.nav-link.dropdown-toggle:hover:active {
   height: auto;
   margin-bottom: 60px;
   display: block; /* Visible par défaut sur les grands écrans */
+  font-size: 16px;
 }
 .covoiturage-results .results-container .filters .filters-content {
   display: block; /* Visible par défaut */
@@ -24817,7 +24831,7 @@ button.nav-link.dropdown-toggle:hover:active {
   padding: 10px; /* Ajoute un espace interne */
   width: 100%; /* L'input occupe toute la largeur disponible */
   color: #1F4924; /* Couleur du texte */
-  font-size: 1rem; /* Taille du texte */
+  font-size: 16px; /* Taille du texte */
   transition: border-color 0.3s ease; /* Ajoute une transition pour un effet fluide */
 }
 .covoiturage-results .results-container .filters .filter-group input[type=text]:focus {
@@ -24855,7 +24869,7 @@ button.nav-link.dropdown-toggle:hover:active {
   padding: 10px; /* Ajoute un espace interne */
   width: 100%; /* Le select occupe toute la largeur disponible */
   color: #1F4924; /* Couleur du texte */
-  font-size: 1rem; /* Taille du texte */
+  font-size: 16px; /* Taille du texte */
   transition: border-color 0.3s ease; /* Ajoute une transition fluide */
   border-color: #4B8A47;
 }
@@ -24880,6 +24894,7 @@ button.nav-link.dropdown-toggle:hover:active {
   border: none;
   border-radius: 20px;
   cursor: pointer;
+  font-size: 16px;
 }
 .covoiturage-results .results-container .filters .filter-buttons .apply-btn {
   background-color: #4B8A47;
@@ -24950,7 +24965,7 @@ button.nav-link.dropdown-toggle:hover:active {
   .covoiturage-results .results-container .results .result-card .profile-column {
     display: flex; /* Utilise Flexbox pour organiser les éléments horizontalement */
     align-items: center; /* Centre les éléments verticalement */
-    gap: 20px; /* Ajoute un espacement entre la photo et les autres éléments */
+    gap: 15px; /* Ajoute un espacement entre la photo et les autres éléments */
     padding-bottom: 40px;
     border-bottom: 1px solid #4B8A47; /* Ligne de séparation en bas */
     padding-right: 0px;
@@ -25112,7 +25127,7 @@ button.nav-link.dropdown-toggle:hover:active {
 .covoiturage-results .results-container .results .profile-column {
   display: flex; /* Utilise Flexbox pour organiser les éléments horizontalement */
   align-items: center; /* Centre les éléments verticalement */
-  gap: 20px; /* Ajoute un espacement entre la photo et les autres éléments */
+  gap: 15px; /* Ajoute un espacement entre la photo et les autres éléments */
   padding-right: 40px;
   border-right: 1px solid #4B8A47; /* Ligne de séparation en bas */
 }
@@ -25149,7 +25164,7 @@ button.nav-link.dropdown-toggle:hover:active {
   .result-card .details {
     display: grid; /* Utilise Grid Layout */
     grid-template-columns: 1fr; /* Passe à une seule colonne */
-    gap: 10px; /* Ajoute un espacement entre les éléments */
+    gap: 5px; /* Ajoute un espacement entre les éléments */
     width: 100%; /* Les colonnes occupent toute la largeur disponible */
   }
   .result-card .details .column {
@@ -25177,7 +25192,7 @@ button.nav-link.dropdown-toggle:hover:active {
   }
   .time {
     margin-top: 8px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
   }
   .price {
     margin-bottom: 20px;
@@ -25238,13 +25253,14 @@ button.nav-link.dropdown-toggle:hover:active {
   color: #1F4924; /* Couleur du texte */
   max-width: 300px; /* Largeur similaire à .filters */
   margin: 0 auto; /* Centre l'Offcanvas horizontalement */
+  font-size: 16px;
 }
 .offcanvas .offcanvas-header {
   border-bottom: 1px solid #4B8A47; /* Ajoute une bordure en bas */
   margin-bottom: 20px; /* Espacement sous le header */
 }
 .offcanvas .offcanvas-header h5, .offcanvas .offcanvas-header .h5 {
-  font-size: 1.5rem; /* Taille du titre */
+  font-size: 1.6rem; /* Taille du titre */
   font-weight: bold; /* Met en valeur le titre */
   color: #1F4924; /* Couleur du titre */
 }
@@ -25257,6 +25273,7 @@ button.nav-link.dropdown-toggle:hover:active {
   gap: 10px; /* Ajoute un espacement entre la case et le texte */
   color: #1F4924; /* Couleur du texte */
   margin-bottom: 10px; /* Ajoute une marge en bas */
+  font-size: 1.6rem;
 }
 .offcanvas .offcanvas-body .filter-group input[type=checkbox] {
   width: 13px;
@@ -25290,7 +25307,7 @@ button.nav-link.dropdown-toggle:hover:active {
   padding: 10px; /* Ajoute un espace interne */
   width: 100%; /* L'input occupe toute la largeur disponible */
   color: #1F4924; /* Couleur du texte */
-  font-size: 1rem; /* Taille du texte */
+  font-size: 1.6rem; /* Taille du texte */
   transition: border-color 0.3s ease; /* Ajoute une transition pour un effet fluide */
 }
 .offcanvas .offcanvas-body .filter-group input[type=text]:focus {
@@ -25305,7 +25322,7 @@ button.nav-link.dropdown-toggle:hover:active {
   padding: 10px; /* Ajoute un espace interne */
   width: 100%; /* Le select occupe toute la largeur disponible */
   color: #1F4924; /* Couleur du texte */
-  font-size: 1rem; /* Taille du texte */
+  font-size: 1.6rem; /* Taille du texte */
   transition: border-color 0.3s ease; /* Ajoute une transition fluide */
   border-color: #4B8A47;
 }
@@ -25330,6 +25347,7 @@ button.nav-link.dropdown-toggle:hover:active {
   border: none;
   border-radius: 20px;
   cursor: pointer;
+  font-size: 1.6rem;
 }
 .offcanvas .offcanvas-body .filter-buttons .apply-btn {
   background-color: #4B8A47;

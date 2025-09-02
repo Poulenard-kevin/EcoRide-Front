@@ -25353,6 +25353,14 @@ button.nav-link.dropdown-toggle:hover:active {
   text-align: center; /* Centre le texte horizontalement */
 }
 
+.auth-form {
+  display: none;
+}
+
+.auth-form.active {
+  display: block;
+}
+
 html {
   position: relative;
   min-height: 100%;
@@ -25504,6 +25512,29 @@ footer.footer {
     margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
     margin-right: 25px;
     margin-top: -30px; /* Conserve l'augmentation de 10px */
+  }
+}
+
+.big-title {
+  position: relative;
+  top: -20px;
+  margin-left: 100px;
+  margin-bottom: 25px;
+  text-align: left;
+  transform: none;
+}
+@media (max-width: 768px) {
+  .big-title {
+    font-size: 36px; /* Réduit encore la taille pour les écrans de tablette */
+    margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
+    margin-right: 50px;
+  }
+}
+@media (max-width: 576px) {
+  .big-title {
+    font-size: 28px; /* Réduit encore la taille pour les écrans mobiles */
+    margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
+    margin-right: 25px;
   }
 }
 

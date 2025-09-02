@@ -90,20 +90,25 @@
     gap: 20px; /* Espacement entre les éléments */
     background-color: $color-background;
     border-radius: 30px;
-    padding: 30px;
+    padding: 100px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     margin-left: 100px;
     margin-right: 100px;
     padding-bottom: 60px;
+    padding-top: 30px;
+    
 
     @media (max-width: 768px) {
-        padding: 20px;
+        padding: 50px;
+        padding-top: 30px;
+        padding-bottom: 60px;
         margin-left: 50px;
         margin-right: 50px;  
       }
   
       @media (max-width: 576px) {
         padding: 20px;
+        padding-bottom: 60px;
         margin-left: 25px;
         margin-right: 25px;
     }
@@ -162,6 +167,11 @@
     line-height: $line-height-normal; /* Hauteur de ligne */
     color: $color-dark-green; /* Couleur du texte */
     margin-bottom: 20px; /* Ajoute un espace au-dessous */
+    display: flex; /* Active Flexbox */
+    flex-direction: center; /* Aligne les éléments horizontalement */
+    align-items: center; /* Centre les éléments verticalement */
+    justify-content: center;
+    gap: 20px; /* Ajoute un espacement entre les éléments */
 }
 
 .auth-text a {
@@ -205,10 +215,11 @@ input[type="checkbox"] {
 
 .auth-suscribe {
     display: flex; /* Active Flexbox */
-    flex-direction: row; /* Aligne les éléments horizontalement */
+    flex-direction: center; /* Aligne les éléments horizontalement */
     align-items: center; /* Centre les éléments verticalement */
-    justify-content: center; /* Centre les éléments horizontalement */
-    gap: 20px; /* Ajoute un espace de 20px entre les éléments */
+    justify-content: center;
+    gap: 20px; /* Ajoute un espacement entre les éléments */
+    margin: 0; /* Supprime toute marge */
 }
 
 .auth-suscribe p {
@@ -217,12 +228,15 @@ input[type="checkbox"] {
     line-height: $line-height-normal; /* Hauteur de ligne */
     color: $color-dark-green; /* Couleur du texte */
     text-align: center; /* Centre le texte */
+    margin: 0; /* Supprime toute marge */
 }
 
 .auth-suscribe p a {
+    text-align: center;
     text-decoration: underline; /* Ajoute un soulignement au lien */
     color: $color-medium-green; /* Couleur du lien */
     transition: color 0.3s ease; /* Ajoute une transition pour le survol */
+
 }
 
 .auth-suscribe p a:hover {
@@ -276,4 +290,107 @@ input[type="checkbox"] {
     color: #7a8a6f;
     font-style: italic;
 }
+
+.checkbox-container {
+    display: flex; /* Active Flexbox */
+    flex-direction: row; /* Aligne la case à cocher et le texte horizontalement */
+    align-items: center; /* Centre les éléments verticalement */
+    justify-content: center; /* Centre les éléments horizontalement */
+    gap: 10px; /* Ajoute un espacement entre la case à cocher et le texte */
+}
+
+@media (max-width: 990px) {
+  .auth-text {
+    display: flex; /* Active Flexbox */
+    flex-direction: column; /* Empile les éléments verticalement */
+    align-items: center; /* Centre les éléments horizontalement */
+    gap: 10px; /* Ajoute un espacement entre les éléments */
+  }
+
+  .checkbox-container {
+    display: flex; /* Active Flexbox */
+    flex-direction: row; /* Aligne la case à cocher et le texte horizontalement */
+    align-items: center; /* Centre les éléments verticalement */
+    gap: 10px; /* Ajoute un espacement entre la case à cocher et le texte */
+  }
+
+  .forgot-password {
+    text-align: center; /* Centre le texte horizontalement */
+    margin-top: 10px; /* Ajoute un espace au-dessus pour séparer */
+  }
+
+  .auth-suscribe {
+    display: flex; /* Active Flexbox */
+    flex-direction: column; /* Empile les éléments verticalement */
+    align-items: center; /* Centre les éléments horizontalement */
+    gap: 10px; /* Ajoute un espacement entre les éléments */
+  }
+}
+
+
+@media (max-width: 576px) {
+  * {
+    font-size: 16px !important; /* Force la taille minimale de tous les éléments */
+  }
+
+  .auth-form h3,
+  .auth-input-container label,
+  .auth-input-container input,
+  .auth-button,
+  .auth-tabs .nav-link,
+  .auth-suscribe p,
+  .auth-suscribe p a {
+    font-size: 16px !important; /* Applique la taille minimale aux éléments spécifiques */
+  }
+
+  .auth-input-container input {
+    padding: 8px 15px; /* Réduit l'espace interne des champs */
+    font-size: 12px !important; /* Réduit la taille du texte dans les champs */
+  }
+
+  .auth-button {
+    padding: 10px 20px; /* Réduit l'espace interne du bouton */
+    font-size: 16px !important; /* Réduit la taille du texte du bouton */
+  }
+
+  .auth-text {
+    display: flex;
+    flex-direction: column; /* Empile les éléments verticalement */
+    align-items: center; /* Centre les éléments horizontalement */
+    gap: 10px; /* Ajoute un espacement entre les éléments */
+  }
+
+  .auth-text input[type="checkbox"] {
+    margin-bottom: 0; /* Ajoute un espace en dessous de la case à cocher */
+  }
+
+  .auth-suscribe {
+    display: flex;
+    flex-direction: column; /* Empile les éléments verticalement */
+    align-items: center; /* Centre les éléments horizontalement */
+    gap: 10px; /* Ajoute un espacement entre les éléments */
+  }
+
+  .checkbox-container {
+    display: flex; /* Active Flexbox */
+    flex-direction: row; /* Aligne la case à cocher et le texte horizontalement */
+    align-items: center; /* Centre les éléments verticalement */
+    gap: 10px; /* Ajoute un espacement entre la case à cocher et le texte */
+  }
+
+  .forgot-password {
+    text-align: center; /* Centre le texte horizontalement */
+  }
+
+  .auth-text .checkbox-container {
+    display: flex; /* Active Flexbox */
+    flex-direction: row; /* Aligne la case à cocher et le texte horizontalement */
+    align-items: center; /* Centre les éléments verticalement */
+    gap: 10px; /* Ajoute un espacement entre la case à cocher et le texte */
+  }
+}
+
+
+  
+
 

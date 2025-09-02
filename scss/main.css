@@ -25361,9 +25361,42 @@ button.nav-link.dropdown-toggle:hover:active {
   display: block;
 }
 
+.auth-tabs {
+  display: flex;
+  justify-content: center; /* Centre les boutons horizontalement */
+  gap: 20px; /* Ajoute un espace entre les boutons */
+  margin-bottom: 20px; /* Ajoute un espace en dessous des boutons */
+}
+
+.auth-tabs .nav-link {
+  background-color: #F1E7D1; /* Couleur de fond */
+  color: #1F4924; /* Couleur du texte */
+  border: none; /* Supprime les bordures */
+  border-radius: 20px; /* Ajoute des coins arrondis */
+  padding: 10px 20px; /* Ajoute de l'espace interne */
+  font-family: "Poppins", sans-serif; /* Utilise la police définie */
+  font-size: 16px; /* Taille du texte */
+  font-weight: 700; /* Texte en gras */
+  text-align: center; /* Centre le texte */
+  cursor: pointer; /* Change le curseur au survol */
+  transition: background-color 0.3s ease, transform 0.3s ease; /* Ajoute une transition fluide */
+}
+
+.auth-tabs .nav-link.active {
+  background-color: #4B8A47; /* Couleur de fond pour l'onglet actif */
+  color: #F1E7D1; /* Couleur du texte pour l'onglet actif */
+}
+
+.auth-tabs .nav-link:hover {
+  background-color: #1F4924; /* Couleur de fond au survol */
+  color: #F1E7D1; /* Couleur du texte au survol */
+  transform: scale(1.05); /* Zoom léger au survol */
+}
+
 html {
   position: relative;
   min-height: 100%;
+  font-size: 62.5%;
 }
 
 html, body {

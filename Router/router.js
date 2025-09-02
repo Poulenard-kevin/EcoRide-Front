@@ -24,6 +24,7 @@ const getRouteByUrl = (url) => {
 // Fonction pour charger le contenu de la page
 const LoadContentPage = async () => {
   const path = window.location.pathname;
+  const queryParams = new URLSearchParams(window.location.search); // Récupère les paramètres de l'URL
   const actualRoute = getRouteByUrl(path);
   const html = await fetch(actualRoute.pathHtml).then((data) => data.text());
   document.getElementById("main-page").innerHTML = html;
@@ -37,8 +38,8 @@ const LoadContentPage = async () => {
 
   document.title = actualRoute.title + " - " + websiteName;
 
-  // Déclenchement de l'événement personnalisé
-  document.dispatchEvent(new Event("routeLoaded"));
+  // Déclenchement de l'événement personnalisé avec les paramètres
+  document.dispatchEvent(new CustomEvent("routeLoaded", { detail: { queryParams } }));
 };
 
 // Fonction pour gérer les événements de routage (clic sur les liens)

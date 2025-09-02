@@ -43,14 +43,14 @@
             </li>
             <li class="nav-item dropdown">
               <button class="nav-link dropdown-toggle" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-                Connexion
+                Menu
               </button>
               <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                <li><a class="dropdown-item connexion" href="#">S'inscrire</a></li>
-                <li><a class="dropdown-item" href="#">Se connecter</a></li>
-                <li><a class="dropdown-item" href="#">Contact</a></li>
-                <li><a class="dropdown-item" href="#">Espace employé</a></li>
-                <li><a class="dropdown-item" href="#">Espace administrateur</a></li>
+                <li><a class="dropdown-item connexion" id="dropdown-register" href="/auth?tab=register">S'inscrire</a></li>
+                <li><a class="dropdown-item" id="dropdown-login" href="/auth?tab=login">Se connecter</a></li>
+                <li><a class="dropdown-item" href="/">Contact</a></li>
+                <li><a class="dropdown-item" href="/">Espace employé</a></li>
+                <li><a class="dropdown-item" href="/">Espace administrateur</a></li>
               </ul>
             </li>
           </ul>
@@ -75,10 +75,10 @@
             <a class="nav-link" href="#">Espace utilisateur</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">S'inscrire</a>
+            <a class="nav-link" href="/auth">S'inscrire</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">Se connecter</a>
+            <a class="nav-link" href="/auth">Se connecter</a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="#">Contact</a>

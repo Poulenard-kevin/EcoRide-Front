@@ -12121,27 +12121,18 @@ p {
   background-color: #F1E7D1; /* Utilise la variable définie pour #F1E7D1 */
   border: none; /* Supprime la bordure si nécessaire */
   z-index: 1050 !important;
+  font-size: 20px;
+}
+
+.dropdown-menu:hover {
+  transform: scale(1.1); /* Zoom de 10% au survol */
+  transition: color 0.3s ease, transform 0.3s ease;
 }
 
 /* Style pour les éléments du menu déroulant au survol */
 .dropdown-item:hover {
   background-color: #F8F0E5; /* Couleur légèrement différente au survol */
   color: #1F4924; /* Couleur du texte au survol */
-}
-
-/* Style spécifique pour l'élément "Connexion" */
-.dropdown-item.connexion {
-  color: #1F4924 !important; /* Force la couleur en vert foncé */
-  font-family: "Poppins", sans-serif; /* Harmonisation avec le reste du site */
-  font-size: 16px; /* Taille du texte */
-  transition: color 0.3s ease; /* Animation fluide */
-}
-
-.dropdown-item.connexion:hover,
-.dropdown-item.connexion:focus,
-.dropdown-item.connexion:active {
-  background-color: #F8F0E5; /* Couleur légèrement différente au survol */
-  color: #1F4924 !important; /* Force la couleur au survol ou sélectionné */
 }
 
 button.nav-link.dropdown-toggle {
@@ -12168,6 +12159,15 @@ button.nav-link.dropdown-toggle:hover:active {
 
 .navbar-toggler {
   margin-left: auto; /* Place le bouton à droite */
+}
+
+.offcanvas-title {
+  font-size: 16px; /* Taille pour les titres de l'offcanvas */
+}
+
+.offcanvas-body {
+  background-color: #F1E7D1; /* Utilise la variable définie pour #F1E7D1 */
+  font-size: 14px;
 }
 
 /* === RESPONSIVES FOOTER === */
@@ -24421,27 +24421,18 @@ p {
   background-color: #F1E7D1; /* Utilise la variable définie pour #F1E7D1 */
   border: none; /* Supprime la bordure si nécessaire */
   z-index: 1050 !important;
+  font-size: 20px;
+}
+
+.dropdown-menu:hover {
+  transform: scale(1.1); /* Zoom de 10% au survol */
+  transition: color 0.3s ease, transform 0.3s ease;
 }
 
 /* Style pour les éléments du menu déroulant au survol */
 .dropdown-item:hover {
   background-color: #F8F0E5; /* Couleur légèrement différente au survol */
   color: #1F4924; /* Couleur du texte au survol */
-}
-
-/* Style spécifique pour l'élément "Connexion" */
-.dropdown-item.connexion {
-  color: #1F4924 !important; /* Force la couleur en vert foncé */
-  font-family: "Poppins", sans-serif; /* Harmonisation avec le reste du site */
-  font-size: 16px; /* Taille du texte */
-  transition: color 0.3s ease; /* Animation fluide */
-}
-
-.dropdown-item.connexion:hover,
-.dropdown-item.connexion:focus,
-.dropdown-item.connexion:active {
-  background-color: #F8F0E5; /* Couleur légèrement différente au survol */
-  color: #1F4924 !important; /* Force la couleur au survol ou sélectionné */
 }
 
 button.nav-link.dropdown-toggle {
@@ -24468,6 +24459,15 @@ button.nav-link.dropdown-toggle:hover:active {
 
 .navbar-toggler {
   margin-left: auto; /* Place le bouton à droite */
+}
+
+.offcanvas-title {
+  font-size: 16px; /* Taille pour les titres de l'offcanvas */
+}
+
+.offcanvas-body {
+  background-color: #F1E7D1; /* Utilise la variable définie pour #F1E7D1 */
+  font-size: 14px;
 }
 
 /* === RESPONSIVES FOOTER === */
@@ -24755,6 +24755,7 @@ button.nav-link.dropdown-toggle:hover:active {
   height: auto;
   margin-bottom: 60px;
   display: block; /* Visible par défaut sur les grands écrans */
+  font-size: 16px;
 }
 .covoiturage-results .results-container .filters .filters-content {
   display: block; /* Visible par défaut */
@@ -24817,7 +24818,7 @@ button.nav-link.dropdown-toggle:hover:active {
   padding: 10px; /* Ajoute un espace interne */
   width: 100%; /* L'input occupe toute la largeur disponible */
   color: #1F4924; /* Couleur du texte */
-  font-size: 1rem; /* Taille du texte */
+  font-size: 16px;
   transition: border-color 0.3s ease; /* Ajoute une transition pour un effet fluide */
 }
 .covoiturage-results .results-container .filters .filter-group input[type=text]:focus {
@@ -24854,8 +24855,8 @@ button.nav-link.dropdown-toggle:hover:active {
   border-radius: 5px; /* Ajoute des coins arrondis */
   padding: 10px; /* Ajoute un espace interne */
   width: 100%; /* Le select occupe toute la largeur disponible */
-  color: #1F4924; /* Couleur du texte */
-  font-size: 1rem; /* Taille du texte */
+  color: #4B8A47; /* Couleur du texte */
+  font-size: 16px;
   transition: border-color 0.3s ease; /* Ajoute une transition fluide */
   border-color: #4B8A47;
 }
@@ -24880,6 +24881,7 @@ button.nav-link.dropdown-toggle:hover:active {
   border: none;
   border-radius: 20px;
   cursor: pointer;
+  font-size: 16px;
 }
 .covoiturage-results .results-container .filters .filter-buttons .apply-btn {
   background-color: #4B8A47;
@@ -25356,14 +25358,15 @@ button.nav-link.dropdown-toggle:hover:active {
 html {
   position: relative;
   min-height: 100%;
+  font-size: 62.5%; /* Définit 1rem = 10px 
 }
 
 html, body {
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  min-height: 100%; /* Assure que le body occupe toute la hauteur de la fenêtre */
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%; /* Assure que le body occupe toute la hauteur de la fenêtre */
 }
 
 body {

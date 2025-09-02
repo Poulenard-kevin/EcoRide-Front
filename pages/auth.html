@@ -1,13 +1,13 @@
 <div class="hero-scene">
     <div class="hero-scene-content">
-        <h1 class="big-title">Connexion</h1>
+        <h1 class="big-title">Authentification</h1>
     </div>
 </div>
 
 <section class="auth-section">
     <ul class="nav nav-pills auth-tabs">
         <li class="nav-item">
-            <a id="login-tab" class="nav-link active" href="javascript:void(0);">Se connecter</a>
+            <a id="login-tab" class="nav-link active" href="javascript:void(0);">Connexion</a>
         </li>
         <li class="nav-item">
             <a id="register-tab" class="nav-link" href="javascript:void(0);">Inscription</a>
@@ -16,42 +16,41 @@
 
     <div id="login-form" class="auth-form active">
         <form>
-            <p>Connectez-vous avec :</p>
-            <div>
+            <h3>Connectez-vous avec :</h3>
+            <div class="auth-social-icons">
                 <a href="#" aria-label="Google"><i class="bi bi-google"></i></a>
-                <a href="#" aria-label="Twitter"><i class="bi bi-twitter"></i></a>
+                <a href="#" aria-label="X"><i class="bi bi-twitter-x"></i></a>
                 <a href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
             </div>
-            <p>Ou :</p>
-            <label for="login-email">E-mail ou nom d'utilisateur :</label>
-            <input type="email" id="login-email" name="email" required>
-            
-            <label for="login-password">Mot de passe :</label>
-            <input type="password" id="login-password" name="password" required>
-            
-            <div>
+            <h3>Ou :</h3>
+            <div class="auth-input-container">
+                <input type="text" class="auth-input" placeholder="E-mail ou nom d'utilisateur">
+                <input type="password" class="auth-input password-input" placeholder="Mot de passe">
+            </div>
+            <div class="auth-text">
                 <input type="checkbox" id="remember-me">
-                <label for="remember-me">Souviens-toi de moi</label>
+                <a><label for="remember-me">Souviens-toi de moi</label></a>
                 <a href="#">Mot de passe oublié ?</a>
             </div>
             
-            <button type="submit">Se connecter</button>
-            <p>Pas encore membre ? <a href="#" id="switch-to-register">Inscrivez-vous</a></p>
+            <button class="auth-button">Se connecter</button>
+            
+            <div class="auth-suscribe">
+                <p>Pas encore membre ?</p>
+                <p><a href="/auth?tab=register" id="switch-to-register">Inscrivez-vous</a></p>
+            </div>
         </form>
     </div>
 
     <div id="register-form" class="auth-form" style="display:none;">
         <form>
-            <label for="register-email">E-mail :</label>
-            <input type="email" id="register-email" name="email" required>
-            
-            <label for="register-password">Mot de passe :</label>
-            <input type="password" id="register-password" name="password" required>
-            
-            <label for="register-confirm-password">Confirmer le mot de passe :</label>
-            <input type="password" id="register-confirm-password" name="confirm-password" required>
-            
-            <button type="submit">S'inscrire</button>
+            <h3>Inscrivez-vous :</h3>
+            <div class="auth-input-container">
+                <input type="email" id="register-email" name="email" placeholder="Votre e-mail" required>
+                <input type="password" id="register-password" name="password" placeholder="Votre mot de passe" required>
+                <input type="password" id="register-confirm-password" name="confirm-password" placeholder="Confirmez votre mot de passe" required>
+            </div>
+            <button type="submit" class="auth-button">S'inscrire</button>
         </form>
     </div>
 </section>

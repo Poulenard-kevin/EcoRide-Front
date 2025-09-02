@@ -25361,6 +25361,26 @@ button.nav-link.dropdown-toggle:hover:active {
   display: block;
 }
 
+.auth-form form {
+  background-color: #F1E7D1; /* Utilise la variable définie */
+  padding: 35px; /* Ajoute un espace interne */
+  padding-left: 30px;
+  padding-right: 30px;
+  border-radius: 30px; /* Ajoute des coins arrondis */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.auth-form h3, .auth-form .h3 {
+  margin-bottom: 20px; /* Ajuste uniquement la marge des h3 dans .auth-form */
+  font-family: "Poppins", sans-serif; /* Utilise la police définie */
+  font-weight: 500; /* Poids du texte */
+  font-size: 24px; /* Taille du texte */
+  line-height: 1.3; /* Hauteur de ligne */
+  color: #1F4924; /* Couleur du texte */
+  text-align: center; /* Centre le texte */
+}
+
 .auth-tabs {
   display: flex;
   justify-content: center; /* Centre les boutons horizontalement */
@@ -25371,15 +25391,17 @@ button.nav-link.dropdown-toggle:hover:active {
 .auth-tabs .nav-link {
   background-color: #F1E7D1; /* Couleur de fond */
   color: #1F4924; /* Couleur du texte */
+  width: 220px;
   border: none; /* Supprime les bordures */
   border-radius: 20px; /* Ajoute des coins arrondis */
-  padding: 10px 20px; /* Ajoute de l'espace interne */
+  padding: 12px 30px; /* Ajoute de l'espace interne */
   font-family: "Poppins", sans-serif; /* Utilise la police définie */
-  font-size: 16px; /* Taille du texte */
-  font-weight: 700; /* Texte en gras */
+  font-size: 24px; /* Taille du texte */
+  font-weight: 500; /* Texte en gras */
   text-align: center; /* Centre le texte */
   cursor: pointer; /* Change le curseur au survol */
   transition: background-color 0.3s ease, transform 0.3s ease; /* Ajoute une transition fluide */
+  box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
 }
 
 .auth-tabs .nav-link.active {
@@ -25390,7 +25412,224 @@ button.nav-link.dropdown-toggle:hover:active {
 .auth-tabs .nav-link:hover {
   background-color: #1F4924; /* Couleur de fond au survol */
   color: #F1E7D1; /* Couleur du texte au survol */
-  transform: scale(1.05); /* Zoom léger au survol */
+}
+
+.auth-button {
+  background-color: #4B8A47; /* Couleur de fond */
+  color: #F1E7D1; /* Couleur du texte */
+  width: 220px; /* Largeur identique */
+  border: none; /* Supprime les bordures */
+  border-radius: 20px; /* Ajoute des coins arrondis */
+  padding: 12px 30px; /* Ajoute de l'espace interne */
+  font-family: "Poppins", sans-serif; /* Utilise la police définie */
+  font-size: 24px; /* Taille du texte */
+  font-weight: 500; /* Texte en gras */
+  text-align: center; /* Centre le texte */
+  cursor: pointer; /* Change le curseur au survol */
+  transition: background-color 0.3s ease, transform 0.3s ease; /* Ajoute une transition fluide */
+  box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5); /* Ajoute une ombre */
+  margin-bottom: 20px;
+}
+
+.auth-button:hover {
+  background-color: #1F4924; /* Couleur de fond au survol */
+  color: #F1E7D1; /* Couleur du texte au survol */
+}
+
+.auth-section {
+  gap: 20px; /* Espacement entre les éléments */
+  background-color: #CACFAA;
+  border-radius: 30px;
+  padding: 30px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-left: 100px;
+  margin-right: 100px;
+  padding-bottom: 60px;
+}
+@media (max-width: 768px) {
+  .auth-section {
+    padding: 20px;
+    margin-left: 50px;
+    margin-right: 50px;
+  }
+}
+@media (max-width: 576px) {
+  .auth-section {
+    padding: 20px;
+    margin-left: 25px;
+    margin-right: 25px;
+  }
+}
+
+.auth-input-container {
+  display: flex;
+  flex-direction: column; /* Empile les éléments verticalement */
+  align-items: center; /* Centre les éléments horizontalement */
+  gap: 15px; /* Ajoute un espace entre les champs */
+  margin: 0 auto; /* Centre le conteneur horizontalement */
+  width: 100%; /* Prend toute la largeur disponible */
+  max-width: 400px; /* Limite la largeur maximale */
+  margin-bottom: 20px; /* Ajoute un espace en dessous du conteneur */
+}
+
+.auth-input, .password-input {
+  border: none;
+  border-radius: 20px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 16px;
+  color: #1F4924;
+  background-color: #F8F0E5;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  outline: none;
+  transition: box-shadow 0.3s ease;
+  width: 100%; /* Prend toute la largeur du conteneur */
+}
+
+.auth-input::-moz-placeholder {
+  color: #7a8a6f;
+}
+
+.auth-input::placeholder {
+  color: #7a8a6f;
+}
+
+.auth-social-icons {
+  display: flex;
+  justify-content: center; /* Centre les icônes horizontalement */
+  gap: 20px; /* Ajuste l'espacement entre les icônes */
+  margin-bottom: 20px; /* Ajoute un espace en dessous des icônes */
+}
+
+.auth-social-icons a {
+  font-size: 24px; /* Taille des icônes */
+  color: #4B8A47; /* Couleur des icônes */
+  transition: transform 0.3s ease, color 0.3s ease; /* Ajoute une transition pour le survol */
+}
+
+.auth-social-icons a:hover {
+  color: #4B8A47; /* Change la couleur au survol */
+  transform: scale(1.2); /* Agrandit légèrement les icônes au survol */
+}
+
+.auth-text {
+  font-family: "Roboto", sans-serif; /* Utilise la police définie */
+  font-size: 20px; /* Taille du texte */
+  line-height: 1.3; /* Hauteur de ligne */
+  color: #1F4924; /* Couleur du texte */
+  margin-bottom: 20px; /* Ajoute un espace au-dessous */
+}
+
+.auth-text a {
+  text-align: center;
+  color: #4B8A47; /* Couleur du lien */
+  transition: color 0.3s ease; /* Ajoute une transition pour le survol */
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+.auth-text a:hover {
+  color: #4B8A47; /* Change la couleur au survol */
+}
+
+input[type=checkbox] {
+  width: 13px;
+  height: 13px;
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
+  background-color: #F8F0E5;
+  border: 2px solid #4B8A47;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+}
+input[type=checkbox]:checked {
+  background-color: #4B8A47;
+  border-color: #4B8A47;
+}
+input[type=checkbox]:checked::after {
+  content: "✔";
+  color: #F1E7D1;
+  font-size: 10px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.auth-suscribe {
+  display: flex; /* Active Flexbox */
+  flex-direction: row; /* Aligne les éléments horizontalement */
+  align-items: center; /* Centre les éléments verticalement */
+  justify-content: center; /* Centre les éléments horizontalement */
+  gap: 20px; /* Ajoute un espace de 20px entre les éléments */
+}
+
+.auth-suscribe p {
+  font-family: "Roboto", sans-serif; /* Utilise la police définie */
+  font-size: 20px; /* Taille du texte */
+  line-height: 1.3; /* Hauteur de ligne */
+  color: #1F4924; /* Couleur du texte */
+  text-align: center; /* Centre le texte */
+}
+
+.auth-suscribe p a {
+  text-decoration: underline; /* Ajoute un soulignement au lien */
+  color: #4B8A47; /* Couleur du lien */
+  transition: color 0.3s ease; /* Ajoute une transition pour le survol */
+}
+
+.auth-suscribe p a:hover {
+  color: #1F4924; /* Change la couleur au survol */
+}
+
+#register-form {
+  display: none; /* Masque par défaut */
+}
+
+#register-form.active {
+  display: block; /* Affiche lorsque l'onglet est actif */
+}
+
+#register-form h3, #register-form .h3 {
+  margin-bottom: 20px; /* Ajoute un espace en dessous du titre */
+  font-family: "Poppins", sans-serif; /* Utilise la police définie */
+  font-weight: 500; /* Poids du texte */
+  font-size: 24px; /* Taille du texte */
+  line-height: 1.3; /* Hauteur de ligne */
+  color: #1F4924; /* Couleur du texte */
+  text-align: center; /* Centre le texte */
+}
+
+.auth-input-container label {
+  font-family: "Roboto", sans-serif; /* Utilise la police définie */
+  font-size: 20px; /* Taille du texte */
+  color: #1F4924; /* Couleur du texte */
+  text-align: left; /* Aligne le texte à gauche */
+}
+
+.auth-input-container input {
+  border: none;
+  border-radius: 20px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 16px;
+  color: #1F4924;
+  background-color: #F8F0E5;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  outline: none;
+  width: 100%; /* Prend toute la largeur disponible */
+}
+
+.auth-input-container input::-moz-placeholder {
+  color: #7a8a6f;
+  font-style: italic;
+}
+
+.auth-input-container input::placeholder {
+  color: #7a8a6f;
+  font-style: italic;
 }
 
 html {

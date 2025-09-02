@@ -7,6 +7,7 @@
 // Import des variables et styles personnalisés
 @import 'custom';
 @import 'covoiturage';
+@import 'auth';
 
 
 html{
@@ -175,6 +176,27 @@ footer.footer{
       margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
       margin-right: 25px;
       margin-top: -30px; /* Conserve l'augmentation de 10px */
+    }
+  }
+
+  .big-title {
+    position: relative;
+    top: -20px; // Positionne à 100px du haut
+    margin-left: 100px; // Positionne à 50px de la gauche
+    margin-bottom: 25px; // Ajoute une marge de 25px en bas
+    text-align: left; // Aligne le texte à gauche
+    transform: none; // Supprime la transformation pour le centrage
+  
+    @media (max-width: 768px) {
+      font-size: $font-size-h1; /* Réduit encore la taille pour les écrans de tablette */
+      margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
+      margin-right: 50px;
+    }
+  
+    @media (max-width: 576px) {
+      font-size: $font-size-h2; /* Réduit encore la taille pour les écrans mobiles */
+      margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
+      margin-right: 25px;
     }
   }
 

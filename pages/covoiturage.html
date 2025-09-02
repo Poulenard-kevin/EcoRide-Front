@@ -1,0 +1,238 @@
+<div class="hero-scene">
+    <div class="hero-scene-content">
+        <h1 class="big-title">Covoiturage</h1>
+    </div>
+</div>
+
+<section class="covoiturage-search-bar">
+    <div class="search-container">
+        <input type="text" class="search-input" placeholder="Lieux de départ">
+        <input type="text" class="search-input" placeholder="Lieux d'arrivée">
+        <input type="text" class="search-input" placeholder="Heure et date de départ">
+        <input type="text" class="search-input" placeholder="Nombre de passagers">
+        <button class="search-btn reserve-btn">Réserver</button>
+    </div>
+</section>
+
+<section class="covoiturage-results">
+    <h1 class="results-title">Liste de covoiturage</h1>
+
+    <!-- Bouton "Filtres" pour les petits écrans -->
+    <button class="btn btn-primary filters-toggle" type="button" data-bs-toggle="offcanvas" data-bs-target="#filtersOffcanvas" aria-controls="filtersOffcanvas">
+        Filtres
+    </button>
+
+    <div class="results-container">
+        <!-- Div "Filtres" pour les grands écrans -->
+        <div class="filters">
+            <div class="filter-group">
+                <label>
+                    <input type="checkbox" checked> Voiture électrique
+                </label>
+                <label>
+                    <input type="checkbox" checked> Voiture hybride
+                </label>
+                <label>
+                    <input type="checkbox"> Voiture thermique
+                </label>
+            </div>
+            <div class="filter-group">
+                <label for="prix-max">Prix max (€)</label>
+                <input type="text" id="prix-max" placeholder="____" class="form-control">
+            </div>
+            <div class="filter-group">
+                <label for="duree-max">Durée max</label>
+                <input type="text" id="duree-max" placeholder="____ [ min ]" class="form-control">
+            </div>
+            <div class="filter-group">
+                <label for="note-mini">Note mini</label>
+                <select id="note-mini" name="note-mini" class="form-select">
+                    <option value="5">★★★★★</option>
+                    <option value="4">★★★★☆</option>
+                    <option value="3">★★★☆☆</option>
+                    <option value="2">★★☆☆☆</option>
+                    <option value="1">★☆☆☆☆</option>
+                </select>
+            </div>
+            <div class="filter-buttons">
+                <button type="button" class="btn btn-success apply-btn">Appliquer</button>
+                <button type="reset" class="btn btn-secondary reset-btn">Réinitialiser</button>
+            </div>
+        </div>
+
+        <!-- Offcanvas pour les filtres -->
+        <div class="offcanvas offcanvas-start" tabindex="-1" id="filtersOffcanvas" aria-labelledby="filtersOffcanvasLabel">
+            <div class="offcanvas-header">
+                <h5 class="offcanvas-title" id="filtersOffcanvasLabel">Filtres</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+            <div class="offcanvas-body">
+                <div class="filter-group">
+                    <label>
+                        <input type="checkbox" checked> Voiture électrique
+                    </label>
+                    <label>
+                        <input type="checkbox" checked> Voiture hybride
+                    </label>
+                    <label>
+                        <input type="checkbox"> Voiture thermique
+                    </label>
+                </div>
+                <div class="filter-group">
+                    <label for="prix-max">Prix max (€)</label>
+                    <input type="text" id="prix-max" placeholder="____" class="form-control">
+                </div>
+                <div class="filter-group">
+                    <label for="duree-max">Durée max</label>
+                    <input type="text" id="duree-max" placeholder="____ [ min ]" class="form-control">
+                </div>
+                <div class="filter-group">
+                    <label for="note-mini">Note mini</label>
+                    <select id="note-mini" name="note-mini" class="form-select">
+                        <option value="5">★★★★★</option>
+                        <option value="4">★★★★☆</option>
+                        <option value="3">★★★☆☆</option>
+                        <option value="2">★★☆☆☆</option>
+                        <option value="1">★☆☆☆☆</option>
+                    </select>
+                </div>
+                <div class="filter-buttons">
+                    <button type="button" class="btn btn-success apply-btn">Appliquer</button>
+                    <button type="reset" class="btn btn-secondary reset-btn">Réinitialiser</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Résultats -->
+        <div class="results">
+            <div class="result-card">
+                <div class="result-header">
+                    <p class="date">Vendredi 16 septembre</p>
+                </div>
+                <div class="result-body">
+                    <div class="profile-column">
+                        <img src="images/profil1.png" alt="Profil" class="profile-photo">
+                        <div class="pseudo-rating">
+                            <p class="pseudo">Pseudo</p>
+                            <p class="rating">★★★★☆</p>
+                        </div>
+                        <div class="column">
+                            <p class="type">Economique</p>
+                            <p class="places">Place: 2</p>
+                        </div>
+                    </div>
+                    <div class="details">
+                        <div class="column">
+                            <p>Paris</p>
+                            <p>Lyon</p>
+                        </div>
+                        <div class="column">
+                            <p class="time">16h00</p>
+                            <p class="time">20h30</p>
+                        </div>
+                        <div class="column">
+                            <p class="price">30€</p>
+                            <button class="detail-btn">Détail</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="result-card">
+                <div class="result-header">
+                    <p class="date">Vendredi 16 septembre</p>
+                </div>
+                <div class="result-body">
+                    <div class="profile-column">
+                        <img src="images/profil1.png" alt="Profil" class="profile-photo">
+                        <div class="pseudo-rating">
+                            <p class="pseudo">Pseudo</p>
+                            <p class="rating">★★★★☆</p>
+                        </div>
+                        <div class="column">
+                            <p class="type">Economique</p>
+                            <p class="places">Place: 2</p>
+                        </div>
+                    </div>
+                    <div class="details">
+                        <div class="column">
+                            <p>Paris</p>
+                            <p>Lyon</p>
+                        </div>
+                        <div class="column">
+                            <p class="time">16h00</p>
+                            <p class="time">20h30</p>
+                        </div>
+                        <div class="column">
+                            <p class="price">30€</p>
+                            <button class="detail-btn">Détail</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="result-card">
+                <div class="result-header">
+                    <p class="date">Vendredi 16 septembre</p>
+                </div>
+                <div class="result-body">
+                    <div class="profile-column">
+                        <img src="images/profil1.png" alt="Profil" class="profile-photo">
+                        <div class="pseudo-rating">
+                            <p class="pseudo">Pseudo</p>
+                            <p class="rating">★★★★☆</p>
+                        </div>
+                        <div class="column">
+                            <p class="type">Economique</p>
+                            <p class="places">Place: 2</p>
+                        </div>
+                    </div>
+                    <div class="details">
+                        <div class="column">
+                            <p>Paris</p>
+                            <p>Lyon</p>
+                        </div>
+                        <div class="column">
+                            <p class="time">16h00</p>
+                            <p class="time">20h30</p>
+                        </div>
+                        <div class="column">
+                            <p class="price">30€</p>
+                            <button class="detail-btn">Détail</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="result-card">
+                <div class="result-header">
+                    <p class="date">Vendredi 16 septembre</p>
+                </div>
+                <div class="result-body">
+                    <div class="profile-column">
+                        <img src="images/profil1.png" alt="Profil" class="profile-photo">
+                        <div class="pseudo-rating">
+                            <p class="pseudo">Pseudo</p>
+                            <p class="rating">★★★★☆</p>
+                        </div>
+                        <div class="column">
+                            <p class="type">Economique</p>
+                            <p class="places">Place: 2</p>
+                        </div>
+                    </div>
+                    <div class="details">
+                        <div class="column">
+                            <p>Paris</p>
+                            <p>Lyon</p>
+                        </div>
+                        <div class="column">
+                            <p class="time">16h00</p>
+                            <p class="time">20h30</p>
+                        </div>
+                        <div class="column">
+                            <p class="price">30€</p>
+                            <button class="detail-btn">Détail</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

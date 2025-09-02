@@ -3,19 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Roboto:wght@400&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="scss/_custom.scss">
+    <link rel="stylesheet" href="scss/main.css">
+   
+    
+
+   
     <title>Document</title>
 </head>
 <body>
 
-    <header>Le menu</header>
+    <header style="background-color: #F1E7D1;">
+      <nav class="navbar navbar-expand-lg" data-bs-theme="light" aria-label="Main navigation">
+        <a class="navbar-brand" href="#">
+          <img src="images/Logo-EcoRide.PNG" alt="EcoRide Logo" class="logo">
+          EcoRide
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNavDropdown">
+          <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+            <li class="nav-item">
+              <a class="nav-link" href="/accueil">Accueil</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/covoiturage">Covoiturage</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#">Espace utilisateur</a>
+            </li>
+            <li class="nav-item dropdown">
+              <button class="nav-link dropdown-toggle" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                Connexion
+              </button>
+              <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                <li><a class="dropdown-item" href="#">S'inscrire</a></li>
+                <li><a class="dropdown-item" href="#">Se connecter</a></li>
+                <li><a class="dropdown-item" href="#">Contact</a></li>
+                <li><a class="dropdown-item" href="#">Espace employé</a></li>
+                <li><a class="dropdown-item" href="#">Espace administrateur</a></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </nav>
+    </header>
+<!--ici le menu pour tablette et portable-->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="offcanvasNavbarLabel">Menu EcoRide</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body">
+        <ul class="navbar-nav justify-content-end flex-grow-1 pe-3">
+          <li class="nav-item">
+            <a class="nav-link" href="/accueil">Accueil</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/covoiturage">Covoiturage</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">Espace utilisateur</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">S'inscrire</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">Se connecter</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">Contact</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">Espace employé</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#">Espace administrateur</a>
+          </li>
+        </ul>
+      </div>
+    </div>
 
-    <main id="main-page">
-        <!--Le contenu de la page sera injectée ici-->
-    </main>
+    <main id="main-page"></main>
 
-    <footer>Le footer de mon site</footer>
+    <footer class="footer-responsive">
+      <div class="contact navigation-text">
+        <a href="/contact.html">contact@ecoride.fr</a>
+      </div>
+      <div class="social-icons">
+        <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+        <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+        <a href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+        <a href="#" aria-label="Twitter"><i class="bi bi-twitter"></i></a>
+      </div>
+      <div class="mentions navigation-text">
+        <a href="/mentions-legales.html">Mentions légales</a>
+      </div>
+    </footer>
 
     <script type="module" src="Router/router.js"></script>
+    <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="Js/search.js"></script>
     
 </body>
 </html>

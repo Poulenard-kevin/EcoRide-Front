@@ -204,7 +204,7 @@ $transition-default: color 0.3s ease, transform 0.3s ease;
     background-color: $color-light-beige; /* Utilise la variable définie pour #F1E7D1 */
     border: none; /* Supprime la bordure si nécessaire */
     z-index: 1050 !important;
-    font-size: 20px;
+    font-size: $font-size-nav;
 }
 
 .dropdown-menu:hover {

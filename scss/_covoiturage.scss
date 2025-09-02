@@ -145,8 +145,6 @@
       height: auto;
       margin-bottom: 60px;
       display: block; /* Visible par défaut sur les grands écrans */
-      font-size: 16px;
-
       .filters-content {
         display: block; /* Visible par défaut */
       }
@@ -211,7 +209,7 @@
           padding: 10px; /* Ajoute un espace interne */
           width: 100%; /* L'input occupe toute la largeur disponible */
           color: $color-dark-green; /* Couleur du texte */
-          font-size: 16px; /* Taille du texte */
+          font-size: 1rem; /* Taille du texte */
           transition: border-color 0.3s ease; /* Ajoute une transition pour un effet fluide */
 
 
@@ -253,7 +251,7 @@
           padding: 10px; /* Ajoute un espace interne */
           width: 100%; /* Le select occupe toute la largeur disponible */
           color: $color-dark-green; /* Couleur du texte */
-          font-size: 16px; /* Taille du texte */
+          font-size: 1rem; /* Taille du texte */
           transition: border-color 0.3s ease; /* Ajoute une transition fluide */
           border-color: $color-medium-green;
         
@@ -282,7 +280,6 @@
           border: none;
           border-radius: 20px;
           cursor: pointer;
-          font-size: 16px;
         }
 
         .apply-btn {

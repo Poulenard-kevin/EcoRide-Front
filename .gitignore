@@ -1,2 +1,13 @@
+# macOS system files
 .DS_Store
-node_modules
+
+# Node modules
+node_modules/
+
+# Fichiers compilés CSS et maps
+scss/main.css
+scss/main.css.map
+
+# Autres fichiers temporaires ou IDE (exemple)
+.vscode/
+*.log

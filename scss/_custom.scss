@@ -204,6 +204,12 @@ $transition-default: color 0.3s ease, transform 0.3s ease;
     background-color: $color-light-beige; /* Utilise la variable définie pour #F1E7D1 */
     border: none; /* Supprime la bordure si nécessaire */
     z-index: 1050 !important;
+    font-size: 20px;
+}
+
+.dropdown-menu:hover {
+  transform: scale(1.1); /* Zoom de 10% au survol */
+  transition: $transition-default;
 }
 
 /* Style pour les éléments du menu déroulant au survol */
@@ -212,25 +218,10 @@ $transition-default: color 0.3s ease, transform 0.3s ease;
     color: $color-dark-green; /* Couleur du texte au survol */
 }
 
-/* Style spécifique pour l'élément "Connexion" */
-.dropdown-item.connexion {
-    color: $color-dark-green !important; /* Force la couleur en vert foncé */
-    font-family: 'Poppins', sans-serif; /* Harmonisation avec le reste du site */
-    font-size: 16px; /* Taille du texte */
-    transition: color 0.3s ease; /* Animation fluide */
-}
-
-.dropdown-item.connexion:hover,
-.dropdown-item.connexion:focus,
-.dropdown-item.connexion:active {
-    background-color: $color-very-light-beige; /* Couleur légèrement différente au survol */
-    color: $color-dark-green !important; /* Force la couleur au survol ou sélectionné */
-}
-
 button.nav-link.dropdown-toggle {
     color: $color-dark-green !important; /* Couleur par défaut en vert foncé */
     font-family: 'Poppins', sans-serif; /* Harmonisation avec le reste du site */
-    font-size: 24px; /* Taille du texte */
+    font-size: $font-size-h3; /* Taille du texte */
     transition: color 0.3s ease; /* Animation fluide */
 }
 
@@ -251,6 +242,17 @@ button.nav-link.dropdown-toggle:hover:active {
 
 .navbar-toggler {
     margin-left: auto; /* Place le bouton à droite */
+}
+
+.offcanvas-title {
+    
+    font-size: $font-size-nav; /* Taille pour les titres de l'offcanvas */
+   
+}
+
+.offcanvas-body {
+    background-color: $color-light-beige; /* Utilise la variable définie pour #F1E7D1 */
+    font-size: $font-size-small;
 }
 
  

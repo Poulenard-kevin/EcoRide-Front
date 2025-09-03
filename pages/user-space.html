@@ -1,50 +1,114 @@
 <div class="hero-scene">
-    <div class="hero-scene-content">
-        <h1 class="big-title">Espace utilisateur</h1>
-    </div>
+  <div class="hero-scene-content">
+    <h1 class="big-title">Espace utilisateur</h1>
+  </div>
 </div>
 
 <section class="user-space-section container">
-    <ul class="nav nav-pills auth-tabs">
-        <li class="nav-item">
-            <a id="login-tab" class="nav-link active" href="javascript:void(0);">Profile / Rôle</a>
-        </li>
-        <li class="nav-item">
-            <a id="register-tab" class="nav-link" href="javascript:void(0);">Mes trajects</a>
-        </li>
-        <li class="nav-item">
-            <a id="register-tab" class="nav-link" href="javascript:void(0);">Mes véhicules</a>
-        </li>
-        <li class="nav-item">
-            <a id="register-tab" class="nav-link" href="javascript:void(0);">Historique</a>
-        </li>
-    </ul>
+  <ul class="nav nav-pills user-tabs">
+    <li class="nav-item">
+      <a class="nav-link active" href="javascript:void(0);">Profile / Rôle</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="javascript:void(0);">Mes trajects</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="javascript:void(0);">Mes véhicules</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="javascript:void(0);">Historique</a>
+    </li>
+  </ul>
 
-    <div id="profile-form" class="user-space-form active">
-        <form>
+  <div id="profile-form" class="user-space-form active">
+    <form>
+      <h2>Profile / Rôle</h2>
 
-        </form>
-    </div>
+      <div class="form-group horizontal-group">
+        <div class="role-group">
+          <label>
+            <input type="radio" name="role" value="chauffeur"> Chauffeur
+          </label>
+          <label>
+            <input type="radio" name="role" value="passager"> Passager
+          </label>
+          <label>
+            <input type="radio" name="role" value="les-deux"> Les deux
+          </label>
+        </div>
+        <button type="submit" class="btn">Enregistrer</button>
+      </div>
 
-    <div id="trips-form" class="user-space-form" style="display:none;">
-        <form>
+      <table class="form-table">
+        <thead>
+          <tr>
+            <th scope="col">Plaque d'immatriculation</th>
+            <th scope="col">Date de première immatriculation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <input type="text" id="plate" class="form-control" placeholder="AB - 123 - CD">
+            </td>
+            <td>
+              <input type="text" id="registration-date" class="form-control" placeholder="jj/mm/aaaa">
+            </td>
+          </tr>
+          <tr>
+            <th scope="col">Modèle, marque véhicule et couleur</th>
+            <th scope="col">Nombre de places disponibles</th>
+          </tr>
+          <tr>
+            <td>
+              <input type="text" id="vehicle-model" class="form-control" placeholder="Tesla, Model 3, Noir">
+            </td>
+            <td>
+              <input type="number" id="seats" class="form-control" placeholder="3">
+            </td>
+          </tr>
+          <tr>
+            <th scope="col">Préférences chauffeur</th>
+            <th scope="col">Autre</th>
+          </tr>
+          <tr>
+            <td>
+              <div class="checkbox-group">
+                <label>
+                  <input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="fumeur"> Fumeur
+                </label>
+                <label>
+                  <input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="animal"> Animal
+                </label>
+                <label>
+                  <input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="musique"> Musique
+                </label>
+              </div>
+            </td>
+            <td>
+              <input type="text" id="other" class="form-control" placeholder="Discussion...">
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </form>
+  </div>
 
-        </form>
-    </div>
+  <div id="trips-form" class="user-space-form" style="display:none;">
+    <form>
+      <h1>Mes trajects</h1>
+    </form>
+  </div>
 
-    <div id="vehicles-form" class="user-space-form" style="display:none;">
-        <form>
+  <div id="vehicles-form" class="user-space-form" style="display:none;">
+    <form>
+      <h1>Mes véhicules</h1>
+    </form>
+  </div>
 
-        </form>
-    </div>
-
-    <div id="history-form" class="user-space-form" style="display:none;">
-        <form>
-
-        </form>
-    </div>
-
-
-
-
+  <div id="history-form" class="user-space-form" style="display:none;">
+    <form>
+      <h1>Historique</h1>
+    </form>
+  </div>
 </section>

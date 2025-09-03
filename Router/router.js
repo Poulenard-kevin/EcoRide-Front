@@ -24,26 +24,22 @@ const getRouteByUrl = (url) => {
 // Fonction pour charger le contenu de la page
 const LoadContentPage = async () => {
   const path = window.location.pathname;
-  // Récupération de l'URL actuelle
+  const queryParams = new URLSearchParams(window.location.search); // Récupère les paramètres de l'URL
   const actualRoute = getRouteByUrl(path);
-  // Récupération du contenu HTML de la route
   const html = await fetch(actualRoute.pathHtml).then((data) => data.text());
-  // Ajout du contenu HTML à l'élément avec l'ID "main-page"
   document.getElementById("main-page").innerHTML = html;
 
-  // Ajout du contenu JavaScript
   if (actualRoute.pathJS != "") {
-    // Création d'une balise script
     var scriptTag = document.createElement("script");
     scriptTag.setAttribute("type", "text/javascript");
     scriptTag.setAttribute("src", actualRoute.pathJS);
-
-    // Ajout de la balise script au corps du document
     document.querySelector("body").appendChild(scriptTag);
   }
 
-  // Changement du titre de la page
   document.title = actualRoute.title + " - " + websiteName;
+
+  // Déclenchement de l'événement personnalisé avec les paramètres
+  document.dispatchEvent(new CustomEvent("routeLoaded", { detail: { queryParams } }));
 };
 
 // Fonction pour gérer les événements de routage (clic sur les liens)

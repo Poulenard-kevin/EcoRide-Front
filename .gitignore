@@ -11,3 +11,5 @@ scss/main.css.map
 # Autres fichiers temporaires ou IDE (exemple)
 .vscode/
 *.log
+
+sitting.json

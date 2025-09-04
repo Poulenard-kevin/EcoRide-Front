@@ -15,39 +15,49 @@ const getRouteByUrl = (url) => {
   return currentRoute || route404;
 };
 
-// Supprime les scripts précédemment ajoutés
-const removePreviousScripts = () => {
+// Supprime les scripts et styles précédemment ajoutés
+const removePreviousAssets = () => {
   const scripts = document.querySelectorAll("script[data-dynamic]");
+  const styles = document.querySelectorAll("link[data-dynamic]");
   scripts.forEach((script) => script.remove());
+  styles.forEach((style) => style.remove());
 };
 
 // Fonction pour charger le contenu de la page
 const LoadContentPage = async () => {
   const path = window.location.pathname;
-  const queryParams = new URLSearchParams(window.location.search);
   const actualRoute = getRouteByUrl(path);
 
   // Récupération du contenu HTML de la route
   const html = await fetch(actualRoute.pathHtml).then((data) => data.text());
   document.getElementById("main-page").innerHTML = html;
 
-  // Supprime les scripts précédents
-  removePreviousScripts();
+  // Supprime les scripts et styles précédents
+  removePreviousAssets();
 
   // Ajout du contenu JavaScript
   if (actualRoute.pathJS) {
     const scriptTag = document.createElement("script");
     scriptTag.setAttribute("type", "text/javascript");
     scriptTag.setAttribute("src", actualRoute.pathJS);
-    scriptTag.setAttribute("data-dynamic", "true"); // Marqueur pour les scripts dynamiques
+    scriptTag.setAttribute("data-dynamic", "true");
     document.querySelector("body").appendChild(scriptTag);
+  }
+
+  // Ajout du contenu SCSS/CSS
+  if (actualRoute.pathCSS) {
+    const styleTag = document.createElement("link");
+    styleTag.setAttribute("rel", "stylesheet");
+    styleTag.setAttribute("href", actualRoute.pathCSS);
+    styleTag.setAttribute("data-dynamic", "true");
+    document.querySelector("head").appendChild(styleTag);
   }
 
   // Changement du titre de la page
   document.title = `${actualRoute.title} - ${websiteName}`;
 
-  // Déclenchement de l'événement personnalisé avec les paramètres
-  document.dispatchEvent(new CustomEvent("routeLoaded", { detail: { queryParams } }));
+  // Déclenchement de l'événement personnalisé
+  document.dispatchEvent(new CustomEvent("routeLoaded"));
 };
 
 // Fonction pour gérer les événements de routage (clic sur les liens)
@@ -65,11 +75,8 @@ window.route = routeEvent;
 // Chargement du contenu de la page au chargement initial
 LoadContentPage();
 
-document.addEventListener("routeLoaded", (event) => {
-  const path = window.location.pathname;
-
-  if (path === "/espace-utilisateur") {
-    console.log("Route espace utilisateur chargée.");
-    initUserSpace(); // Réinitialise les événements pour les onglets et formulaires
+document.addEventListener("routeLoaded", () => {
+  if (window.location.pathname === "/espace-utilisateur") {
+    setTimeout(() => initUserSpace(), 50);
   }
 });

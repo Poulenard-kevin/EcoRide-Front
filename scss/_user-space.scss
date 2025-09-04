@@ -3,334 +3,93 @@
   color: #fff;
 }
 
-h2 {
-  text-align: center; /* Centre le titre */
-  margin: 35px; /* Espace en dessous du titre */
-}
-
 .user-space-section.container {
-    background-color: $color-background;
-    border-radius: 30px;
-    padding: 35px;
-    padding-bottom: 60px;
-    padding-left: 100px;
-    padding-right: 100px;
-    margin-left: 100px; // Ajoute une marge explicite à gauche
-    margin-right: 100px; // Ajoute une marge explicite à droite
-    max-width: calc(100% - 200px); // Ajuste la largeur maximale pour tenir compte des marges
-    box-sizing: border-box; // Inclure le padding dans la largeur totale
+  background-color: $color-background;
+  border-radius: 30px;
+  padding: 35px 100px 60px;
+  margin: 0 100px;
+  max-width: calc(100% - 200px);
+  box-sizing: border-box;
 
-    @media (max-width: 768px) {
-        padding: 50px;
-        padding-top: 30px;
-        padding-bottom: 60px;
-        margin-left: 50px; // Ajuste la marge pour les écrans plus petits
-        margin-right: 50px; // Ajuste la marge pour les écrans plus petits
-        max-width: calc(100% - 100px); // Ajuste la largeur maximale
-    }
+  @media (max-width: 768px) {
+    padding: 30px 50px 60px;
+    margin: 0 50px;
+    max-width: calc(100% - 100px);
+  }
 
-    @media (max-width: 576px) {
-        padding: 20px;
-        padding-bottom: 60px;
-        margin-left: 25px; // Ajuste la marge pour les écrans très petits
-        margin-right: 25px; // Ajuste la marge pour les écrans très petits
-        max-width: calc(100% - 50px); // Ajuste la largeur maximale
-    }
+  @media (max-width: 576px) {
+    padding: 20px 20px 60px;
+    margin: 0 25px;
+    max-width: calc(100% - 50px);
+  }
 }
 
 .user-space-section {
   padding: 20px;
-  background-color: $color-light-beige; /* Couleur de fond */
-  border-radius: 20px; /* Coins arrondis */
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ombre légère */
-
-  .user-tabs {
-    display: flex;
-    justify-content: start;
-    margin-bottom: 20px;
-  
-
-    .nav-link {
-      font-family: $font-title;
-      font-size: $font-size-body;
-      font-weight: $weight-medium;
-      color: $color-dark-green;
-      padding: 10px 20px;
-      border-radius: 30px;
-      text-align: center;
-      cursor: pointer;
-      
-
-      &.active {
-        background-color: $color-medium-green;
-        color: $color-light-beige;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      }
-
-      &:hover {
-        background-color: $color-dark-green;
-        color: $color-light-beige;
-      }
-    }
-  }
+  background-color: $color-light-beige;
+  border-radius: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-// Navigation pas onglets //
-// Navigation pas onglets //
-// Navigation pas onglets //
-// Navigation pas onglets //
-
+// NAVIGATION ONGLET
 .user-tabs {
   display: flex;
   justify-content: start;
   margin-bottom: 35px;
   background-color: $color-light-beige;
   border-radius: 30px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
+  box-shadow: 0 4px 6px rgba(0,0,0,.1);
 
-.user-tabs .nav-link {
-  width: 230px;
-  border: none; /* Supprime les bordures */
-  font-family: $font-title; /* Utilise la police définie */
-  font-size: $font-size-h3; /* Taille du texte */
-  font-weight: $weight-medium; /* Texte en gras */
-  text-align: center; /* Centre le texte */
-  cursor: pointer; /* Change le curseur au survol */
-  padding: 12px 30px; /* Ajoute de l'espace interne */
-  border-radius: 30px; /* Ajoute des coins arrondis */
-  color: $color-dark-green;
-}
+  .nav-link {
+    width: 230px;
+    font-family: $font-title;
+    font-size: $font-size-h3;
+    font-weight: $weight-medium;
+    text-align: center;
+    cursor: pointer;
+    padding: 12px 30px;
+    border-radius: 30px;
+    color: $color-dark-green;
 
-.user-tabs .nav-link.active {
-  transition: background-color 0.3s ease, transform 0.3s ease; /* Ajoute une transition fluide */
-  box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
-  border-radius: 30px; /* Ajoute des coins arrondis */
-  padding: 10px 30px; /* Ajoute de l'espace interne */
-  background-color: $color-medium-green; /* Couleur de fond pour l'onglet actif */
-  color: $color-light-beige; /* Couleur du texte pour l'onglet actif */
-}
-
-.user-tabs .nav-link:hover {
-  border-radius: 30px; /* Ajoute des coins arrondis */
-  padding: 10px 30px; /* Ajoute de l'espace interne */
-  background-color: $color-dark-green; /* Couleur de fond au survol */
-  color: $color-light-beige; /* Couleur du texte au survol */
-  transition: background-color 0.3s ease, transform 0.3s ease; /* Ajoute une transition fluide */
-  box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
-}
-
-// Profile / Rôle //
-// Profile / Rôle //
-// Profile / Rôle //
-// Profile / Rôle //
-
-  form {
-    background-color: $color-light-beige; /* Couleur de fond */
-    padding-top:10px;
-    padding-left: 35px; /* Espacement interne */
-    padding-right: 35px; /* Espacement interne */
-    padding-bottom: 35px; /* Espacement interne */
-    border-radius: 30px; /* Coins arrondis */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ombre légère */
-    text-align: center; /* Centre le texte */
-  }
-
-  .btn {
-    background-color: $color-medium-green; /* Couleur de fond du bouton */
-    color: $color-light-beige; /* Couleur du texte */
-    border: none; /* Supprime les bordures */
-    border-radius: 30px; /* Coins arrondis */
-    padding: 10px 20px; /* Espacement interne */
-    font-family: $font-title; /* Police définie */
-    font-size: $font-size-body; /* Taille du texte */
-    font-weight: $weight-medium; /* Texte en gras */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ombre légère */
-    transition: background-color 0.3s ease, transform 0.3s ease; /* Transition fluide */
-    margin-top: 0;
+    &.active {
+      background-color: $color-medium-green;
+      color: $color-light-beige;
+      box-shadow: 0 4px 8px rgba(74,122,63,.5);
+    }
 
     &:hover {
-      background-color: $color-dark-green; /* Couleur de fond au survol */
-      transform: scale(1.05); /* Effet de zoom au survol */
-      box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5); /* Ombre au survol */
-    }
-  }
-
-  input[type="radio"] {
-    width: 16px;
-    height: 16px;
-    appearance: none;
-    background-color: $color-very-light-beige;
-    border: 2px solid $color-medium-green;
-    border-radius: 50%;
-    cursor: pointer;
-    position: relative;
-    margin-right: 10px;
-    display: inline-block;
-  
-    &:checked {
-      background-color: $color-medium-green;
-      border-color: $color-medium-green;
-  
-      &::after {
-        content: '';
-        position: absolute;
-        inset: 4px; // même marge intérieure de chaque côté → parfaitement centré
-        background-color: $color-light-beige;
-        border-radius: 50%;
-      }
-    }
-  }
-
-// Background + placeholder + focus des champs //
-
-  .form-control {
-    background-color: $color-very-light-beige; /* Couleur de fond des champs */
-    border: none; /* Supprime les bordures */
-    border-radius: 20px; /* Coins arrondis */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ombre légère */
-    padding: 10px 15px; /* Espacement interne */
-    font-family: $font-body; /* Police définie */
-    font-size: $font-size-body; /* Taille du texte */
-    font-weight: $weight-regular;
-    color: $color-medium-green; /* Couleur du texte */
-    width: 100%; /* Les champs prennent toute la largeur */
-
-    &::placeholder {
-      color: #7a8a6f; /* Couleur du placeholder */
-    }
-
-    &:focus {
-      outline: none; /* Supprime l'effet de focus par défaut */
-      box-shadow: 0 0 8px rgba(74, 122, 63, 0.5); /* Ombre au focus */
-    }
-  }
-
-  // style du tableuau des rôles //
-  label {
-    font-family: $font-body; /* Police définie */
-    font-size: $font-size-body; /* Taille du texte */
-    font-weight: $weight-regular; /* Texte normal */
-    color: $color-dark-green; /* Couleur du texte */
-    cursor: pointer; /* Change le curseur au survol */
-    display: flex; /* Aligne le texte et la checkbox horizontalement */
-    align-items: center; /* Centre verticalement le texte et la checkbox */
-    margin-bottom: 10px;
-  }
-
-
-
-
-input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  appearance: none;
-  background-color: $color-very-light-beige;
-  border: 2px solid $color-medium-green;
-  border-radius: 4px;
-  cursor: pointer;
-  position: relative;
-  margin-right: 10px;
-
-
-  &:checked {
-    background-color: $color-medium-green;
-    border-color: $color-medium-green;
-
-    &::after {
-      content: '✔';
+      background-color: $color-dark-green;
       color: $color-light-beige;
-      font-size: 10px;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
     }
   }
 }
 
-.form-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 30px;
-  margin-top: 20px;
-
-  .form-field {
-    display: flex;
-    flex-direction: column;
-    text-align: left;
-
-    .form-control {
-      width: 100%;
-    }
-  }
-
-  .role-group {
-    display: flex;
-    gap: 15px;
-    flex-wrap: wrap;
-  }
-
-  .checkbox-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-  }
-
-  .btn {
-    align-self: center;
-    margin-top: 20px;
-    min-width: 200px;
-  }
-}
-
-// Cible uniquement le `<ul>` en dehors de l'Offcanvas
+// Responsive tab nav
 .user-space-section .nav-pills.user-tabs {
-  display: flex; /* Affiche les onglets normalement */
-  justify-content: start;
-  margin-bottom: 20px;
-
-  @media (max-width: 1335px) {
-    display: none; /* Cache les onglets en dessous de 1335px */
-  }
+  display: flex;
+  @media (max-width: 1335px) { display: none; }
 }
 
-// Cible le bouton pour le remplacer en dessous de 1335px
 .user-space-section .user-space-toggle {
-  display: none; /* Cache le bouton par défaut */
-  margin: 0 auto; /* Centre le bouton horizontalement */
-  text-align: center;
-
-  @media (max-width: 1335px) {
-    display: block; /* Affiche le bouton en dessous de 1335px */
-  }
+  display: none;
+  margin: 0 auto;
+  @media (max-width: 1335px) { display: block; }
 }
 
-
+// Offcanvas
 #userSpaceOffcanvas {
   .nav-pills.user-tabs-offcanvas {
-    background: none; /* Supprime le background */
-    box-shadow: none; /* Supprime l'ombre */
-    padding: 0; /* Supprime tout padding si nécessaire */
-    border: none; /* Supprime toute bordure si présente */
+    background: none; box-shadow: none; padding: 0; border: none;
   }
 
   .nav-link {
-    color: $color-dark-green; /* Couleur du texte */
-    font-size: $font-size-body; /* Taille de la police */
-    padding: 0.5rem 1rem; /* Espacement interne */
-    border-radius: 0.25rem; /* Coins arrondis */
-    background-color: transparent; /* Supprime les couleurs de fond */
-  }
+    color: $color-dark-green;
+    font-size: $font-size-body;
+    padding: .5rem 1rem;
+    border-radius: .25rem;
+    background: transparent;
 
-  .nav-link.active {
-    background-color: $color-medium-green; /* Couleur de fond pour l'élément actif */
-    color: $color-light-beige; /* Couleur du texte pour l'élément actif */
-  }
-
-  .nav-link:hover {
-    background-color: $color-dark-green; /* Couleur de fond au survol */
-    color: $color-light-beige; /* Couleur du texte au survol */
+    &.active { background: $color-medium-green; color: $color-light-beige; }
+    &:hover { background: $color-dark-green; color: $color-light-beige; }
   }
 }
-

@@ -3,6 +3,11 @@
   color: #fff;
 }
 
+h2 {
+  text-align: center; /* Centre le titre */
+  margin: 35px; /* Espace en dessous du titre */
+}
+
 .user-space-section.container {
     background-color: $color-background;
     border-radius: 30px;
@@ -43,6 +48,7 @@
     display: flex;
     justify-content: start;
     margin-bottom: 20px;
+  
 
     .nav-link {
       font-family: $font-title;
@@ -67,81 +73,7 @@
       }
     }
   }
-
-  .form-table {
-    width: 100%;
-    border-collapse: separate; /* Permet d'utiliser border-spacing */
-    border-spacing: 30px 10px; /* Ajoute un gap vertical de 20px entre les lignes */
-    text-align: left;
-
-    th {
-      text-align: left; /* Aligne le texte des en-têtes à droite */
-      vertical-align: middle; /* Centre verticalement le contenu */
-      font-family: $font-body; /* Police définie */
-      font-size: $font-size-body; /* Taille du texte */
-      font-weight: $weight-regular; /* Texte normal */
-      color: $color-dark-green; /* Couleur du texte */
-    }
-
-    td {
-      vertical-align: middle; /* Centre verticalement le contenu */
-      font-family: $font-body; /* Police définie */
-      font-size: $font-size-body; /* Taille du texte */
-      font-weight: $weight-regular; /* Texte normal */
-      color: $color-dark-green; /* Couleur du texte */
-    }
-
-    tr {
-      margin-bottom: 20px; /* Ajoute un espacement entre les lignes */
-    }
-
-    .checkbox-group {
-      display: flex; /* Aligne les checkboxes et labels horizontalement */
-      gap: 10px; /* Ajoute un espacement entre chaque checkbox et label */
-      align-items: center; /* Centre verticalement les checkboxes et labels */
-    }
-  }
 }
-
-  .form-control {
-    background-color: $color-very-light-beige; /* Couleur de fond des champs */
-    border: none; /* Supprime les bordures */
-    border-radius: 20px; /* Coins arrondis */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ombre légère */
-    padding: 10px 15px; /* Espacement interne */
-    font-family: $font-body; /* Police définie */
-    font-size: $font-size-body; /* Taille du texte */
-    color: $color-medium-green; /* Couleur du texte */
-    width: 100%; /* Prend toute la largeur du conteneur parent */
-    margin-bottom:10px;
-
-
-    &::placeholder {
-      color: #7a8a6f; /* Couleur du placeholder */
-    }
-
-    &:focus {
-      outline: none; /* Supprime l'effet de focus par défaut */
-      box-shadow: 0 0 8px rgba(74, 122, 63, 0.5); /* Ombre au focus */
-    }
-  }
-
-  label {
-    font-family: $font-body; /* Police définie */
-    font-size: $font-size-body; /* Taille du texte */
-    font-weight: $weight-regular; /* Texte normal */
-    color: $color-dark-green; /* Couleur du texte */
-    cursor: pointer; /* Change le curseur au survol */
-    display: flex; /* Aligne le texte et la checkbox horizontalement */
-    align-items: center; /* Centre verticalement le texte et la checkbox */
-    
-  }
-
-  .checkbox-group {
-    display: flex; /* Aligne les checkboxes et labels horizontalement */
-    gap: 30px; /* Ajoute un espacement entre chaque checkbox et label */
-    align-items: center; /* Centre verticalement les checkboxes et labels */
-  }
 
 // Navigation pas onglets //
 // Navigation pas onglets //
@@ -158,36 +90,34 @@
 }
 
 .user-tabs .nav-link {
-    width: 230px;
-    border: none; /* Supprime les bordures */
-    font-family: $font-title; /* Utilise la police définie */
-    font-size: $font-size-h3; /* Taille du texte */
-    font-weight: $weight-medium; /* Texte en gras */
-    text-align: center; /* Centre le texte */
-    cursor: pointer; /* Change le curseur au survol */
-    padding: 12px 30px; /* Ajoute de l'espace interne */
-    border-radius: 30px; /* Ajoute des coins arrondis */
-    color: $color-dark-green;
-
-    
+  width: 230px;
+  border: none; /* Supprime les bordures */
+  font-family: $font-title; /* Utilise la police définie */
+  font-size: $font-size-h3; /* Taille du texte */
+  font-weight: $weight-medium; /* Texte en gras */
+  text-align: center; /* Centre le texte */
+  cursor: pointer; /* Change le curseur au survol */
+  padding: 12px 30px; /* Ajoute de l'espace interne */
+  border-radius: 30px; /* Ajoute des coins arrondis */
+  color: $color-dark-green;
 }
 
 .user-tabs .nav-link.active {
-    transition: background-color 0.3s ease, transform 0.3s ease; /* Ajoute une transition fluide */
-    box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
-    border-radius: 30px; /* Ajoute des coins arrondis */
-    padding: 10px 30px; /* Ajoute de l'espace interne */
-    background-color: $color-medium-green; /* Couleur de fond pour l'onglet actif */
-    color: $color-light-beige; /* Couleur du texte pour l'onglet actif */
+  transition: background-color 0.3s ease, transform 0.3s ease; /* Ajoute une transition fluide */
+  box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
+  border-radius: 30px; /* Ajoute des coins arrondis */
+  padding: 10px 30px; /* Ajoute de l'espace interne */
+  background-color: $color-medium-green; /* Couleur de fond pour l'onglet actif */
+  color: $color-light-beige; /* Couleur du texte pour l'onglet actif */
 }
 
 .user-tabs .nav-link:hover {
-    border-radius: 30px; /* Ajoute des coins arrondis */
-    padding: 10px 30px; /* Ajoute de l'espace interne */
-    background-color: $color-dark-green; /* Couleur de fond au survol */
-    color: $color-light-beige; /* Couleur du texte au survol */
-    transition: background-color 0.3s ease, transform 0.3s ease; /* Ajoute une transition fluide */
-    box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
+  border-radius: 30px; /* Ajoute des coins arrondis */
+  padding: 10px 30px; /* Ajoute de l'espace interne */
+  background-color: $color-dark-green; /* Couleur de fond au survol */
+  color: $color-light-beige; /* Couleur du texte au survol */
+  transition: background-color 0.3s ease, transform 0.3s ease; /* Ajoute une transition fluide */
+  box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
 }
 
 // Profile / Rôle //
@@ -195,79 +125,64 @@
 // Profile / Rôle //
 // Profile / Rôle //
 
-.user-space-form {
-  display: none;
-  
-
-  &.active {
-    display: block;
-  }
-
   form {
     background-color: $color-light-beige; /* Couleur de fond */
-    padding: 35px; /* Espacement interne */
+    padding-top:10px;
+    padding-left: 35px; /* Espacement interne */
+    padding-right: 35px; /* Espacement interne */
+    padding-bottom: 35px; /* Espacement interne */
     border-radius: 30px; /* Coins arrondis */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ombre légère */
     text-align: center; /* Centre le texte */
   }
 
-  .form-group {
-    display: flex; /* Utilise Flexbox pour aligner les éléments horizontalement */
-    justify-content: space-between; /* Espacement entre les éléments */
-    align-items: center; /* Aligne les éléments verticalement au centre */
-    margin-bottom: 10px; /* Espacement entre les groupes */
+  .btn {
+    background-color: $color-medium-green; /* Couleur de fond du bouton */
+    color: $color-light-beige; /* Couleur du texte */
+    border: none; /* Supprime les bordures */
+    border-radius: 30px; /* Coins arrondis */
+    padding: 10px 20px; /* Espacement interne */
+    font-family: $font-title; /* Police définie */
+    font-size: $font-size-body; /* Taille du texte */
+    font-weight: $weight-medium; /* Texte en gras */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ombre légère */
+    transition: background-color 0.3s ease, transform 0.3s ease; /* Transition fluide */
+    margin-top: 0;
 
-    &.horizontal-group {
-      gap: 20px; /* Ajoute un espacement uniforme entre les éléments */
-      padding: 30px;
-      margin:0px;
+    &:hover {
+      background-color: $color-dark-green; /* Couleur de fond au survol */
+      transform: scale(1.05); /* Effet de zoom au survol */
+      box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5); /* Ombre au survol */
     }
+  }
 
-    .role-group,
-    .preferences-group {
-      display: flex; /* Aligne les éléments horizontalement */
-      gap: 10px; /* Espacement entre les options */
-    }
-
-    .form-field {
-      flex: 1; /* Les champs prennent la même largeur */
-      margin: 0 10px; /* Espacement horizontal entre les champs */
-    }
-
-    .btn {
-      background-color: $color-medium-green; /* Couleur de fond du bouton */
-      color: $color-light-beige; /* Couleur du texte */
-      border: none; /* Supprime les bordures */
-      border-radius: 30px; /* Coins arrondis */
-      padding: 10px 20px; /* Espacement interne */
-      font-family: $font-title; /* Police définie */
-      font-size: $font-size-body; /* Taille du texte */
-      font-weight: $weight-medium; /* Texte en gras */
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ombre légère */
-      transition: background-color 0.3s ease, transform 0.3s ease; /* Transition fluide */
-      margin-top: 0;
-
-      &:hover {
-        background-color: $color-dark-green; /* Couleur de fond au survol */
-        transform: scale(1.05); /* Effet de zoom au survol */
-        box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5); /* Ombre au survol */
+  input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    appearance: none;
+    background-color: $color-very-light-beige;
+    border: 2px solid $color-medium-green;
+    border-radius: 50%;
+    cursor: pointer;
+    position: relative;
+    margin-right: 10px;
+    display: inline-block;
+  
+    &:checked {
+      background-color: $color-medium-green;
+      border-color: $color-medium-green;
+  
+      &::after {
+        content: '';
+        position: absolute;
+        inset: 4px; // même marge intérieure de chaque côté → parfaitement centré
+        background-color: $color-light-beige;
+        border-radius: 50%;
       }
     }
   }
 
-  .form-field {
-    flex: 1; /* Les champs prennent la même largeur */
-    margin: 0 10px; /* Espacement horizontal entre les champs */
-
-    label {
-        font-family: $font-body; /* Police définie */
-        font-size: $font-size-body; /* Taille du texte */
-        font-weight: $weight-regular; /* Texte normal */
-        color: $color-dark-green; /* Couleur du texte */
-        display: block; /* Affiche le label au-dessus du champ */
-        margin-bottom: 5px; /* Espacement sous le label */
-      }
-  }
+// Background + placeholder + focus des champs //
 
   .form-control {
     background-color: $color-very-light-beige; /* Couleur de fond des champs */
@@ -291,94 +206,24 @@
     }
   }
 
-  .form-controle::placeholder {
-    color: #7a8a6f;
-}
-
-  .form-control:focus {
-    outline: none; /* Supprime l'effet de focus par défaut */
-    box-shadow: 0 0 8px rgba(74, 122, 63, 0.5); /* Ombre au focus */
-  }
-
-  
-
-  input[type="radio"] {
-    width: 13px;
-    height: 13px;
-    appearance: none; /* Supprime le style par défaut */
-    background-color: $color-very-light-beige; /* Couleur de fond par défaut */
-    border: 2px solid $color-medium-green; /* Bordure verte */
-    border-radius: 50%; /* Forme circulaire pour les radios */
+  // style du tableuau des rôles //
+  label {
+    font-family: $font-body; /* Police définie */
+    font-size: $font-size-body; /* Taille du texte */
+    font-weight: $weight-regular; /* Texte normal */
+    color: $color-dark-green; /* Couleur du texte */
     cursor: pointer; /* Change le curseur au survol */
-    position: relative; /* Nécessaire pour le pseudo-élément */
-    margin-right: 10px;
-
-    &:checked {
-      background-color: $color-medium-green; /* Couleur de fond lorsque sélectionné */
-      border-color: $color-medium-green; /* Bordure verte lorsque sélectionné */
-      
-
-      &::after {
-        content: ''; /* Ajoute un cercle intérieur */
-        width: 6px; /* Taille du cercle intérieur */
-        height: 6px; /* Taille du cercle intérieur */
-        background-color: $color-light-beige; /* Couleur du cercle intérieur */
-        border-radius: 50%; /* Forme circulaire */
-        position: absolute; /* Positionnement absolu */
-        top: 50%; /* Centre verticalement */
-        left: 50%; /* Centre horizontalement */
-        transform: translate(-50%, -50%); /* Centre parfaitement */
-        display: block; /* Assure que le pseudo-élément est visible */
-      }
-    }
+    display: flex; /* Aligne le texte et la checkbox horizontalement */
+    align-items: center; /* Centre verticalement le texte et la checkbox */
+    margin-bottom: 10px;
   }
-}
 
-.checkbox-group {
-  display: flex; /* Aligne les checkboxes et labels horizontalement */
-  gap: 0px; /* Ajoute un espacement entre chaque checkbox et label */
-  align-items: center; /* Centre verticalement les checkboxes et labels */
-  margin-bottom: 40px;
-}
 
-.checkbox-input {
-  width: 13px; /* Taille fixe pour garantir une apparence uniforme */
-  height: 13px; /* Taille fixe pour garantir une apparence uniforme */
-  background-color: $color-very-light-beige; /* Couleur de fond par défaut */
-  border: 2px solid $color-medium-green; /* Bordure verte */
-  border-radius: 4px; /* Coins légèrement arrondis pour une forme carrée */
-  cursor: pointer; /* Change le curseur au survol */
-  margin-right: 10px; /* Espacement entre l'input et le texte du label */
 
-  &:checked {
-    background-color: $color-medium-green; /* Couleur de fond lorsque sélectionné */
-    border-color: $color-medium-green; /* Bordure verte lorsque sélectionné */
-
-    &::after {
-      content: '✔'; /* Ajoute une coche */
-      color: $color-light-beige; /* Couleur de la coche */
-      font-size: 12px; /* Taille de la coche */
-      position: absolute; /* Positionnement absolu */
-      top: 50%; /* Centre verticalement */
-      left: 50%; /* Centre horizontalement */
-      transform: translate(-50%, -50%); /* Centre parfaitement */
-    }
-  }
-}
-
-label {
-  font-family: $font-body; /* Police définie */
-  font-size: $font-size-body; /* Taille du texte */
-  font-weight: $weight-regular; /* Texte normal */
-  color: $color-dark-green; /* Couleur du texte */
-  cursor: pointer; /* Change le curseur au survol */
-  display: flex; /* Aligne le texte et la checkbox horizontalement */
-  align-items: center; /* Centre verticalement le texte et la checkbox */
-}
 
 input[type="checkbox"] {
-  width: 13px;
-  height: 13px;
+  width: 16px;
+  height: 16px;
   appearance: none;
   background-color: $color-very-light-beige;
   border: 2px solid $color-medium-green;
@@ -404,5 +249,88 @@ input[type="checkbox"] {
   }
 }
 
-// Responsive //
+.form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  margin-top: 20px;
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+
+    .form-control {
+      width: 100%;
+    }
+  }
+
+  .role-group {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+
+  .checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+
+  .btn {
+    align-self: center;
+    margin-top: 20px;
+    min-width: 200px;
+  }
+}
+
+// Cible uniquement le `<ul>` en dehors de l'Offcanvas
+.user-space-section .nav-pills.user-tabs {
+  display: flex; /* Affiche les onglets normalement */
+  justify-content: start;
+  margin-bottom: 20px;
+
+  @media (max-width: 1335px) {
+    display: none; /* Cache les onglets en dessous de 1335px */
+  }
+}
+
+// Cible le bouton pour le remplacer en dessous de 1335px
+.user-space-section .user-space-toggle {
+  display: none; /* Cache le bouton par défaut */
+  margin: 0 auto; /* Centre le bouton horizontalement */
+  text-align: center;
+
+  @media (max-width: 1335px) {
+    display: block; /* Affiche le bouton en dessous de 1335px */
+  }
+}
+
+
+#userSpaceOffcanvas {
+  .nav-pills.user-tabs-offcanvas {
+    background: none; /* Supprime le background */
+    box-shadow: none; /* Supprime l'ombre */
+    padding: 0; /* Supprime tout padding si nécessaire */
+    border: none; /* Supprime toute bordure si présente */
+  }
+
+  .nav-link {
+    color: $color-dark-green; /* Couleur du texte */
+    font-size: $font-size-body; /* Taille de la police */
+    padding: 0.5rem 1rem; /* Espacement interne */
+    border-radius: 0.25rem; /* Coins arrondis */
+    background-color: transparent; /* Supprime les couleurs de fond */
+  }
+
+  .nav-link.active {
+    background-color: $color-medium-green; /* Couleur de fond pour l'élément actif */
+    color: $color-light-beige; /* Couleur du texte pour l'élément actif */
+  }
+
+  .nav-link:hover {
+    background-color: $color-dark-green; /* Couleur de fond au survol */
+    color: $color-light-beige; /* Couleur du texte au survol */
+  }
+}
 

@@ -5,9 +5,10 @@
 </div>
 
 <section class="user-space-section container">
+  <!-- Liste dans le HTML desktop -->
   <ul class="nav nav-pills user-tabs">
     <li class="nav-item">
-      <a class="nav-link active" href="javascript:void(0);">Profile / Rôle</a>
+      <a class="nav-link active" href="javascript:void(0);">Profil / Rôle</a>
     </li>
     <li class="nav-item">
       <a class="nav-link" href="javascript:void(0);">Mes trajects</a>
@@ -20,95 +21,125 @@
     </li>
   </ul>
 
-  <div id="profile-form" class="user-space-form active">
-    <form>
-      <h2>Profile / Rôle</h2>
+  <!-- Bouton pour ouvrir l'Offcanvas -->
+  <button class="btn btn-primary user-space-toggle" type="button" data-bs-toggle="offcanvas" data-bs-target="#userSpaceOffcanvas" aria-controls="userSpaceOffcanvas">
+    Menu espace utilisateur
+  </button>
 
-      <div class="form-group horizontal-group">
-        <div class="role-group">
-          <label>
-            <input type="radio" name="role" value="chauffeur"> Chauffeur
-          </label>
-          <label>
-            <input type="radio" name="role" value="passager"> Passager
-          </label>
-          <label>
-            <input type="radio" name="role" value="les-deux"> Les deux
-          </label>
+  <!-- Offcanvas -->
+  <div class="offcanvas offcanvas-start" tabindex="-1" id="userSpaceOffcanvas" aria-labelledby="userSpaceOffcanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="userSpaceOffcanvasLabel">Menu espace utilisateur</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      <!-- Liste dans l'Offcanvas -->
+      <ul class="nav nav-pills user-tabs-offcanvas">
+        <li class="nav-item">
+          <a class="nav-link active" href="javascript:void(0);">Profil / Rôle</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="javascript:void(0);">Mes trajects</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="javascript:void(0);">Mes véhicules</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="javascript:void(0);">Historique</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+    <!-- Formulaire Profile / Rôle -->
+  <div id="profile-form" class="user-space-form active">
+    <h2>Profil / Rôle</h2>
+    <form>
+      <div class="form-fields">
+        <!-- 1. Rôle -->
+        <div class="form-group role-group">
+          <label><input type="radio" name="role" value="chauffeur"> Chauffeur</label>
+          <label><input type="radio" name="role" value="passager"> Passager</label>
+          <label><input type="radio" name="role" value="les-deux"> Les deux</label>
         </div>
+      
+        <!-- 2. Plaque -->
+        <div class="form-field">
+          <label for="plate">Plaque d'immatriculation</label>
+          <input type="text" id="plate" class="form-control" placeholder="AB - 123 - CD">
+        </div>
+      
+        <!-- 3. Date -->
+        <div class="form-field">
+          <label for="registration-date">Date de première immatriculation</label>
+          <input type="text" id="registration-date" class="form-control" placeholder="jj/mm/aaaa">
+        </div>
+      
+        <!-- 4. Modèle -->
+        <div class="form-field">
+          <label for="vehicle-model">Modèle, marque véhicule et couleur</label>
+          <input type="text" id="vehicle-model" class="form-control" placeholder="Tesla, Model 3, Noir">
+        </div>
+      
+        <!-- 5. Nombre de places -->
+        <div class="form-field">
+          <label for="seats">Nombre de places disponibles</label>
+          <input type="number" id="seats" class="form-control" placeholder="3">
+        </div>
+      
+        <!-- 6. Préférences chauffeur -->
+        <div class="form-field">
+          <label>Préférences chauffeur</label>
+          <div class="checkbox-group">
+            <label><input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="fumeur"> Fumeur</label>
+            <label><input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="animal"> Animal</label>
+            <label><input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="musique"> Musique</label>
+          </div>
+        </div>
+      
+        <!-- 7. Autre -->
+        <div class="form-field">
+          <label for="other">Autre</label>
+          <input type="text" id="other" class="form-control" placeholder="Discussion...">
+        </div>
+      
+        <!-- 8. Bouton -->
         <button type="submit" class="btn">Enregistrer</button>
       </div>
-
-      <table class="form-table">
-        <thead>
-          <tr>
-            <th scope="col">Plaque d'immatriculation</th>
-            <th scope="col">Date de première immatriculation</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>
-              <input type="text" id="plate" class="form-control" placeholder="AB - 123 - CD">
-            </td>
-            <td>
-              <input type="text" id="registration-date" class="form-control" placeholder="jj/mm/aaaa">
-            </td>
-          </tr>
-          <tr>
-            <th scope="col">Modèle, marque véhicule et couleur</th>
-            <th scope="col">Nombre de places disponibles</th>
-          </tr>
-          <tr>
-            <td>
-              <input type="text" id="vehicle-model" class="form-control" placeholder="Tesla, Model 3, Noir">
-            </td>
-            <td>
-              <input type="number" id="seats" class="form-control" placeholder="3">
-            </td>
-          </tr>
-          <tr>
-            <th scope="col">Préférences chauffeur</th>
-            <th scope="col">Autre</th>
-          </tr>
-          <tr>
-            <td>
-              <div class="checkbox-group">
-                <label>
-                  <input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="fumeur"> Fumeur
-                </label>
-                <label>
-                  <input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="animal"> Animal
-                </label>
-                <label>
-                  <input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="musique"> Musique
-                </label>
-              </div>
-            </td>
-            <td>
-              <input type="text" id="other" class="form-control" placeholder="Discussion...">
-            </td>
-          </tr>
-        </tbody>
-      </table>
     </form>
   </div>
 
-  <div id="trips-form" class="user-space-form" style="display:none;">
+   <!-- Formulaire Mes trajects -->
+   <div id="mes-trajects-form" class="user-space-form" style="display: none;">
+    <h2>Mes trajects</h2>
     <form>
-      <h1>Mes trajects</h1>
+      <div class="form-fields">
+        <!-- Contenu du formulaire -->
+      </div>
     </form>
   </div>
 
-  <div id="vehicles-form" class="user-space-form" style="display:none;">
+  <!-- Formulaire Mes véhicules -->
+  <div id="mes-vehicules-form" class="user-space-form" style="display: none;">
+    <h2>Mes véhicules</h2>
     <form>
-      <h1>Mes véhicules</h1>
+      <div class="form-fields">
+        <!-- Contenu du formulaire -->
+      </div>
     </form>
   </div>
 
-  <div id="history-form" class="user-space-form" style="display:none;">
+  <!-- Formulaire Historique -->
+  <div id="historique-form" class="user-space-form" style="display: none;">
+    <h2>Historique</h2>
     <form>
-      <h1>Historique</h1>
+      <div class="form-fields">
+        <!-- Contenu du formulaire -->
+      </div>
     </form>
   </div>
+
+
+
+  
 </section>

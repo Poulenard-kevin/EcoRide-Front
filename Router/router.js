@@ -7,31 +7,39 @@ const route404 = new Route("404", "Page introuvable", "/pages/404.html");
 // Fonction pour récupérer la route correspondant à une URL donnée
 const getRouteByUrl = (url) => {
   let currentRoute = null;
-  // Parcours de toutes les routes pour trouver la correspondance
   allRoutes.forEach((element) => {
     if (element.url === url) {
       currentRoute = element;
     }
   });
-  // Si aucune correspondance n'est trouvée, on retourne la route 404
   return currentRoute || route404;
+};
+
+// Supprime les scripts précédemment ajoutés
+const removePreviousScripts = () => {
+  const scripts = document.querySelectorAll("script[data-dynamic]");
+  scripts.forEach((script) => script.remove());
 };
 
 // Fonction pour charger le contenu de la page
 const LoadContentPage = async () => {
   const path = window.location.pathname;
-  const queryParams = new URLSearchParams(window.location.search); // Récupère les paramètres de l'URL
+  const queryParams = new URLSearchParams(window.location.search);
   const actualRoute = getRouteByUrl(path);
 
   // Récupération du contenu HTML de la route
   const html = await fetch(actualRoute.pathHtml).then((data) => data.text());
   document.getElementById("main-page").innerHTML = html;
 
+  // Supprime les scripts précédents
+  removePreviousScripts();
+
   // Ajout du contenu JavaScript
   if (actualRoute.pathJS) {
     const scriptTag = document.createElement("script");
     scriptTag.setAttribute("type", "text/javascript");
     scriptTag.setAttribute("src", actualRoute.pathJS);
+    scriptTag.setAttribute("data-dynamic", "true"); // Marqueur pour les scripts dynamiques
     document.querySelector("body").appendChild(scriptTag);
   }
 
@@ -46,9 +54,7 @@ const LoadContentPage = async () => {
 const routeEvent = (event) => {
   event = event || window.event;
   event.preventDefault();
-  // Mise à jour de l'URL dans l'historique du navigateur
   window.history.pushState({}, "", event.target.href);
-  // Chargement du contenu de la nouvelle page
   LoadContentPage();
 };
 
@@ -58,3 +64,12 @@ window.onpopstate = LoadContentPage;
 window.route = routeEvent;
 // Chargement du contenu de la page au chargement initial
 LoadContentPage();
+
+document.addEventListener("routeLoaded", (event) => {
+  const path = window.location.pathname;
+
+  if (path === "/espace-utilisateur") {
+    console.log("Route espace utilisateur chargée.");
+    initUserSpace(); // Réinitialise les événements pour les onglets et formulaires
+  }
+});

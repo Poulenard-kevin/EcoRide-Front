@@ -1,20 +1,209 @@
-// Styles spécifiques à l'onglet "My Trajects"
+#user-trajects-form {
+  h1 {
+    text-align: center;
+    margin: 35px;
+  }
 
-h1 {
-  text-align: center;
-  margin: 35px;
-}
+  h2 {
+    text-align: left;
+  }
+
+  form {
+    background-color: $color-light-beige;
+    padding: 20px 35px 35px;
+    border-radius: 30px;
+    box-shadow: 0 4px 6px rgba(0,0,0,.1);
+    text-align: center;
+    margin-bottom: 35px;
+  }
+  
+  .btn {
+    background-color: $color-medium-green;
+    color: $color-light-beige;
+    border: none;
+    border-radius: 30px;
+    padding: 10px 20px;
+    font-family: $font-title;
+    font-size: $font-size-body;
+    font-weight: $weight-medium;
+    transition: background .3s ease, transform .3s ease;
+  
+    &:hover {
+      background-color: $color-dark-green;
+      transform: scale(1.05);
+      box-shadow: 0 6px 8px rgba(74,122,63,.5);
+    }
+  }
+
+  .form-control {
+    border-radius: 20px;
+    padding: 12px 20px;
+    font-weight: $weight-semibold;
+    font-size: $font-size-nav;
+    color: $color-dark-green;
+    background-color: $color-very-light-beige;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    outline: none;
+    transition: box-shadow 0.3s ease;
+    
+    &::placeholder { 
+      color: #7a8a6f; 
+    }
+
+    &:focus {
+      background-color: $color-very-light-beige;    /* ne change pas le fond */
+      box-shadow: 0 0 5px 2px $color-dark-green;   /* halo lumineux vert */
+    }
+  }
+  
+  label {
+    font-family: $font-body;
+    font-size: $font-size-body;
+    font-weight: $weight-regular;
+    color: $color-dark-green;
+    display: flex; align-items: center;
+    margin-bottom: 10px;
+  }
+
+  // layout champs
+  .form-fields {
+    display: flex; flex-direction: column; gap: 30px; margin-top: 20px;
+  
+    .form-field { display: flex; flex-direction: column; text-align: left; }
+    .role-group { display: flex; gap: 15px; flex-wrap: wrap; }
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 15px; }
+  
+    .btn { align-self: center; margin-top: 20px; min-width: 200px; }
+  }
+
+  .input-with-unit {
+    display: flex;
+    align-items: center;
+  
+    input {
+      flex: 1;
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+  
+    .unit {
+      background-color: $color-medium-green;
+      color: $color-light-beige;
+      padding: 10px 15px;
+      border-top-right-radius: 20px;
+      border-bottom-right-radius: 20px;
+      font-family: $font-body;
+      font-size: $font-size-body;
+      font-weight: $weight-medium;
+    }
+  }
 
 
-.trajects-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
+  // Trajets en cours
+  // Trajets en cours
+  // Trajets en cours
 
-.traject-item {
-  padding: 15px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  background-color: #f9f9f9;
+  .trajets-en-cours {
+    gap:0px;    
+    .trajet-card {
+      background: $color-light-beige;
+      border-radius: 20px;
+      padding: 15px 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  
+      .trajet-header {
+        margin-bottom: 8px;
+      }
+  
+      .trajet-body {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+  
+        .trajet-info {
+          flex: 1;
+          strong {
+            display: block;
+            font-family: $font-body;
+            font-size: $font-size-body;
+            font-weight: $weight-regular;
+            color: $color-dark-green;
+            margin-bottom: 4px;
+          }
+          .details {
+            font-family: $font-body;
+            font-size: $font-size-nav;
+            font-weight: $weight-regular;
+            opacity: 0.8;
+          }
+        }
+  
+        .trajet-price {
+          font-size: 1rem;
+          font-weight: $weight-semibold;
+          color: $color-dark-green;
+          margin-right: 20px;
+        }
+  
+        .btn-trajet {
+          background-color: $color-medium-green;
+          color: $color-light-beige;
+          border: none;
+          border-radius: 30px;
+          padding: 10px 20px;
+          font-family: $font-title;
+          font-size: $font-size-body;
+          font-weight: $weight-medium;
+          transition: background .3s ease, transform .3s ease;
+        
+          &:hover {
+            background-color: $color-dark-green;
+            transform: scale(1.05);
+            box-shadow: 0 6px 8px rgba(74,122,63,.5);
+          }
+        }
+  
+        .trajet-status {
+          font-size: 0.9rem;
+          color: $color-dark-green;
+          font-style: italic;
+        }
+      }
+  
+      &.actif {
+        background: $color-medium-green;
+        color: $color-light-beige;
+  
+        .trajet-info strong,
+        .trajet-price {
+          color: $color-light-beige;
+        }
+
+        .details {
+          color: $color-light-beige;
+        }
+  
+        .btn-trajet {
+          background: $color-light-beige;
+          color: $color-dark-green;
+        }
+      }
+  
+      &.termine {
+        background:$color-background;
+      }
+  
+      &.attente {
+        background: $color-very-light-beige;
+        height: 80px;
+      }
+    }
+  }
+
+
+
+
 }

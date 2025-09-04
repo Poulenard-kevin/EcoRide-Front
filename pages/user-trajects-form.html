@@ -1,8 +1,113 @@
 <!-- Onglet Mes trajects -->
-<div id="user-trajects-form" class="user-space-form">
-  <h1>Mes Trajects</h1>
-  <div class="trajects-container">
-    <div class="traject-item">Traject 1</div>
-    <div class="traject-item">Traject 2</div>
-  </div>
-</div>
+  <h1>Mes trajects</h1>
+  <form>
+    <div class="form-fields">
+      <!-- 1 -->
+      <div class="titre-publier-traject">
+        <h2>Publier un trajet</h2>
+      </div>
+    
+      <!-- 2 -->
+      <div class="form-field">
+        <label for="departure-location">Lieu de départ</label>
+        <input type="text" id="departure-location" class="form-control" placeholder="Lyon">
+      </div>
+    
+      <!-- 3 -->
+      <div class="form-field">
+        <label for="arrival-location">Lieu d'arrivée</label>
+        <input type="text" id="arrival-location" class="form-control" placeholder="Grenoble">
+      </div>
+    
+      <!-- 4 -->
+      <div class="form-field">
+        <label for="departure-datetime">Heure et date de départ</label>
+        <input type="text" id="departure-datetime" class="form-control" placeholder="8h30, Vendredi 16 septembre">
+      </div>
+    
+      <!-- 5 -->
+      <div class="form-field">
+        <label for="arrival-datetime">Heure et date d'arrivée</label>
+        <input type="number" id="arrival-datetime" class="form-control" placeholder="10h00 , Vendredi 16 septembre">
+      </div>
+    
+      <!-- 6 -->
+      <div class="form-field">
+        <label for="vehicle">Véhicule</label>
+        <input list="vehicles" id="vehicle" class="form-control" placeholder="--Sélectionne un véhicule--">
+        <datalist id="vehicles">
+          <option value="Tesla Model 3 Noir">
+          <option value="Renault Clio Rouge">
+          <option value="Peugeot 208 Bleu">
+          <option value="Volkswagen Golf Blanc">
+        </datalist>
+      </div>
+    
+      <!-- 7 -->
+      <div class="form-field price-field">
+        <label for="price">Prix</label>
+        <div class="input-with-unit">
+          <input 
+            type="number" 
+            id="price" 
+            class="form-control" 
+            min="5" max="100" step="5" 
+            placeholder="5 crédits">
+          <span class="unit">crédits</span>
+        </div>
+      </div>
+    
+      <!-- 8 -->
+      <button type="submit" class="btn">Publier</button>
+    </div>
+  </form>
+
+  <!-- Trajets en cours --> 
+
+  <form>
+    <div class="form-fields trajets-en-cours">
+  
+      <h2>Mes trajets en cours</h2>
+
+      <label for="price">Vendredi 16 septembre</label>
+  
+      <!-- Première carte trajet -->
+      <div class="trajet-card actif">
+        
+        <div class="trajet-body">
+          <div class="trajet-info">
+            <strong>Covoiturage : Lyon --&gt; Grenoble</strong>
+            <span class="details">8h30 - 10h00 • 3 places réservées</span>
+          </div>
+          <div class="trajet-price">12 crédits</div>
+          <button type="button" class="btn-trajet">Démarrer</button>
+        </div>
+      </div>
+  
+      <!-- Deuxième carte trajet -->
+      <div class="trajet-card termine">
+       
+        <div class="trajet-body">
+          <div class="trajet-info">
+            <strong>Covoiturage : Lyon --&gt; Grenoble</strong>
+            <span class="details">8h30 - 10h00 • 3 places réservées</span>
+          </div>
+          <div class="trajet-price">12 crédits</div>
+          <button type="button" class="btn-trajet">Arrivée à destination</button>
+        </div>
+      </div>
+  
+      <!-- Troisième trajet -->
+      <div class="trajet-card attente">
+        
+        <div class="trajet-body">
+          <div class="trajet-info">
+            <strong>Covoiturage : Lyon --&gt; Grenoble</strong>
+            <span class="details">8h30 - 10h00 • 3 places réservées</span>
+          </div>
+          <div class="trajet-price">12 crédits</div>
+          <span class="trajet-status">En attente de validation des passagers…</span>
+        </div>
+      </div>
+    </div>
+  </form>

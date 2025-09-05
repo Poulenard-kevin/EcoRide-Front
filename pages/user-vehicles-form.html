@@ -1,8 +1,68 @@
 <!-- Onglet Mes véhicules -->
-<div id="user-vehicles-form" class="user-space-form">
-  <h1>Mes Véhicules</h1>
-  <div class="vehicles-container">
-    <div class="vehicle-item">Véhicule 1</div>
-    <div class="vehicle-item">Véhicule 2</div>
+<div id="user-vehicles-form">
+  <h1>Mes véhicules</h1>
+  
+  <form>
+    <div class="form-fields">
+      <div class="title-my-used-vehicles">
+        <h2>Mes véhicules utilisées</h2>
+      </div>
+  
+      <div class="form-field">
+        <div class="model">Tesla</div>
+        <div class="brand">Model 3</div>
+        <div class="color">Noir</div>
+      </div>
+
+      <div class="form-field-modify-delete">
+        <a href="javascript:void(0);" class="link-modify" onclick="redirectToProfileRole()">Modifier</a>
+        <a href="#" class="link-delete" data-bs-toggle="modal" data-bs-target="#deleteModal">Supprimer</a>
+      </div>
+         
+      <div class="form-field">
+        <div class="model">Tesla</div>
+        <div class="brand">Model 3</div>
+        <div class="color">Noir</div>
+      </div>
+      
+      <div class="form-field-modify-delete">
+        <a href="javascript:void(0);" class="link-modify" onclick="redirectToProfileRole()">Modifier</a>
+        <a href="#" class="link-delete" data-bs-toggle="modal" data-bs-target="#deleteModal">Supprimer</a>
+      </div>
+
+      <div class="form-field">
+        <div class="model">Tesla</div>
+        <div class="brand">Model 3</div>
+        <div class="color">Noir</div>
+      </div>
+    
+      <div class="form-field-modify-delete">
+        <a href="javascript:void(0);" class="link-modify" onclick="redirectToProfileRole()">Modifier</a>
+        <a href="#" class="link-delete" data-bs-toggle="modal" data-bs-target="#deleteModal">Supprimer</a>
+      </div>
+
+      <div class="btn-add-vehicle">
+        <button type="submit" class="btn">Ajouter un véhicule</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Modal pour confirmer la suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteModalLabel">Confirmer la suppression</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Êtes-vous sûr de vouloir supprimer ce véhicule ?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-danger">Supprimer</button>
+      </div>
+    </div>
   </div>
 </div>

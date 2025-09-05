@@ -10,6 +10,7 @@
       border-radius: 30px;
       box-shadow: 0 4px 6px rgba(0,0,0,.1);
       text-align: center;
+      margin-bottom: 35px;
     }
     
     .btn {
@@ -22,6 +23,7 @@
       font-size: $font-size-body;
       font-weight: $weight-medium;
       transition: background .3s ease, transform .3s ease;
+      box-shadow: 0 6px 8px rgba(74,122,63,.5);
     
       &:hover {
         background-color: $color-dark-green;
@@ -112,4 +114,25 @@
     
       .btn { align-self: center; margin-top: 20px; min-width: 200px; }
     }
+
+
+  @media (max-width: 576px) {
+    .btn {
+      font-size: $font-size-nav; /* Réduit la taille des boutons */
+      padding: 8px 16px; /* Ajuste le padding des boutons */
+    }
+
+    .form-control {
+      padding: 8px 15px;
+      font-size: 12px;
+    }
+    
+    label {
+      font-size: $font-size-nav;
+    }
+
+    form {
+      padding: 10px 20px 35px;
+    }
+  }
 }

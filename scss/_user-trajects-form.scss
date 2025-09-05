@@ -1,4 +1,5 @@
 #user-trajects-form {
+
   h1 {
     text-align: center;
     margin: 35px;
@@ -10,7 +11,7 @@
 
   form {
     background-color: $color-light-beige;
-    padding: 20px 35px 35px;
+    padding: 10px 35px 35px;
     border-radius: 30px;
     box-shadow: 0 4px 6px rgba(0,0,0,.1);
     text-align: center;
@@ -27,6 +28,7 @@
     font-size: $font-size-body;
     font-weight: $weight-medium;
     transition: background .3s ease, transform .3s ease;
+    box-shadow: 0 6px 8px rgba(74,122,63,.5);
   
     &:hover {
       background-color: $color-dark-green;
@@ -67,7 +69,10 @@
 
   // layout champs
   .form-fields {
-    display: flex; flex-direction: column; gap: 30px; margin-top: 20px;
+    display: flex; 
+    flex-direction: column; 
+    gap: 30px; 
+    margin-top: 20px;
   
     .form-field { display: flex; flex-direction: column; text-align: left; }
     .role-group { display: flex; gap: 15px; flex-wrap: wrap; }
@@ -193,12 +198,18 @@
           font-size: $font-size-body;
           font-weight: $weight-medium;
           transition: background .3s ease, transform .3s ease;
+          box-shadow: 0 6px 8px rgba(74,122,63,.5);
 
           &:hover {
             background-color: $color-dark-green;
             transform: scale(1.05);
             box-shadow: 0 6px 8px rgba(74,122,63,.5);
           }
+        }
+
+        .btn-trajet {
+          font-size: $font-size-nav !important; /* Force l'application de la règle */
+          padding: 8px 16px !important; /* Force l'application de la règle */
         }
 
         .trajet-status {
@@ -246,7 +257,50 @@
     }
   }
 
+  @media (max-width: 576px) {
+    .btn {
+      font-size: $font-size-nav; /* Réduit la taille des boutons */
+      padding: 8px 16px; /* Ajuste le padding des boutons */
+    }
 
+    .trajet-card .btn-trajet {
+      font-size: $font-size-nav; /* Réduit la taille des boutons */
+      padding: 8px 16px; /* Ajuste le padding des boutons */
+    }
 
+    .form-control {
+      padding: 8px 15px;
+      font-size: 12px;
+    }
+    
+    label {
+      font-size: $font-size-nav;
+    }
 
+    .input-with-unit {
+      .unit {
+        padding: 8px 15px;
+        font-size: 12px;
+      }
+    }
+
+    .trajet-info {
+      strong {
+        font-size: $font-size-nav !important; /* Force l'application de la règle */
+      }
+      .details {
+      font-size: $font-size-small !important; /* Force l'application de la règle */
+      text-align: left !important; /* Aligne le texte à gauche */
+      margin: 0 !important; /* Supprime tout centrage horizontal */
+    }
+    }
+
+    .trajet-price {
+      font-size: $font-size-small !important; /* Force l'application de la règle */
+    }
+
+    form {
+      padding: 10px 20px 35px;
+    }
+  }
 }

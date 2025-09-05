@@ -113,3 +113,20 @@
         &:hover { background: $color-dark-green; color: $color-light-beige; }
       }
     }
+
+    @media (max-width: 576px) {
+    
+      .user-space-toggle {
+        font-size: $font-size-nav; /* Réduit la taille des boutons */
+        padding: 8px 16px; /* Ajuste le padding des boutons */
+      }
+
+      h1 {
+        font-size: 24px; /* Réduit la taille des titres h1 */
+      }
+
+      h2 {
+        font-size: 20px; /* Réduit la taille des titres h1 */
+      }
+    }
+    

@@ -16,7 +16,7 @@
     text-align: center;
     margin-bottom: 35px;
   }
-  
+
   .btn {
     background-color: $color-medium-green;
     color: $color-light-beige;
@@ -104,12 +104,15 @@
   // Trajets en cours
 
   .trajets-en-cours {
-    gap:0px;    
+    gap:10px; 
+    
+    label {
+      margin-bottom: 0px;
+    }
     .trajet-card {
       background: $color-light-beige;
       border-radius: 20px;
       padding: 15px 20px;
-      margin-bottom: 20px;
       box-shadow: 0 4px 6px rgba(0,0,0,0.1);
   
       .trajet-header {
@@ -119,12 +122,43 @@
       .trajet-body {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: flex-start; // Aligne les éléments au début
         flex-wrap: wrap;
-        gap: 10px;
-  
+        gap: 120px; // Ajoute un espace fixe entre les éléments
+
+        @media (max-width: 1415px) {
+          flex-direction: column; // Passe en disposition verticale
+          align-items: center; // Centre les éléments horizontalement
+          gap: 15px; // Ajuste l'espace entre les éléments
+
+          .btn-trajet,
+          .trajet-status {
+            margin: 0 auto; // Centre les éléments dans le conteneur
+            text-align: center; // Centre le texte pour trajet-status
+          }
+
+          .trajet-status {
+            padding-top: 13px; // Ajoute un espace au-dessus pour séparer du reste
+            padding-bottom: 13px;
+          }
+
+          .trajet-price {
+            margin-left: 0 !important; // Supprime la marge gauche avec priorité
+            text-align: center; // Centre le texte
+            display: block; // Assure que l'élément est en bloc pour un centrage correct
+          }
+
+          .details {
+            margin: 0 auto; // Centre les détails horizontalement
+            text-align: center; // Centre le texte des détails
+            display: block; // Assure que l'élément est en bloc pour un centrage correct
+          }
+        }
+
         .trajet-info {
-          flex: 1;
+          text-align: left; // Alignement à gauche
+          display: inline-block; // Ajuste la largeur à celle du contenu
+          line-height: 1.5; // Définit une interligne fixe
           strong {
             display: block;
             font-family: $font-body;
@@ -140,15 +174,16 @@
             opacity: 0.8;
           }
         }
-  
+
         .trajet-price {
-          font-size: 1rem;
-          font-weight: $weight-semibold;
-          color: $color-dark-green;
-          margin-right: 20px;
+          font-family: $font-body;
+          font-size: $font-size-nav;
+          font-weight: $weight-regular;
+          margin-left: 20px; // Ajoute un espace fixe entre trajet-info et trajet-price
         }
-  
+
         .btn-trajet {
+          margin-left: auto; // Force le bouton à rester aligné à droite
           background-color: $color-medium-green;
           color: $color-light-beige;
           border: none;
@@ -158,17 +193,19 @@
           font-size: $font-size-body;
           font-weight: $weight-medium;
           transition: background .3s ease, transform .3s ease;
-        
+
           &:hover {
             background-color: $color-dark-green;
             transform: scale(1.05);
             box-shadow: 0 6px 8px rgba(74,122,63,.5);
           }
         }
-  
+
         .trajet-status {
-          font-size: 0.9rem;
-          color: $color-dark-green;
+          margin-left: auto;
+          font-family: $font-body;
+          font-size: $font-size-nav;
+          font-weight: $weight-regular;
           font-style: italic;
         }
       }
@@ -189,6 +226,13 @@
         .btn-trajet {
           background: $color-light-beige;
           color: $color-dark-green;
+
+          &:hover {
+            background-color: $color-dark-green;
+            color: $color-light-beige;
+            transform: scale(1.05);
+            box-shadow: 0 6px 8px rgba(74,122,63,.5);
+          }
         }
       }
   
@@ -198,7 +242,6 @@
   
       &.attente {
         background: $color-very-light-beige;
-        height: 80px;
       }
     }
   }

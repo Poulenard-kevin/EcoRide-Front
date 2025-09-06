@@ -1,0 +1,62 @@
+<div class="hero-scene">
+    <div class="hero-scene-content">
+      <h1 class="big-title">Espace administrateur</h1>
+    </div>
+  </div>
+  
+  <section class="dashboard-section container">
+    <h1>Dashboard statistiques</h1>
+    
+    <!-- Formulaire Dashboard -->
+    <form class="form-dashboard">
+      <div class="form-fields">
+        <div class="charts-container">
+          
+          <!-- Graph 1 : Nombre de covoiturage par jour -->
+          <div class="chart-card">
+            <h2>Nombre de covoiturage par jour</h2>
+            <canvas id="covoituragesChart"></canvas>
+          </div>
+          
+          <!-- Graph 2 : Crédits gagnés par jour -->
+          <div class="chart-card">
+            <h2>Crédits gagnés par jour</h2>
+            <canvas id="creditsChart"></canvas>
+          </div>
+        </div>
+  
+        <!-- Total crédits -->
+        <div class="total-credits">
+          <p><strong>Total crédits gagnés :</strong> 
+            <span id="totalCredits">XXXX</span>
+          </p>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <section class="accounts-section container">
+    <h1>Gestion comptes</h1>
+  
+    <form class="form-comptes">
+      <div class="form-fields">
+        <!-- Conteneur scrollable -->
+        <div class="table-wrapper">
+          <table class="accounts-table">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Rôle</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="accountsTableBody">
+              <!-- Le JS remplit ce tbody -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </form>
+  </section>

@@ -1,0 +1,266 @@
+// Dashboard statistiques
+.dashboard-section.container {
+    background-color: $color-background;
+    border-radius: 30px;
+    padding: 35px 100px 60px;
+    margin: 0 100px;
+    max-width: calc(100% - 200px);
+    box-sizing: border-box;
+  
+    @media (max-width: 768px) {
+      padding: 30px 50px 60px;
+      margin: 0 50px;
+      max-width: calc(100% - 100px);
+    }
+  
+    @media (max-width: 576px) {
+      padding: 35px 20px 60px;
+      margin: 0 25px;
+      max-width: calc(100% - 50px);
+    }
+  
+    h1 {
+      text-align: center;
+      margin-bottom: 35px;
+    }
+  
+    h2 {
+      text-align: left;
+      margin-bottom: 0px;
+    }
+  
+    form {
+      background-color: $color-light-beige;
+      padding: 35px;
+      border-radius: 30px;
+      box-shadow: 0 4px 6px rgba(0,0,0,.1);
+      text-align: center;
+      margin-bottom: 35px;
+    }
+  
+    .form-dashboard .charts-container {
+      display: flex;
+      gap: 30px;
+      justify-content: space-around;
+      flex-wrap: wrap;
+    }
+
+    .charts-container {
+        display: flex;
+        gap: 20px;
+        overflow-x: auto; /* scroll horizontal si trop large */
+        padding-bottom: 10px; /* espace pour la barre de scroll */
+    }
+    
+    .chart-card {
+      background: $color-very-light-beige;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      min-width: 320px; /* largeur minimale pour chaque graphe */
+      flex: 0 0 auto; /* empêcher de rétrécir */
+      height: 250px; /* hauteur fixe */
+    }
+
+    @media (max-width: 768px) {
+        .chart-card {
+          flex: 1 1 100%; // sur mobile → 1 colonne
+        }
+    }
+
+    .total-credits {
+      margin-top: 20px;
+      font-size: 1.2em;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    @media (max-width: 990px) {
+
+        h1 {
+            font-size: 22px; /* Réduit la taille des titres h1 */
+            margin-bottom: 35px;
+          }
+
+        h2 {
+            font-size: 20px; /* Réduit la taille des titres h2 */
+            padding-bottom: 20px;
+          }
+    }
+
+    .charts-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch; /* scroll fluide iOS */
+      
+        /* Scrollbar WebKit */
+        &::-webkit-scrollbar {
+          height: 8px; /* hauteur scrollbar horizontale */
+        }
+      
+        &::-webkit-scrollbar-track {
+          background: $color-very-light-beige; /* piste */
+          border-radius: 10px;
+        }
+      
+        &::-webkit-scrollbar-thumb {
+          background: $color-medium-green; /* pouce */
+          border-radius: 10px;
+        }
+      
+        &::-webkit-scrollbar-thumb:hover {
+          background: $color-dark-green; /* hover */
+        }
+      
+        /* Scrollbar Firefox */
+        scrollbar-width: thin;
+        scrollbar-color: $color-medium-green $color-very-light-beige;
+      }
+
+  }
+  
+  // ===============================
+  // Gestion comptes
+  // ===============================
+
+  .accounts-section.container {
+    background-color: $color-background;
+    border-radius: 30px;
+    padding: 35px 100px 60px;
+    margin: 35px 100px;
+    max-width: calc(100% - 200px);
+    box-sizing: border-box;
+  
+    @media (max-width: 768px) {
+      padding: 30px 50px 60px;
+      margin: 0 50px;
+      max-width: calc(100% - 100px);
+    }
+  
+    @media (max-width: 576px) {
+      padding: 35px 20px 60px;
+      margin: 0 25px;
+      max-width: calc(100% - 50px);
+    }
+
+    h1 {
+        text-align: center;
+        margin-bottom: 35px;
+      }
+
+    .form-comptes {
+      background-color: $color-light-beige;
+      padding: 35px;
+      border-radius: 30px;
+      box-shadow: 0 4px 6px rgba(0,0,0,.1);
+      text-align: center;
+      margin-bottom: 35px;
+    }
+
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch; /* pour un scroll fluide sur iOS */
+      }
+  
+    .accounts-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: $color-background;
+      border-radius: 20px;
+      overflow: hidden;
+      min-width: 600px;
+    }
+    
+    .accounts-table th,
+    .accounts-table td {
+      padding: 12px 15px;
+      text-align: center;
+    }
+
+    .accounts-table td {
+        background: $color-background;
+        border-top: 1px solid $color-dark-green;
+        font-family: $font-body;
+        font-size: $font-size-small;
+        font-weight: $weight-regular;
+    }
+    
+    .accounts-table thead {
+        background: $color-medium-green;
+        color: $color-light-beige;
+        font-family: $font-body;
+        font-size: $font-size-nav;
+        font-weight: $weight-regular;
+    }
+    
+    .btn-action {
+        border: none;
+        border-radius: 20px;
+        padding: 8px 12px;
+        font-family: $font-title;
+        font-size: $font-size-small;
+        font-weight: $weight-medium;
+        transition: background .3s ease, transform .3s ease;
+        box-shadow: 0 6px 8px rgba(74,122,63,.5);
+        margin: 5px;
+    
+        &:hover {
+        background-color: $color-dark-green;
+        transform: scale(1.05);
+        box-shadow: 0 6px 8px rgba(74,122,63,.5);
+        }
+
+            // Variante "Suspendre" 
+        &.btn-suspendre {
+            background-color: $color-light-beige;
+            color: $color-dark-green;
+        }
+        
+        // Variante "Réactiver" 
+        &.btn-reactiver {
+            background-color: $color-medium-green;
+            color: $color-light-beige;
+            padding: 8px 15px;
+        }
+    }
+
+    @media (max-width: 990px) {
+
+        h1 {
+            font-size: 22px; /* Réduit la taille des titres h1 */
+            margin-bottom: 35px;
+          }
+
+        h2 {
+            font-size: 20px; /* Réduit la taille des titres h2 */
+            padding-bottom: 20px;
+          }
+    }
+
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch; /* scroll fluide iOS */
+      
+        /* Scrollbar WebKit */
+        &::-webkit-scrollbar {
+          height: 8px; /* hauteur de la scrollbar horizontale */
+        }
+      
+        &::-webkit-scrollbar-track {
+          background: $color-very-light-beige; /* couleur de la piste */
+          border-radius: 10px;
+        }
+      
+        &::-webkit-scrollbar-thumb {
+          background: $color-medium-green; /* couleur du pouce */
+          border-radius: 10px;
+        }
+      
+        &::-webkit-scrollbar-thumb:hover {
+          background: $color-dark-green; /* couleur au survol */
+        }
+      
+        /* Scrollbar Firefox */
+        scrollbar-width: thin;
+        scrollbar-color: $color-medium-green $color-very-light-beige;
+      }
+}

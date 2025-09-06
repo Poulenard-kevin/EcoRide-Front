@@ -13,7 +13,7 @@
     }
 
     @media (max-width: 576px) {
-      padding: 20px 20px 60px;
+      padding: 35px 20px 60px;
       margin: 0 25px;
       max-width: calc(100% - 50px);
     }
@@ -124,11 +124,12 @@
 
         h1 {
             font-size: 22px; /* Réduit la taille des titres h1 */
-            margin-bottom: 20px;
+            margin-bottom: 35px;
           }
 
         h2 {
             font-size: 20px; /* Réduit la taille des titres h2 */
+            padding-bottom: 20px;
           }
 
         h3 {
@@ -153,6 +154,18 @@
         .trajet-card .btn-trajet {
         font-size: $font-size-nav; /* Réduit la taille des boutons */
         padding: 8px 16px; /* Ajuste le padding des boutons */
+        }
+
+        .form-avis {
+        padding-top: 30px;
+        }
+
+        .form-trajets {
+        padding-top: 30px;
+        }
+
+        .trajets-signales {
+        padding-top: 10px !important;
         }
 
         .form-control {

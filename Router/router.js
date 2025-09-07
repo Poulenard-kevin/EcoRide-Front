@@ -1,21 +1,34 @@
 import Route from "./Route.js";
 import { allRoutes, websiteName } from "./allRoutes.js";
 
-// Route 404
+const mainPage = document.getElementById("main-page");
+const loaderOverlay = document.getElementById("loader-overlay");
+
+function showLoader() {
+  if (loaderOverlay) loaderOverlay.style.display = "flex";
+  if (mainPage) mainPage.classList.add("loading");
+}
+
+function hideLoader() {
+  if (loaderOverlay) loaderOverlay.style.display = "none";
+  if (mainPage) mainPage.classList.remove("loading");
+}
+
 const route404 = new Route("404", "Page introuvable", "/pages/404.html");
 
-// Récupère la route correspondant au pathname (sans query)
-const getRouteByPathname = () => {
-  const url = new URL(window.location.href);
-  const pathname = url.pathname;
-
+const getRouteByPathname = (pathname) => {
+  if (!pathname || pathname === "") pathname = "/";
   const exact = allRoutes.find(r => r.url === pathname);
-  return exact || route404;
+  if (exact) return exact;
+  for (const r of allRoutes) {
+    if (r.url !== "/" && pathname.startsWith(r.url + "/")) return r;
+  }
+  return route404;
 };
 
-// Fonction pour attacher les événements sur les boutons détail
 const attachDetailBtnListeners = () => {
   document.querySelectorAll('.detail-btn').forEach(original => {
+    if (!original) return;
     const newNode = original.cloneNode(true);
     original.replaceWith(newNode);
   });
@@ -23,7 +36,7 @@ const attachDetailBtnListeners = () => {
   document.querySelectorAll('.detail-btn').forEach(button => {
     button.addEventListener('click', () => {
       const id = button.dataset.id || "";
-      const newPath = `/detail?id=${encodeURIComponent(id)}`;
+      const newPath = `/detail/${encodeURIComponent(id)}`;
       window.history.pushState({}, "", newPath);
       LoadContentPage();
     });
@@ -40,45 +53,51 @@ const attachDetailBtnListeners = () => {
   });
 };
 
-// Fonction pour charger et injecter la page
 const LoadContentPage = async () => {
-  const route = getRouteByPathname();
+  const pathname = window.location.pathname;
+  const route = getRouteByPathname(pathname);
+
+  showLoader();
 
   try {
     const res = await fetch(route.pathHtml);
     if (!res.ok) throw new Error("HTML non trouvé");
     const html = await res.text();
-    const main = document.getElementById("main-page");
-    if (main) main.innerHTML = html;
-  } catch (err) {
-    console.error("Erreur fetch page:", err);
-    const main = document.getElementById("main-page");
-    if (main) main.innerHTML = "<h2>Erreur de chargement</h2>";
-  }
 
-  document.querySelectorAll('script[data-route-script]').forEach(s => s.remove());
+    if (mainPage) mainPage.innerHTML = html;
 
-  if (route.pathJS && route.pathJS.trim() !== "") {
-    const scriptTag = document.createElement("script");
-    scriptTag.type = "text/javascript";
-    scriptTag.src = route.pathJS;
-    scriptTag.setAttribute("data-route-script", route.pathJS);
-    scriptTag.onload = () => attachDetailBtnListeners();
-    scriptTag.onerror = () => {
-      console.warn("Impossible de charger le script:", route.pathJS);
+    document.querySelectorAll('script[data-route-script]').forEach(s => s.remove());
+
+    if (route.pathJS && route.pathJS.trim() !== "") {
+      const scriptTag = document.createElement("script");
+      scriptTag.type = "text/javascript";
+      scriptTag.src = route.pathJS;
+      scriptTag.setAttribute("data-route-script", route.pathJS);
+      scriptTag.onload = () => {
+        attachDetailBtnListeners();
+        document.dispatchEvent(new Event('pageContentLoaded'));
+      };
+      scriptTag.onerror = () => {
+        console.warn("Impossible de charger le script:", route.pathJS);
+        attachDetailBtnListeners();
+        document.dispatchEvent(new Event('pageContentLoaded'));
+      };
+      document.body.appendChild(scriptTag);
+    } else {
       attachDetailBtnListeners();
-    };
-    document.body.appendChild(scriptTag);
-  } else {
-    attachDetailBtnListeners();
-  }
+      document.dispatchEvent(new Event('pageContentLoaded'));
+    }
 
-  document.title = `${route.title} - ${websiteName}`;
+    document.title = `${route.title} - ${websiteName}`;
+  } catch (err) {
+    if (mainPage) mainPage.innerHTML = '<p style="color:red; text-align:center;">Erreur lors du chargement de la page.</p>';
+    console.error("Erreur fetch page:", err);
+  } finally {
+    hideLoader();
+  }
 };
 
-// Gestion des liens internes
 const routeEvent = (event) => {
-  event = event || window.event;
   event.preventDefault();
   const a = event.target.closest('a');
   if (!a) return;
@@ -90,7 +109,6 @@ const routeEvent = (event) => {
 window.onpopstate = LoadContentPage;
 window.route = routeEvent;
 
-// Chargement initial
 window.addEventListener('DOMContentLoaded', () => {
   LoadContentPage();
 });

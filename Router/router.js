@@ -66,6 +66,7 @@ const LoadContentPage = async () => {
 
     if (mainPage) mainPage.innerHTML = html;
 
+    // Supprime les anciens scripts dynamiques
     document.querySelectorAll('script[data-route-script]').forEach(s => s.remove());
 
     if (route.pathJS && route.pathJS.trim() !== "") {
@@ -96,8 +97,6 @@ const LoadContentPage = async () => {
     hideLoader();
   }
 };
-
-
 
 const routeEvent = (event) => {
   event.preventDefault();

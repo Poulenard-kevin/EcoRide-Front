@@ -1,6 +1,5 @@
-// Dashboard statistiques
-.dashboard-section.container {
-    background-color: $color-background;
+.admin-content.container {
+    background-color: $color-background; // ton vert
     border-radius: 30px;
     padding: 35px 100px 60px;
     margin: 0 100px;
@@ -14,11 +13,25 @@
     }
   
     @media (max-width: 576px) {
-      padding: 35px 20px 60px;
+      padding: 20px 20px 60px;
       margin: 0 25px;
       max-width: calc(100% - 50px);
     }
+
+    
   
+    // Tu peux garder ici les styles communs aux sections si besoin
+    h1 {
+      text-align: center;
+      margin-bottom: 35px;
+    }
+  }
+
+
+// Dashboard statistiques
+.dashboard-section.container {
+    padding: 0px;
+    
     h1 {
       text-align: center;
       margin-bottom: 35px;
@@ -60,20 +73,15 @@
       text-align: center;
       font-weight: bold;
     }
-  }
+  
 
     @media (max-width: 990px) {
-
-        h1 {
-            font-size: 22px; /* Réduit la taille des titres h1 */
-            margin-bottom: 35px;
-          }
 
         h2 {
             font-size: 20px; /* Réduit la taille des titres h2 */
             padding-bottom: 20px;
           }
-        
+
         .charts-container {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch; /* scroll fluide iOS */
@@ -104,30 +112,33 @@
 
     }
 
+    @media (max-width: 576px) {
+
+        .form-dashboard{
+            padding: 20px 20px;
+        }
+
+        h1 {
+            font-size: 22px; /* Réduit la taille des titres h1 */
+            margin-bottom: 35px;
+          }
+
+        h2 {
+            font-size: 20px; /* Réduit la taille des titres h2 */
+            padding-bottom: 20px;
+          }
+    }
+    
+
+}
+
   
   // ===============================
   // Gestion comptes
   // ===============================
 
   .accounts-section.container {
-    background-color: $color-background;
-    border-radius: 30px;
-    padding: 35px 100px 60px;
-    margin: 35px 100px;
-    max-width: calc(100% - 200px);
-    box-sizing: border-box;
-  
-    @media (max-width: 768px) {
-      padding: 30px 50px 60px;
-      margin: 35px 50px;
-      max-width: calc(100% - 100px);
-    }
-  
-    @media (max-width: 576px) {
-      padding: 35px 20px 60px;
-      margin: 20px 25px;
-      max-width: calc(100% - 50px);
-    }
+    padding: 0px;
 
     h1 {
         text-align: center;
@@ -210,19 +221,6 @@
         }
     }
 
-    @media (max-width: 990px) {
-
-        h1 {
-            font-size: 22px; /* Réduit la taille des titres h1 */
-            margin-bottom: 35px;
-          }
-
-        h2 {
-            font-size: 20px; /* Réduit la taille des titres h2 */
-            padding-bottom: 20px;
-          }
-    }
-
     .table-wrapper {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch; /* scroll fluide iOS */
@@ -251,6 +249,23 @@
         scrollbar-color: $color-medium-green $color-very-light-beige;
     }
 
+    @media (max-width: 576px) {
+
+        .form-comptes{
+            padding: 20px 20px;
+        }
+
+        h1 {
+            font-size: 22px; /* Réduit la taille des titres h1 */
+            margin-bottom: 35px;
+          }
+
+        h2 {
+            font-size: 20px; /* Réduit la taille des titres h2 */
+            padding-bottom: 20px;
+          }
+    }
+
 }
 
 // ===============================
@@ -258,24 +273,7 @@
 // ===============================
 
 .employee-management-section.container {
-    background-color: $color-background;
-    border-radius: 30px;
-    padding: 35px 100px 60px;
-    margin: 0 100px;
-    max-width: calc(100% - 200px);
-    box-sizing: border-box;
-  
-    @media (max-width: 768px) {
-      padding: 30px 50px 60px;
-      margin: 0 50px;
-      max-width: calc(100% - 100px);
-    }
-  
-    @media (max-width: 576px) {
-      padding: 20px 20px 60px;
-      margin: 0 25px;
-      max-width: calc(100% - 50px);
-    }
+    padding: 0px;
   
     h1 {
       text-align: center;
@@ -362,6 +360,7 @@
         }
     }
 
+
     @media (max-width: 576px) {
         .btn {
           font-size: $font-size-nav; /* Réduit la taille des boutons */
@@ -378,12 +377,17 @@
         }
 
         form {
-            padding: 10px 20px 35px;
+            padding: 20px 20px;
+        }
+
+        h1 {
+            font-size: 22px; /* Réduit la taille des titres h1 */
+            margin-bottom: 35px;
           }
 
-
-
-
+        h2 {
+            font-size: 20px; /* Réduit la taille des titres h2 */
+            padding-bottom: 20px;
+          }
     }
-
 }

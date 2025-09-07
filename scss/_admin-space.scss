@@ -44,36 +44,23 @@
       justify-content: space-around;
       flex-wrap: wrap;
     }
-
-    .charts-container {
-        display: flex;
-        gap: 20px;
-        overflow-x: auto; /* scroll horizontal si trop large */
-        padding-bottom: 10px; /* espace pour la barre de scroll */
-    }
     
     .chart-card {
       background: $color-very-light-beige;
       padding: 20px;
       border-radius: 12px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      min-width: 320px; /* largeur minimale pour chaque graphe */
-      flex: 0 0 auto; /* empêcher de rétrécir */
-      height: 250px; /* hauteur fixe */
+      flex: 1;
+      min-width: 300px;
     }
-
-    @media (max-width: 768px) {
-        .chart-card {
-          flex: 1 1 100%; // sur mobile → 1 colonne
-        }
-    }
-
+    
     .total-credits {
       margin-top: 20px;
       font-size: 1.2em;
       text-align: center;
       font-weight: bold;
     }
+  }
 
     @media (max-width: 990px) {
 
@@ -86,37 +73,37 @@
             font-size: 20px; /* Réduit la taille des titres h2 */
             padding-bottom: 20px;
           }
-    }
-
-    .charts-container {
+        
+        .charts-container {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch; /* scroll fluide iOS */
-      
-        /* Scrollbar WebKit */
-        &::-webkit-scrollbar {
-          height: 8px; /* hauteur scrollbar horizontale */
+        
+            /* Scrollbar WebKit */
+            &::-webkit-scrollbar {
+                height: 8px; /* hauteur scrollbar horizontale */
+            }
+            
+            &::-webkit-scrollbar-track {
+                background: $color-very-light-beige; /* piste */
+                border-radius: 10px;
+            }
+            
+            &::-webkit-scrollbar-thumb {
+                background: $color-medium-green; /* pouce */
+                border-radius: 10px;
+            }
+            
+            &::-webkit-scrollbar-thumb:hover {
+                background: $color-dark-green; /* hover */
+            }
+            
+            /* Scrollbar Firefox */
+            scrollbar-width: thin;
+            scrollbar-color: $color-medium-green $color-very-light-beige;
         }
-      
-        &::-webkit-scrollbar-track {
-          background: $color-very-light-beige; /* piste */
-          border-radius: 10px;
-        }
-      
-        &::-webkit-scrollbar-thumb {
-          background: $color-medium-green; /* pouce */
-          border-radius: 10px;
-        }
-      
-        &::-webkit-scrollbar-thumb:hover {
-          background: $color-dark-green; /* hover */
-        }
-      
-        /* Scrollbar Firefox */
-        scrollbar-width: thin;
-        scrollbar-color: $color-medium-green $color-very-light-beige;
-      }
 
-  }
+    }
+
   
   // ===============================
   // Gestion comptes
@@ -132,13 +119,13 @@
   
     @media (max-width: 768px) {
       padding: 30px 50px 60px;
-      margin: 0 50px;
+      margin: 35px 50px;
       max-width: calc(100% - 100px);
     }
   
     @media (max-width: 576px) {
       padding: 35px 20px 60px;
-      margin: 0 25px;
+      margin: 20px 25px;
       max-width: calc(100% - 50px);
     }
 
@@ -262,5 +249,141 @@
         /* Scrollbar Firefox */
         scrollbar-width: thin;
         scrollbar-color: $color-medium-green $color-very-light-beige;
+    }
+
+}
+
+// ===============================
+// Création compte employé
+// ===============================
+
+.employee-management-section.container {
+    background-color: $color-background;
+    border-radius: 30px;
+    padding: 35px 100px 60px;
+    margin: 0 100px;
+    max-width: calc(100% - 200px);
+    box-sizing: border-box;
+  
+    @media (max-width: 768px) {
+      padding: 30px 50px 60px;
+      margin: 0 50px;
+      max-width: calc(100% - 100px);
+    }
+  
+    @media (max-width: 576px) {
+      padding: 20px 20px 60px;
+      margin: 0 25px;
+      max-width: calc(100% - 50px);
+    }
+  
+    h1 {
+      text-align: center;
+      margin-bottom: 35px;
+    }
+  
+    form {
+      background-color: $color-light-beige;
+      padding: 35px;
+      border-radius: 30px;
+      box-shadow: 0 4px 6px rgba(0,0,0,.1);
+      text-align: center;
+      margin-bottom: 35px;
+    }
+  
+    .form-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+      margin-top: 20px;
+  
+      .form-field {
+        display: flex;
+        flex-direction: column;
+        text-align: left;
       }
+
+      .btn { 
+        align-self: center; 
+        margin-top: 20px; 
+        min-width: 200px; 
+      }
+
+    }
+  
+    .btn {
+        background-color: $color-medium-green;
+        color: $color-light-beige;
+        border: none;
+        border-radius: 30px;
+        padding: 10px 20px;
+        font-family: $font-title;
+        font-size: $font-size-body;
+        font-weight: $weight-medium;
+        transition: background .3s ease, transform .3s ease;
+        box-shadow: 0 6px 8px rgba(74,122,63,.5);
+
+        &:hover {
+        background-color: $color-dark-green;
+        transform: scale(1.05);
+        box-shadow: 0 6px 8px rgba(74,122,63,.5);
+        }
+    }
+
+    label {
+        font-family: $font-body;
+        font-size: $font-size-body;
+        font-weight: $weight-regular;
+        color: $color-dark-green;
+        display: flex; align-items: center;
+        margin-bottom: 10px;
+      }
+
+
+
+    .form-control {
+        border-radius: 20px;
+        padding: 12px 20px;
+        font-weight: $weight-semibold;
+        font-size: $font-size-nav;
+        color: $color-dark-green;
+        background-color: $color-very-light-beige;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        outline: none;
+        transition: box-shadow 0.3s ease;
+        
+        &::placeholder { 
+        color: #7a8a6f; 
+        }
+
+        &:focus {
+        background-color: $color-very-light-beige;    /* ne change pas le fond */
+        box-shadow: 0 0 5px 2px $color-dark-green;   /* halo lumineux vert */
+        }
+    }
+
+    @media (max-width: 576px) {
+        .btn {
+          font-size: $font-size-nav; /* Réduit la taille des boutons */
+          padding: 8px 16px; /* Ajuste le padding des boutons */
+        }
+
+        .form-control {
+            padding: 8px 15px;
+            font-size: 12px;
+        }
+
+        label {
+            font-size: $font-size-nav;
+        }
+
+        form {
+            padding: 10px 20px 35px;
+          }
+
+
+
+
+    }
+
 }

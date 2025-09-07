@@ -119,3 +119,28 @@ const utilisateurs = [
   // Initialisation
   // ==========================
   renderAccountsTable();
+
+  // ==========================
+  // Gestion employés
+  // ==========================
+
+  document.getElementById("employeeForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+  
+    const nom = document.getElementById("employeeName").value.trim();
+    const email = document.getElementById("employeeEmail").value.trim();
+    const password = document.getElementById("employeePassword").value;
+  
+    if (!nom || !email || !password) {
+      alert("Merci de remplir tous les champs.");
+      return;
+    }
+  
+    // Ici tu peux ajouter la logique pour envoyer les données au backend
+    // Par exemple via fetch POST /api/employes
+  
+    alert(`Employé créé : ${nom} (${email})`);
+  
+    // Reset du formulaire
+    this.reset();
+  });

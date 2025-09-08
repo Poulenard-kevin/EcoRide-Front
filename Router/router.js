@@ -97,6 +97,8 @@ const LoadContentPage = async () => {
   }
 };
 
+
+
 const routeEvent = (event) => {
   event.preventDefault();
   const a = event.target.closest('a');

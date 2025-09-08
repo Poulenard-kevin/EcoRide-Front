@@ -5,13 +5,21 @@ const mainPage = document.getElementById("main-page");
 const loaderOverlay = document.getElementById("loader-overlay");
 
 function showLoader() {
-  if (loaderOverlay) loaderOverlay.style.display = "flex";
-  if (mainPage) mainPage.classList.add("loading");
+  if (loaderOverlay) {
+    loaderOverlay.style.display = "flex"; // Affiche le loader (flex pour centrer)
+  }
+  if (mainPage) {
+    mainPage.classList.add("loading"); // Ajoute la classe pour transition CSS
+  }
 }
 
 function hideLoader() {
-  if (loaderOverlay) loaderOverlay.style.display = "none";
-  if (mainPage) mainPage.classList.remove("loading");
+  if (loaderOverlay) {
+    loaderOverlay.style.display = "none"; // Cache le loader
+  }
+  if (mainPage) {
+    mainPage.classList.remove("loading"); // Enlève la classe
+  }
 }
 
 const route404 = new Route("404", "Page introuvable", "/pages/404.html");
@@ -66,7 +74,6 @@ const LoadContentPage = async () => {
 
     if (mainPage) mainPage.innerHTML = html;
 
-    // Supprime les anciens scripts dynamiques
     document.querySelectorAll('script[data-route-script]').forEach(s => s.remove());
 
     if (route.pathJS && route.pathJS.trim() !== "") {

@@ -149,13 +149,32 @@ document.addEventListener('pageContentLoaded', () => {
       });
     }
   
-    // Récupération des éléments de la barre de recherche
-    const inputDepart = document.querySelector('.search-input[placeholder="Lieux de départ"]');
-    const inputArrivee = document.querySelector('.search-input[placeholder="Lieux d\'arrivée"]');
+    // Récupération des éléments de la barre de recherche avec id
+    const inputDepart = document.getElementById('inputDepartCovoiturage');
+    const inputArrivee = document.getElementById('inputArriveeCovoiturage');
     const inputDate = document.getElementById('date-depart-input');
     const inputHeure = document.getElementById('heure-depart-input');
     const inputPassagers = document.getElementById('nombre-passagers-input');
     const selectType = document.getElementById('type-trajet-select');
+  
+    // Fonction pour récupérer les paramètres URL
+    function getQueryParams() {
+      const params = {};
+      window.location.search.substring(1).split('&').forEach(pair => {
+        const [key, value] = pair.split('=');
+        if (key) params[decodeURIComponent(key)] = decodeURIComponent(value || '');
+      });
+      return params;
+    }
+  
+    // Récupération des paramètres et pré-remplissage des inputs
+    const params = getQueryParams();
+    if (params.depart && inputDepart) {
+      inputDepart.value = params.depart;
+    }
+    if (params.arrivee && inputArrivee) {
+      inputArrivee.value = params.arrivee;
+    }
   
     // Récupère les valeurs des filtres desktop uniquement (pour filtrer)
     function getDesktopFilters() {
@@ -307,6 +326,20 @@ document.addEventListener('pageContentLoaded', () => {
       });
     });
   
+    // Gestion de la classe "valid" sur le select type trajet
+    if (selectType) {
+      function updateSelectValidClass() {
+        if (selectType.value === "") {
+          selectType.classList.remove("valid");
+        } else {
+          selectType.classList.add("valid");
+        }
+      }
+  
+      selectType.addEventListener("change", updateSelectValidClass);
+      updateSelectValidClass();
+    }
+  
     // Bouton Recherche lance la recherche combinée
     const btnReserver = document.querySelector('.search-btn.reserve-btn');
     btnReserver.addEventListener('click', () => {
@@ -316,28 +349,3 @@ document.addEventListener('pageContentLoaded', () => {
     // Affiche tous les trajets au départ
     displayTrajets(trajets);
   });
-
-  document.addEventListener("DOMContentLoaded", function () {
-  const select = document.getElementById("type-trajet-select");
-
-  if (!select) {
-    console.error("L'élément #type-trajet-select est introuvable !");
-    return;
-  }
-
-  // Applique la classe "valid" en fonction de la sélection
-  select.addEventListener("change", function () {
-    if (this.value === "") {
-      this.classList.remove("valid"); // Supprime la classe si l'option par défaut est sélectionnée
-    } else {
-      this.classList.add("valid"); // Ajoute la classe si une option valide est sélectionnée
-    }
-  });
-
-  // Applique la couleur par défaut au chargement
-  if (select.value === "") {
-    select.classList.remove("valid");
-  } else {
-    select.classList.add("valid");
-  }
-});

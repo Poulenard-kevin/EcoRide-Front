@@ -2,8 +2,8 @@ import Route from "./Route.js";
 
 //Définir ici vos routes
 export const allRoutes = [
-    new Route("/accueil", "Accueil", "/pages/home.html"),
-    new Route("/covoiturage", "Covoiturage", "/pages/covoiturage.html"),
+    new Route("/accueil", "Accueil", "/pages/home.html", "/Js/home.js"),
+    new Route("/covoiturage", "Covoiturage", "/pages/covoiturage.html", "/Js/covoiturage.js", "/scss/_covoiturage.css"),
 
 ];
 

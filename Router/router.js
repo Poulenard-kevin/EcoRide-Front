@@ -22,6 +22,24 @@ function hideLoader() {
   }
 }
 
+function showLoader() {
+  if (loaderOverlay) {
+    loaderOverlay.style.display = "flex"; // Affiche le loader (flex pour centrer)
+  }
+  if (mainPage) {
+    mainPage.classList.add("loading"); // Ajoute la classe pour transition CSS
+  }
+}
+
+function hideLoader() {
+  if (loaderOverlay) {
+    loaderOverlay.style.display = "none"; // Cache le loader
+  }
+  if (mainPage) {
+    mainPage.classList.remove("loading"); // Enlève la classe
+  }
+}
+
 const route404 = new Route("404", "Page introuvable", "/pages/404.html");
 
 const getRouteByUrl = (url) => {
@@ -31,6 +49,7 @@ const getRouteByUrl = (url) => {
       currentRoute = element;
     }
   });
+  return currentRoute != null ? currentRoute : route404;
   return currentRoute != null ? currentRoute : route404;
 };
 
@@ -50,14 +69,22 @@ async function LoadContentPage() {
 
     // Ajoute le nouveau contenu
     mainPage.innerHTML = html;
+    console.log('HTML injecté dans #main-page');
 
-    // Ajoute le script JS si défini
     if (actualRoute.pathJS) {
       const scriptTag = document.createElement("script");
       scriptTag.type = "text/javascript";
       scriptTag.src = actualRoute.pathJS;
       scriptTag.setAttribute("data-dynamic", "true");
+
+      scriptTag.onload = () => {
+        console.log('Script chargé:', actualRoute.pathJS);
+        document.dispatchEvent(new Event('pageContentLoaded'));
+      };
+
       document.body.appendChild(scriptTag);
+    } else {
+      document.dispatchEvent(new Event('pageContentLoaded'));
     }
 
     document.title = `${actualRoute.title} - ${websiteName}`;
@@ -68,6 +95,8 @@ async function LoadContentPage() {
     hideLoader();
   }
 }
+
+
 
 const routeEvent = (event) => {
   event.preventDefault();

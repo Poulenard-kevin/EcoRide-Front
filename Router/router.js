@@ -22,24 +22,6 @@ function hideLoader() {
   }
 }
 
-function showLoader() {
-  if (loaderOverlay) {
-    loaderOverlay.style.display = "flex"; // Affiche le loader (flex pour centrer)
-  }
-  if (mainPage) {
-    mainPage.classList.add("loading"); // Ajoute la classe pour transition CSS
-  }
-}
-
-function hideLoader() {
-  if (loaderOverlay) {
-    loaderOverlay.style.display = "none"; // Cache le loader
-  }
-  if (mainPage) {
-    mainPage.classList.remove("loading"); // Enlève la classe
-  }
-}
-
 const route404 = new Route("404", "Page introuvable", "/pages/404.html");
 
 const getRouteByUrl = (url) => {

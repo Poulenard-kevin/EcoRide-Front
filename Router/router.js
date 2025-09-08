@@ -22,9 +22,6 @@ function hideLoader() {
   }
 }
 
-const mainPage = document.getElementById("main-page");
-const loaderOverlay = document.getElementById("loader-overlay");
-
 function showLoader() {
   if (loaderOverlay) {
     loaderOverlay.style.display = "flex"; // Affiche le loader (flex pour centrer)
@@ -56,7 +53,6 @@ const getRouteByUrl = (url) => {
   return currentRoute != null ? currentRoute : route404;
 };
 
-async function LoadContentPage() {
 async function LoadContentPage() {
   const path = window.location.pathname;
   const actualRoute = getRouteByUrl(path);
@@ -104,9 +100,6 @@ async function LoadContentPage() {
 
 const routeEvent = (event) => {
   event.preventDefault();
-  const href = event.target.closest("a")?.href;
-  if (!href) return;
-  window.history.pushState({}, "", href);
   const href = event.target.closest("a")?.href;
   if (!href) return;
   window.history.pushState({}, "", href);

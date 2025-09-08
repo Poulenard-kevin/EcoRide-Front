@@ -26,7 +26,7 @@
       padding: 35px;
     }
     
-    @media (max-width: 768px) {
+    @media (max-width: 910px) {
       grid-template-columns: 1fr; /* Passe à une seule colonne */
       gap: 15px; /* Réduit l'espacement entre les éléments */
       padding: 35px;
@@ -42,7 +42,7 @@
     @media (max-width: 576px) {
       grid-template-columns: 1fr; /* Une seule colonne pour les petits écrans */
       gap: 15px;
-      padding: 35px;
+      padding: 20px;
       margin-left: 25px;
       margin-right: 25px;
 
@@ -130,6 +130,7 @@
       transition: border-color 0.3s ease;
       height: 48px;  
       box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+      color: #7a8a6f;
 
       &:focus {
         background-color: $color-very-light-beige;    /* ne change pas le fond */
@@ -138,6 +139,52 @@
 
       &:valid {
         color: $color-dark-green;
+      }
+    }
+
+        input[type="date"] {
+      &::placeholder {
+        color: #7a8a6f; // Couleur pour le placeholder
+        opacity: 1; // Assure que la couleur est bien visible
+      }
+    
+      &::-webkit-datetime-edit {
+        color: #7a8a6f; // Couleur pour le texte affiché dans le champ
+      }
+    
+      &::-webkit-datetime-edit-fields-wrapper {
+        color: #7a8a6f; // Couleur pour les champs internes
+      }
+    
+      &::-webkit-datetime-edit-text {
+        color: #7a8a6f; // Couleur pour les séparateurs (slash, tirets, etc.)
+      }
+    
+      &::-webkit-calendar-picker-indicator {
+        filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
+      }
+    }
+
+        input[type="time"] {
+      &::placeholder {
+        color: #7a8a6f; // Couleur pour le placeholder
+        opacity: 1; // Assure que la couleur est bien visible
+      }
+    
+      &::-webkit-datetime-edit {
+        color: #7a8a6f; // Couleur pour le texte affiché dans le champ
+      }
+    
+      &::-webkit-datetime-edit-fields-wrapper {
+        color: #7a8a6f; // Couleur pour les champs internes
+      }
+    
+      &::-webkit-datetime-edit-text {
+        color: #7a8a6f; // Couleur pour les séparateurs (deux-points, etc.)
+      }
+    
+      &::-webkit-calendar-picker-indicator {
+        filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
       }
     }
   }
@@ -151,16 +198,13 @@
     background-position: right 10px center; /* espace à droite */
     background-size: 16px 16px; /* taille de la flèche */
     padding-right: 30px; /* espace pour la flèche */
-    color: #7a8a6f;
-  
-    &:valid {
-      color: $color-dark-green;
-    }
+    color: #7a8a6f !important;
   }
 
-  
-
-  
+    /* Applique une couleur différente lorsque l'utilisateur sélectionne une option valide */
+  #type-trajet-select:valid {
+    color: $color-dark-green; /* Couleur pour les options valides */
+  }
 }
 
 /* === SECTION LISTE DE COVOITURAGE === */
@@ -705,6 +749,7 @@
   }
 
   .covoiturage-results {
+    padding: 20px; /* Réduit le padding global */
     width: 90%; /* Réduit la largeur à 90% de l'écran */
   }
 
@@ -957,7 +1002,27 @@
 }
 
 
+@media (max-width: 576px) {
+  .input-group {
+    display: flex;
+    align-items: center; 
+    
+    label {
+      width: 100px !important;
+      font-size: 10px !important; /* Taille de police adaptée aux petits écrans */
+      padding: 8px 16px !important; /* Ajuste le padding pour un affichage compact */
+      text-align: left !important; /* Aligne le texte à gauche */
+      height: 34px !important;
+    }
 
- 
+    input[type="date"],
+    input[type="time"] {
+      font-size: 12px !important; /* Taille de police adaptée aux petits écrans */
+      padding: 8px 16px !important; /* Ajuste le padding pour un affichage compact */
+      height: 34px !important;
+      
+    }
+  }
+}
 
 

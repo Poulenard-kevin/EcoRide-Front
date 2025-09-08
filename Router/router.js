@@ -77,6 +77,8 @@ async function LoadContentPage() {
   }
 }
 
+
+
 const routeEvent = (event) => {
   event.preventDefault();
   const href = event.target.closest("a")?.href;

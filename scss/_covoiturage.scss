@@ -624,6 +624,10 @@
           padding-top: 40px;
           color: $color-medium-green; /* Couleur des étoiles */
           margin-bottom: 10px; /* Ajoute un espacement sous les étoiles */
+          max-width: 150px; /* Limite la largeur maximale du pseudo */
+          white-space: nowrap; /* Empêche le texte de passer à la ligne */
+          overflow: hidden; /* Cache le texte qui dépasse */
+          text-overflow: ellipsis; /* Ajoute "..." pour indiquer le débordement */
         }
         
         .time {
@@ -752,11 +756,13 @@
 
   .covoiturage-results {
     padding: 20px; /* Réduit le padding global */
-    width: 90%; /* Réduit la largeur à 90% de l'écran */
   }
 
     .pseudo {
-      font-size: 14px; /* Taille réduite pour le pseudo */
+      font-size: 16px; /* Taille réduite pour le pseudo */
+      max-width: 50px; /* Limite la largeur maximale du pseudo */
+      overflow: hidden; /* Cache le texte qui dépasse */
+      text-overflow: ellipsis; /* Ajoute "..." pour indiquer le débordement */
     }
 
     .rating {
@@ -781,7 +787,29 @@
       font-size: 14px !important; /* Taille réduite pour la date */
       padding: 8px 12px !important; /* Ajuste le padding pour une meilleure lisibilité */
       margin-top: 12px;
-     }
+    }
+
+    .filters-toggle,
+    .result-header .date {
+      display: block; /* Assure que les deux éléments sont des blocs */
+      width: auto; /* Ajuste automatiquement la largeur */
+      padding: 10px 20px; /* Uniformise le padding */
+      margin: 0 auto; /* Centre les éléments horizontalement */
+      background-color: $color-medium-green; /* Fond vert */
+      color: $color-light-beige; /* Texte beige */
+      border-radius: 20px; /* Coins arrondis identiques */
+      text-align: center; /* Centre le texte horizontalement */
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+      font-size: 16px; /* Taille de police uniforme */
+    }
+
+    .filters-toggle {
+      max-width: 200px; /* Fixe une largeur maximale pour le bouton "Filtres" */
+    }
+
+    .result-header .date {
+      max-width: 200px; /* Fixe une largeur maximale pour la date */
+    }
   }
 
   

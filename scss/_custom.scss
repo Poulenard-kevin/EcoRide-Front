@@ -82,11 +82,33 @@ $line-height-loose: 1.5;
 // Application des styles
 
 .big-title-accueil {
-    font-family: 'Playfair Display', sans-serif;
-    font-weight: 400; // Regular
-    font-size: 50px;
-    line-height: 1.2;
+  font-size: $font-size-big-title-accueil; /* Taille par défaut pour les écrans larges */
+  font-weight: $weight-regular;
+  color: $color-dark-green;
+  text-align: left; /* Aligne le texte à gauche */
+  margin: 0; /* Supprime les marges par défaut */
+  padding-bottom: 35px; /* Ajoute un espace en bas */
+  margin-left: 100px; /* Marge par défaut pour les écrans larges */
+  margin-right: 100px; /* Marge par défaut pour les écrans larges */
+
+  @media (max-width: 1240px) {
+    font-size: $font-size-h1; /* Réduit la taille du texte pour les écrans moyens */
   }
+
+  @media (max-width: 768px) {
+    font-size: $font-size-h2; /* Réduit encore la taille pour les écrans de tablette */
+    margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
+    margin-right: 50px;
+    margin-top: -10px; /* Monte le texte de 10px */
+  }
+
+  @media (max-width: 576px) {
+    font-size: $font-size-h3; /* Réduit encore la taille pour les écrans mobiles */
+    margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
+    margin-right: 25px;
+    margin-top: -30px; /* Conserve l'augmentation de 10px */
+  }
+}
 
 .big-title {
     font-family: 'Playfair Display', sans-serif;
@@ -97,6 +119,28 @@ $line-height-loose: 1.5;
     text-decoration: underline; // Ajoute un surlignement
     text-decoration-thickness: 2px; // Épaisseur du surlignement
     text-underline-offset: 4px; // Décalage du surlignement par rapport au texte
+    margin: 0; /* Supprime les marges par défaut */
+    padding-bottom: 35px; /* Ajoute un espace en bas */
+    margin-left: 100px; /* Marge par défaut pour les écrans larges */
+    margin-right: 100px; /* Marge par défaut pour les écrans larges */
+
+    @media (max-width: 1240px) {
+      font-size: $font-size-h1; /* Réduit la taille du texte pour les écrans moyens */
+    }
+  
+    @media (max-width: 768px) {
+      font-size: $font-size-h2; /* Réduit encore la taille pour les écrans de tablette */
+      margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
+      margin-right: 50px;
+      margin-top: -10px; /* Monte le texte de 10px */
+    }
+  
+    @media (max-width: 576px) {
+      font-size: $font-size-h3; /* Réduit encore la taille pour les écrans mobiles */
+      margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
+      margin-right: 25px;
+      margin-top: -30px; /* Conserve l'augmentation de 10px */
+    }
   }
   
   h1 {

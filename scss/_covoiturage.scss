@@ -46,9 +46,20 @@
       margin-left: 25px;
       margin-right: 25px;
 
+      .search-input {
+        font-size: 12px;
+        padding: 8px 16px; /* Ajuste le padding des champs */
+      }
+
       .search-btn {
         justify-self: center; /* Centre le bouton horizontalement */
+        font-size: $font-size-nav; /* Réduit la taille des boutons */
+        padding: 8px 16px; /* Ajuste le padding des boutons */
       }
+
+      
+
+      
     }
   }
 
@@ -84,6 +95,72 @@
       background-color: $color-dark-green;
     }
   }
+
+  .input-group {
+    display: flex;
+    align-items: center;  // centre verticalement label + input
+
+    label {
+      width: 140px;               // largeur fixe pour aligner les labels
+      font-weight: 600;
+      color: $color-dark-green;
+      font-size: 14px;
+      text-align: right;
+      background-color: $color-medium-green;
+      padding: 0.5rem 1rem;
+      height: 48px;               // hauteur fixe pour alignement
+      display: flex;
+      align-items: center;  
+      border-radius: 20px; 
+    }
+
+    input[type="date"],
+    input[type="time"] {
+      flex: 1;
+      appearance: none;
+      &::-webkit-calendar-picker-indicator,
+      &::-webkit-clear-button {
+      filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
+       /* filtre pour approx #7a8a6f, à ajuster si besoin */
+      }
+      padding: 0.5rem 0.75rem;
+      border-left: none;          // pas de bordure à gauche pour fusionner avec label
+      font-size: 16px;
+      background-color: $color-very-light-beige;
+      transition: border-color 0.3s ease;
+      height: 48px;  
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+
+      &:focus {
+        background-color: $color-very-light-beige;    /* ne change pas le fond */
+        box-shadow: 0 0 5px 2px $color-dark-green;   /* halo lumineux vert */
+      }
+
+      &:valid {
+        color: $color-dark-green;
+      }
+    }
+  }
+
+  #type-trajet-select {
+    appearance: none; /* Supprime la flèche native */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%237a8a6f" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center; /* espace à droite */
+    background-size: 16px 16px; /* taille de la flèche */
+    padding-right: 30px; /* espace pour la flèche */
+    color: #7a8a6f;
+  
+    &:valid {
+      color: $color-dark-green;
+    }
+  }
+
+  
+
+  
 }
 
 /* === SECTION LISTE DE COVOITURAGE === */
@@ -166,6 +243,7 @@
           padding: 10px; /* Ajoute un espace interne */
           width: 100%; /* L'input occupe toute la largeur disponible */
           color: $color-dark-green; /* Couleur du texte */
+          font-size: $font-size-nav;
         }
 
         label {
@@ -174,6 +252,7 @@
           gap: 10px; /* Ajoute un espacement entre la case et le texte */
           color: $color-dark-green; /* Couleur du texte */
           margin-bottom: 10px; /* Ajoute une marge en bas */
+          font-size: $font-size-nav;
         }
 
         input[type="checkbox"] {
@@ -185,6 +264,7 @@
           border-radius: 4px;
           cursor: pointer;
           position: relative;
+          font-size: $font-size-nav;
 
           &:checked {
             background-color: $color-medium-green;
@@ -211,6 +291,7 @@
           color: $color-dark-green; /* Couleur du texte */
           font-size: 1rem; /* Taille du texte */
           transition: border-color 0.3s ease; /* Ajoute une transition pour un effet fluide */
+          font-size: $font-size-nav;
 
 
           &:focus {
@@ -227,6 +308,7 @@
           cursor: pointer; /* Ajoute un curseur pointer */
           appearance: none; /* Supprime le style par défaut du navigateur */
           position: relative; /* Nécessaire pour le pseudo-élément */
+          font-size: $font-size-nav;
         
           &:checked {
             background-color: $color-medium-green; /* Couleur de fond pour une case cochée */
@@ -254,6 +336,7 @@
           font-size: 1rem; /* Taille du texte */
           transition: border-color 0.3s ease; /* Ajoute une transition fluide */
           border-color: $color-medium-green;
+          font-size: $font-size-nav;
         
           &:focus {
             outline: none; /* Supprime le contour par défaut */
@@ -266,6 +349,7 @@
             color: $color-light-beige; /* Couleur du texte des options */
             border: 1px solid $color-dark-green; /* Bordure des options */
             padding: 5px; /* Ajoute un espace interne */
+            font-size: $font-size-nav;
           }
         }
       }
@@ -273,6 +357,7 @@
       .filter-buttons {
         display: flex;
         gap: 10px;
+        font-size: $font-size-nav;
 
         .apply-btn, .reset-btn {
           flex: 1;
@@ -280,6 +365,7 @@
           border: none;
           border-radius: 20px;
           cursor: pointer;
+          font-size: $font-size-nav;
         }
 
         .apply-btn {
@@ -548,7 +634,7 @@
         align-items: center; /* Centre les éléments verticalement */
         gap: 15px; /* Ajoute un espacement entre la photo et les autres éléments */
         padding-right: 40px;
-        border-right: 1px solid $color-medium-green; /* Ligne de séparation en bas */
+        
 
         .profile-photo {
           width: 120px; /* Taille fixe de la largeur */
@@ -578,11 +664,20 @@
 
 @media (max-width: 576px) {
 
+  h1 {
+    font-size: 24px; /* Réduit la taille des titres h1 */
+  }
+
   .result-card .detail-btn {
-    padding: 10px 14px !important; /* Réduit le padding du bouton */
-    font-size: 14px !important; /* Ajuste la taille de la police */
+    padding: 8px 16px !important; /* Réduit le padding du bouton */
+    font-size: 16px !important; /* Ajuste la taille de la police */
     width: auto !important; /* Ajuste automatiquement la largeur */
     height: auto !important; /* Ajuste automatiquement la hauteur */
+  }
+
+  .btn.btn-primary {
+    font-size: 16px !important; /* Réduit la taille de la police */
+    padding: 8px 16px !important; /* Réduit le padding interne */
   }
 
   .result-card .details {
@@ -793,7 +888,32 @@
           padding: 5px; /* Ajoute un espace interne */
         }
       }
+
+      select#note-mini-offcanvas {
+        background-color: $color-very-light-beige; /* Applique la couleur de fond */
+      border: 1px solid $color-dark-green; /* Bordure du select */
+      border-radius: 5px; /* Ajoute des coins arrondis */
+      padding: 10px; /* Ajoute un espace interne */
+      width: 100%; /* Le select occupe toute la largeur disponible */
+      color: $color-dark-green; /* Couleur du texte */
+      font-size: 1.6rem; /* Taille du texte */
+      transition: border-color 0.3s ease; /* Ajoute une transition fluide */
+      border-color: $color-medium-green;
+
+      &:focus {
+        outline: none; /* Supprime le contour par défaut */
+        border-color: $color-medium-green; /* Change la couleur de la bordure en vert moyen */
+        box-shadow: 0 0 5px $color-medium-green; /* Ajoute un effet lumineux autour */
+      }
+
+      option {
+        background-color: $color-medium-green; /* Fond des options */
+        color: $color-light-beige; /* Couleur du texte des options */
+        border: 1px solid $color-dark-green; /* Bordure des options */
+        padding: 5px; /* Ajoute un espace interne */
+      }
     }
+}
 
     .filter-buttons {
       display: flex;
@@ -836,5 +956,8 @@
   text-align: center; /* Centre le texte horizontalement */
 }
 
+
+
+ 
 
 

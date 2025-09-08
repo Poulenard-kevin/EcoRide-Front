@@ -50,14 +50,22 @@ async function LoadContentPage() {
 
     // Ajoute le nouveau contenu
     mainPage.innerHTML = html;
+    console.log('HTML injecté dans #main-page');
 
-    // Ajoute le script JS si défini
     if (actualRoute.pathJS) {
       const scriptTag = document.createElement("script");
       scriptTag.type = "text/javascript";
       scriptTag.src = actualRoute.pathJS;
       scriptTag.setAttribute("data-dynamic", "true");
+
+      scriptTag.onload = () => {
+        console.log('Script chargé:', actualRoute.pathJS);
+        document.dispatchEvent(new Event('pageContentLoaded'));
+      };
+
       document.body.appendChild(scriptTag);
+    } else {
+      document.dispatchEvent(new Event('pageContentLoaded'));
     }
 
     document.title = `${actualRoute.title} - ${websiteName}`;

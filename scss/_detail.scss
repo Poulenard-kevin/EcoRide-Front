@@ -33,21 +33,86 @@
 
   @media (max-width: 576px) {
     display: flex;
+    flex-direction: column;
     margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
     margin-right: 25px;
     padding: 20px;
     padding-top: 35px;
     padding-bottom: 0px;
-  }
+  
 
   h1 {
     font-family: $font-title;
     font-weight: $weight-semibold;
-    font-size: $font-size-h1; /* Ajustez la taille si nécessaire */
+    font-size: 22px; /* Ajustez la taille si nécessaire */
     color: $color-dark-green;
-    margin-bottom: 3.5rem; /* Ajoute un espace sous le titre */
-    text-align: center;
+    margin-bottom: 2rem; /* Ajoute un espace sous le titre */
+    text-align: center
   }
+
+  h2 {
+    font-size: 20px; /* Réduit la taille des titres h2 */
+    
+  }
+
+  h3 {
+    font-size: 16px; /* Réduit la taille des titres h3 */
+  }
+
+  p, span {
+    font-size: 16px; /* Réduit la taille des paragraphes et spans */
+  }
+
+  .pseudo {
+    flex-direction: row !important; /* Aligne les éléments en ligne */
+    max-width: none; /* Limite la largeur maximale du pseudo */
+    align-items: center !important; /* Centre verticalement les éléments */
+    text-align: center !important;
+  }
+
+  .profile-info{
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centre verticalement les éléments */
+  }
+
+  .badge-date {
+    font-size: 18px !important; /* Force la réduction de la taille pour .badge-date */
+  }
+
+  .location, .time-depart, .time-arrivee {
+    font-size: 16px !important;
+  }
+
+  .review {
+    font-size: 16px !important; /* Réduit la taille des avis */
+  }
+
+  .reserve-btn {
+    font-size: $font-size-nav; /* Réduit la taille des boutons */
+    padding: 8px 16px; /* Ajuste le padding des boutons */
+  }
+
+  .badge-economique, .badge-electrique, .badge-thermique, .badge-hybride {
+    font-size: 16px !important; /* Réduit la taille des badges */
+  }
+
+  .rating {
+    font-size: 20px !important; /* Réduit la taille des badges */
+  }
+
+  .trip-dates, .vehicle-info, .info .preferences {
+    margin-bottom: 2rem !important; /* Réduit la marge en bas des sections */
+  }
+
+  .preferences {
+    margin-bottom: 2rem !important; /* Réduit la marge en bas des sections */
+  }
+
+  .info {
+    margin-bottom: 2rem !important; /* Réduit la marge en bas des sections */
+  }
+}
 
   .profile-section {
     display: flex;
@@ -128,6 +193,7 @@
     font-family: $font-title;
     font-weight: $weight-semibold;
     font-size: $font-size-h3;
+    max-width: 600px;
     width: 100%;
     
 
@@ -137,7 +203,7 @@
       padding: 0.3rem 1.2rem;
       border-radius: 20px;
       display: inline-block;
-      margin-bottom: 2rem;
+      margin-bottom: 1rem;
       font-family: $font-title;
       font-weight: $weight-medium;
       font-size: 2.8rem;
@@ -165,6 +231,32 @@
         font-weight: $weight-medium;
         font-size: $font-size-h3;
       }
+    }
+
+    .locations-times {
+      display: flex;
+      justify-content: space-between;
+      max-width: 400px; /* ou la largeur que tu veux */
+      margin: 0 auto;
+      gap: 20px;
+    }
+    
+    .location-time {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 50%;
+    }
+
+    .time-arrivee, .time-depart {
+      color: $color-light-beige;
+      background-color: $color-medium-green;
+      margin-top: 0.5rem;
+      font-family: $font-title;
+      font-weight: $weight-medium;
+      font-size: $font-size-h3;
+      padding: 0.3rem 1.2rem;
+      border-radius: 20px;
     }
   }
 
@@ -296,6 +388,7 @@
 
     .trip-dates {
       margin-top: 20px; /* Supprime la marge supérieure */
+      max-width: 100%;
     }
 
     .profile-section {
@@ -324,20 +417,9 @@
       }
 
       .actions {
-        display: flex;
-        flex-direction: column; /* Empile les éléments verticalement */
-        align-items: center; /* Centre les éléments horizontalement */
-        gap: 2rem; /* Ajoute un espace entre les éléments */
-
-        .search-btn {
-          order: 1; /* Place le bouton Réserver en second */
-        }
-
-        .badge-economique {
-          order: 2; /* Place le badge Economique en premier */
-        }
+        gap: 20px; /* Ajoute un espace entre les éléments */
       }
-    }
+  }
 
     /* Déplacer Avis du conducteur et driver-reviews en dessous */
     h1:nth-of-type(2) {
@@ -354,37 +436,3 @@
   }
 }
 
-@media (max-width: 768px) {
-  .detail-container {
-    h1 {
-      font-size: 22px; /* Réduit la taille des titres h1 */
-    }
-
-    h2 {
-      font-size: 20px; /* Réduit la taille des titres h2 */
-    }
-
-    h3 {
-      font-size: 16px; /* Réduit la taille des titres h3 */
-    }
-
-    p, span {
-      font-size: 16px; /* Réduit la taille des paragraphes et spans */
-    }
-
-    .badge-date {
-      font-size: 18px !important; /* Force la réduction de la taille pour .badge-date */
-    }
-
-    .location, .time-depart, .time-arrivee {
-      font-size: 16px !important;
-    }
-
-    .review {
-      font-size: 16px !important; /* Réduit la taille des avis */
-    }
-
-  
-
-  }
-}

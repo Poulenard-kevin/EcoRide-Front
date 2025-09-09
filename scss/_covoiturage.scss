@@ -602,12 +602,12 @@
                 align-items: center; /* Centre les éléments horizontalement */
                 gap: 10px; /* Ajoute un espacement entre les lignes */
   
-              .pseudo, .rating {
-                display: flex; /* Organise Pseudo et Rating horizontalement */
-                flex-direction: row; /* Aligne les éléments en ligne */
-                justify-content: flex-start; /* Aligne les éléments à gauche */
-                gap: 10px; /* Ajoute un espacement entre Pseudo et Rating */
-              }
+                .pseudo, .rating {
+                  display: flex; /* Organise Pseudo et Rating horizontalement */
+                  flex-direction: row; /* Aligne les éléments en ligne */
+                  justify-content: flex-start; /* Aligne les éléments à gauche */
+                  gap: 10px; /* Ajoute un espacement entre Pseudo et Rating */
+                }
             }
           }
   

@@ -13388,20 +13388,69 @@ button.nav-link.dropdown-toggle:hover:active {
 @media (max-width: 576px) {
   .detail-container {
     display: flex;
+    flex-direction: column;
     margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
     margin-right: 25px;
     padding: 20px;
     padding-top: 35px;
     padding-bottom: 0px;
   }
-}
-.detail-container h1, .detail-container .h1 {
-  font-family: "Poppins", sans-serif;
-  font-weight: 600;
-  font-size: 36px; /* Ajustez la taille si nécessaire */
-  color: #1F4924;
-  margin-bottom: 3.5rem; /* Ajoute un espace sous le titre */
-  text-align: center;
+  .detail-container h1, .detail-container .h1 {
+    font-family: "Poppins", sans-serif;
+    font-weight: 600;
+    font-size: 22px; /* Ajustez la taille si nécessaire */
+    color: #1F4924;
+    margin-bottom: 2rem; /* Ajoute un espace sous le titre */
+    text-align: center;
+  }
+  .detail-container h2, .detail-container .h2 {
+    font-size: 20px; /* Réduit la taille des titres h2 */
+  }
+  .detail-container h3, .detail-container .h3 {
+    font-size: 16px; /* Réduit la taille des titres h3 */
+  }
+  .detail-container p, .detail-container span {
+    font-size: 16px; /* Réduit la taille des paragraphes et spans */
+  }
+  .detail-container .pseudo {
+    flex-direction: row !important; /* Aligne les éléments en ligne */
+    max-width: none; /* Limite la largeur maximale du pseudo */
+    align-items: center !important; /* Centre verticalement les éléments */
+    text-align: center !important;
+  }
+  .detail-container .profile-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centre verticalement les éléments */
+  }
+  .detail-container .badge-date {
+    font-size: 18px !important; /* Force la réduction de la taille pour .badge-date */
+  }
+  .detail-container .location, .detail-container .time-depart, .detail-container .time-arrivee {
+    font-size: 16px !important;
+  }
+  .detail-container .review {
+    font-size: 16px !important; /* Réduit la taille des avis */
+  }
+  .detail-container .reserve-btn {
+    font-size: 16px; /* Réduit la taille des boutons */
+    padding: 8px 16px; /* Ajuste le padding des boutons */
+  }
+  .detail-container .badge-economique, .detail-container .badge-electrique, .detail-container .badge-thermique, .detail-container .badge-hybride {
+    font-size: 16px !important; /* Réduit la taille des badges */
+  }
+  .detail-container .rating {
+    font-size: 20px !important; /* Réduit la taille des badges */
+  }
+  .detail-container .trip-dates, .detail-container .vehicle-info, .detail-container .info .preferences {
+    margin-bottom: 2rem !important; /* Réduit la marge en bas des sections */
+  }
+  .detail-container .preferences {
+    margin-bottom: 2rem !important; /* Réduit la marge en bas des sections */
+  }
+  .detail-container .info {
+    margin-bottom: 2rem !important; /* Réduit la marge en bas des sections */
+  }
 }
 .detail-container .profile-section {
   display: flex;
@@ -13473,6 +13522,7 @@ button.nav-link.dropdown-toggle:hover:active {
   font-family: "Poppins", sans-serif;
   font-weight: 600;
   font-size: 24px;
+  max-width: 600px;
   width: 100%;
 }
 .detail-container .trip-dates .badge-date {
@@ -13481,7 +13531,7 @@ button.nav-link.dropdown-toggle:hover:active {
   padding: 0.3rem 1.2rem;
   border-radius: 20px;
   display: inline-block;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   font-family: "Poppins", sans-serif;
   font-weight: 500;
   font-size: 2.8rem;
@@ -13506,6 +13556,29 @@ button.nav-link.dropdown-toggle:hover:active {
   font-family: "Poppins", sans-serif;
   font-weight: 500;
   font-size: 24px;
+}
+.detail-container .trip-dates .locations-times {
+  display: flex;
+  justify-content: space-between;
+  max-width: 400px; /* ou la largeur que tu veux */
+  margin: 0 auto;
+  gap: 20px;
+}
+.detail-container .trip-dates .location-time {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 50%;
+}
+.detail-container .trip-dates .time-arrivee, .detail-container .trip-dates .time-depart {
+  color: #F1E7D1;
+  background-color: #4B8A47;
+  margin-top: 0.5rem;
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-size: 24px;
+  padding: 0.3rem 1.2rem;
+  border-radius: 20px;
 }
 .detail-container .section-titles {
   display: flex; /* Aligne les sections horizontalement */
@@ -13620,6 +13693,7 @@ button.nav-link.dropdown-toggle:hover:active {
   }
   .detail-container .trip-dates {
     margin-top: 20px; /* Supprime la marge supérieure */
+    max-width: 100%;
   }
   .detail-container .profile-section {
     display: flex;
@@ -13643,16 +13717,7 @@ button.nav-link.dropdown-toggle:hover:active {
     text-align: center;
   }
   .detail-container .profile-section .actions {
-    display: flex;
-    flex-direction: column; /* Empile les éléments verticalement */
-    align-items: center; /* Centre les éléments horizontalement */
-    gap: 2rem; /* Ajoute un espace entre les éléments */
-  }
-  .detail-container .profile-section .actions .search-btn {
-    order: 1; /* Place le bouton Réserver en second */
-  }
-  .detail-container .profile-section .actions .badge-economique {
-    order: 2; /* Place le badge Economique en premier */
+    gap: 20px; /* Ajoute un espace entre les éléments */
   }
   .detail-container h1:nth-of-type(2), .detail-container .h1:nth-of-type(2) {
     order: 5; /* Place le titre Avis du conducteur après les autres sections */
@@ -13666,29 +13731,6 @@ button.nav-link.dropdown-toggle:hover:active {
   }
 }
 
-@media (max-width: 768px) {
-  .detail-container h1, .detail-container .h1 {
-    font-size: 22px; /* Réduit la taille des titres h1 */
-  }
-  .detail-container h2, .detail-container .h2 {
-    font-size: 20px; /* Réduit la taille des titres h2 */
-  }
-  .detail-container h3, .detail-container .h3 {
-    font-size: 16px; /* Réduit la taille des titres h3 */
-  }
-  .detail-container p, .detail-container span {
-    font-size: 16px; /* Réduit la taille des paragraphes et spans */
-  }
-  .detail-container .badge-date {
-    font-size: 18px !important; /* Force la réduction de la taille pour .badge-date */
-  }
-  .detail-container .location, .detail-container .time-depart, .detail-container .time-arrivee {
-    font-size: 16px !important;
-  }
-  .detail-container .review {
-    font-size: 16px !important; /* Réduit la taille des avis */
-  }
-}
 html {
   position: relative;
   min-height: 100%;

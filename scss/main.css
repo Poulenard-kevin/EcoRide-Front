@@ -13440,7 +13440,7 @@ button.nav-link.dropdown-toggle:hover:active {
   align-items: center; /* Centre les éléments horizontalement */
   gap: 5rem; /* Ajoute un espace entre le bouton et le badge */
 }
-.detail-container .profile-section .badge-economique {
+.detail-container .profile-section .badge-economique, .detail-container .profile-section .badge-electrique, .detail-container .profile-section .badge-thermique, .detail-container .profile-section .badge-hybride {
   background-color: #F1E7D1;
   padding: 0.5rem 1.5rem;
   border-radius: 5px;

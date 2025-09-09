@@ -7,6 +7,9 @@
 // Import des variables et styles personnalisés
 @import 'custom';
 @import 'covoiturage';
+@import 'index';
+@import 'detail';
+
 @import 'user-space';
 // Import des styles spécifiques aux onglets
 @import 'user-profile-form';
@@ -18,7 +21,7 @@
 html{
     position: relative;
     min-height: 100%;
-    font-size: 62.5%; /* Définit 1rem = 10px 
+    font-size: 62.5%; /* Définit 1rem = 10px si la taille de police par défaut du navigateur est de 16px */
 }
 
 html, body {
@@ -182,6 +185,27 @@ footer.footer{
       margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
       margin-right: 25px;
       margin-top: -30px; /* Conserve l'augmentation de 10px */
+    }
+  }
+
+  .big-title {
+    position: relative;
+    top: -20px; // Positionne à 100px du haut
+    margin-left: 100px; // Positionne à 50px de la gauche
+    margin-bottom: 25px; // Ajoute une marge de 25px en bas
+    text-align: left; // Aligne le texte à gauche
+    transform: none; // Supprime la transformation pour le centrage
+  
+    @media (max-width: 768px) {
+      font-size: $font-size-h1; /* Réduit encore la taille pour les écrans de tablette */
+      margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
+      margin-right: 50px;
+    }
+  
+    @media (max-width: 576px) {
+      font-size: $font-size-h2; /* Réduit encore la taille pour les écrans mobiles */
+      margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
+      margin-right: 25px;
     }
   }
 
@@ -484,5 +508,7 @@ footer.footer{
   margin-bottom: 15px;
   color: $color-medium-green; /* Couleur de l'icône */
 }
+
+
 
 

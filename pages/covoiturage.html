@@ -6,11 +6,33 @@
 
 <section class="covoiturage-search-bar">
     <div class="search-container">
-        <input type="text" class="search-input" placeholder="Lieux de départ">
-        <input type="text" class="search-input" placeholder="Lieux d'arrivée">
-        <input type="text" class="search-input" placeholder="Heure et date de départ">
-        <input type="text" class="search-input" placeholder="Nombre de passagers">
-        <button class="search-btn reserve-btn">Réserver</button>
+        <input type="text" id="inputDepartCovoiturage" class="search-input" placeholder="Lieux de départ">
+        <input type="text" id="inputArriveeCovoiturage" class="search-input" placeholder="Lieux d'arrivée">
+        <div class="input-group">
+            <label for="date-depart-input">Date de départ</label>
+            <input type="date" class="search-input" id="date-depart-input" />
+          </div>
+          <div class="input-group">
+            <label for="heure-depart-input">Heure de départ</label>
+            <input type="time" class="search-input" id="heure-depart-input" />
+          </div>
+        <input
+            type="number"
+            class="search-input"
+            id="nombre-passagers-input"
+            placeholder="Nombre de passagers"
+            min="1"
+            max="7"
+            step="1"
+            />
+            <select class="search-input" id="type-trajet-select" required>
+                <option value="" selected>-- Type du trajet --</option>
+                <option value="electrique">Électrique</option>
+                <option value="hybride">Hybride</option>
+                <option value="thermique">Thermique</option>
+                <option value="economique">Trajet économique</option>
+              </select>
+        <button class="search-btn reserve-btn">Recherche</button>
     </div>
 </section>
 
@@ -27,22 +49,25 @@
         <div class="filters">
             <div class="filter-group">
                 <label>
-                    <input type="checkbox" checked> Voiture électrique
+                <input type="checkbox" value="electrique" checked> Voiture électrique
                 </label>
                 <label>
-                    <input type="checkbox" checked> Voiture hybride
+                <input type="checkbox" value="hybride" checked> Voiture hybride
                 </label>
                 <label>
-                    <input type="checkbox"> Voiture thermique
+                <input type="checkbox" value="thermique" checked> Voiture thermique
+                </label>
+                <label>
+                <input type="checkbox" value="economique" checked> Trajet économique
                 </label>
             </div>
             <div class="filter-group">
-                <label for="prix-max">Prix max (€)</label>
-                <input type="text" id="prix-max" placeholder="____" class="form-control">
+                <label for="prix-max">Prix max</label>
+                <input type="text" id="prix-max" placeholder="____ [ € ]" class="form-control">
             </div>
             <div class="filter-group">
                 <label for="duree-max">Durée max</label>
-                <input type="text" id="duree-max" placeholder="____ [ min ]" class="form-control">
+                <input type="text" id="duree-max" placeholder="____ [ heure ]" class="form-control">
             </div>
             <div class="filter-group">
                 <label for="note-mini">Note mini</label>
@@ -51,8 +76,8 @@
                     <option value="4">★★★★☆</option>
                     <option value="3">★★★☆☆</option>
                     <option value="2">★★☆☆☆</option>
-                    <option value="1">★☆☆☆☆</option>
-                </select>
+                    <option value="1" selected>★☆☆☆☆</option>
+                  </select>
             </div>
             <div class="filter-buttons">
                 <button type="button" class="btn btn-success apply-btn">Appliquer</button>
@@ -69,31 +94,34 @@
             <div class="offcanvas-body">
                 <div class="filter-group">
                     <label>
-                        <input type="checkbox" checked> Voiture électrique
+                    <input type="checkbox" value="electrique" checked> Voiture électrique
                     </label>
                     <label>
-                        <input type="checkbox" checked> Voiture hybride
+                    <input type="checkbox" value="hybride" checked> Voiture hybride
                     </label>
                     <label>
-                        <input type="checkbox"> Voiture thermique
+                    <input type="checkbox" value="thermique" checked> Voiture thermique
+                    </label>
+                    <label>
+                    <input type="checkbox" value="economique" checked> Trajet économique
                     </label>
                 </div>
                 <div class="filter-group">
-                    <label for="prix-max">Prix max (€)</label>
-                    <input type="text" id="prix-max" placeholder="____" class="form-control">
+                    <label for="prix-max">Prix max</label>
+                    <input type="text" id="prix-max-offcanvas" placeholder="____ [ € ]" class="form-control">
                 </div>
                 <div class="filter-group">
                     <label for="duree-max">Durée max</label>
-                    <input type="text" id="duree-max" placeholder="____ [ min ]" class="form-control">
+                    <input type="text" id="duree-max-offcanvas" placeholder="____ [ heure ]" class="form-control">
                 </div>
                 <div class="filter-group">
                     <label for="note-mini">Note mini</label>
-                    <select id="note-mini" name="note-mini" class="form-select">
+                    <select id="note-mini-offcanvas" name="note-mini" class="form-select">
                         <option value="5">★★★★★</option>
                         <option value="4">★★★★☆</option>
                         <option value="3">★★★☆☆</option>
                         <option value="2">★★☆☆☆</option>
-                        <option value="1">★☆☆☆☆</option>
+                        <option value="1" selected>★☆☆☆☆</option>
                     </select>
                 </div>
                 <div class="filter-buttons">
@@ -137,102 +165,8 @@
                     </div>
                 </div>
             </div>
-            <div class="result-card">
-                <div class="result-header">
-                    <p class="date">Vendredi 16 septembre</p>
-                </div>
-                <div class="result-body">
-                    <div class="profile-column">
-                        <img src="images/profil1.png" alt="Profil" class="profile-photo">
-                        <div class="pseudo-rating">
-                            <p class="pseudo">Pseudo</p>
-                            <p class="rating">★★★★☆</p>
-                        </div>
-                        <div class="column">
-                            <p class="type">Economique</p>
-                            <p class="places">Place: 2</p>
-                        </div>
-                    </div>
-                    <div class="details">
-                        <div class="column">
-                            <p>Paris</p>
-                            <p>Lyon</p>
-                        </div>
-                        <div class="column">
-                            <p class="time">16h00</p>
-                            <p class="time">20h30</p>
-                        </div>
-                        <div class="column">
-                            <p class="price">30€</p>
-                            <button class="detail-btn">Détail</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="result-card">
-                <div class="result-header">
-                    <p class="date">Vendredi 16 septembre</p>
-                </div>
-                <div class="result-body">
-                    <div class="profile-column">
-                        <img src="images/profil1.png" alt="Profil" class="profile-photo">
-                        <div class="pseudo-rating">
-                            <p class="pseudo">Pseudo</p>
-                            <p class="rating">★★★★☆</p>
-                        </div>
-                        <div class="column">
-                            <p class="type">Economique</p>
-                            <p class="places">Place: 2</p>
-                        </div>
-                    </div>
-                    <div class="details">
-                        <div class="column">
-                            <p>Paris</p>
-                            <p>Lyon</p>
-                        </div>
-                        <div class="column">
-                            <p class="time">16h00</p>
-                            <p class="time">20h30</p>
-                        </div>
-                        <div class="column">
-                            <p class="price">30€</p>
-                            <button class="detail-btn">Détail</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="result-card">
-                <div class="result-header">
-                    <p class="date">Vendredi 16 septembre</p>
-                </div>
-                <div class="result-body">
-                    <div class="profile-column">
-                        <img src="images/profil1.png" alt="Profil" class="profile-photo">
-                        <div class="pseudo-rating">
-                            <p class="pseudo">Pseudo</p>
-                            <p class="rating">★★★★☆</p>
-                        </div>
-                        <div class="column">
-                            <p class="type">Economique</p>
-                            <p class="places">Place: 2</p>
-                        </div>
-                    </div>
-                    <div class="details">
-                        <div class="column">
-                            <p>Paris</p>
-                            <p>Lyon</p>
-                        </div>
-                        <div class="column">
-                            <p class="time">16h00</p>
-                            <p class="time">20h30</p>
-                        </div>
-                        <div class="column">
-                            <p class="price">30€</p>
-                            <button class="detail-btn">Détail</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+       
         </div>
     </div>
 </section>
+

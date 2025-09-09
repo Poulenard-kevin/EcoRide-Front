@@ -56,10 +56,6 @@
           font-size: $font-size-nav; /* Réduit la taille des boutons */
           padding: 8px 16px; /* Ajuste le padding des boutons */
         }
-  
-        
-  
-        
       }
     }
   
@@ -601,7 +597,7 @@
                 flex-direction: column; /* Organise les éléments verticalement dans chaque colonne */
                 align-items: center; /* Centre les éléments horizontalement */
                 gap: 10px; /* Ajoute un espacement entre les lignes */
-  
+
               .pseudo, .rating {
                 display: flex; /* Organise Pseudo et Rating horizontalement */
                 flex-direction: row; /* Aligne les éléments en ligne */
@@ -809,9 +805,6 @@
         max-width: 200px; /* Fixe une largeur maximale pour la date */
       }
     }
-  
-    
-  
   
   
   @media (max-width: 1290px) {
@@ -1052,7 +1045,3 @@
       }
     }
   }
-  
-  
-  
-  

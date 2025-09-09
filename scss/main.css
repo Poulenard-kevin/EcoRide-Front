@@ -13731,6 +13731,943 @@ button.nav-link.dropdown-toggle:hover:active {
   }
 }
 
+.nav-link.active {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.user-space-section.container {
+  background-color: #CACFAA;
+  border-radius: 30px;
+  padding: 35px 100px 60px;
+  margin: 0 100px;
+  max-width: calc(100% - 200px);
+  box-sizing: border-box;
+}
+@media (max-width: 768px) {
+  .user-space-section.container {
+    padding: 30px 50px 60px;
+    margin: 0 50px;
+    max-width: calc(100% - 100px);
+  }
+}
+@media (max-width: 576px) {
+  .user-space-section.container {
+    padding: 20px 20px 60px;
+    margin: 0 25px;
+    max-width: calc(100% - 50px);
+  }
+}
+
+.user-space-section {
+  padding: 20px;
+  background-color: #F1E7D1;
+  border-radius: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.user-tabs {
+  display: flex;
+  justify-content: start;
+  margin-bottom: 35px;
+  background-color: #F1E7D1;
+  border-radius: 30px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.user-tabs .nav-link {
+  width: 230px;
+  font-family: "Poppins", sans-serif;
+  font-size: 24px;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  padding: 12px 30px;
+  border-radius: 30px;
+  color: #1F4924;
+}
+.user-tabs .nav-link.active {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
+}
+.user-tabs .nav-link:hover {
+  background-color: #1F4924;
+  color: #F1E7D1;
+}
+
+.btn {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  border: none;
+  border-radius: 30px;
+  padding: 10px 20px;
+  font-family: "Poppins", sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+.btn:hover {
+  background-color: #1F4924;
+  color: #F1E7D1;
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+
+.user-space-section .nav-pills.user-tabs {
+  display: flex;
+}
+@media (max-width: 1335px) {
+  .user-space-section .nav-pills.user-tabs {
+    display: none;
+  }
+}
+
+.user-space-section .user-space-toggle {
+  display: none;
+  margin: 0 auto;
+}
+@media (max-width: 1335px) {
+  .user-space-section .user-space-toggle {
+    display: block;
+  }
+}
+
+#userSpaceOffcanvas .nav-pills.user-tabs-offcanvas {
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  border: none;
+}
+#userSpaceOffcanvas .nav-link {
+  color: #1F4924;
+  font-size: 20px;
+  border-radius: 30px;
+  background: transparent;
+  margin-bottom: 10px;
+}
+#userSpaceOffcanvas .nav-link.active {
+  background: #4B8A47;
+  color: #F1E7D1;
+}
+#userSpaceOffcanvas .nav-link:hover {
+  background: #1F4924;
+  color: #F1E7D1;
+}
+
+@media (max-width: 576px) {
+  .user-space-toggle {
+    font-size: 16px; /* Réduit la taille des boutons */
+    padding: 8px 16px; /* Ajuste le padding des boutons */
+  }
+  h1, .h1 {
+    font-size: 24px; /* Réduit la taille des titres h1 */
+  }
+  h2, .h2 {
+    font-size: 20px; /* Réduit la taille des titres h1 */
+  }
+}
+#user-profile-form h1, #user-profile-form .h1 {
+  text-align: center;
+  margin: 35px;
+}
+#user-profile-form form {
+  background-color: #F1E7D1;
+  padding: 10px 35px 35px;
+  border-radius: 30px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  margin-bottom: 35px;
+}
+#user-profile-form .btn {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  border: none;
+  border-radius: 30px;
+  padding: 10px 20px;
+  font-family: "Poppins", sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  transition: background 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+#user-profile-form .btn:hover {
+  background-color: #1F4924;
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+#user-profile-form input[type=radio] {
+  width: 16px;
+  height: 16px;
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
+  background: #F8F0E5;
+  border: 2px solid #4B8A47;
+  border-radius: 50%;
+  cursor: pointer;
+  margin-right: 10px;
+  position: relative;
+}
+#user-profile-form input[type=radio]:checked {
+  background: #4B8A47;
+}
+#user-profile-form input[type=radio]:checked::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  background: #F1E7D1;
+  border-radius: 50%;
+}
+#user-profile-form input[type=checkbox] {
+  width: 16px;
+  height: 16px;
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
+  background: #F8F0E5;
+  border: 2px solid #4B8A47;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 10px;
+  position: relative;
+}
+#user-profile-form input[type=checkbox]:checked {
+  background: #4B8A47;
+}
+#user-profile-form input[type=checkbox]:checked::after {
+  content: "✔";
+  color: #F1E7D1;
+  font-size: 10px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+#user-profile-form .form-control {
+  border-radius: 20px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 16px;
+  color: #1F4924;
+  background-color: #F8F0E5;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  outline: none;
+  transition: box-shadow 0.3s ease;
+}
+#user-profile-form .form-control::-moz-placeholder {
+  color: #7a8a6f;
+}
+#user-profile-form .form-control::placeholder {
+  color: #7a8a6f;
+}
+#user-profile-form .form-control:focus {
+  background-color: #F8F0E5; /* ne change pas le fond */
+  box-shadow: 0 0 5px 2px #1F4924; /* halo lumineux vert */
+}
+#user-profile-form label {
+  font-family: "Roboto", sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: #1F4924;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+#user-profile-form .form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  margin-top: 20px;
+}
+#user-profile-form .form-fields .form-field {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+#user-profile-form .form-fields .role-group {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+#user-profile-form .form-fields .checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+#user-profile-form .form-fields .btn {
+  align-self: center;
+  margin-top: 20px;
+  min-width: 200px;
+}
+@media (max-width: 576px) {
+  #user-profile-form .btn {
+    font-size: 16px; /* Réduit la taille des boutons */
+    padding: 8px 16px; /* Ajuste le padding des boutons */
+  }
+  #user-profile-form .form-control {
+    padding: 8px 15px;
+    font-size: 12px;
+  }
+  #user-profile-form label {
+    font-size: 16px;
+  }
+  #user-profile-form form {
+    padding: 10px 20px 35px;
+  }
+}
+
+#user-trajects-form h1, #user-trajects-form .h1 {
+  text-align: center;
+  margin: 35px;
+}
+#user-trajects-form h2, #user-trajects-form .h2 {
+  text-align: left;
+}
+#user-trajects-form form {
+  background-color: #F1E7D1;
+  padding: 10px 35px 35px;
+  border-radius: 30px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  margin-bottom: 35px;
+}
+#user-trajects-form .btn {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  border: none;
+  border-radius: 30px;
+  padding: 10px 20px;
+  font-family: "Poppins", sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  transition: background 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+#user-trajects-form .btn:hover {
+  background-color: #1F4924;
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+#user-trajects-form .form-control {
+  border-radius: 20px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 16px;
+  color: #1F4924;
+  background-color: #F8F0E5;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  outline: none;
+  transition: box-shadow 0.3s ease;
+}
+#user-trajects-form .form-control::-moz-placeholder {
+  color: #7a8a6f;
+}
+#user-trajects-form .form-control::placeholder {
+  color: #7a8a6f;
+}
+#user-trajects-form .form-control:focus {
+  background-color: #F8F0E5; /* ne change pas le fond */
+  box-shadow: 0 0 5px 2px #1F4924; /* halo lumineux vert */
+}
+#user-trajects-form label {
+  font-family: "Roboto", sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: #1F4924;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+#user-trajects-form .form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  margin-top: 20px;
+}
+#user-trajects-form .form-fields .form-field {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+#user-trajects-form .form-fields .role-group {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+#user-trajects-form .form-fields .checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+#user-trajects-form .form-fields .btn {
+  align-self: center;
+  margin-top: 20px;
+  min-width: 200px;
+}
+#user-trajects-form .input-with-unit {
+  display: flex;
+  align-items: center;
+}
+#user-trajects-form .input-with-unit input {
+  flex: 1;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+#user-trajects-form .input-with-unit .unit {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  padding: 10px 15px;
+  border-top-right-radius: 20px;
+  border-bottom-right-radius: 20px;
+  font-family: "Roboto", sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+}
+#user-trajects-form .trajets-en-cours {
+  gap: 10px;
+}
+#user-trajects-form .trajets-en-cours label {
+  margin-bottom: 0px;
+}
+#user-trajects-form .trajets-en-cours .trajet-card {
+  background: #F1E7D1;
+  border-radius: 20px;
+  padding: 15px 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+#user-trajects-form .trajets-en-cours .trajet-card .trajet-header {
+  margin-bottom: 8px;
+}
+#user-trajects-form .trajets-en-cours .trajet-card .trajet-body {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 120px;
+}
+@media (max-width: 1415px) {
+  #user-trajects-form .trajets-en-cours .trajet-card .trajet-body {
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+  }
+  #user-trajects-form .trajets-en-cours .trajet-card .trajet-body .btn-trajet,
+  #user-trajects-form .trajets-en-cours .trajet-card .trajet-body .trajet-status {
+    margin: 0 auto;
+    text-align: center;
+  }
+  #user-trajects-form .trajets-en-cours .trajet-card .trajet-body .trajet-status {
+    padding-top: 13px;
+    padding-bottom: 13px;
+  }
+  #user-trajects-form .trajets-en-cours .trajet-card .trajet-body .trajet-price {
+    margin-left: 0 !important;
+    text-align: center;
+    display: block;
+  }
+  #user-trajects-form .trajets-en-cours .trajet-card .trajet-body .details {
+    margin: 0 auto;
+    text-align: center;
+    display: block;
+  }
+}
+#user-trajects-form .trajets-en-cours .trajet-card .trajet-body .trajet-info {
+  text-align: left;
+  display: inline-block;
+  line-height: 1.5;
+}
+#user-trajects-form .trajets-en-cours .trajet-card .trajet-body .trajet-info strong {
+  display: block;
+  font-family: "Roboto", sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: #1F4924;
+  margin-bottom: 4px;
+}
+#user-trajects-form .trajets-en-cours .trajet-card .trajet-body .trajet-info .details {
+  font-family: "Roboto", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  opacity: 0.8;
+}
+#user-trajects-form .trajets-en-cours .trajet-card .trajet-body .trajet-price {
+  font-family: "Roboto", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  margin-left: 20px;
+}
+#user-trajects-form .trajets-en-cours .trajet-card .trajet-body .btn-trajet {
+  margin-left: auto;
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  border: none;
+  border-radius: 30px;
+  padding: 10px 20px;
+  font-family: "Poppins", sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  transition: background 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+#user-trajects-form .trajets-en-cours .trajet-card .trajet-body .btn-trajet:hover {
+  background-color: #1F4924;
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+#user-trajects-form .trajets-en-cours .trajet-card .trajet-body .btn-trajet {
+  font-size: 16px !important; /* Force l'application de la règle */
+  padding: 8px 16px !important; /* Force l'application de la règle */
+}
+#user-trajects-form .trajets-en-cours .trajet-card .trajet-body .trajet-status {
+  margin-left: auto;
+  font-family: "Roboto", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  font-style: italic;
+}
+#user-trajects-form .trajets-en-cours .trajet-card.actif {
+  background: #4B8A47;
+  color: #F1E7D1;
+}
+#user-trajects-form .trajets-en-cours .trajet-card.actif .trajet-info strong,
+#user-trajects-form .trajets-en-cours .trajet-card.actif .trajet-price {
+  color: #F1E7D1;
+}
+#user-trajects-form .trajets-en-cours .trajet-card.actif .details {
+  color: #F1E7D1;
+}
+#user-trajects-form .trajets-en-cours .trajet-card.actif .btn-trajet {
+  background: #F1E7D1;
+  color: #1F4924;
+}
+#user-trajects-form .trajets-en-cours .trajet-card.actif .btn-trajet:hover {
+  background-color: #1F4924;
+  color: #F1E7D1;
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+#user-trajects-form .trajets-en-cours .trajet-card.termine {
+  background: #CACFAA;
+}
+#user-trajects-form .trajets-en-cours .trajet-card.attente {
+  background: #F8F0E5;
+}
+@media (max-width: 576px) {
+  #user-trajects-form .btn {
+    font-size: 16px; /* Réduit la taille des boutons */
+    padding: 8px 16px; /* Ajuste le padding des boutons */
+  }
+  #user-trajects-form .trajet-card .btn-trajet {
+    font-size: 16px; /* Réduit la taille des boutons */
+    padding: 8px 16px; /* Ajuste le padding des boutons */
+  }
+  #user-trajects-form .form-control {
+    padding: 8px 15px;
+    font-size: 12px;
+  }
+  #user-trajects-form label {
+    font-size: 16px;
+  }
+  #user-trajects-form .input-with-unit .unit {
+    padding: 8px 15px;
+    font-size: 12px;
+  }
+  #user-trajects-form .trajet-info strong {
+    font-size: 16px !important; /* Force l'application de la règle */
+  }
+  #user-trajects-form .trajet-info .details {
+    font-size: 14px !important; /* Force l'application de la règle */
+    text-align: left !important; /* Aligne le texte à gauche */
+    margin: 0 !important; /* Supprime tout centrage horizontal */
+  }
+  #user-trajects-form .trajet-price {
+    font-size: 14px !important; /* Force l'application de la règle */
+  }
+  #user-trajects-form form {
+    padding: 10px 20px 35px;
+  }
+}
+
+#user-vehicles-form h1, #user-vehicles-form .h1 {
+  text-align: center;
+  margin: 35px;
+}
+#user-vehicles-form h2, #user-vehicles-form .h2 {
+  text-align: left;
+  margin-bottom: 30px;
+}
+#user-vehicles-form form {
+  background-color: #F1E7D1;
+  padding: 10px 35px 35px;
+  border-radius: 30px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  margin-bottom: 35px;
+}
+#user-vehicles-form .form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+#user-vehicles-form .form-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #CACFAA;
+  padding: 12px 20px;
+  border-radius: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 20px;
+  font-weight: 400;
+  font-family: "Roboto", sans-serif;
+  text-align: left;
+}
+#user-vehicles-form .form-field-modify-delete {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  padding: 0px 20px;
+  margin-bottom: 10px;
+}
+#user-vehicles-form .form-field-modify-delete .link-modify {
+  color: #4B8A47;
+  text-decoration: underline;
+  font-size: 20px;
+  font-family: "Roboto", sans-serif;
+  cursor: pointer;
+}
+#user-vehicles-form .form-field-modify-delete .link-modify:hover {
+  color: rgb(56.6985645933, 104.3253588517, 53.6746411483);
+}
+#user-vehicles-form .form-field-modify-delete .link-delete {
+  color: #1F4924;
+  text-decoration: underline;
+  font-size: 20px;
+  font-family: "Roboto", sans-serif;
+  cursor: pointer;
+}
+#user-vehicles-form .form-field-modify-delete .link-delete:hover {
+  color: rgb(15.7980769231, 37.2019230769, 18.3461538462);
+}
+#user-vehicles-form .btn-add-vehicle {
+  margin-top: 20px;
+}
+#user-vehicles-form .btn {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  border: none;
+  border-radius: 30px;
+  padding: 10px 20px;
+  font-family: "Poppins", sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  transition: background 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+  cursor: pointer;
+}
+#user-vehicles-form .btn:hover {
+  background-color: #1F4924;
+  color: #F1E7D1;
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+#user-vehicles-form label {
+  font-weight: 400;
+  font-size: 16px;
+  font-family: "Roboto", sans-serif;
+  font-style: italic;
+}
+@media (max-width: 768px) {
+  #user-vehicles-form .btn {
+    font-size: 16px; /* Réduit la taille des boutons */
+    padding: 8px 16px; /* Ajuste le padding des boutons */
+  }
+  #user-vehicles-form .form-field {
+    font-size: 16px; /* Réduit la taille de la police */
+  }
+  #user-vehicles-form .form-field-modify-delete .link-modify, #user-vehicles-form .form-field-modify-delete .link-delete {
+    font-size: 14px;
+  }
+  #user-vehicles-form form {
+    padding: 10px 20px 35px;
+  }
+}
+
+#user-history-form h1, #user-history-form .h1 {
+  text-align: center;
+  margin: 35px;
+}
+#user-history-form h2, #user-history-form .h2 {
+  text-align: left;
+}
+#user-history-form form {
+  background-color: #F1E7D1;
+  padding: 10px 35px 35px;
+  border-radius: 30px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  margin-bottom: 35px;
+}
+#user-history-form .btn {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  border: none;
+  border-radius: 30px;
+  padding: 10px 20px;
+  font-family: "Poppins", sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  transition: background 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+#user-history-form .btn:hover {
+  background-color: #1F4924;
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+#user-history-form .form-control {
+  border-radius: 20px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 16px;
+  color: #1F4924;
+  background-color: #F8F0E5;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  outline: none;
+  transition: box-shadow 0.3s ease;
+}
+#user-history-form .form-control::-moz-placeholder {
+  color: #7a8a6f;
+}
+#user-history-form .form-control::placeholder {
+  color: #7a8a6f;
+}
+#user-history-form .form-control:focus {
+  background-color: #F8F0E5; /* ne change pas le fond */
+  box-shadow: 0 0 5px 2px #1F4924; /* halo lumineux vert */
+}
+#user-history-form label {
+  font-family: "Roboto", sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: #1F4924;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+#user-history-form .form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  margin-top: 20px;
+}
+#user-history-form .form-fields .form-field {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+#user-history-form .form-fields .role-group {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+#user-history-form .form-fields .checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+#user-history-form .form-fields .btn {
+  align-self: center;
+  margin-top: 20px;
+  min-width: 200px;
+}
+#user-history-form .input-with-unit {
+  display: flex;
+  align-items: center;
+}
+#user-history-form .input-with-unit input {
+  flex: 1;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+#user-history-form .input-with-unit .unit {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  padding: 10px 15px;
+  border-top-right-radius: 20px;
+  border-bottom-right-radius: 20px;
+  font-family: "Roboto", sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+}
+#user-history-form .trajets-en-cours {
+  gap: 10px;
+}
+#user-history-form .trajets-en-cours label {
+  margin-bottom: 0px;
+}
+#user-history-form .trajets-en-cours .trajet-card {
+  background: #F1E7D1;
+  border-radius: 20px;
+  padding: 15px 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+#user-history-form .trajets-en-cours .trajet-card .trajet-header {
+  margin-bottom: 8px;
+}
+#user-history-form .trajets-en-cours .trajet-card .trajet-body {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 120px;
+}
+@media (max-width: 1415px) {
+  #user-history-form .trajets-en-cours .trajet-card .trajet-body {
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+  }
+  #user-history-form .trajets-en-cours .trajet-card .trajet-body .btn-trajet,
+  #user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-status {
+    margin: 0 auto;
+    text-align: center;
+  }
+  #user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-status {
+    padding-top: 13px;
+    padding-bottom: 13px;
+  }
+  #user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-price {
+    margin-left: 0 !important;
+    text-align: center;
+    display: block;
+  }
+  #user-history-form .trajets-en-cours .trajet-card .trajet-body .details {
+    margin: 0 auto;
+    text-align: center;
+    display: block;
+  }
+}
+#user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-info {
+  text-align: left;
+  display: inline-block;
+  line-height: 1.5;
+}
+#user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-info strong {
+  display: block;
+  font-family: "Roboto", sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: #1F4924;
+  margin-bottom: 4px;
+}
+#user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-info .details {
+  font-family: "Roboto", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  opacity: 0.8;
+}
+#user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-price {
+  font-family: "Roboto", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  margin-left: 20px;
+}
+#user-history-form .trajets-en-cours .trajet-card .trajet-body .btn-trajet {
+  margin-left: auto;
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  border: none;
+  border-radius: 30px;
+  padding: 10px 20px;
+  font-family: "Poppins", sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  transition: background 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+#user-history-form .trajets-en-cours .trajet-card .trajet-body .btn-trajet:hover {
+  background-color: #1F4924;
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+#user-history-form .trajets-en-cours .trajet-card .trajet-body .btn-trajet {
+  font-size: 16px !important; /* Force l'application de la règle */
+  padding: 8px 16px !important; /* Force l'application de la règle */
+}
+#user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-status {
+  margin-left: auto;
+  font-family: "Roboto", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  font-style: italic;
+}
+#user-history-form .trajets-en-cours .trajet-card.actif {
+  background: #4B8A47;
+  color: #F1E7D1;
+}
+#user-history-form .trajets-en-cours .trajet-card.actif .trajet-info strong,
+#user-history-form .trajets-en-cours .trajet-card.actif .trajet-price {
+  color: #F1E7D1;
+}
+#user-history-form .trajets-en-cours .trajet-card.actif .details {
+  color: #F1E7D1;
+}
+#user-history-form .trajets-en-cours .trajet-card.actif .btn-trajet {
+  background: #F1E7D1;
+  color: #1F4924;
+}
+#user-history-form .trajets-en-cours .trajet-card.actif .btn-trajet:hover {
+  background-color: #1F4924;
+  color: #F1E7D1;
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+#user-history-form .trajets-en-cours .trajet-card.validé {
+  background: #CACFAA;
+}
+@media (max-width: 576px) {
+  #user-history-form .btn {
+    font-size: 16px; /* Réduit la taille des boutons */
+    padding: 8px 16px; /* Ajuste le padding des boutons */
+  }
+  #user-history-form .trajet-card .btn-trajet {
+    font-size: 16px; /* Réduit la taille des boutons */
+    padding: 8px 16px; /* Ajuste le padding des boutons */
+  }
+  #user-history-form .form-control {
+    padding: 8px 15px;
+    font-size: 12px;
+  }
+  #user-history-form label {
+    font-size: 16px;
+  }
+  #user-history-form .input-with-unit .unit {
+    padding: 8px 15px;
+    font-size: 12px;
+  }
+  #user-history-form .trajet-info strong {
+    font-size: 16px !important; /* Force l'application de la règle */
+  }
+  #user-history-form .trajet-info .details {
+    font-size: 14px !important; /* Force l'application de la règle */
+    text-align: left !important; /* Aligne le texte à gauche */
+    margin: 0 !important; /* Supprime tout centrage horizontal */
+  }
+  #user-history-form .trajet-price {
+    font-size: 14px !important; /* Force l'application de la règle */
+  }
+  #user-history-form form {
+    padding: 10px 20px 35px;
+  }
+  #user-history-form .trajet-status {
+    text-align: center !important;
+    margin: 0 auto !important; /* Centre horizontalement */
+  }
+}
+
 html {
   position: relative;
   min-height: 100%;

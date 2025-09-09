@@ -303,4 +303,80 @@
       padding: 10px 20px 35px;
     }
   }
+
+  input[type="date"],
+  input[type="time"] {
+    flex: 1;
+    appearance: none;
+    &::-webkit-calendar-picker-indicator,
+    &::-webkit-clear-button {
+    filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
+      /* filtre pour approx #7a8a6f, à ajuster si besoin */
+    }
+    border-left: none;          // pas de bordure à gauche pour fusionner avec label
+    font-size: 16px;
+    background-color: $color-very-light-beige;
+    transition: border-color 0.3s ease;
+    height: 48px;  
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    color: #7a8a6f;
+
+    &:focus {
+      background-color: $color-very-light-beige;    /* ne change pas le fond */
+      box-shadow: 0 0 5px 2px $color-dark-green;   /* halo lumineux vert */
+    }
+
+    &:valid {
+      color: $color-dark-green ;
+    }
+  }
+
+      input[type="date"] {
+    &::placeholder {
+      color: #7a8a6f; // Couleur pour le placeholder
+      opacity: 1; // Assure que la couleur est bien visible
+    }
+  
+    &::-webkit-datetime-edit {
+      color: #7a8a6f; // Couleur pour le texte affiché dans le champ
+    }
+  
+    &::-webkit-datetime-edit-fields-wrapper {
+      color: #7a8a6f; // Couleur pour les champs internes
+    }
+  
+    &::-webkit-datetime-edit-text {
+      color: #7a8a6f; // Couleur pour les séparateurs (slash, tirets, etc.)
+    }
+  
+    &::-webkit-calendar-picker-indicator {
+      filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
+    }
+  }
+
+      input[type="time"] {
+    &::placeholder {
+      color: #7a8a6f; // Couleur pour le placeholder
+      opacity: 1; // Assure que la couleur est bien visible
+    }
+  
+    &::-webkit-datetime-edit {
+      color: #7a8a6f; // Couleur pour le texte affiché dans le champ
+    }
+  
+    &::-webkit-datetime-edit-fields-wrapper {
+      color: #7a8a6f; // Couleur pour les champs internes
+    }
+  
+    &::-webkit-datetime-edit-text {
+      color: #7a8a6f; // Couleur pour les séparateurs (deux-points, etc.)
+    }
+  
+    &::-webkit-calendar-picker-indicator {
+      filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
+    }
+  }
+    
+
+
 }

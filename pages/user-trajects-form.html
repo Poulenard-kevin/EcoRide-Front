@@ -6,32 +6,38 @@
       <div class="titre-publier-traject">
         <h2>Publier un trajet</h2>
       </div>
-    
+
       <!-- 2 -->
+      <div class="form-field">
+        <label for="departure-location">Date de départ</label>
+        <input type="date" class="search-input" id="date-depart-input" />
+      </div>
+    
+      <!-- 3 -->
       <div class="form-field">
         <label for="departure-location">Lieu de départ</label>
         <input type="text" id="departure-location" class="form-control" placeholder="Lyon">
       </div>
     
-      <!-- 3 -->
+      <!-- 4 -->
+      <div class="form-field">
+        <label for="departure-datetime">Heure de départ</label>
+        <input type="time" class="search-input" id="heure-depart-input" />
+      </div>
+    
+      <!-- 5 -->
       <div class="form-field">
         <label for="arrival-location">Lieu d'arrivée</label>
         <input type="text" id="arrival-location" class="form-control" placeholder="Grenoble">
       </div>
     
-      <!-- 4 -->
+      <!-- 6 -->
       <div class="form-field">
-        <label for="departure-datetime">Heure et date de départ</label>
-        <input type="text" id="departure-datetime" class="form-control" placeholder="8h30, Vendredi 16 septembre">
-      </div>
-    
-      <!-- 5 -->
-      <div class="form-field">
-        <label for="arrival-datetime">Heure et date d'arrivée</label>
+        <label for="arrival-datetime">Heure d'arrivée</label>
         <input type="number" id="arrival-datetime" class="form-control" placeholder="10h00 , Vendredi 16 septembre">
       </div>
     
-      <!-- 6 -->
+      <!-- 7 -->
       <div class="form-field">
         <label for="vehicle">Véhicule</label>
         <input list="vehicles" id="vehicle" class="form-control" placeholder="--Sélectionne un véhicule--">
@@ -43,7 +49,7 @@
         </datalist>
       </div>
     
-      <!-- 7 -->
+      <!-- 8 -->
       <div class="form-field price-field">
         <label for="price">Prix</label>
         <div class="input-with-unit">
@@ -57,7 +63,7 @@
         </div>
       </div>
     
-      <!-- 8 -->
+      <!-- 9 -->
       <button type="submit" class="btn">Publier</button>
     </div>
   </form>

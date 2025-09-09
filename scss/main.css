@@ -13870,6 +13870,9 @@ button.nav-link.dropdown-toggle:hover:active {
   text-align: center;
   margin: 35px;
 }
+#user-profile-form h2, #user-profile-form .h2 {
+  text-align: left;
+}
 #user-profile-form form {
   background-color: #F1E7D1;
   padding: 10px 35px 35px;
@@ -13877,6 +13880,9 @@ button.nav-link.dropdown-toggle:hover:active {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   text-align: center;
   margin-bottom: 35px;
+}
+#user-profile-form .role-group {
+  justify-content: center;
 }
 #user-profile-form .btn {
   background-color: #4B8A47;
@@ -13943,6 +13949,15 @@ button.nav-link.dropdown-toggle:hover:active {
   left: 50%;
   transform: translate(-50%, -50%);
 }
+#user-profile-form input:disabled,
+#user-profile-form select:disabled,
+#user-profile-form textarea:disabled {
+  background-color: #e9ecef; /* gris clair */
+  color: #6c757d; /* texte gris */
+  cursor: not-allowed;
+  opacity: 1; /* pour garder le texte lisible */
+  box-shadow: none;
+}
 #user-profile-form .form-control {
   border-radius: 20px;
   padding: 12px 20px;
@@ -13986,7 +14001,7 @@ button.nav-link.dropdown-toggle:hover:active {
 }
 #user-profile-form .form-fields .role-group {
   display: flex;
-  gap: 15px;
+  gap: 30px;
   flex-wrap: wrap;
 }
 #user-profile-form .form-fields .checkbox-group {
@@ -14287,6 +14302,75 @@ button.nav-link.dropdown-toggle:hover:active {
     padding: 10px 20px 35px;
   }
 }
+#user-trajects-form input[type=date],
+#user-trajects-form input[type=time] {
+  flex: 1;
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
+  border-left: none;
+  font-size: 16px;
+  background-color: #F8F0E5;
+  transition: border-color 0.3s ease;
+  height: 48px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  color: #7a8a6f;
+}
+#user-trajects-form input[type=date]::-webkit-calendar-picker-indicator, #user-trajects-form input[type=date]::-webkit-clear-button,
+#user-trajects-form input[type=time]::-webkit-calendar-picker-indicator,
+#user-trajects-form input[type=time]::-webkit-clear-button {
+  filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
+  /* filtre pour approx #7a8a6f, à ajuster si besoin */
+}
+#user-trajects-form input[type=date]:focus,
+#user-trajects-form input[type=time]:focus {
+  background-color: #F8F0E5; /* ne change pas le fond */
+  box-shadow: 0 0 5px 2px #1F4924; /* halo lumineux vert */
+}
+#user-trajects-form input[type=date]:valid,
+#user-trajects-form input[type=time]:valid {
+  color: #1F4924;
+}
+#user-trajects-form input[type=date]::-moz-placeholder {
+  color: #7a8a6f;
+  opacity: 1;
+}
+#user-trajects-form input[type=date]::placeholder {
+  color: #7a8a6f;
+  opacity: 1;
+}
+#user-trajects-form input[type=date]::-webkit-datetime-edit {
+  color: #7a8a6f;
+}
+#user-trajects-form input[type=date]::-webkit-datetime-edit-fields-wrapper {
+  color: #7a8a6f;
+}
+#user-trajects-form input[type=date]::-webkit-datetime-edit-text {
+  color: #7a8a6f;
+}
+#user-trajects-form input[type=date]::-webkit-calendar-picker-indicator {
+  filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
+}
+#user-trajects-form input[type=time]::-moz-placeholder {
+  color: #7a8a6f;
+  opacity: 1;
+}
+#user-trajects-form input[type=time]::placeholder {
+  color: #7a8a6f;
+  opacity: 1;
+}
+#user-trajects-form input[type=time]::-webkit-datetime-edit {
+  color: #7a8a6f;
+}
+#user-trajects-form input[type=time]::-webkit-datetime-edit-fields-wrapper {
+  color: #7a8a6f;
+}
+#user-trajects-form input[type=time]::-webkit-datetime-edit-text {
+  color: #7a8a6f;
+}
+#user-trajects-form input[type=time]::-webkit-calendar-picker-indicator {
+  filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
+}
 
 #user-vehicles-form h1, #user-vehicles-form .h1 {
   text-align: center;
@@ -14393,6 +14477,60 @@ button.nav-link.dropdown-toggle:hover:active {
   #user-vehicles-form form {
     padding: 10px 20px 35px;
   }
+}
+#user-vehicles-form .vehicle-container {
+  margin-bottom: 15px;
+}
+#user-vehicles-form .vehicle-line {
+  display: flex;
+  justify-content: space-between; /* espace maximal entre les éléments */
+  align-items: center;
+  background-color: #c9d4b5; /* ta couleur */
+  padding: 10px 20px;
+  border-radius: 15px;
+  font-weight: 600;
+  font-family: "Arial", sans-serif;
+  font-size: 1rem;
+  color: #2f4f2f;
+}
+#user-vehicles-form .form-field-modify-delete {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 20px 0 20px;
+  font-size: 0.9rem;
+}
+#user-vehicles-form .form-field-modify-delete a {
+  color: #2f4f2f;
+  text-decoration: underline;
+  cursor: pointer;
+}
+#user-vehicles-form .form-field-modify-delete a:hover {
+  color: #1e2f1e;
+}
+#user-vehicles-form .form-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #CACFAA;
+  padding: 12px 20px;
+  border-radius: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 20px;
+  font-weight: 400;
+  font-family: "Roboto", sans-serif;
+  text-align: left;
+}
+#user-vehicles-form .vehicle-line > div.brand {
+  text-align: left;
+  flex-basis: 33%;
+}
+#user-vehicles-form .vehicle-line > div.model {
+  text-align: center;
+  flex-basis: 33%;
+}
+#user-vehicles-form .vehicle-line > div.color {
+  text-align: right;
+  flex-basis: 33%;
 }
 
 #user-history-form h1, #user-history-form .h1 {
@@ -14524,7 +14662,7 @@ button.nav-link.dropdown-toggle:hover:active {
   flex-wrap: wrap;
   gap: 120px;
 }
-@media (max-width: 1415px) {
+@media (max-width: 1215px) {
   #user-history-form .trajets-en-cours .trajet-card .trajet-body {
     flex-direction: column;
     align-items: center;

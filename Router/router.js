@@ -18,12 +18,7 @@ const route404 = new Route("404", "Page introuvable", "/pages/404.html");
 
 // Fonction pour récupérer la route correspondant à une URL donnée ou un pathname
 const getRouteByUrl = (url) => {
-  let currentRoute = null;
-  allRoutes.forEach((element) => {
-    if (element.url === url) {
-      currentRoute = element;
-    }
-  });
+  const currentRoute = allRoutes.find(element => element.url === url);
   return currentRoute || route404;
 };
 

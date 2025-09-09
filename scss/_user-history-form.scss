@@ -131,7 +131,7 @@
             flex-wrap: wrap;
             gap: 120px; // Ajoute un espace fixe entre les éléments
     
-            @media (max-width: 1415px) {
+            @media (max-width: 1215px) {
               flex-direction: column; // Passe en disposition verticale
               align-items: center; // Centre les éléments horizontalement
               gap: 15px; // Ajuste l'espace entre les éléments

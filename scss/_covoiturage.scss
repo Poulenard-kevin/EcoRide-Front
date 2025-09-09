@@ -1,197 +1,899 @@
-@import 'custom'; // on utilise les variables / mixins définies dans custom
+  /* === SECTION BARRE DE RECHERCHE === */
+  /* === SECTION BARRE DE RECHERCHE === */
+  /* === SECTION BARRE DE RECHERCHE === */
+  /* === SECTION BARRE DE RECHERCHE === */
 
-
-.big-title {
-  position: relative;
-  top: -20px; // Positionne à 100px du haut
-  margin-left: 100px; // Positionne à 50px de la gauche
-  margin-bottom: 25px; // Ajoute une marge de 25px en bas
-  text-align: left; // Aligne le texte à gauche
-  transform: none; // Supprime la transformation pour le centrage
-
-  @media (max-width: 768px) {
-    font-size: $font-size-h1; /* Réduit encore la taille pour les écrans de tablette */
-    margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
-    margin-right: 50px;
+  .covoiturage-search-bar {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+  
+    .search-container {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr); /* Deux colonnes de largeur égale */
+      gap: 20px; /* Espacement entre les éléments */
+      background-color: $color-background;
+      border-radius: 30px;
+      padding: 100px;
+      padding-top: 35px;
+      padding-bottom: 35px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      margin-left: 100px;
+      margin-right: 100px;
+  
+      @media (max-width: 1440px) {
+        padding: 35px;
+      }
+      
+      @media (max-width: 910px) {
+        grid-template-columns: 1fr; /* Passe à une seule colonne */
+        gap: 15px; /* Réduit l'espacement entre les éléments */
+        padding: 35px;
+        margin-left: 50px;
+        margin-right: 50px;
+  
+        .search-btn {
+          grid-column: 1; /* Le bouton occupe une seule colonne */
+          justify-self: center; /* Centre le bouton horizontalement */
+        }
+      }
+  
+      @media (max-width: 576px) {
+        grid-template-columns: 1fr; /* Une seule colonne pour les petits écrans */
+        gap: 15px;
+        padding: 20px;
+        margin-left: 25px;
+        margin-right: 25px;
+  
+        .search-input {
+          font-size: 12px;
+          padding: 8px 16px; /* Ajuste le padding des champs */
+        }
+  
+        .search-btn {
+          justify-self: center; /* Centre le bouton horizontalement */
+          font-size: $font-size-nav; /* Réduit la taille des boutons */
+          padding: 8px 16px; /* Ajuste le padding des boutons */
+        }
+  
+        
+  
+        
+      }
+    }
+  
+    .search-row {
+      display: flex;
+      gap: 15px; /* Ajoute un espacement entre les champs */
+    }
+  
+    .search-input {
+      width: 100%; /* Les champs occupent toute la largeur de leur cellule */
+      padding: 12px 20px;
+      border: none;
+      border-radius: 20px;
+      background-color: $color-very-light-beige;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+      outline: none;
+    }
+  
+    .search-btn {
+      grid-column: span 2; /* Le bouton occupe les deux colonnes */
+      justify-self: center; /* Centre le bouton horizontalement */
+      width: 200px; /* Fixe la largeur du bouton */
+      padding: 12px 30px; /* Ajuste le padding pour un bon rendu */
+      border: none;
+      border-radius: 20px;
+      background-color: $color-medium-green;
+      color: $color-light-beige;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
+      transition: background-color 0.3s ease;
+  
+      &:hover {
+        background-color: $color-dark-green;
+      }
+    }
+  
+    .input-group {
+      display: flex;
+      align-items: center;  // centre verticalement label + input
+  
+      label {
+        width: 140px;               // largeur fixe pour aligner les labels
+        font-weight: 600;
+        color: $color-light-beige;
+        font-size: 14px;
+        text-align: right;
+        background-color: $color-medium-green;
+        padding: 0.5rem 1rem;
+        height: 48px;               // hauteur fixe pour alignement
+        display: flex;
+        align-items: center;  
+        border-radius: 20px; 
+      }
+  
+      input[type="date"],
+      input[type="time"] {
+        flex: 1;
+        appearance: none;
+        &::-webkit-calendar-picker-indicator,
+        &::-webkit-clear-button {
+        filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
+         /* filtre pour approx #7a8a6f, à ajuster si besoin */
+        }
+        padding: 0.5rem 0.75rem;
+        border-left: none;          // pas de bordure à gauche pour fusionner avec label
+        font-size: 16px;
+        background-color: $color-very-light-beige;
+        transition: border-color 0.3s ease;
+        height: 48px;  
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        color: #7a8a6f;
+  
+        &:focus {
+          background-color: $color-very-light-beige;    /* ne change pas le fond */
+          box-shadow: 0 0 5px 2px $color-dark-green;   /* halo lumineux vert */
+        }
+  
+        &:valid {
+          color: $color-dark-green;
+        }
+      }
+  
+          input[type="date"] {
+        &::placeholder {
+          color: #7a8a6f; // Couleur pour le placeholder
+          opacity: 1; // Assure que la couleur est bien visible
+        }
+      
+        &::-webkit-datetime-edit {
+          color: #7a8a6f; // Couleur pour le texte affiché dans le champ
+        }
+      
+        &::-webkit-datetime-edit-fields-wrapper {
+          color: #7a8a6f; // Couleur pour les champs internes
+        }
+      
+        &::-webkit-datetime-edit-text {
+          color: #7a8a6f; // Couleur pour les séparateurs (slash, tirets, etc.)
+        }
+      
+        &::-webkit-calendar-picker-indicator {
+          filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
+        }
+      }
+  
+          input[type="time"] {
+        &::placeholder {
+          color: #7a8a6f; // Couleur pour le placeholder
+          opacity: 1; // Assure que la couleur est bien visible
+        }
+      
+        &::-webkit-datetime-edit {
+          color: #7a8a6f; // Couleur pour le texte affiché dans le champ
+        }
+      
+        &::-webkit-datetime-edit-fields-wrapper {
+          color: #7a8a6f; // Couleur pour les champs internes
+        }
+      
+        &::-webkit-datetime-edit-text {
+          color: #7a8a6f; // Couleur pour les séparateurs (deux-points, etc.)
+        }
+      
+        &::-webkit-calendar-picker-indicator {
+          filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
+        }
+      }
+    }
+  
+    #type-trajet-select {
+      appearance: none; /* Supprime la flèche native */
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-image: url('data:image/svg+xml;utf8,<svg fill="%237a8a6f" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+      background-repeat: no-repeat;
+      background-position: right 10px center; /* espace à droite */
+      background-size: 16px 16px; /* taille de la flèche */
+      padding-right: 30px; /* espace pour la flèche */
+      color: #7a8a6f !important;
+    }
+  
+      /* Applique une couleur différente lorsque l'utilisateur sélectionne une option valide */
+    #type-trajet-select:valid {
+      color: $color-dark-green; /* Couleur pour les options valides */
+    }
   }
-
-  @media (max-width: 576px) {
-    font-size: $font-size-h2; /* Réduit encore la taille pour les écrans mobiles */
-    margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
-    margin-right: 25px;
-  }
-}
-
-  /* === SECTION BARRE DE RECHERCHE === */
-  /* === SECTION BARRE DE RECHERCHE === */
-  /* === SECTION BARRE DE RECHERCHE === */
-  /* === SECTION BARRE DE RECHERCHE === */
-
-.covoiturage-search-bar {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
-
-  .search-container {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr); /* Deux colonnes de largeur égale */
-    gap: 20px; /* Espacement entre les éléments */
+  
+  /* === SECTION LISTE DE COVOITURAGE === */
+  /* === SECTION LISTE DE COVOITURAGE === */
+  /* === SECTION LISTE DE COVOITURAGE === */
+  /* === SECTION LISTE DE COVOITURAGE === */
+  
+  .covoiturage-results {
+    padding: 100px;
+    padding-top: 35px;
+    padding-bottom: 0px;
     background-color: $color-background;
     border-radius: 30px;
-    padding: 30px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    width: 100%;
     margin-left: 100px;
     margin-right: 100px;
-    
-
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  
+    @media (max-width: 1440px) {
+      padding: 30px;
+      padding-bottom: 0px;
+    }
+  
     @media (max-width: 768px) {
-      grid-template-columns: 1fr; /* Passe à une seule colonne */
-      gap: 15px; /* Réduit l'espacement entre les éléments */
-      padding: 20px;
       margin-left: 50px;
       margin-right: 50px;
-
-      .search-btn {
-        grid-column: 1; /* Le bouton occupe une seule colonne */
-        justify-self: center; /* Centre le bouton horizontalement */
-      }
     }
-
+  
     @media (max-width: 576px) {
-      grid-template-columns: 1fr; /* Une seule colonne pour les petits écrans */
-      gap: 15px;
-      padding: 20px;
       margin-left: 25px;
       margin-right: 25px;
-
-      .search-btn {
-        justify-self: center; /* Centre le bouton horizontalement */
-      }
     }
-  }
-
-  .search-row {
-    display: flex;
-    gap: 15px; /* Ajoute un espacement entre les champs */
-  }
-
-  .search-input {
-    width: 100%; /* Les champs occupent toute la largeur de leur cellule */
-    padding: 12px 20px;
-    border: none;
-    border-radius: 20px;
-    background-color: $color-very-light-beige;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-    outline: none;
-  }
-
-  .search-btn {
-    grid-column: span 2; /* Le bouton occupe les deux colonnes */
-    justify-self: center; /* Centre le bouton horizontalement */
-    width: 200px; /* Fixe la largeur du bouton */
-    padding: 12px 30px; /* Ajuste le padding pour un bon rendu */
-    border: none;
-    border-radius: 20px;
-    background-color: $color-medium-green;
-    color: $color-light-beige;
-    cursor: pointer;
-    box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
-    transition: background-color 0.3s ease;
-
-    &:hover {
-      background-color: $color-dark-green;
+  
+    .results-title {
+      text-align: center; /* Centre le titre horizontalement */
+      color: $color-dark-green; /* Couleur du titre */
+      font-weight: 600; /* Poids du texte */
+      margin-bottom: 35px;
     }
-  }
-}
-
-/* === SECTION LISTE DE COVOITURAGE === */
-/* === SECTION LISTE DE COVOITURAGE === */
-/* === SECTION LISTE DE COVOITURAGE === */
-/* === SECTION LISTE DE COVOITURAGE === */
-
-.covoiturage-results {
-  padding: 30px;
-  padding-top: 35px;
-  padding-bottom: 0px;
-  background-color: $color-background;
-  border-radius: 30px;
-  margin-left: 100px;
-  margin-right: 100px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-
-  @media (max-width: 768px) {
-    margin-left: 50px;
-    margin-right: 50px;
-  }
-
-  @media (max-width: 576px) {
-    margin-left: 25px;
-    margin-right: 25px;
-  }
-
-  .results-title {
-    text-align: center; /* Centre le titre horizontalement */
-    color: $color-dark-green; /* Couleur du titre */
-    font-weight: 600; /* Poids du texte */
-    margin-bottom: 35px;
-  }
-
-  .results-container {
-    display: flex; /* Utilise Flexbox pour aligner les filtres et les résultats côte à côte */
-    gap: 30px; /* Ajoute un espacement entre les filtres et les résultats */
-    margin-top: 85px; /* Ajoute un espacement entre le bouton et les résultats */
-
-
-    /* === FILTRES === */
-    /* === FILTRES === */
-    /* === FILTRES === */
-    /* === FILTRES === */
-    
-
-    .filters {
-      flex: 1; /* Les filtres occupent 1 part de l'espace disponible */
-      background-color: $color-light-beige;
-      border-radius: 20px;
-      padding: 20px;
-      padding-bottom: 20px;
-      max-width: 300px;
-      height: auto;
-      margin-bottom: 60px;
-      display: block; /* Visible par défaut sur les grands écrans */
-      font-size: $font-size-nav;
-
-      .filters-content {
-        display: block; /* Visible par défaut */
+  
+    .results-container {
+      display: flex; /* Utilise Flexbox pour aligner les filtres et les résultats côte à côte */
+      gap: 30px; /* Ajoute un espacement entre les filtres et les résultats */
+      margin-top: 85px; /* Ajoute un espacement entre le bouton et les résultats */
+  
+  
+      /* === FILTRES === */
+      /* === FILTRES === */
+      /* === FILTRES === */
+      /* === FILTRES === */
+      
+  
+      .filters {
+        flex: 1; /* Les filtres occupent 1 part de l'espace disponible */
+        background-color: $color-light-beige;
+        border-radius: 20px;
+        padding: 20px;
+        padding-bottom: 20px;
+        max-width: 300px;
+        height: auto;
+        margin-bottom: 60px;
+        display: block; /* Visible par défaut sur les grands écrans */
+        .filters-content {
+          display: block; /* Visible par défaut */
+        }
+  
+        @media (max-width: 1290px) {
+          background-color: transparent; /* Supprime le fond beige */
+          padding: 0; /* Supprime le padding */
+          margin-bottom: 0; /* Supprime la marge en bas */
+          display: none; /* Masque la div "Filtres" sur les petits écrans */
+        }
+  
+        .filter-group {
+          margin-bottom: 20px;
+  
+          .filters .filter-group input[type="text"]#prix-max {
+            background-color: $color-very-light-beige; /* Applique la couleur de fond */
+            border: 1px solid $color-medium-green; /* Bordure de l'input */
+            border-radius: 5px; /* Ajoute des coins arrondis */
+            padding: 10px; /* Ajoute un espace interne */
+            width: 100%; /* L'input occupe toute la largeur disponible */
+            color: $color-dark-green; /* Couleur du texte */
+            font-size: $font-size-nav;
+          }
+  
+          label {
+            display: flex; /* Aligne la case à cocher et le texte sur la même ligne */
+            align-items: center;
+            gap: 10px; /* Ajoute un espacement entre la case et le texte */
+            color: $color-dark-green; /* Couleur du texte */
+            margin-bottom: 10px; /* Ajoute une marge en bas */
+            font-size: $font-size-nav;
+          }
+  
+          input[type="checkbox"] {
+            width: 13px;
+            height: 13px;
+            appearance: none;
+            background-color: $color-very-light-beige;
+            border: 2px solid $color-medium-green;
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            font-size: $font-size-nav;
+  
+            &:checked {
+              background-color: $color-medium-green;
+              border-color: $color-medium-green;
+  
+              &::after {
+                content: '✔';
+                color: $color-light-beige;
+                font-size: 10px;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+              }
+            }
+          }
+  
+          input[type="text"] {
+            background-color: $color-very-light-beige; /* Applique la couleur de fond */
+            border: 1px solid $color-medium-green; /* Bordure par défaut */
+            border-radius: 5px; /* Ajoute des coins arrondis */
+            padding: 10px; /* Ajoute un espace interne */
+            width: 100%; /* L'input occupe toute la largeur disponible */
+            color: $color-dark-green; /* Couleur du texte */
+            font-size: 1rem; /* Taille du texte */
+            transition: border-color 0.3s ease; /* Ajoute une transition pour un effet fluide */
+            font-size: $font-size-nav;
+  
+  
+            &:focus {
+              outline: none; /* Supprime le contour par défaut */
+              border-color: $color-medium-green; /* Change la couleur de la bordure en vert */
+              box-shadow: 0 0 5px $color-medium-green; /* Ajoute un effet lumineux autour */
+            }
+          }
+  
+          .filters .filter-group input[type="checkbox"] {
+            background-color: $color-very-light-beige; /* Change la couleur de fond */
+            border: 1px solid $color-dark-green; /* Bordure de la case */
+            border-radius: 4px; /* Ajoute des coins arrondis */
+            cursor: pointer; /* Ajoute un curseur pointer */
+            appearance: none; /* Supprime le style par défaut du navigateur */
+            position: relative; /* Nécessaire pour le pseudo-élément */
+            font-size: $font-size-nav;
+          
+            &:checked {
+              background-color: $color-medium-green; /* Couleur de fond pour une case cochée */
+              border-color: $color-dark-green; /* Change la couleur de la bordure */
+              
+              &::after {
+                content: '✔'; /* Symbole de validation */
+                color: $color-light-beige; /* Couleur du symbole */
+                font-size: 14px; /* Taille du symbole */
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%); /* Centre le symbole */
+              }
+            }
+          }
+  
+          select#note-mini {
+            background-color: $color-very-light-beige; /* Applique la couleur de fond */
+            border: 1px solid $color-dark-green; /* Bordure du select */
+            border-radius: 5px; /* Ajoute des coins arrondis */
+            padding: 10px; /* Ajoute un espace interne */
+            width: 100%; /* Le select occupe toute la largeur disponible */
+            color: $color-dark-green; /* Couleur du texte */
+            font-size: 1rem; /* Taille du texte */
+            transition: border-color 0.3s ease; /* Ajoute une transition fluide */
+            border-color: $color-medium-green;
+            font-size: $font-size-nav;
+          
+            &:focus {
+              outline: none; /* Supprime le contour par défaut */
+              border-color: $color-medium-green; /* Change la couleur de la bordure en vert moyen */
+              box-shadow: 0 0 5px $color-medium-green; /* Ajoute un effet lumineux autour */
+            }
+          
+            option {
+              background-color: $color-medium-green; /* Fond des options */
+              color: $color-light-beige; /* Couleur du texte des options */
+              border: 1px solid $color-dark-green; /* Bordure des options */
+              padding: 5px; /* Ajoute un espace interne */
+              font-size: $font-size-nav;
+            }
+          }
+        }
+  
+        .filter-buttons {
+          display: flex;
+          gap: 10px;
+          font-size: $font-size-nav;
+  
+          .apply-btn, .reset-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: $font-size-nav;
+          }
+  
+          .apply-btn {
+            background-color: $color-medium-green;
+            color: $color-light-beige;
+  
+            &:hover {
+              background-color: $color-dark-green;
+            }
+          }
+  
+          .reset-btn {
+            background-color: $color-light-beige;
+            color: $color-medium-green;
+            border: 1px solid $color-medium-green;
+  
+            &:hover {
+              background-color: $color-dark-green;
+              color: $color-light-beige;
+            }
+          }
+        }
       }
-
-      @media (max-width: 1290px) {
+  
+      @media (max-width: 768px) {
+        .filters {
+          display: none; /* Masque la div "Filtres" sur les petits écrans */
+        }
+  
+        .filters-toggle {
+          display: block; /* Affiche le bouton "Filtres" pour les petits écrans */
+          margin: 10px 20px; /* Centre le bouton horizontalement */
+        }
+      }
+  
+      /* === Liste === */
+      /* === Liste === */
+      /* === Liste === */
+      /* === Liste === */
+  
+  
+      .results {
+        flex: 2; /* Les résultats occupent 2 parts de l'espace disponible */
         background-color: transparent; /* Supprime le fond beige */
-        padding: 0; /* Supprime le padding */
-        margin-bottom: 0; /* Supprime la marge en bas */
-        display: none; /* Masque la div "Filtres" sur les petits écrans */
+        
+        .result-card {
+          position: relative; /* Nécessaire pour positionner les éléments */
+          background-color: $color-light-beige; /* Fond beige */
+          border-radius: 20px; /* Coins arrondis */
+          padding: 20px; /* Espacement interne */
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ombre légère */
+          margin-bottom: 60px; /* Espacement entre les cartes */
+          width: 100%; /* La carte occupe toute la largeur de son conteneur */
+          max-width: 100%; /* Empêche la carte de dépasser son conteneur */
+  
+          
+          @media (max-width: 1024px) {
+            padding: 15px; 
+            padding-bottom: 20px;
+            margin-bottom: 60px; 
+          }
+          
+          @media (max-width: 768px) {
+            padding: 10px; 
+            margin-bottom: 60px; 
+          }
+          
+          @media (max-width: 576px) {
+            padding: 5px; 
+            margin-bottom: 60px; 
+          }
+  
+          @media (max-width: 990px) {
+            display: flex; /* Utilise Flexbox pour organiser les éléments */
+            flex-direction: column; /* Passe les éléments en disposition verticale */
+            align-items: center; /* Centre les éléments horizontalement */
+            padding: 15px; /* Réduit le padding interne */
+            gap: 20px; /* Ajoute un espacement entre les sections */
+  
+            .profile-column {
+              display: flex; /* Utilise Flexbox pour organiser les éléments horizontalement */
+              align-items: center; /* Centre les éléments verticalement */
+              gap: 15px; /* Ajoute un espacement entre la photo et les autres éléments */
+              padding-bottom: 40px;
+              border-bottom: 1px solid $color-medium-green; /* Ligne de séparation en bas */
+              padding-right: 0px;
+              border-right: none 
+            }
+            
+            .result-body {
+              display: flex; /* Active Flexbox */
+              flex-direction: column; /* Passe les colonnes en disposition verticale */
+              align-items: center; /* Centre les colonnes horizontalement */
+              gap: 15px; /* Réduit l'espacement entre les colonnes */
+  
+              .profile-photo {
+                margin: 0 auto; /* Centre la photo horizontalement */
+              }
+  
+              .details {
+                display: grid; /* Utilise Grid Layout pour organiser les colonnes */
+                grid-template-columns: 1fr 1fr; /* Deux colonnes de largeur égale */
+                gap: 10px; /* Ajoute un espacement entre les colonnes */
+                width: 100%; /* Les colonnes occupent toute la largeur disponible */
+  
+                .column {
+                  text-align: center; /* Centre le texte dans chaque colonne */
+                }
+              }
+            }
+  
+            .result-header {
+              flex-direction: column; /* Passe les éléments en disposition verticale */
+              align-items: center; /* Centre les éléments horizontalement */
+              gap: 10px; /* Ajoute un espacement entre les éléments */
+            }
+  
+            .detail-btn {
+              width: 100%; /* Le bouton occupe toute la largeur disponible */
+              max-width: 200px; /* Fixe une largeur maximale */
+            }
+          }
+  
+          .result-header {
+            position: absolute; /* Positionne au-dessus de .result-card */
+            top: -50px; /* Ajuste la position verticale */
+            left: 20px; /* Ajuste la position horizontale */
+            display: flex; /* Utilise Flexbox pour organiser les éléments */
+            justify-content: flex-start; /* Aligne les éléments à gauche */
+            align-items: center; /* Centre verticalement les éléments */
+            margin-bottom: 15px; /* Ajoute un espacement sous la date */
+          }
+  
+          .result-header 
+          .date {
+            background-color: $color-medium-green; /* Fond vert moyen */
+            color: $color-light-beige; /* Texte beige */
+            padding: 10px 15px; /* Ajuste l'espacement interne */
+            border-radius: 20px; /* Coins arrondis */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+          }
+  
+          .result-body {
+            display: flex; /* Active Flexbox */
+            align-items: center; /* Centre les éléments verticalement */
+            gap: 30px; /* Ajoute un espacement entre les éléments */
+  
+            .profile-photo {
+              width: 120px; /* Taille fixe de la largeur */
+              height: 120px; /* Taille fixe de la hauteur */
+              object-fit: cover; /* Ajuste l'image à la taille définie */
+              object-position: center; /* Centre l'image */
+              border-radius: 50%; /* Rend la photo circulaire */
+              border: 4px solid $color-medium-green; /* Bordure verte */
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+              margin-left: 10px; /* Ajoute un espacement à gauche */
+              flex-shrink: 0; /* Empêche la photo de se réduire */
+  
+              @media (max-width: 768px) {
+                width: 100px; /* Réduit la taille pour les petits écrans */
+                height: 100px; /* Réduit la taille pour les petits écrans */
+              }
+  
+              @media (max-width: 576px) {
+                width: 80px; /* Réduit davantage la taille pour les très petits écrans */
+                height: 80px; /* Réduit davantage la taille pour les très petits écrans */
+              }
+            }
+  
+            .pseudo-rating {
+              display: flex; /* Organise Pseudo et Rating horizontalement */
+              flex-direction: column; /* Organise les éléments verticalement */
+              justify-content: center; /* Centre les éléments verticalement */
+              gap: 5px; /* Ajoute un espacement entre Pseudo et Rating */
+            
+            }
+  
+            .details {
+              display: flex; /* Utilise Flexbox pour organiser les colonnes en ligne */
+              justify-content: space-between; /* Ajoute un espacement uniforme entre les colonnes */
+              gap: 10px; /* Espacement fixe entre les colonnes */
+              text-align: center; /* Centre le texte horizontalement */
+              width: 100%; /* Assure que le conteneur prend toute la largeur disponible */
+              align-items: center; /* Aligne les colonnes au même niveau horizontal */
+  
+              .column {
+                flex: 1; /* Permet à chaque colonne de s'étendre pour occuper l'espace disponible */
+                display: flex; /* Utilise Flexbox pour organiser les éléments verticalement */
+                flex-direction: column; /* Organise les éléments verticalement dans chaque colonne */
+                align-items: center; /* Centre les éléments horizontalement */
+                gap: 10px; /* Ajoute un espacement entre les lignes */
+  
+              .pseudo, .rating {
+                display: flex; /* Organise Pseudo et Rating horizontalement */
+                flex-direction: row; /* Aligne les éléments en ligne */
+                justify-content: flex-start; /* Aligne les éléments à gauche */
+                gap: 10px; /* Ajoute un espacement entre Pseudo et Rating */
+              }
+            }
+          }
+  
+          .pseudo {
+            font-weight: bold; /* Met en valeur le pseudo */
+            margin-bottom: 5px; /* Ajoute un espacement sous le pseudo */
+            padding-top: 10px;
+  
+          }
+  
+          .rating {
+            padding-top: 40px;
+            color: $color-medium-green; /* Couleur des étoiles */
+            margin-bottom: 10px; /* Ajoute un espacement sous les étoiles */
+            max-width: 150px; /* Limite la largeur maximale du pseudo */
+            white-space: nowrap; /* Empêche le texte de passer à la ligne */
+            overflow: hidden; /* Cache le texte qui dépasse */
+            text-overflow: ellipsis; /* Ajoute "..." pour indiquer le débordement */
+          }
+          
+          .time {
+            font-weight: bold; /* Met en valeur l'heure */
+            color: $color-dark-green; /* Couleur du texte */
+          }
+          .type {
+            background-color: $color-background; /* Applique le fond défini */
+            border-radius: 5px; /* Ajoute des coins arrondis */
+            color: $color-dark-green; /* Couleur du texte */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+            text-align: center; /* Centre le texte horizontalement */
+            padding: 5px; /* Ajuste l'espacement interne */
+          }
+  
+          .places {
+            color: $color-dark-green; /* Couleur du texte */
+          }
+  
+          .price {
+            margin-top: 20px;
+            margin-bottom: 16px;
+            font-weight: bold; /* Met en valeur le prix */
+            color: $color-dark-green; /* Couleur du texte */
+          }
+  
+          .detail-btn {
+            background-color: $color-medium-green; /* Fond vert moyen */
+            color: $color-light-beige; /* Texte beige */
+            border: none;
+            border-radius: 20px; /* Coins arrondis */
+            padding: 10px 20px; /* Ajuste l'espacement interne */
+            width: 120px; /* Fixe une largeur standard */
+            height: 50px; /* Fixe une hauteur standard */
+            text-align: center; /* Centre le texte horizontalement */
+            display: flex; /* Utilise Flexbox */
+            align-items: center; /* Centre le texte verticalement */
+            justify-content: center; /* Centre le texte horizontalement */
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+            transition: background-color 0.3s ease; /* Ajoute une transition fluide */
+            font-size: 20px; /* Taille du texte */
+            margin-top: 16px;
+  
+            &:hover {
+              background-color: $color-dark-green; /* Change la couleur de fond au survol */
+  }
+            }
+          }
+        }
+  
+        .profile-column {
+          display: flex; /* Utilise Flexbox pour organiser les éléments horizontalement */
+          align-items: center; /* Centre les éléments verticalement */
+          gap: 15px; /* Ajoute un espacement entre la photo et les autres éléments */
+          padding-right: 40px;
+          
+  
+          .profile-photo {
+            width: 120px; /* Taille fixe de la largeur */
+            height: 120px; /* Taille fixe de la hauteur */
+            object-fit: cover; /* Ajuste l'image à la taille définie */
+            object-position: center; /* Centre l'image */
+            border-radius: 50%; /* Rend la photo circulaire */
+            border: 4px solid $color-medium-green; /* Bordure verte */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+            flex-shrink: 0; /* Empêche la photo de se réduire */
+          }
+  
+          .pseudo-rating, .column {
+            display: flex; /* Utilise Flexbox pour organiser les éléments verticalement */
+            flex-direction: column; /* Organise les éléments verticalement */
+            justify-content: center; /* Centre les éléments verticalement */
+            text-align: left; /* Aligne le texte à gauche */
+          }
+        }
       }
-
+    }
+  }
+  
+  .filters-toggle {
+    display: none; /* Masqué par défaut */
+  }
+  
+  @media (max-width: 576px) {
+  
+    h1 {
+      font-size: 24px; /* Réduit la taille des titres h1 */
+    }
+  
+    .result-card .detail-btn {
+      padding: 8px 16px !important; /* Réduit le padding du bouton */
+      font-size: 16px !important; /* Ajuste la taille de la police */
+      width: auto !important; /* Ajuste automatiquement la largeur */
+      height: auto !important; /* Ajuste automatiquement la hauteur */
+    }
+  
+    .btn.btn-primary {
+      font-size: 16px !important; /* Réduit la taille de la police */
+      padding: 8px 16px !important; /* Réduit le padding interne */
+    }
+  
+    .result-card .details {
+      display: grid; /* Utilise Grid Layout */
+      grid-template-columns: 1fr; /* Passe à une seule colonne */
+      gap: 5px; /* Ajoute un espacement entre les éléments */
+      width: 100%; /* Les colonnes occupent toute la largeur disponible */
+  
+      .column {
+        text-align: center; /* Centre le texte horizontalement */
+        font-size: 12px; /* Réduit la taille de la police */
+      }
+    }
+  
+    .filters-toggle {
+      display: none; /* Masqué par défaut */
+      font-size: 14px !important; /* Réduit la taille de la police */
+      padding: 8px 12px !important; /* Réduit le padding interne */
+      width: 100px !important; /* Réduit la largeur du bouton */
+      height: auto !important; /* Ajuste automatiquement la hauteur */
+    
+      &:hover {
+        background-color: $color-dark-green;
+      }
+    }
+  
+    .covoiturage-results {
+      padding: 20px; /* Réduit le padding global */
+    }
+  
+      .pseudo {
+        font-size: 16px; /* Taille réduite pour le pseudo */
+        max-width: 50px; /* Limite la largeur maximale du pseudo */
+        overflow: hidden; /* Cache le texte qui dépasse */
+        text-overflow: ellipsis; /* Ajoute "..." pour indiquer le débordement */
+      }
+  
+      .rating {
+        font-size: 12px; /* Taille réduite pour les étoiles */
+      }
+  
+      .time {
+        margin-top: 8px;
+        margin-bottom: 15px;
+      }
+  
+      .price {
+  
+        margin-bottom: 20px;
+      }
+  
+      .type, .places, .time {
+        font-size: 12px; /* Taille réduite pour les autres textes */
+      }
+  
+      .date {
+        font-size: 14px !important; /* Taille réduite pour la date */
+        padding: 8px 12px !important; /* Ajuste le padding pour une meilleure lisibilité */
+        margin-top: 12px;
+      }
+  
+      .filters-toggle,
+      .result-header .date {
+        display: block; /* Assure que les deux éléments sont des blocs */
+        width: auto; /* Ajuste automatiquement la largeur */
+        padding: 10px 20px; /* Uniformise le padding */
+        margin: 0 auto; /* Centre les éléments horizontalement */
+        background-color: $color-medium-green; /* Fond vert */
+        color: $color-light-beige; /* Texte beige */
+        border-radius: 20px; /* Coins arrondis identiques */
+        text-align: center; /* Centre le texte horizontalement */
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+        font-size: 16px; /* Taille de police uniforme */
+      }
+  
+      .filters-toggle {
+        max-width: 200px; /* Fixe une largeur maximale pour le bouton "Filtres" */
+      }
+  
+      .result-header .date {
+        max-width: 200px; /* Fixe une largeur maximale pour la date */
+      }
+    }
+  
+    
+  
+  
+  
+  @media (max-width: 1290px) {
+    .filters {
+      background-color: transparent; /* Supprime le fond beige */
+      padding: 0; /* Supprime le padding */
+      margin-bottom: 0; /* Supprime la marge en bas */
+      display: none; /* Masque la div "Filtres" sur les petits écrans */
+    }
+  
+    .filters-toggle {
+      display: block; /* Affiche le bouton */
+      margin-bottom: 0px; /* Ajoute un espacement de 20px au-dessus de .result-card */
+      margin-left: auto; /* Centre le bouton horizontalement */
+      margin-right: auto; /* Centre le bouton horizontalement */
+      background-color: $color-medium-green;
+      color: $color-light-beige;
+      border: none;
+      border-radius: 20px;
+      padding: 10px 20px;
+      cursor: pointer;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s ease;
+      font-size: 20px;
+      
+      &:hover {
+        background-color: $color-dark-green;
+        color: $color-light-beige;
+      }
+  
+      /* Positionnement à droite */
+      @media (max-width: 1290px) {
+      margin-left: auto; /* Pousse le bouton à la fin (droite) */
+      margin-right: 0; /* Supprime tout espacement à gauche */
+      }
+    }
+  }
+  
+  
+  
+  
+  /* Styles pour l'Offcanvas */
+  /* Styles pour l'Offcanvas */
+  /* Styles pour l'Offcanvas */
+  /* Styles pour l'Offcanvas */
+  
+  
+  
+  .offcanvas {
+    background-color: $color-light-beige; /* Fond beige similaire à .filters */
+    border-radius: 20px; /* Coins arrondis */
+    padding: 20px; /* Espacement interne */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+    color: $color-dark-green; /* Couleur du texte */
+    max-width: 300px; /* Largeur similaire à .filters */
+    margin: 0 auto; /* Centre l'Offcanvas horizontalement */
+    font-size: 16px;
+  
+    .offcanvas-header {
+      border-bottom: 1px solid $color-medium-green; /* Ajoute une bordure en bas */
+      margin-bottom: 20px; /* Espacement sous le header */
+      h5 {
+        font-size: 1.6rem; /* Taille du titre */
+        font-weight: bold; /* Met en valeur le titre */
+        color: $color-dark-green; /* Couleur du titre */
+      }
+    }
+  
+    .offcanvas-body {
       .filter-group {
         margin-bottom: 20px;
-
-        .filters .filter-group input[type="text"]#prix-max {
-          background-color: $color-very-light-beige; /* Applique la couleur de fond */
-          border: 1px solid $color-medium-green; /* Bordure de l'input */
-          border-radius: 5px; /* Ajoute des coins arrondis */
-          padding: 10px; /* Ajoute un espace interne */
-          width: 100%; /* L'input occupe toute la largeur disponible */
-          color: $color-dark-green; /* Couleur du texte */
-        }
-
+  
         label {
           display: flex; /* Aligne la case à cocher et le texte sur la même ligne */
           align-items: center;
           gap: 10px; /* Ajoute un espacement entre la case et le texte */
           color: $color-dark-green; /* Couleur du texte */
           margin-bottom: 10px; /* Ajoute une marge en bas */
+          font-size: 1.6rem;
         }
-
+  
         input[type="checkbox"] {
           width: 13px;
           height: 13px;
@@ -201,11 +903,11 @@
           border-radius: 4px;
           cursor: pointer;
           position: relative;
-
+  
           &:checked {
             background-color: $color-medium-green;
             border-color: $color-medium-green;
-
+  
             &::after {
               content: '✔';
               color: $color-light-beige;
@@ -217,7 +919,7 @@
             }
           }
         }
-
+  
         input[type="text"] {
           background-color: $color-very-light-beige; /* Applique la couleur de fond */
           border: 1px solid $color-medium-green; /* Bordure par défaut */
@@ -225,57 +927,33 @@
           padding: 10px; /* Ajoute un espace interne */
           width: 100%; /* L'input occupe toute la largeur disponible */
           color: $color-dark-green; /* Couleur du texte */
-          font-size: $font-size-nav;
+          font-size: 1.6rem; /* Taille du texte */
           transition: border-color 0.3s ease; /* Ajoute une transition pour un effet fluide */
-
+  
           &:focus {
             outline: none; /* Supprime le contour par défaut */
             border-color: $color-medium-green; /* Change la couleur de la bordure en vert */
             box-shadow: 0 0 5px $color-medium-green; /* Ajoute un effet lumineux autour */
           }
         }
-
-        .filters .filter-group input[type="checkbox"] {
-          background-color: $color-very-light-beige; /* Change la couleur de fond */
-          border: 1px solid $color-dark-green; /* Bordure de la case */
-          border-radius: 4px; /* Ajoute des coins arrondis */
-          cursor: pointer; /* Ajoute un curseur pointer */
-          appearance: none; /* Supprime le style par défaut du navigateur */
-          position: relative; /* Nécessaire pour le pseudo-élément */
-        
-          &:checked {
-            background-color: $color-medium-green; /* Couleur de fond pour une case cochée */
-            border-color: $color-dark-green; /* Change la couleur de la bordure */
-            
-            &::after {
-              content: '✔'; /* Symbole de validation */
-              color: $color-light-beige; /* Couleur du symbole */
-              font-size: 14px; /* Taille du symbole */
-              position: absolute;
-              top: 50%;
-              left: 50%;
-              transform: translate(-50%, -50%); /* Centre le symbole */
-            }
-          }
-        }
-
+  
         select#note-mini {
           background-color: $color-very-light-beige; /* Applique la couleur de fond */
           border: 1px solid $color-dark-green; /* Bordure du select */
           border-radius: 5px; /* Ajoute des coins arrondis */
           padding: 10px; /* Ajoute un espace interne */
           width: 100%; /* Le select occupe toute la largeur disponible */
-          color: $color-medium-green; /* Couleur du texte */
-          font-size: $font-size-nav;
+          color: $color-dark-green; /* Couleur du texte */
+          font-size: 1.6rem; /* Taille du texte */
           transition: border-color 0.3s ease; /* Ajoute une transition fluide */
           border-color: $color-medium-green;
-        
+  
           &:focus {
             outline: none; /* Supprime le contour par défaut */
             border-color: $color-medium-green; /* Change la couleur de la bordure en vert moyen */
             box-shadow: 0 0 5px $color-medium-green; /* Ajoute un effet lumineux autour */
           }
-        
+  
           option {
             background-color: $color-medium-green; /* Fond des options */
             color: $color-light-beige; /* Couleur du texte des options */
@@ -283,523 +961,24 @@
             padding: 5px; /* Ajoute un espace interne */
           }
         }
-      }
-
-      .filter-buttons {
-        display: flex;
-        gap: 10px;
-
-        .apply-btn, .reset-btn {
-          flex: 1;
-          padding: 10px;
-          border: none;
-          border-radius: 20px;
-          cursor: pointer;
-          font-size: $font-size-nav;
-        }
-
-        .apply-btn {
-          background-color: $color-medium-green;
-          color: $color-light-beige;
-
-          &:hover {
-            background-color: $color-dark-green;
-          }
-        }
-
-        .reset-btn {
-          background-color: $color-light-beige;
-          color: $color-medium-green;
-          border: 1px solid $color-medium-green;
-
-          &:hover {
-            background-color: $color-dark-green;
-            color: $color-light-beige;
-          }
-        }
-      }
-    }
-
-    @media (max-width: 768px) {
-      .filters {
-        display: none; /* Masque la div "Filtres" sur les petits écrans */
-      }
-
-      .filters-toggle {
-        display: block; /* Affiche le bouton "Filtres" pour les petits écrans */
-        margin: 10px 20px; /* Centre le bouton horizontalement */
-      }
-    }
-
-    /* === Liste === */
-    /* === Liste === */
-    /* === Liste === */
-    /* === Liste === */
-
-
-    .results {
-      flex: 2; /* Les résultats occupent 2 parts de l'espace disponible */
-      background-color: transparent; /* Supprime le fond beige */
-      
-      .result-card {
-        position: relative; /* Nécessaire pour positionner les éléments */
-        background-color: $color-light-beige; /* Fond beige */
-        border-radius: 20px; /* Coins arrondis */
-        padding: 20px; /* Espacement interne */
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ombre légère */
-        margin-bottom: 60px; /* Espacement entre les cartes */
-        width: 100%; /* La carte occupe toute la largeur de son conteneur */
-        max-width: 100%; /* Empêche la carte de dépasser son conteneur */
-
-        
-        @media (max-width: 1024px) {
-          padding: 15px; 
-          padding-bottom: 20px;
-          margin-bottom: 60px; 
-        }
-        
-        @media (max-width: 768px) {
-          padding: 10px; 
-          margin-bottom: 60px; 
-        }
-        
-        @media (max-width: 576px) {
-          padding: 5px; 
-          margin-bottom: 60px; 
-        }
-
-        @media (max-width: 990px) {
-          display: flex; /* Utilise Flexbox pour organiser les éléments */
-          flex-direction: column; /* Passe les éléments en disposition verticale */
-          align-items: center; /* Centre les éléments horizontalement */
-          padding: 15px; /* Réduit le padding interne */
-          gap: 20px; /* Ajoute un espacement entre les sections */
-
-          .profile-column {
-            display: flex; /* Utilise Flexbox pour organiser les éléments horizontalement */
-            align-items: center; /* Centre les éléments verticalement */
-            gap: 20px; /* Ajoute un espacement entre la photo et les autres éléments */
-            padding-bottom: 40px;
-            border-bottom: 1px solid $color-medium-green; /* Ligne de séparation en bas */
-            padding-right: 0px;
-            border-right: none 
-          }
-          
-          .result-body {
-            display: flex; /* Active Flexbox */
-            flex-direction: column; /* Passe les colonnes en disposition verticale */
-            align-items: center; /* Centre les colonnes horizontalement */
-            gap: 15px; /* Réduit l'espacement entre les colonnes */
-
-            .profile-photo {
-              margin: 0 auto; /* Centre la photo horizontalement */
-            }
-
-            .details {
-              display: grid; /* Utilise Grid Layout pour organiser les colonnes */
-              grid-template-columns: 1fr 1fr; /* Deux colonnes de largeur égale */
-              gap: 10px; /* Ajoute un espacement entre les colonnes */
-              width: 100%; /* Les colonnes occupent toute la largeur disponible */
-
-              .column {
-                text-align: center; /* Centre le texte dans chaque colonne */
-              }
-            }
-          }
-
-          .result-header {
-            flex-direction: column; /* Passe les éléments en disposition verticale */
-            align-items: center; /* Centre les éléments horizontalement */
-            gap: 10px; /* Ajoute un espacement entre les éléments */
-          }
-
-          .detail-btn {
-            width: 100%; /* Le bouton occupe toute la largeur disponible */
-            max-width: 200px; /* Fixe une largeur maximale */
-          }
-        }
-
-        .result-header {
-          position: absolute; /* Positionne au-dessus de .result-card */
-          top: -50px; /* Ajuste la position verticale */
-          left: 20px; /* Ajuste la position horizontale */
-          display: flex; /* Utilise Flexbox pour organiser les éléments */
-          justify-content: flex-start; /* Aligne les éléments à gauche */
-          align-items: center; /* Centre verticalement les éléments */
-          margin-bottom: 15px; /* Ajoute un espacement sous la date */
-        }
-
-        .result-header 
-        .date {
-          background-color: $color-medium-green; /* Fond vert moyen */
-          color: $color-light-beige; /* Texte beige */
-          padding: 10px 15px; /* Ajuste l'espacement interne */
-          border-radius: 20px; /* Coins arrondis */
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
-        }
-
-        .result-body {
-          display: flex; /* Active Flexbox */
-          align-items: center; /* Centre les éléments verticalement */
-          gap: 30px; /* Ajoute un espacement entre les éléments */
-
-          .profile-photo {
-            width: 120px; /* Taille fixe de la largeur */
-            height: 120px; /* Taille fixe de la hauteur */
-            object-fit: cover; /* Ajuste l'image à la taille définie */
-            object-position: center; /* Centre l'image */
-            border-radius: 50%; /* Rend la photo circulaire */
-            border: 4px solid $color-medium-green; /* Bordure verte */
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
-            margin-left: 10px; /* Ajoute un espacement à gauche */
-            flex-shrink: 0; /* Empêche la photo de se réduire */
-
-            @media (max-width: 768px) {
-              width: 100px; /* Réduit la taille pour les petits écrans */
-              height: 100px; /* Réduit la taille pour les petits écrans */
-            }
-
-            @media (max-width: 576px) {
-              width: 80px; /* Réduit davantage la taille pour les très petits écrans */
-              height: 80px; /* Réduit davantage la taille pour les très petits écrans */
-            }
-          }
-
-          .pseudo-rating {
-            display: flex; /* Organise Pseudo et Rating horizontalement */
-            flex-direction: column; /* Organise les éléments verticalement */
-            justify-content: center; /* Centre les éléments verticalement */
-            gap: 5px; /* Ajoute un espacement entre Pseudo et Rating */
-          
-          }
-
-          .details {
-            display: flex; /* Utilise Flexbox pour organiser les colonnes en ligne */
-            justify-content: space-between; /* Ajoute un espacement uniforme entre les colonnes */
-            gap: 10px; /* Espacement fixe entre les colonnes */
-            text-align: center; /* Centre le texte horizontalement */
-            width: 100%; /* Assure que le conteneur prend toute la largeur disponible */
-            align-items: center; /* Aligne les colonnes au même niveau horizontal */
-
-            .column {
-              flex: 1; /* Permet à chaque colonne de s'étendre pour occuper l'espace disponible */
-              display: flex; /* Utilise Flexbox pour organiser les éléments verticalement */
-              flex-direction: column; /* Organise les éléments verticalement dans chaque colonne */
-              align-items: center; /* Centre les éléments horizontalement */
-              gap: 10px; /* Ajoute un espacement entre les lignes */
-
-            .pseudo, .rating {
-              display: flex; /* Organise Pseudo et Rating horizontalement */
-              flex-direction: row; /* Aligne les éléments en ligne */
-              justify-content: flex-start; /* Aligne les éléments à gauche */
-              gap: 10px; /* Ajoute un espacement entre Pseudo et Rating */
-            }
-          }
-        }
-
-        .pseudo {
-          font-weight: bold; /* Met en valeur le pseudo */
-          margin-bottom: 5px; /* Ajoute un espacement sous le pseudo */
-          padding-top: 10px;
-
-        }
-
-        .rating {
-          padding-top: 40px;
-          color: $color-medium-green; /* Couleur des étoiles */
-          margin-bottom: 10px; /* Ajoute un espacement sous les étoiles */
-        }
-        
-        .time {
-          font-weight: bold; /* Met en valeur l'heure */
-          color: $color-dark-green; /* Couleur du texte */
-        }
-        .type {
-          background-color: $color-background; /* Applique le fond défini */
-          border-radius: 5px; /* Ajoute des coins arrondis */
-          color: $color-dark-green; /* Couleur du texte */
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
-          text-align: center; /* Centre le texte horizontalement */
-          padding: 5px; /* Ajuste l'espacement interne */
-        }
-
-        .places {
-          color: $color-dark-green; /* Couleur du texte */
-        }
-
-        .price {
-          margin-top: 20px;
-          margin-bottom: 16px;
-          font-weight: bold; /* Met en valeur le prix */
-          color: $color-dark-green; /* Couleur du texte */
-        }
-
-        .detail-btn {
-          background-color: $color-medium-green; /* Fond vert moyen */
-          color: $color-light-beige; /* Texte beige */
-          border: none;
-          border-radius: 20px; /* Coins arrondis */
-          padding: 10px 20px; /* Ajuste l'espacement interne */
-          width: 120px; /* Fixe une largeur standard */
-          height: 50px; /* Fixe une hauteur standard */
-          text-align: center; /* Centre le texte horizontalement */
-          display: flex; /* Utilise Flexbox */
-          align-items: center; /* Centre le texte verticalement */
-          justify-content: center; /* Centre le texte horizontalement */
-          cursor: pointer;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
-          transition: background-color 0.3s ease; /* Ajoute une transition fluide */
-          font-size: 20px; /* Taille du texte */
-          margin-top: 16px;
-
-          &:hover {
-            background-color: $color-dark-green; /* Change la couleur de fond au survol */
-}
-          }
-        }
-      }
-
-      .profile-column {
-        display: flex; /* Utilise Flexbox pour organiser les éléments horizontalement */
-        align-items: center; /* Centre les éléments verticalement */
-        gap: 20px; /* Ajoute un espacement entre la photo et les autres éléments */
-        padding-right: 40px;
-        border-right: 1px solid $color-medium-green; /* Ligne de séparation en bas */
-
-        .profile-photo {
-          width: 120px; /* Taille fixe de la largeur */
-          height: 120px; /* Taille fixe de la hauteur */
-          object-fit: cover; /* Ajuste l'image à la taille définie */
-          object-position: center; /* Centre l'image */
-          border-radius: 50%; /* Rend la photo circulaire */
-          border: 4px solid $color-medium-green; /* Bordure verte */
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
-          flex-shrink: 0; /* Empêche la photo de se réduire */
-        }
-
-        .pseudo-rating, .column {
-          display: flex; /* Utilise Flexbox pour organiser les éléments verticalement */
-          flex-direction: column; /* Organise les éléments verticalement */
-          justify-content: center; /* Centre les éléments verticalement */
-          text-align: left; /* Aligne le texte à gauche */
-        }
-      }
-    }
-  }
-}
-
-.filters-toggle {
-  display: none; /* Masqué par défaut */
-}
-
-@media (max-width: 576px) {
-
-  .result-card .detail-btn {
-    padding: 10px 14px !important; /* Réduit le padding du bouton */
-    font-size: 14px !important; /* Ajuste la taille de la police */
-    width: auto !important; /* Ajuste automatiquement la largeur */
-    height: auto !important; /* Ajuste automatiquement la hauteur */
-  }
-
-  .result-card .details {
-    display: grid; /* Utilise Grid Layout */
-    grid-template-columns: 1fr; /* Passe à une seule colonne */
-    gap: 10px; /* Ajoute un espacement entre les éléments */
-    width: 100%; /* Les colonnes occupent toute la largeur disponible */
-
-    .column {
-      text-align: center; /* Centre le texte horizontalement */
-      font-size: 12px; /* Réduit la taille de la police */
-    }
-  }
-
-  .filters-toggle {
-    display: none; /* Masqué par défaut */
-    font-size: 14px !important; /* Réduit la taille de la police */
-    padding: 8px 12px !important; /* Réduit le padding interne */
-    width: 100px !important; /* Réduit la largeur du bouton */
-    height: auto !important; /* Ajuste automatiquement la hauteur */
   
-    &:hover {
-      background-color: $color-dark-green;
-    }
-  }
-
-  .covoiturage-results {
-    width: 90%; /* Réduit la largeur à 90% de l'écran */
-  }
-
-    .pseudo {
-      font-size: 14px; /* Taille réduite pour le pseudo */
-    }
-
-    .rating {
-      font-size: 12px; /* Taille réduite pour les étoiles */
-    }
-
-    .time {
-      margin-top: 8px;
-      margin-bottom: 20px;
-    }
-
-    .price {
-
-      margin-bottom: 20px;
-    }
-
-    .type, .places, .time {
-      font-size: 12px; /* Taille réduite pour les autres textes */
-    }
-
-    .date {
-      font-size: 14px !important; /* Taille réduite pour la date */
-      padding: 8px 12px !important; /* Ajuste le padding pour une meilleure lisibilité */
-      margin-top: 12px;
-     }
-  }
-
-  
-
-
-
-@media (max-width: 1290px) {
-  .filters {
-    background-color: transparent; /* Supprime le fond beige */
-    padding: 0; /* Supprime le padding */
-    margin-bottom: 0; /* Supprime la marge en bas */
-    display: none; /* Masque la div "Filtres" sur les petits écrans */
-  }
-
-  .filters-toggle {
-    display: block; /* Affiche le bouton */
-    margin-bottom: 0px; /* Ajoute un espacement de 20px au-dessus de .result-card */
-    margin-left: auto; /* Centre le bouton horizontalement */
-    margin-right: auto; /* Centre le bouton horizontalement */
-    background-color: $color-medium-green;
-    color: $color-light-beige;
-    border: none;
-    border-radius: 20px;
-    padding: 10px 20px;
-    cursor: pointer;
-    text-align: center;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: background-color 0.3s ease;
-    font-size: 20px;
-    
-    &:hover {
-      background-color: $color-dark-green;
-      color: $color-light-beige;
-    }
-
-    /* Positionnement à droite */
-    @media (max-width: 1290px) {
-    margin-left: auto; /* Pousse le bouton à la fin (droite) */
-    margin-right: 0; /* Supprime tout espacement à gauche */
-    }
-  }
-}
-
-
-
-
-/* Styles pour l'Offcanvas */
-/* Styles pour l'Offcanvas */
-/* Styles pour l'Offcanvas */
-/* Styles pour l'Offcanvas */
-
-
-
-.offcanvas {
-  background-color: $color-light-beige; /* Fond beige similaire à .filters */
-  border-radius: 20px; /* Coins arrondis */
-  padding: 20px; /* Espacement interne */
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
-  color: $color-dark-green; /* Couleur du texte */
-  max-width: 300px; /* Largeur similaire à .filters */
-  margin: 0 auto; /* Centre l'Offcanvas horizontalement */
-
-  .offcanvas-header {
-    border-bottom: 1px solid $color-medium-green; /* Ajoute une bordure en bas */
-    margin-bottom: 20px; /* Espacement sous le header */
-    h5 {
-      font-size: 1.5rem; /* Taille du titre */
-      font-weight: bold; /* Met en valeur le titre */
-      color: $color-dark-green; /* Couleur du titre */
-    }
-  }
-
-  .offcanvas-body {
-    .filter-group {
-      margin-bottom: 20px;
-
-      label {
-        display: flex; /* Aligne la case à cocher et le texte sur la même ligne */
-        align-items: center;
-        gap: 10px; /* Ajoute un espacement entre la case et le texte */
-        color: $color-dark-green; /* Couleur du texte */
-        margin-bottom: 10px; /* Ajoute une marge en bas */
-      }
-
-      input[type="checkbox"] {
-        width: 13px;
-        height: 13px;
-        appearance: none;
-        background-color: $color-very-light-beige;
-        border: 2px solid $color-medium-green;
-        border-radius: 4px;
-        cursor: pointer;
-        position: relative;
-
-        &:checked {
-          background-color: $color-medium-green;
-          border-color: $color-medium-green;
-
-          &::after {
-            content: '✔';
-            color: $color-light-beige;
-            font-size: 10px;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-          }
-        }
-      }
-
-      input[type="text"] {
-        background-color: $color-very-light-beige; /* Applique la couleur de fond */
-        border: 1px solid $color-medium-green; /* Bordure par défaut */
-        border-radius: 5px; /* Ajoute des coins arrondis */
-        padding: 10px; /* Ajoute un espace interne */
-        width: 100%; /* L'input occupe toute la largeur disponible */
-        color: $color-dark-green; /* Couleur du texte */
-        font-size: 1rem; /* Taille du texte */
-        transition: border-color 0.3s ease; /* Ajoute une transition pour un effet fluide */
-
-        &:focus {
-          outline: none; /* Supprime le contour par défaut */
-          border-color: $color-medium-green; /* Change la couleur de la bordure en vert */
-          box-shadow: 0 0 5px $color-medium-green; /* Ajoute un effet lumineux autour */
-        }
-      }
-
-      select#note-mini {
-        background-color: $color-very-light-beige; /* Applique la couleur de fond */
+        select#note-mini-offcanvas {
+          background-color: $color-very-light-beige; /* Applique la couleur de fond */
         border: 1px solid $color-dark-green; /* Bordure du select */
         border-radius: 5px; /* Ajoute des coins arrondis */
         padding: 10px; /* Ajoute un espace interne */
         width: 100%; /* Le select occupe toute la largeur disponible */
         color: $color-dark-green; /* Couleur du texte */
-        font-size: 1rem; /* Taille du texte */
+        font-size: 1.6rem; /* Taille du texte */
         transition: border-color 0.3s ease; /* Ajoute une transition fluide */
         border-color: $color-medium-green;
-
+  
         &:focus {
           outline: none; /* Supprime le contour par défaut */
           border-color: $color-medium-green; /* Change la couleur de la bordure en vert moyen */
           box-shadow: 0 0 5px $color-medium-green; /* Ajoute un effet lumineux autour */
         }
-
+  
         option {
           background-color: $color-medium-green; /* Fond des options */
           color: $color-light-beige; /* Couleur du texte des options */
@@ -807,47 +986,73 @@
           padding: 5px; /* Ajoute un espace interne */
         }
       }
-    }
-
-    .filter-buttons {
-      display: flex;
-      gap: 10px;
-
-      .apply-btn, .reset-btn {
-        flex: 1;
-        padding: 10px;
-        border: none;
-        border-radius: 20px;
-        cursor: pointer;
-      }
-
-      .apply-btn {
-        background-color: $color-medium-green;
-        color: $color-light-beige;
-        
-        &:hover {
-          background-color: $color-dark-green;
+  }
+  
+      .filter-buttons {
+        display: flex;
+        gap: 10px;
+  
+        .apply-btn, .reset-btn {
+          flex: 1;
+          padding: 10px;
+          border: none;
+          border-radius: 20px;
+          cursor: pointer;
+          font-size: 1.6rem;
         }
-      }
-
-      .reset-btn {
-        background-color: $color-light-beige;
-        color: $color-medium-green;
-        border: 1px solid $color-medium-green;
-
-        &:hover {
-          background-color: $color-dark-green;
+  
+        .apply-btn {
+          background-color: $color-medium-green;
           color: $color-light-beige;
+          
+          &:hover {
+            background-color: $color-dark-green;
+          }
+        }
+  
+        .reset-btn {
+          background-color: $color-light-beige;
+          color: $color-medium-green;
+          border: 1px solid $color-medium-green;
+  
+          &:hover {
+            background-color: $color-dark-green;
+            color: $color-light-beige;
+          }
         }
       }
     }
   }
-}
-
-.filters-title {
-  margin-bottom: 20px; /* Ajoute un espacement sous le titre */
-  text-align: center; /* Centre le texte horizontalement */
-}
-
-
-
+  
+  .filters-title {
+    margin-bottom: 20px; /* Ajoute un espacement sous le titre */
+    text-align: center; /* Centre le texte horizontalement */
+  }
+  
+  
+  @media (max-width: 576px) {
+    .input-group {
+      display: flex;
+      align-items: center; 
+      
+      label {
+        width: 100px !important;
+        font-size: 10px !important; /* Taille de police adaptée aux petits écrans */
+        padding: 8px 16px !important; /* Ajuste le padding pour un affichage compact */
+        text-align: left !important; /* Aligne le texte à gauche */
+        height: 34px !important;
+      }
+  
+      input[type="date"],
+      input[type="time"] {
+        font-size: 12px !important; /* Taille de police adaptée aux petits écrans */
+        padding: 8px 16px !important; /* Ajuste le padding pour un affichage compact */
+        height: 34px !important;
+        
+      }
+    }
+  }
+  
+  
+  
+  

@@ -1,11 +1,10 @@
 import Route from "./Route.js";
 
-//Définir ici vos routes
 export const allRoutes = [
-    new Route("/accueil", "Accueil", "/pages/home.html", "/Js/home.js"),
-    new Route("/covoiturage", "Covoiturage", "/pages/covoiturage.html", "/Js/covoiturage.js", "/scss/_covoiturage.css"),
 
+  new Route("/accueil", "Accueil", "/pages/home.html", "/Js/home.js"),
+  new Route("/covoiturage", "Covoiturage", "/pages/covoiturage.html", "/Js/covoiturage.js", "/scss/_covoiturage.css"),
+  new Route("/detail", "Détail trajet", "/pages/detail.html", "/Js/detail.js"),
 ];
 
-//Le titre s'affiche comme ceci : Route.titre - websitename
 export const websiteName = "EcoRide";

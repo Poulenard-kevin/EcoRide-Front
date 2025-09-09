@@ -230,7 +230,7 @@ $transition-default: color 0.3s ease, transform 0.3s ease;
 
 .navbar-brand:hover {
     color: $color-medium-green; /* Couleur au survol */
-    transform: scale(1.1); /* Zoom de 10% au survol */
+    transform: scale(1.03); /* Zoom de 10% au survol */
     transition: $transition-default;
 }
 

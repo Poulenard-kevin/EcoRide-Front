@@ -119,7 +119,7 @@
         filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
          /* filtre pour approx #7a8a6f, à ajuster si besoin */
         }
-        padding: 0.5rem 0.75rem;
+        padding: 12px 20px;
         border-left: none;          // pas de bordure à gauche pour fusionner avec label
         font-size: 16px;
         background-color: $color-very-light-beige;
@@ -137,69 +137,69 @@
           color: $color-dark-green;
         }
       }
-  
-          input[type="date"] {
-        &::placeholder {
-          color: #7a8a6f; // Couleur pour le placeholder
-          opacity: 1; // Assure que la couleur est bien visible
-        }
-      
-        &::-webkit-datetime-edit {
-          color: #7a8a6f; // Couleur pour le texte affiché dans le champ
-        }
-      
-        &::-webkit-datetime-edit-fields-wrapper {
-          color: #7a8a6f; // Couleur pour les champs internes
-        }
-      
-        &::-webkit-datetime-edit-text {
-          color: #7a8a6f; // Couleur pour les séparateurs (slash, tirets, etc.)
-        }
-      
-        &::-webkit-calendar-picker-indicator {
-          filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
-        }
+ 
+      /* Style de base (placeholder visuel gris) */
+      input[type="date"].empty::-webkit-datetime-edit,
+      input[type="time"].empty::-webkit-datetime-edit,
+      input[type="date"].empty::-webkit-datetime-edit-text,
+      input[type="time"].empty::-webkit-datetime-edit-text,
+      input[type="date"].empty::-webkit-datetime-edit-fields-wrapper,
+      input[type="time"].empty::-webkit-datetime-edit-fields-wrapper {
+        color: #7a8a6f;
       }
-  
-          input[type="time"] {
-        &::placeholder {
-          color: #7a8a6f; // Couleur pour le placeholder
-          opacity: 1; // Assure que la couleur est bien visible
-        }
-      
-        &::-webkit-datetime-edit {
-          color: #7a8a6f; // Couleur pour le texte affiché dans le champ
-        }
-      
-        &::-webkit-datetime-edit-fields-wrapper {
-          color: #7a8a6f; // Couleur pour les champs internes
-        }
-      
-        &::-webkit-datetime-edit-text {
-          color: #7a8a6f; // Couleur pour les séparateurs (deux-points, etc.)
-        }
-      
-        &::-webkit-calendar-picker-indicator {
-          filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
-        }
+
+      /* En vert quand rempli (pas empty) */
+      input[type="date"]:not(.empty)::-webkit-datetime-edit,
+      input[type="time"]:not(.empty)::-webkit-datetime-edit,
+      input[type="date"]:not(.empty)::-webkit-datetime-edit-text,
+      input[type="time"]:not(.empty)::-webkit-datetime-edit-text,
+      input[type="date"]:not(.empty)::-webkit-datetime-edit-fields-wrapper,
+      input[type="time"]:not(.empty)::-webkit-datetime-edit-fields-wrapper {
+        color: $color-dark-green;
+      }
+
+      /* Placeholder (gris) */
+      select.empty {
+        color: #7a8a6f;
+      }
+
+      /* Sélection valide (vert) */
+      select:not(.empty) {
+        color: $color-dark-green;
       }
     }
   
     #type-trajet-select {
-      appearance: none; /* Supprime la flèche native */
-      -webkit-appearance: none;
+      border-radius: 20px;
+      padding: 12px 20px;
+      font-weight: $weight-semibold;
+      font-size: $font-size-nav;
+      color: $color-dark-green;
+      background-color: $color-very-light-beige;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+      outline: none;
+      transition: box-shadow 0.3s ease;
+      
+      /* On supprime la flèche native */
+      appearance: none;
       -moz-appearance: none;
-      background-image: url('data:image/svg+xml;utf8,<svg fill="%237a8a6f" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+      -webkit-appearance: none;
+
+      /* 🔥 Flèche custom */
+      background-image: url("data:image/svg+xml;utf8,<svg fill='%237a8a6f' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
       background-repeat: no-repeat;
-      background-position: right 10px center; /* espace à droite */
-      background-size: 16px 16px; /* taille de la flèche */
-      padding-right: 30px; /* espace pour la flèche */
-      color: #7a8a6f !important;
-    }
-  
-      /* Applique une couleur différente lorsque l'utilisateur sélectionne une option valide */
-    #type-trajet-select:valid {
-      color: $color-dark-green; /* Couleur pour les options valides */
+      background-position: right 18px center; /* 👈 décale la flèche vers la gauche */
+      background-size: 25px;
+
+      &:focus {
+        background-color: $color-very-light-beige;
+        box-shadow: 0 0 5px 2px $color-dark-green;
+      }
+
+      /* Placeholder (option sélectionnée vide) */
+      &:has(option[value=""]:checked) {
+        color: #7a8a6f;
+      }
     }
   }
   

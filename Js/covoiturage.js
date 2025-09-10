@@ -4,6 +4,20 @@ document.addEventListener('pageContentLoaded', () => {
       console.error('Conteneur .results introuvable');
       return;
     }
+
+    // =================== ⚡ Gestion placeholders input date/heure ⚡ ===================
+    document.querySelectorAll('input[type="date"], input[type="time"]').forEach(input => {
+      const toggleClass = () => {
+        if (!input.value) {
+          input.classList.add('empty');
+        } else {
+          input.classList.remove('empty');
+        }
+      };
+      toggleClass(); // au chargement
+      input.addEventListener('input', toggleClass);
+      input.addEventListener('change', toggleClass);
+    });
   
     // Données des trajets
     const trajets = [

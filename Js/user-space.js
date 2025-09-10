@@ -1,3 +1,7 @@
+// user-space.js
+
+let editingVehicleIndex = null;
+
 // -------------------------------------------------
 // Fonction principale d'initialisation de l'espace utilisateur
 // -------------------------------------------------
@@ -207,10 +211,10 @@ function initVehicleManagement() {
     return;
   }
 
-  let editingVehicleIndex = null;
-
   profileForm.addEventListener('submit', (e) => {
     e.preventDefault();
+
+    console.log('editingVehicleIndex au submit:', editingVehicleIndex);
   
     // Récupération des valeurs comme avant
     const plate = profileForm.querySelector('#plate').value.trim();
@@ -325,10 +329,10 @@ document.body.addEventListener('click', function(event) {
 // --- Ajoute ici le gestionnaire pour le bouton "Ajouter un véhicule" ---
 document.body.addEventListener('click', function(event) {
   if (event.target.id === 'addVehicleBtn') {
-    editingVehicleIndex = null; // Réinitialise l'index pour un nouvel ajout
+    editingVehicleIndex = null; // Important : reset pour ajout
     const profileForm = document.querySelector('#user-profile-form form');
-    if (profileForm) profileForm.reset(); // Vide le formulaire
-    switchToTab('user-profile-form'); // Affiche l'onglet Profil / Rôle
+    if (profileForm) profileForm.reset();
+    switchToTab('user-profile-form');
   }
 });
 
@@ -378,7 +382,7 @@ document.body.addEventListener('click', function(event) {
           </div>
           <div id="vehicleList"></div>
           <div class="btn-add-vehicle">
-            <button type="submit" class="btn" id="addVehicleBtn">Ajouter un véhicule</button>
+            <button type="button" class="btn" id="addVehicleBtn">Ajouter un véhicule</button>
           </div>
         </div>
       </form>

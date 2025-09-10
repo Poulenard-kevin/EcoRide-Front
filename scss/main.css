@@ -13732,7 +13732,7 @@ button.nav-link.dropdown-toggle:hover:active {
 }
 
 .nav-link.active {
-  background-color: #007bff;
+  background-color: #4a90e2;
   color: #fff;
 }
 
@@ -14519,6 +14519,12 @@ button.nav-link.dropdown-toggle:hover:active {
   font-weight: 400;
   font-family: "Roboto", sans-serif;
   text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.3s ease;
+}
+#user-vehicles-form .form-field:hover {
+  color: #F1E7D1; /* Couleur bleue Bootstrap au survol */
 }
 #user-vehicles-form .vehicle-line > div.brand {
   text-align: left;

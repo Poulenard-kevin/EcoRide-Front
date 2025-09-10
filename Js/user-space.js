@@ -488,13 +488,35 @@ document.addEventListener('pageContentLoaded', () => {
   const pathname = window.location.pathname;
   const cleanPathname = pathname.replace(/\/$/, "");
 
-  console.log("🔍 pathname actuel:", pathname);
-  console.log("🔍 pathname nettoyé:", cleanPathname);
-
   if (cleanPathname === "/espace-utilisateur") {
-    console.log("✅ Condition OK, lancement initUserSpace");
     initUserSpace();
-  } else {
-    console.log("❌ Condition pas remplie");
+
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+
+    if (tab === "trajets") {
+      // On attend que le DOM soit prêt avec les onglets
+      setTimeout(() => {
+        // 👉 Clique sur l’onglet desktop
+        const desktopTab = document.querySelector('.user-tabs .nav-link[data-tab="trajets"]');
+        if (desktopTab) {
+          desktopTab.click();
+        }
+      
+        // 👉 Clique aussi sur l’onglet offcanvas (si jamais affiché)
+        const offcanvasTab = document.querySelector('.user-tabs-offcanvas .nav-link[data-tab="trajets"]');
+        if (offcanvasTab) {
+          offcanvasTab.click();
+        }
+      
+        // 👉 Ensuite scroll sur la section "Mes trajets en cours"
+        const target = document.getElementById("trajets-en-cours");
+        if (target) {
+          console.log("🟢 Scroll vers 'Mes trajets en cours'");
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 500); // mets 500ms si 300 était trop court
+    }
   }
 });
+

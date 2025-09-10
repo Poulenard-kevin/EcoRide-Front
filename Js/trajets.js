@@ -217,25 +217,23 @@ function handleTrajetActions(e) {
 function renderTrajetsInProgress() {
   console.log("🎨 Rendu dans 'Mes trajets en cours'");
 
-  const container = document.querySelector('.trajets-en-cours');
+  const container = document.querySelector('#trajets-en-cours .trajets-list');
   if (!container) return;
 
-  container.innerHTML = `<h2>Mes trajets en cours</h2>`;
+  container.innerHTML = ''; // On vide uniquement la liste, pas le titre 😉
 
-  // On ne prend QUE les trajets non validés (= encore en cours)
   const enCours = trajets.filter(t => t.status !== "valide");
 
   if (enCours.length === 0) {
-    container.innerHTML += `<p>Aucun trajet en cours</p>`;
+    container.innerHTML = `<p>Aucun trajet en cours</p>`;
     return;
   }
 
-  trajets.forEach((trajet, index) => {
-    if (trajet.status === "valide") return; // on ignore les trajets passés
-    
+  enCours.forEach((trajet, index) => {
+    // Détermination du style selon status
     let bgClass = "";
     let actionHtml = "";
-  
+
     if (trajet.status === "ajoute") {
       bgClass = "trajet-card actif";
       actionHtml = `
@@ -256,17 +254,23 @@ function renderTrajetsInProgress() {
         <span class="trajet-status">En attente de validation des passagers...</span>
         <button type="button" class="btn-trajet trajet-close-btn" data-index="${index}">Clôturer</button>
       `;
+    } 
+    else if (trajet.status === "reserve" && trajet.role === "passager") {
+      bgClass = "trajet-card attente";
+      actionHtml = `
+        <button type="button" class="btn-trajet trajet-detail-btn" data-id="${trajet.id}">Détail</button>
+        <button type="button" class="btn-trajet trajet-cancel-btn" data-index="${index}">Annuler</button>
+      `;
     }
-  
-    const placesReservees = trajet.placesReservees || 0;
-  
+
+    // Insertion de la carte
     container.innerHTML += `
       <div class="${bgClass}">
         <div class="trajet-body">
           <div class="trajet-info">
-            <strong>Covoiturage (${trajet.date || ""}) : <br>${trajet.depart} --&gt; ${trajet.arrivee}</strong>
+            <strong>Covoiturage (${trajet.date || ""}) : <br>${trajet.depart} → ${trajet.arrivee}</strong>
             <span class="details">
-              ${trajet.heureDepart || ""} -----&gt; ${trajet.heureArrivee || ""} • ${placesReservees} places réservées
+              ${trajet.heureDepart || ""} → ${trajet.heureArrivee || ""} • ${(trajet.placesReservees || 0)} places réservées
             </span>
           </div>
           <div class="trajet-price">${trajet.prix} crédits</div>
@@ -275,6 +279,27 @@ function renderTrajetsInProgress() {
       </div>
     `;
   });
+
+  // 🔥 Ajout bouton reset en DEV
+  if (window.location.hostname === "localhost") {
+    container.innerHTML += `
+      <button class="btn-dev-reset" id="reset-trajets-en-cours">
+        🗑 Supprimer tous les trajets en cours (DEV)
+      </button>
+    `;
+
+    const resetBtn = document.getElementById("reset-trajets-en-cours");
+    if (resetBtn) {
+      resetBtn.addEventListener("click", () => {
+        if (confirm("Supprimer tous les trajets en cours ? (DEV)")) {
+          trajets = trajets.filter(t => t.status === "valide");
+          saveTrajets();
+          renderTrajetsInProgress();
+          renderHistorique();
+        }
+      });
+    }
+  }
 }
 
 function renderHistorique() {

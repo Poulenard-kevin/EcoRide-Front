@@ -136,207 +136,6 @@
     }
   }
 
-
-  // Trajets en cours
-  // Trajets en cours
-  // Trajets en cours
-
-  .trajets-en-cours {
-    gap:10px; 
-    
-    label {
-      margin-bottom: 0px;
-    }
-    .trajet-card {
-      background: $color-light-beige;
-      border-radius: 20px;
-      padding: 15px 20px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  
-      .trajet-header {
-        margin-bottom: 8px;
-      }
-  
-      .trajet-body {
-        display: flex;
-        align-items: center;
-        justify-content: flex-start; // Aligne les éléments au début
-        flex-wrap: wrap;
-        gap: 20px; // Ajoute un espace fixe entre les éléments
-
-        @media (max-width: 1415px) {
-          flex-direction: column; // Passe en disposition verticale
-          align-items: center; // Centre les éléments horizontalement
-          gap: 15px; // Ajuste l'espace entre les éléments
-
-          .btn-trajet,
-          .trajet-status {
-            margin: 0 auto; // Centre les éléments dans le conteneur
-            text-align: center; // Centre le texte pour trajet-status
-          }
-
-          .trajet-status {
-            padding-top: 13px; // Ajoute un espace au-dessus pour séparer du reste
-            padding-bottom: 13px;
-          }
-
-          .trajet-price {
-            margin-left: 0 !important; // Supprime la marge gauche avec priorité
-            text-align: center; // Centre le texte
-            display: block; // Assure que l'élément est en bloc pour un centrage correct
-          }
-
-          .details {
-            margin: 0 auto; // Centre les détails horizontalement
-            text-align: center; // Centre le texte des détails
-            display: block; // Assure que l'élément est en bloc pour un centrage correct
-          }
-        }
-
-        .trajet-info {
-          text-align: left; // Alignement à gauche
-          display: inline-block; // Ajuste la largeur à celle du contenu
-          line-height: 1.5; // Définit une interligne fixe
-          strong {
-            display: block;
-            font-family: $font-body;
-            font-size: $font-size-body;
-            font-weight: $weight-regular;
-            color: $color-dark-green;
-            margin-bottom: 4px;
-          }
-          .details {
-            font-family: $font-body;
-            font-size: $font-size-nav;
-            font-weight: $weight-regular;
-            opacity: 0.8;
-          }
-        }
-
-        .trajet-price {
-          font-family: $font-body;
-          font-size: $font-size-nav;
-          font-weight: $weight-regular;
-          margin-left: 20px; // Ajoute un espace fixe entre trajet-info et trajet-price
-        }
-
-        .btn-trajet {
-          margin-left: auto; // Force le bouton à rester aligné à droite
-          background-color: $color-medium-green;
-          color: $color-light-beige;
-          border: none;
-          border-radius: 30px;
-          padding: 10px 20px;
-          font-family: $font-title;
-          font-size: $font-size-body;
-          font-weight: $weight-medium;
-          transition: background .3s ease, transform .3s ease;
-          box-shadow: 0 6px 8px rgba(74,122,63,.5);
-
-          &:hover {
-            background-color: $color-dark-green;
-            transform: scale(1.05);
-            box-shadow: 0 6px 8px rgba(74,122,63,.5);
-          }
-        }
-
-        .btn-trajet {
-          font-size: $font-size-nav !important; /* Force l'application de la règle */
-          padding: 8px 16px !important; /* Force l'application de la règle */
-        }
-
-        .trajet-status {
-          margin-left: auto;
-          font-family: $font-body;
-          font-size: $font-size-nav;
-          font-weight: $weight-regular;
-          font-style: italic;
-        }
-      }
-  
-      &.actif {
-        background: $color-medium-green;
-        color: $color-light-beige;
-  
-        .trajet-info strong,
-        .trajet-price {
-          color: $color-light-beige;
-        }
-
-        .details {
-          color: $color-light-beige;
-        }
-  
-        .btn-trajet {
-          background: $color-light-beige;
-          color: $color-dark-green;
-
-          &:hover {
-            background-color: $color-dark-green;
-            color: $color-light-beige;
-            transform: scale(1.05);
-            box-shadow: 0 6px 8px rgba(74,122,63,.5);
-          }
-        }
-      }
-  
-      &.termine {
-        background:$color-background;
-      }
-  
-      &.attente {
-        background: $color-very-light-beige;
-      }
-    }
-  }
-
-  @media (max-width: 576px) {
-    .btn {
-      font-size: $font-size-nav; /* Réduit la taille des boutons */
-      padding: 8px 16px; /* Ajuste le padding des boutons */
-    }
-
-    .trajet-card .btn-trajet {
-      font-size: $font-size-nav; /* Réduit la taille des boutons */
-      padding: 8px 16px; /* Ajuste le padding des boutons */
-    }
-
-    .form-control {
-      padding: 8px 15px;
-      font-size: 12px;
-    }
-    
-    label {
-      font-size: $font-size-nav;
-    }
-
-    .input-with-unit {
-      .unit {
-        padding: 8px 15px;
-        font-size: 12px;
-      }
-    }
-
-    .trajet-info {
-      strong {
-        font-size: $font-size-nav !important; /* Force l'application de la règle */
-      }
-      .details {
-      font-size: $font-size-small !important; /* Force l'application de la règle */
-      text-align: left !important; /* Aligne le texte à gauche */
-      margin: 0 !important; /* Supprime tout centrage horizontal */
-    }
-    }
-
-    .trajet-price {
-      font-size: $font-size-small !important; /* Force l'application de la règle */
-    }
-
-    form {
-      padding: 10px 20px 35px;
-    }
-  }
-
   input[type="date"],
   input[type="time"] {
     flex: 1;
@@ -377,5 +176,163 @@
   input[type="date"]:not(.empty)::-webkit-datetime-edit-fields-wrapper,
   input[type="time"]:not(.empty)::-webkit-datetime-edit-fields-wrapper {
     color: $color-dark-green;
+  }
+
+
+  // Trajets en cours
+  // Trajets en cours
+  // Trajets en cours
+
+  // ---- Bloc Trajets en cours ----
+  #trajets-en-cours {
+    .trajets-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px; // Espacement entre les trajets
+    }
+
+    .trajet-card {
+      background: $color-light-beige;
+      border-radius: 20px;
+      padding: 15px 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+
+      .trajet-body {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: 20px;
+
+        .trajet-info {
+          text-align: left;
+          display: inline-block;
+          line-height: 1.5;
+
+          strong {
+            display: block;
+            font-family: $font-body;
+            font-size: $font-size-body;
+            font-weight: $weight-regular;
+            color: $color-dark-green;
+            margin-bottom: 4px;
+          }
+
+          .details {
+            font-family: $font-body;
+            font-size: $font-size-nav;
+            font-weight: $weight-regular;
+            opacity: 0.8;
+          }
+        }
+
+        .trajet-price {
+          font-family: $font-body;
+          font-size: $font-size-nav;
+          font-weight: $weight-regular;
+          margin-left: 20px;
+        }
+
+        .btn-trajet {
+          margin-left: auto;
+          background-color: $color-medium-green;
+          color: $color-light-beige;
+          border: none;
+          border-radius: 30px;
+          padding: 8px 16px;
+          font-family: $font-title;
+          font-size: $font-size-nav;
+          font-weight: $weight-medium;
+          transition: background .3s ease, transform .3s ease;
+          box-shadow: 0 6px 8px rgba(74,122,63,.5);
+
+          &:hover {
+            background-color: $color-dark-green;
+            transform: scale(1.05);
+            box-shadow: 0 6px 8px rgba(74,122,63,.5);
+          }
+        }
+
+        .trajet-status {
+          margin-left: auto;
+          font-style: italic;
+          font-size: $font-size-nav;
+        }
+      }
+
+      // ---- Variantes ----
+      &.actif {
+        background: $color-medium-green;   // toute la carte en vert
+        color: $color-light-beige;         // texte par défaut en beige
+  
+        .trajet-info strong,
+        .trajet-price,
+        .details,
+        .trajet-status {
+          color: $color-light-beige; // force les textes en beige
+        }
+  
+        .btn-trajet {
+          background: $color-light-beige;   // bouton beige
+          color: $color-dark-green;         // texte vert
+          transition: background .3s ease, transform .3s ease;
+          box-shadow: 0 6px 8px rgba(74,122,63,.5);
+  
+          &:hover {
+            background-color: $color-dark-green; // vert foncé au hover
+            color: $color-light-beige;           // texte beige
+            transform: scale(1.05);
+            box-shadow: 0 6px 8px rgba(74,122,63,.5);
+          }
+        }
+      }
+
+      &.termine {
+        background: $color-background;
+      }
+
+      &.attente {
+        border: 1px solid $color-medium-green;
+        background: $color-very-light-beige;
+      }
+    }
+
+    // ---- Responsive ----
+    @media (max-width: 1415px) {
+      .trajet-card .trajet-body {
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        
+        .btn-trajet,
+        .trajet-status,
+        .trajet-price,
+        .details {
+          text-align: center;
+          margin: 0 auto;
+        }
+      }
+    }
+
+    @media (max-width: 576px) {
+      form { padding: 10px 20px 35px; }
+
+      .trajet-card .trajet-body {
+        .btn-trajet { font-size: $font-size-nav; padding: 8px 16px; }
+      }
+
+      .form-control { padding: 8px 15px; font-size: 12px; }
+
+      label { font-size: $font-size-nav; }
+
+      .input-with-unit .unit { padding: 8px 15px; font-size: 12px; }
+
+      .trajet-info {
+        strong { font-size: $font-size-nav !important; }
+        .details { font-size: $font-size-small !important; }
+      }
+
+      .trajet-price { font-size: $font-size-small !important; }
+    }
   }
 }

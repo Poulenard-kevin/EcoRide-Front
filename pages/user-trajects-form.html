@@ -68,49 +68,8 @@
   <!-- Trajets en cours --> 
 
   <form>
-    <div class="form-fields trajets-en-cours">
-  
+    <div class="form-fields trajets-en-cours" id="trajets-en-cours">
       <h2>Mes trajets en cours</h2>
-
-      <label for="price">Vendredi 16 septembre</label>
-  
-      <!-- Première carte trajet -->
-      <div class="trajet-card actif">
-        
-        <div class="trajet-body">
-          <div class="trajet-info">
-            <strong>Covoiturage : <br> Lyon --&gt; Grenoble</strong>
-            <span class="details">8h30 -----&gt 10h00 • 3 places réservées</span>
-          </div>
-          <div class="trajet-price">12 crédits</div>
-          <button type="button" class="btn-trajet">Démarrer</button>
-        </div>
-      </div>
-  
-      <!-- Deuxième carte trajet -->
-      <div class="trajet-card termine">
-       
-        <div class="trajet-body">
-          <div class="trajet-info">
-            <strong>Covoiturage : <br> Lyon --&gt; Grenoble</strong>
-            <span class="details">8h30 -----&gt 10h00 • 3 places réservées</span>
-          </div>
-          <div class="trajet-price">12 crédits</div>
-          <button type="button" class="btn-trajet">Arrivée à destination</button>
-        </div>
-      </div>
-  
-      <!-- Troisième trajet -->
-      <div class="trajet-card attente">
-        
-        <div class="trajet-body">
-          <div class="trajet-info">
-            <strong>Covoiturage : <br> Lyon --&gt; Grenoble</strong>
-            <span class="details">8h30 -----&gt 10h00 • 3 places réservées</span>
-          </div>
-          <div class="trajet-price">12 crédits</div>
-          <span class="trajet-status">En attente de validation des passagers…</span>
-        </div>
-      </div>
+      <div class="trajets-list"></div> <!-- 🔥 le JS injectera ici les cartes -->
     </div>
   </form>

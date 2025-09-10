@@ -12359,7 +12359,6 @@ button.nav-link.dropdown-toggle:hover:active {
   display: flex;
   justify-content: center;
   margin-bottom: 20px;
-  /* Applique une couleur différente lorsque l'utilisateur sélectionne une option valide */
 }
 .covoiturage-search-bar .search-container {
   display: grid;
@@ -12443,6 +12442,10 @@ button.nav-link.dropdown-toggle:hover:active {
 .covoiturage-search-bar .input-group {
   display: flex;
   align-items: center;
+  /* Style de base (placeholder visuel gris) */
+  /* En vert quand rempli (pas empty) */
+  /* Placeholder (gris) */
+  /* Sélection valide (vert) */
 }
 .covoiturage-search-bar .input-group label {
   width: 140px;
@@ -12463,7 +12466,7 @@ button.nav-link.dropdown-toggle:hover:active {
   -webkit-appearance: none;
      -moz-appearance: none;
           appearance: none;
-  padding: 0.5rem 0.75rem;
+  padding: 12px 20px;
   border-left: none;
   font-size: 16px;
   background-color: #F8F0E5;
@@ -12487,59 +12490,55 @@ button.nav-link.dropdown-toggle:hover:active {
 .covoiturage-search-bar .input-group input[type=time]:valid {
   color: #1F4924;
 }
-.covoiturage-search-bar .input-group input[type=date]::-moz-placeholder {
-  color: #7a8a6f;
-  opacity: 1;
-}
-.covoiturage-search-bar .input-group input[type=date]::placeholder {
-  color: #7a8a6f;
-  opacity: 1;
-}
-.covoiturage-search-bar .input-group input[type=date]::-webkit-datetime-edit {
+.covoiturage-search-bar .input-group input[type=date].empty::-webkit-datetime-edit,
+.covoiturage-search-bar .input-group input[type=time].empty::-webkit-datetime-edit,
+.covoiturage-search-bar .input-group input[type=date].empty::-webkit-datetime-edit-text,
+.covoiturage-search-bar .input-group input[type=time].empty::-webkit-datetime-edit-text,
+.covoiturage-search-bar .input-group input[type=date].empty::-webkit-datetime-edit-fields-wrapper,
+.covoiturage-search-bar .input-group input[type=time].empty::-webkit-datetime-edit-fields-wrapper {
   color: #7a8a6f;
 }
-.covoiturage-search-bar .input-group input[type=date]::-webkit-datetime-edit-fields-wrapper {
+.covoiturage-search-bar .input-group input[type=date]:not(.empty)::-webkit-datetime-edit,
+.covoiturage-search-bar .input-group input[type=time]:not(.empty)::-webkit-datetime-edit,
+.covoiturage-search-bar .input-group input[type=date]:not(.empty)::-webkit-datetime-edit-text,
+.covoiturage-search-bar .input-group input[type=time]:not(.empty)::-webkit-datetime-edit-text,
+.covoiturage-search-bar .input-group input[type=date]:not(.empty)::-webkit-datetime-edit-fields-wrapper,
+.covoiturage-search-bar .input-group input[type=time]:not(.empty)::-webkit-datetime-edit-fields-wrapper {
+  color: #1F4924;
+}
+.covoiturage-search-bar .input-group select.empty {
   color: #7a8a6f;
 }
-.covoiturage-search-bar .input-group input[type=date]::-webkit-datetime-edit-text {
-  color: #7a8a6f;
-}
-.covoiturage-search-bar .input-group input[type=date]::-webkit-calendar-picker-indicator {
-  filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
-}
-.covoiturage-search-bar .input-group input[type=time]::-moz-placeholder {
-  color: #7a8a6f;
-  opacity: 1;
-}
-.covoiturage-search-bar .input-group input[type=time]::placeholder {
-  color: #7a8a6f;
-  opacity: 1;
-}
-.covoiturage-search-bar .input-group input[type=time]::-webkit-datetime-edit {
-  color: #7a8a6f;
-}
-.covoiturage-search-bar .input-group input[type=time]::-webkit-datetime-edit-fields-wrapper {
-  color: #7a8a6f;
-}
-.covoiturage-search-bar .input-group input[type=time]::-webkit-datetime-edit-text {
-  color: #7a8a6f;
-}
-.covoiturage-search-bar .input-group input[type=time]::-webkit-calendar-picker-indicator {
-  filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
+.covoiturage-search-bar .input-group select:not(.empty) {
+  color: #1F4924;
 }
 .covoiturage-search-bar #type-trajet-select {
-  appearance: none; /* Supprime la flèche native */
-  -webkit-appearance: none;
+  border-radius: 20px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 16px;
+  color: #1F4924;
+  background-color: #F8F0E5;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  outline: none;
+  transition: box-shadow 0.3s ease;
+  /* On supprime la flèche native */
+  appearance: none;
   -moz-appearance: none;
-  background-image: url('data:image/svg+xml;utf8,<svg fill="%237a8a6f" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+  -webkit-appearance: none;
+  /* 🔥 Flèche custom */
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%237a8a6f' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
   background-repeat: no-repeat;
-  background-position: right 10px center; /* espace à droite */
-  background-size: 16px 16px; /* taille de la flèche */
-  padding-right: 30px; /* espace pour la flèche */
-  color: #7a8a6f !important;
+  background-position: right 18px center; /* 👈 décale la flèche vers la gauche */
+  background-size: 25px;
+  /* Placeholder (option sélectionnée vide) */
 }
-.covoiturage-search-bar #type-trajet-select:valid {
-  color: #1F4924; /* Couleur pour les options valides */
+.covoiturage-search-bar #type-trajet-select:focus {
+  background-color: #F8F0E5;
+  box-shadow: 0 0 5px 2px #1F4924;
+}
+.covoiturage-search-bar #type-trajet-select:has(option[value=""]:checked) {
+  color: #7a8a6f;
 }
 
 /* === SECTION LISTE DE COVOITURAGE === */

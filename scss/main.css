@@ -14601,28 +14601,34 @@ button.nav-link.dropdown-toggle:hover:active {
   align-items: center;
   margin-bottom: 10px;
 }
-#user-history-form .form-fields {
+#user-history-form .form-fields,
+#user-history-form .trajets-historique {
   display: flex;
   flex-direction: column;
   gap: 30px;
   margin-top: 20px;
+  color: #F1E7D1;
 }
-#user-history-form .form-fields .form-field {
+#user-history-form .form-fields .form-field,
+#user-history-form .trajets-historique .form-field {
   display: flex;
   flex-direction: column;
   text-align: left;
 }
-#user-history-form .form-fields .role-group {
+#user-history-form .form-fields .role-group,
+#user-history-form .trajets-historique .role-group {
   display: flex;
   gap: 15px;
   flex-wrap: wrap;
 }
-#user-history-form .form-fields .checkbox-group {
+#user-history-form .form-fields .checkbox-group,
+#user-history-form .trajets-historique .checkbox-group {
   display: flex;
   flex-wrap: wrap;
   gap: 15px;
 }
-#user-history-form .form-fields .btn {
+#user-history-form .form-fields .btn,
+#user-history-form .trajets-historique .btn {
   align-self: center;
   margin-top: 20px;
   min-width: 200px;
@@ -14646,80 +14652,96 @@ button.nav-link.dropdown-toggle:hover:active {
   font-size: 20px;
   font-weight: 500;
 }
-#user-history-form .trajets-en-cours {
+#user-history-form .trajets-en-cours,
+#user-history-form .trajets-historique {
   gap: 10px;
 }
-#user-history-form .trajets-en-cours label {
+#user-history-form .trajets-en-cours label,
+#user-history-form .trajets-historique label {
   margin-bottom: 0px;
 }
-#user-history-form .trajets-en-cours .trajet-card {
-  background: #F1E7D1;
+#user-history-form .trajets-en-cours .trajet-card,
+#user-history-form .trajets-historique .trajet-card {
+  background: #4B8A47;
   border-radius: 20px;
   padding: 15px 20px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-#user-history-form .trajets-en-cours .trajet-card .trajet-header {
+#user-history-form .trajets-en-cours .trajet-card .trajet-header,
+#user-history-form .trajets-historique .trajet-card .trajet-header {
   margin-bottom: 8px;
 }
-#user-history-form .trajets-en-cours .trajet-card .trajet-body {
+#user-history-form .trajets-en-cours .trajet-card .trajet-body,
+#user-history-form .trajets-historique .trajet-card .trajet-body {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   flex-wrap: wrap;
   gap: 120px;
+  color: #F1E7D1;
 }
 @media (max-width: 1215px) {
-  #user-history-form .trajets-en-cours .trajet-card .trajet-body {
+  #user-history-form .trajets-en-cours .trajet-card .trajet-body,
+  #user-history-form .trajets-historique .trajet-card .trajet-body {
     flex-direction: column;
     align-items: center;
     gap: 15px;
   }
   #user-history-form .trajets-en-cours .trajet-card .trajet-body .btn-trajet,
-  #user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-status {
+  #user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-status,
+  #user-history-form .trajets-historique .trajet-card .trajet-body .btn-trajet,
+  #user-history-form .trajets-historique .trajet-card .trajet-body .trajet-status {
     margin: 0 auto;
     text-align: center;
   }
-  #user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-status {
+  #user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-status,
+  #user-history-form .trajets-historique .trajet-card .trajet-body .trajet-status {
     padding-top: 13px;
     padding-bottom: 13px;
   }
-  #user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-price {
+  #user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-price,
+  #user-history-form .trajets-historique .trajet-card .trajet-body .trajet-price {
     margin-left: 0 !important;
     text-align: center;
     display: block;
   }
-  #user-history-form .trajets-en-cours .trajet-card .trajet-body .details {
+  #user-history-form .trajets-en-cours .trajet-card .trajet-body .details,
+  #user-history-form .trajets-historique .trajet-card .trajet-body .details {
     margin: 0 auto;
     text-align: center;
     display: block;
   }
 }
-#user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-info {
+#user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-info,
+#user-history-form .trajets-historique .trajet-card .trajet-body .trajet-info {
   text-align: left;
   display: inline-block;
   line-height: 1.5;
 }
-#user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-info strong {
+#user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-info strong,
+#user-history-form .trajets-historique .trajet-card .trajet-body .trajet-info strong {
   display: block;
   font-family: "Roboto", sans-serif;
   font-size: 20px;
   font-weight: 400;
-  color: #1F4924;
   margin-bottom: 4px;
 }
-#user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-info .details {
+#user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-info .details,
+#user-history-form .trajets-historique .trajet-card .trajet-body .trajet-info .details {
   font-family: "Roboto", sans-serif;
   font-size: 16px;
   font-weight: 400;
   opacity: 0.8;
 }
-#user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-price {
+#user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-price,
+#user-history-form .trajets-historique .trajet-card .trajet-body .trajet-price {
   font-family: "Roboto", sans-serif;
   font-size: 16px;
   font-weight: 400;
   margin-left: 20px;
 }
-#user-history-form .trajets-en-cours .trajet-card .trajet-body .btn-trajet {
+#user-history-form .trajets-en-cours .trajet-card .trajet-body .btn-trajet,
+#user-history-form .trajets-historique .trajet-card .trajet-body .btn-trajet {
   margin-left: auto;
   background-color: #4B8A47;
   color: #F1E7D1;
@@ -14732,44 +14754,54 @@ button.nav-link.dropdown-toggle:hover:active {
   transition: background 0.3s ease, transform 0.3s ease;
   box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
 }
-#user-history-form .trajets-en-cours .trajet-card .trajet-body .btn-trajet:hover {
+#user-history-form .trajets-en-cours .trajet-card .trajet-body .btn-trajet:hover,
+#user-history-form .trajets-historique .trajet-card .trajet-body .btn-trajet:hover {
   background-color: #1F4924;
   transform: scale(1.05);
   box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
 }
-#user-history-form .trajets-en-cours .trajet-card .trajet-body .btn-trajet {
+#user-history-form .trajets-en-cours .trajet-card .trajet-body .btn-trajet,
+#user-history-form .trajets-historique .trajet-card .trajet-body .btn-trajet {
   font-size: 16px !important; /* Force l'application de la règle */
   padding: 8px 16px !important; /* Force l'application de la règle */
 }
-#user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-status {
+#user-history-form .trajets-en-cours .trajet-card .trajet-body .trajet-status,
+#user-history-form .trajets-historique .trajet-card .trajet-body .trajet-status {
   margin-left: auto;
   font-family: "Roboto", sans-serif;
   font-size: 16px;
   font-weight: 400;
   font-style: italic;
 }
-#user-history-form .trajets-en-cours .trajet-card.actif {
+#user-history-form .trajets-en-cours .trajet-card.actif,
+#user-history-form .trajets-historique .trajet-card.actif {
   background: #4B8A47;
   color: #F1E7D1;
 }
 #user-history-form .trajets-en-cours .trajet-card.actif .trajet-info strong,
-#user-history-form .trajets-en-cours .trajet-card.actif .trajet-price {
+#user-history-form .trajets-en-cours .trajet-card.actif .trajet-price,
+#user-history-form .trajets-historique .trajet-card.actif .trajet-info strong,
+#user-history-form .trajets-historique .trajet-card.actif .trajet-price {
   color: #F1E7D1;
 }
-#user-history-form .trajets-en-cours .trajet-card.actif .details {
+#user-history-form .trajets-en-cours .trajet-card.actif .details,
+#user-history-form .trajets-historique .trajet-card.actif .details {
   color: #F1E7D1;
 }
-#user-history-form .trajets-en-cours .trajet-card.actif .btn-trajet {
+#user-history-form .trajets-en-cours .trajet-card.actif .btn-trajet,
+#user-history-form .trajets-historique .trajet-card.actif .btn-trajet {
   background: #F1E7D1;
   color: #1F4924;
 }
-#user-history-form .trajets-en-cours .trajet-card.actif .btn-trajet:hover {
+#user-history-form .trajets-en-cours .trajet-card.actif .btn-trajet:hover,
+#user-history-form .trajets-historique .trajet-card.actif .btn-trajet:hover {
   background-color: #1F4924;
   color: #F1E7D1;
   transform: scale(1.05);
   box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
 }
-#user-history-form .trajets-en-cours .trajet-card.validé {
+#user-history-form .trajets-en-cours .trajet-card.validé,
+#user-history-form .trajets-historique .trajet-card.validé {
   background: #CACFAA;
 }
 @media (max-width: 576px) {

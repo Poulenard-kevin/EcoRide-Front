@@ -1,52 +1,45 @@
 <!-- Onglet Mes trajects -->
   <h1>Mes trajects</h1>
-  <form>
+  <form id="trajet-form">
     <div class="form-fields">
       <!-- 1 -->
       <div class="titre-publier-traject">
         <h2>Publier un trajet</h2>
       </div>
-
       <!-- 2 -->
       <div class="form-field">
-        <label for="departure-location">Date de départ</label>
-        <input type="date" class="search-input" id="date-depart-input" />
+        <label for="date-depart">Date de départ</label>
+        <input type="date" name="date" class="search-input" id="date-depart" />
       </div>
-    
+
       <!-- 3 -->
       <div class="form-field">
-        <label for="departure-location">Lieu de départ</label>
-        <input type="text" id="departure-location" class="form-control" placeholder="Lyon">
+        <label for="lieu-depart">Lieu de départ</label>
+        <input type="text" name="depart" id="lieu-depart" class="form-control" placeholder="Lyon">
       </div>
-    
+
       <!-- 4 -->
       <div class="form-field">
-        <label for="departure-datetime">Heure de départ</label>
-        <input type="time" class="search-input" id="heure-depart-input" />
+        <label for="heure-depart">Heure de départ</label>
+        <input type="time" name="heure-depart" class="search-input" id="heure-depart">
       </div>
-    
+
       <!-- 5 -->
       <div class="form-field">
-        <label for="arrival-location">Lieu d'arrivée</label>
-        <input type="text" id="arrival-location" class="form-control" placeholder="Grenoble">
+        <label for="lieu-arrivee">Lieu d'arrivée</label>
+        <input type="text" name="arrivee" id="lieu-arrivee" class="form-control" placeholder="Grenoble">
       </div>
-    
+
       <!-- 6 -->
       <div class="form-field">
-        <label for="arrival-datetime">Heure d'arrivée</label>
-        <input type="number" id="arrival-datetime" class="form-control" placeholder="10h00 , Vendredi 16 septembre">
+        <label for="heure-arrivee">Heure d'arrivée</label>
+        <input type="time" name="heure-arrivee" class="search-input" id="heure-arrivee">
       </div>
     
       <!-- 7 -->
       <div class="form-field">
         <label for="vehicle">Véhicule</label>
-        <input list="vehicles" id="vehicle" class="form-control" placeholder="--Sélectionne un véhicule--">
-        <datalist id="vehicles">
-          <option value="Tesla Model 3 Noir">
-          <option value="Renault Clio Rouge">
-          <option value="Peugeot 208 Bleu">
-          <option value="Volkswagen Golf Blanc">
-        </datalist>
+        <input list="vehicles" name="vehicule" id="vehicule" class="form-control" placeholder="--Sélectionne un véhicule--">
       </div>
     
       <!-- 8 -->
@@ -56,6 +49,7 @@
           <input 
             type="number" 
             id="price" 
+            name="prix"
             class="form-control" 
             min="5" max="100" step="5" 
             placeholder="5 crédits">
@@ -67,6 +61,7 @@
       <button type="submit" class="btn">Publier</button>
     </div>
   </form>
+
 
   <!-- Trajets en cours --> 
 

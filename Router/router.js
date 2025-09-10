@@ -67,6 +67,33 @@ const attachDetailBtnListeners = () => {
   });
 };
 
+const loadScripts = async (scripts) => {
+  if (!scripts) return;
+
+  const loadOne = (src) => {
+    return new Promise((resolve) => {
+      const scriptTag = document.createElement("script");
+      scriptTag.type = "module"; // ✅ très important
+      scriptTag.src = src;
+      scriptTag.setAttribute("data-route-script", src);
+      scriptTag.onload = resolve;
+      scriptTag.onerror = () => {
+        console.warn("Impossible de charger le script:", src);
+        resolve();
+      };
+      document.body.appendChild(scriptTag);
+    });
+  };
+
+  if (Array.isArray(scripts)) {
+    for (const src of scripts) {
+      await loadOne(src);
+    }
+  } else {
+    await loadOne(scripts);
+  }
+};
+
 const LoadContentPage = async () => {
   const pathname = window.location.pathname;
   const route = getRouteByPathname(pathname);
@@ -83,25 +110,18 @@ const LoadContentPage = async () => {
     // Supprime les anciens scripts dynamiques et styles
     removePreviousAssets();
 
-    if (route.pathJS && route.pathJS.trim() !== "") {
-      const scriptTag = document.createElement("script");
-      scriptTag.type = "text/javascript";
-      scriptTag.src = route.pathJS;
-      scriptTag.setAttribute("data-route-script", route.pathJS);
-      scriptTag.onload = () => {
-        attachDetailBtnListeners();
-        document.dispatchEvent(new Event('pageContentLoaded'));
-      };
-      scriptTag.onerror = () => {
-        console.warn("Impossible de charger le script:", route.pathJS);
-        attachDetailBtnListeners();
-        document.dispatchEvent(new Event('pageContentLoaded'));
-      };
-      document.body.appendChild(scriptTag);
-    } else {
+    if (route.pathJS && (
+      typeof route.pathJS === 'string' ? route.pathJS.trim() !== "" 
+      : Array.isArray(route.pathJS) && route.pathJS.length > 0
+    )) {
+    await loadScripts(route.pathJS);
+  }
+  
+    // 🔥 Très important : on décale pour que les modules aient le temps de s’exécuter
+    setTimeout(() => {
       attachDetailBtnListeners();
       document.dispatchEvent(new Event('pageContentLoaded'));
-    }
+    }, 0);
 
     document.title = `${route.title} - ${websiteName}`;
   } catch (err) {

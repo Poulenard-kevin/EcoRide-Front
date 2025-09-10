@@ -68,11 +68,13 @@
       }
     
       // layout champs
-      .form-fields {
+      .form-fields,
+      .trajets-historique{
         display: flex; 
         flex-direction: column; 
         gap: 30px; 
         margin-top: 20px;
+        color: $color-light-beige;
       
         .form-field { display: flex; flex-direction: column; text-align: left; }
         .role-group { display: flex; gap: 15px; flex-wrap: wrap; }
@@ -108,14 +110,15 @@
       // Trajets en cours
       // Trajets en cours
     
-      .trajets-en-cours {
+      .trajets-en-cours,
+      .trajets-historique {
         gap:10px; 
         
         label {
           margin-bottom: 0px;
         }
         .trajet-card {
-          background: $color-light-beige;
+          background: $color-medium-green;
           border-radius: 20px;
           padding: 15px 20px;
           box-shadow: 0 4px 6px rgba(0,0,0,0.1);
@@ -130,6 +133,7 @@
             justify-content: flex-start; // Aligne les éléments au début
             flex-wrap: wrap;
             gap: 120px; // Ajoute un espace fixe entre les éléments
+            color: $color-light-beige;
     
             @media (max-width: 1215px) {
               flex-direction: column; // Passe en disposition verticale
@@ -169,7 +173,6 @@
                 font-family: $font-body;
                 font-size: $font-size-body;
                 font-weight: $weight-regular;
-                color: $color-dark-green;
                 margin-bottom: 4px;
               }
               .details {

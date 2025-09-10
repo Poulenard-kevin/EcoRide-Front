@@ -57,6 +57,39 @@
       box-shadow: 0 0 5px 2px $color-dark-green;   /* halo lumineux vert */
     }
   }
+
+  select.form-select {
+    border-radius: 20px;
+    padding: 12px 20px;
+    font-weight: $weight-semibold;
+    font-size: $font-size-nav;
+    color: $color-dark-green;
+    background-color: $color-very-light-beige;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    outline: none;
+    transition: box-shadow 0.3s ease;
+    
+    /* On supprime la flèche native */
+    appearance: none;
+    -moz-appearance: none;
+    -webkit-appearance: none;
+  
+    /* 🔥 Flèche custom */
+    background-image: url("data:image/svg+xml;utf8,<svg fill='%237a8a6f' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 20px center; /* 👈 décale la flèche vers la gauche */
+    background-size: 25px;
+  
+    &:focus {
+      background-color: $color-very-light-beige;
+      box-shadow: 0 0 5px 2px $color-dark-green;
+    }
+  
+    /* Placeholder (option sélectionnée vide) */
+    &:has(option[value=""]:checked) {
+      color: #7a8a6f;
+    }
+  }
   
   label {
     font-family: $font-body;
@@ -308,75 +341,41 @@
   input[type="time"] {
     flex: 1;
     appearance: none;
-    &::-webkit-calendar-picker-indicator,
-    &::-webkit-clear-button {
-    filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
-      /* filtre pour approx #7a8a6f, à ajuster si besoin */
-    }
-    border-left: none;          // pas de bordure à gauche pour fusionner avec label
+    border-left: none;
     font-size: 16px;
     background-color: $color-very-light-beige;
     transition: border-color 0.3s ease;
     height: 48px;  
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-    color: #7a8a6f;
 
     &:focus {
-      background-color: $color-very-light-beige;    /* ne change pas le fond */
-      box-shadow: 0 0 5px 2px $color-dark-green;   /* halo lumineux vert */
-    }
-
-    &:valid {
-      color: $color-dark-green ;
+      background-color: $color-very-light-beige;
+      box-shadow: 0 0 5px 2px $color-dark-green;
     }
   }
 
-      input[type="date"] {
-    &::placeholder {
-      color: #7a8a6f; // Couleur pour le placeholder
-      opacity: 1; // Assure que la couleur est bien visible
-    }
-  
-    &::-webkit-datetime-edit {
-      color: #7a8a6f; // Couleur pour le texte affiché dans le champ
-    }
-  
-    &::-webkit-datetime-edit-fields-wrapper {
-      color: #7a8a6f; // Couleur pour les champs internes
-    }
-  
-    &::-webkit-datetime-edit-text {
-      color: #7a8a6f; // Couleur pour les séparateurs (slash, tirets, etc.)
-    }
-  
-    &::-webkit-calendar-picker-indicator {
-      filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
-    }
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
   }
 
-      input[type="time"] {
-    &::placeholder {
-      color: #7a8a6f; // Couleur pour le placeholder
-      opacity: 1; // Assure que la couleur est bien visible
-    }
-  
-    &::-webkit-datetime-edit {
-      color: #7a8a6f; // Couleur pour le texte affiché dans le champ
-    }
-  
-    &::-webkit-datetime-edit-fields-wrapper {
-      color: #7a8a6f; // Couleur pour les champs internes
-    }
-  
-    &::-webkit-datetime-edit-text {
-      color: #7a8a6f; // Couleur pour les séparateurs (deux-points, etc.)
-    }
-  
-    &::-webkit-calendar-picker-indicator {
-      filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
-    }
+  /* Style de base (placeholder visuel gris) */
+  input[type="date"].empty::-webkit-datetime-edit,
+  input[type="time"].empty::-webkit-datetime-edit,
+  input[type="date"].empty::-webkit-datetime-edit-text,
+  input[type="time"].empty::-webkit-datetime-edit-text,
+  input[type="date"].empty::-webkit-datetime-edit-fields-wrapper,
+  input[type="time"].empty::-webkit-datetime-edit-fields-wrapper {
+    color: #7a8a6f;
   }
-    
 
-
+  /* En vert quand rempli (pas empty) */
+  input[type="date"]:not(.empty)::-webkit-datetime-edit,
+  input[type="time"]:not(.empty)::-webkit-datetime-edit,
+  input[type="date"]:not(.empty)::-webkit-datetime-edit-text,
+  input[type="time"]:not(.empty)::-webkit-datetime-edit-text,
+  input[type="date"]:not(.empty)::-webkit-datetime-edit-fields-wrapper,
+  input[type="time"]:not(.empty)::-webkit-datetime-edit-fields-wrapper {
+    color: $color-dark-green;
+  }
 }

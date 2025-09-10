@@ -9,7 +9,7 @@
       <!-- 2 -->
       <div class="form-field">
         <label for="date-depart">Date de départ</label>
-        <input type="date" name="date" class="search-input" id="date-depart" />
+        <input type="date" name="date" class="search-input" id="date-depart">
       </div>
 
       <!-- 3 -->
@@ -39,7 +39,9 @@
       <!-- 7 -->
       <div class="form-field">
         <label for="vehicle">Véhicule</label>
-        <input list="vehicles" name="vehicule" id="vehicule" class="form-control" placeholder="--Sélectionne un véhicule--">
+        <select name="vehicule" id="vehicule" class="form-select">
+          <option value="" selected hidden>-- Sélectionner un véhicule --</option>
+        </select>
       </div>
     
       <!-- 8 -->

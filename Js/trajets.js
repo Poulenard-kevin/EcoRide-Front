@@ -25,6 +25,21 @@ export function initTrajets() {
 
   renderTrajetsInProgress();
   renderHistorique();
+  populateVehicles();
+
+  // =================== ⚡ Gestion placeholder Date / Time ===================
+  document.querySelectorAll('input[type="date"], input[type="time"]').forEach(input => {
+    const toggleClass = () => {
+      if (!input.value) {
+        input.classList.add('empty');
+      } else {
+        input.classList.remove('empty');
+      }
+    };
+    toggleClass(); // au chargement
+    input.addEventListener('input', toggleClass);
+    input.addEventListener('change', toggleClass);
+  });
 
   // ================== DEV ONLY: Bouton pour vider l'historique ==================
   // Affiché uniquement en local (localhost ou 127.0.0.1)
@@ -303,26 +318,31 @@ function resetForm(form) {
 // -------------------- Injection dynamique véhicules --------------------
 
 function populateVehicles() {
-    try {
-      const stored = localStorage.getItem('ecoride_vehicules');
-      const vehicles = stored ? JSON.parse(stored) : [];
-  
-      const datalist = document.querySelector('#vehicles');
-      if (!datalist) return;
-  
-      datalist.innerHTML = ''; // reset
-  
-      vehicles.forEach(v => {
-        const option = document.createElement('option');
-        option.value = `${v.marque} ${v.modele} ${v.couleur || ''}`.trim();
-        datalist.appendChild(option);
-      });
-  
-      console.log("🚗 Véhicules injectés:", vehicles.length);
-    } catch (err) {
-      console.error("❌ Erreur chargement véhicules:", err);
-    }
+  try {
+    const stored = localStorage.getItem('ecoride_vehicules');
+    const vehicles = stored ? JSON.parse(stored) : [];
+
+    const select = document.querySelector('#vehicule');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">-- Sélectionner un véhicule --</option>';
+
+    vehicles.forEach(v => {
+      const marque = v.brand || v.marque || '';
+      const modele = v.vehicleModel || v.modele || '';
+      const couleur = v.color || v.couleur || '';
+
+      const option = document.createElement('option');
+      option.value = `${marque} ${modele} ${couleur}`.trim();
+      option.textContent = option.value;
+      select.appendChild(option);
+    });
+
+    console.log("🚗 Véhicules injectés:", vehicles.length);
+  } catch (err) {
+    console.error("❌ Erreur chargement véhicules:", err);
   }
+}
 
 // -------------------- Exports debug --------------------
 export function debugTrajets() {

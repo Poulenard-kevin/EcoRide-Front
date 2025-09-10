@@ -448,6 +448,12 @@ function saveVehicles() {
   try {
     localStorage.setItem('ecoride_vehicules', JSON.stringify(vehicles));
     console.log("💾 Véhicules sauvegardés:", vehicles.length);
+
+    // ⚡ Mise à jour immédiate du datalist côté trajets
+    if (typeof populateVehicles === 'function') {
+      populateVehicles();
+    }
+    
   } catch (err) {
     console.error("❌ Erreur sauvegarde véhicules:", err);
   }

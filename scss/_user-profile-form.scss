@@ -153,4 +153,29 @@
       padding: 10px 20px 35px;
     }
   }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
+  }
+
+  /* Style de base (placeholder visuel gris) */
+  input[type="date"].empty::-webkit-datetime-edit,
+  input[type="time"].empty::-webkit-datetime-edit,
+  input[type="date"].empty::-webkit-datetime-edit-text,
+  input[type="time"].empty::-webkit-datetime-edit-text,
+  input[type="date"].empty::-webkit-datetime-edit-fields-wrapper,
+  input[type="time"].empty::-webkit-datetime-edit-fields-wrapper {
+    color: #7a8a6f;
+  }
+
+  /* En vert quand rempli (pas empty) */
+  input[type="date"]:not(.empty)::-webkit-datetime-edit,
+  input[type="time"]:not(.empty)::-webkit-datetime-edit,
+  input[type="date"]:not(.empty)::-webkit-datetime-edit-text,
+  input[type="time"]:not(.empty)::-webkit-datetime-edit-text,
+  input[type="date"]:not(.empty)::-webkit-datetime-edit-fields-wrapper,
+  input[type="time"]:not(.empty)::-webkit-datetime-edit-fields-wrapper {
+    color: $color-dark-green;
+  }
 }

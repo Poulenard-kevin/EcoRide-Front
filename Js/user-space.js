@@ -59,6 +59,20 @@ export async function initUserSpace() {
 
   injectDeleteModal();
 
+  // =================== ⚡ Gestion placeholder Date / Time ===================
+  document.querySelectorAll('input[type="date"], input[type="time"]').forEach(input => {
+    const toggleClass = () => {
+      if (!input.value) {
+        input.classList.add('empty');
+      } else {
+        input.classList.remove('empty');
+      }
+    };
+    toggleClass(); // au chargement
+    input.addEventListener('input', toggleClass);
+    input.addEventListener('change', toggleClass);
+  });
+
   // Initialiser les trajets
   console.log("initUserSpace start");
   setTimeout(() => {
@@ -453,7 +467,7 @@ function saveVehicles() {
     if (typeof populateVehicles === 'function') {
       populateVehicles();
     }
-    
+
   } catch (err) {
     console.error("❌ Erreur sauvegarde véhicules:", err);
   }

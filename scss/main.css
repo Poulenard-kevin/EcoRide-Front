@@ -13865,6 +13865,10 @@ button.nav-link.dropdown-toggle:hover:active {
     font-size: 20px; /* Réduit la taille des titres h1 */
   }
 }
+#user-profile-form {
+  /* Style de base (placeholder visuel gris) */
+  /* En vert quand rempli (pas empty) */
+}
 #user-profile-form h1, #user-profile-form .h1 {
   text-align: center;
   margin: 35px;
@@ -14029,6 +14033,26 @@ button.nav-link.dropdown-toggle:hover:active {
     padding: 10px 20px 35px;
   }
 }
+#user-profile-form input[type=date]::-webkit-calendar-picker-indicator,
+#user-profile-form input[type=time]::-webkit-calendar-picker-indicator {
+  filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
+}
+#user-profile-form input[type=date].empty::-webkit-datetime-edit,
+#user-profile-form input[type=time].empty::-webkit-datetime-edit,
+#user-profile-form input[type=date].empty::-webkit-datetime-edit-text,
+#user-profile-form input[type=time].empty::-webkit-datetime-edit-text,
+#user-profile-form input[type=date].empty::-webkit-datetime-edit-fields-wrapper,
+#user-profile-form input[type=time].empty::-webkit-datetime-edit-fields-wrapper {
+  color: #7a8a6f;
+}
+#user-profile-form input[type=date]:not(.empty)::-webkit-datetime-edit,
+#user-profile-form input[type=time]:not(.empty)::-webkit-datetime-edit,
+#user-profile-form input[type=date]:not(.empty)::-webkit-datetime-edit-text,
+#user-profile-form input[type=time]:not(.empty)::-webkit-datetime-edit-text,
+#user-profile-form input[type=date]:not(.empty)::-webkit-datetime-edit-fields-wrapper,
+#user-profile-form input[type=time]:not(.empty)::-webkit-datetime-edit-fields-wrapper {
+  color: #1F4924;
+}
 
 #user-trajects-form {
   /* Style de base (placeholder visuel gris) */
@@ -14189,7 +14213,7 @@ button.nav-link.dropdown-toggle:hover:active {
   align-items: center;
   justify-content: flex-start;
   flex-wrap: wrap;
-  gap: 120px;
+  gap: 20px;
 }
 @media (max-width: 1415px) {
   #user-trajects-form .trajets-en-cours .trajet-card .trajet-body {
@@ -14677,7 +14701,7 @@ button.nav-link.dropdown-toggle:hover:active {
   align-items: center;
   justify-content: flex-start;
   flex-wrap: wrap;
-  gap: 120px;
+  gap: 20px;
   color: #F1E7D1;
 }
 @media (max-width: 1215px) {

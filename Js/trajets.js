@@ -125,6 +125,16 @@ function handleTrajetSubmit(e) {
     renderTrajetsInProgress();
     renderHistorique();
     e.target.reset();
+
+    // Réapplique les classes .empty après reset
+    document.querySelectorAll('input[type="date"], input[type="time"], input[type="text"], input[type="number"], select')
+    .forEach(input => {
+      if (!input.value) {
+        input.classList.add('empty');
+      } else {
+        input.classList.remove('empty');
+      }
+    });
   }
 
 // -------------------- Gestion des actions --------------------
@@ -205,57 +215,66 @@ function handleTrajetActions(e) {
 // -------------------- Rendu dynamique --------------------
 
 function renderTrajetsInProgress() {
-    console.log("🎨 Rendu dans 'Mes trajets en cours'");
+  console.log("🎨 Rendu dans 'Mes trajets en cours'");
+
+  const container = document.querySelector('.trajets-en-cours');
+  if (!container) return;
+
+  container.innerHTML = `<h2>Mes trajets en cours</h2>`;
+
+  // On ne prend QUE les trajets non validés (= encore en cours)
+  const enCours = trajets.filter(t => t.status !== "valide");
+
+  if (enCours.length === 0) {
+    container.innerHTML += `<p>Aucun trajet en cours</p>`;
+    return;
+  }
+
+  trajets.forEach((trajet, index) => {
+    if (trajet.status === "valide") return; // on ignore les trajets passés
+    
+    let bgClass = "";
+    let actionHtml = "";
   
-    const container = document.querySelector('.trajets-en-cours');
-    if (!container) return;
-  
-    container.innerHTML = `<h2>Mes trajets en cours</h2>`;
-  
-    if (trajets.length === 0) {
-      container.innerHTML += `<p>Aucun trajet en cours</p>`;
-      return;
+    if (trajet.status === "ajoute") {
+      bgClass = "trajet-card actif";
+      actionHtml = `
+        <button type="button" class="btn-trajet trajet-edit-btn" data-index="${index}">Modifier</button>
+        <button type="button" class="btn-trajet trajet-delete-btn" data-index="${index}">Supprimer</button>
+        <button type="button" class="btn-trajet trajet-start-btn" data-index="${index}">Démarrer</button>
+      `;
+    } 
+    else if (trajet.status === "demarre") {
+      bgClass = "trajet-card termine";
+      actionHtml = `
+        <button type="button" class="btn-trajet trajet-arrive-btn" data-index="${index}">Arrivée à destination</button>
+      `;
+    } 
+    else if (trajet.status === "termine") {
+      bgClass = "trajet-card attente";
+      actionHtml = `
+        <span class="trajet-status">En attente de validation des passagers...</span>
+        <button type="button" class="btn-trajet trajet-close-btn" data-index="${index}">Clôturer</button>
+      `;
     }
   
-    trajets.forEach((trajet, index) => {
-      let bgClass = "";
-      let actionHtml = "";
+    const placesReservees = trajet.placesReservees || 0;
   
-      if (trajet.status === "ajoute") {
-        bgClass = "trajet-card actif";
-        actionHtml = `
-          <button type="button" class="btn-trajet trajet-edit-btn" data-index="${index}">Modifier</button>
-          <button type="button" class="btn-trajet trajet-delete-btn" data-index="${index}">Supprimer</button>
-          <button type="button" class="btn-trajet trajet-start-btn" data-index="${index}">Démarrer</button>
-        `;
-      } 
-      else if (trajet.status === "demarre") {
-        bgClass = "trajet-card termine";
-        actionHtml = `
-          <button type="button" class="btn-trajet trajet-arrive-btn" data-index="${index}">Arrivée à destination</button>
-        `;
-      } 
-      else if (trajet.status === "termine") {
-        bgClass = "trajet-card attente";
-        actionHtml = `
-          <span class="trajet-status">En attente de validation des passagers...</span>
-          <button type="button" class="btn-trajet trajet-close-btn" data-index="${index}">Clôturer</button>
-        `;
-      }
-  
-      container.innerHTML += `
-        <div class="${bgClass}">
-          <div class="trajet-body">
-            <div class="trajet-info">
-              <strong>Covoiturage : <br>${trajet.depart} → ${trajet.arrivee}</strong>
-              <span class="details">${trajet.date} ${trajet.heureDepart ? "• " + trajet.heureDepart : ""}</span>
-            </div>
-            <div class="trajet-price">${trajet.prix} crédits</div>
-            ${actionHtml}
+    container.innerHTML += `
+      <div class="${bgClass}">
+        <div class="trajet-body">
+          <div class="trajet-info">
+            <strong>Covoiturage (${trajet.date || ""}) : <br>${trajet.depart} --&gt; ${trajet.arrivee}</strong>
+            <span class="details">
+              ${trajet.heureDepart || ""} -----&gt; ${trajet.heureArrivee || ""} • ${placesReservees} places réservées
+            </span>
           </div>
+          <div class="trajet-price">${trajet.prix} crédits</div>
+          ${actionHtml}
         </div>
-      `;
-    });
+      </div>
+    `;
+  });
 }
 
 function renderHistorique() {
@@ -272,12 +291,16 @@ function renderHistorique() {
     }
   
     passe.forEach(trajet => {
+      const placesReservees = trajet.placesReservees || 0;
+    
       container.innerHTML += `
         <div class="trajet-card valide">
           <div class="trajet-body">
             <div class="trajet-info">
-              <strong>Covoiturage : <br>${trajet.depart} → ${trajet.arrivee}</strong>
-              <span class="details">${trajet.date} ${trajet.heureDepart || ""} → ${trajet.heureArrivee || ""}</span>
+              <strong>Covoiturage (${trajet.date || ""}) : <br>${trajet.depart} --&gt; ${trajet.arrivee}</strong>
+              <span class="details">
+                ${trajet.heureDepart || ""} -----&gt; ${trajet.heureArrivee || ""} • ${placesReservees} places réservées
+              </span>
             </div>
             <div class="trajet-price">${trajet.prix} crédits</div>
           </div>

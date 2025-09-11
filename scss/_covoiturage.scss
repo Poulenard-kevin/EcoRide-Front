@@ -200,6 +200,14 @@
       &:has(option[value=""]:checked) {
         color: #7a8a6f;
       }
+
+      @media (max-width: 576px) {
+        font-size: 12px !important; /* Taille de police adaptée aux petits écrans */
+        padding: 8px 16px !important; /* Ajuste le padding pour un affichage compact */
+        height: 34px !important;
+        background-position: right 15px center; /* 👈 décale la flèche vers la gauche */
+        background-size: 20px;
+      }
     }
   }
   
@@ -1041,7 +1049,6 @@
         font-size: 12px !important; /* Taille de police adaptée aux petits écrans */
         padding: 8px 16px !important; /* Ajuste le padding pour un affichage compact */
         height: 34px !important;
-        
       }
     }
   }

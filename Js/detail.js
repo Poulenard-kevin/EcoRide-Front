@@ -27,7 +27,7 @@ function reserverTrajet(trajet) {
     date: trajet.date,
     heureDepart: trajet.timeStart,
     heureArrivee: trajet.timeEnd,
-    prix: parseInt(trajet.price.replace("€", ""), 10),
+    prix: parseInt(trajet.price.match(/\d+/)[0], 10),
     placesReservees,
     role: "passager",
     status: "reserve",
@@ -80,7 +80,7 @@ document.addEventListener('pageContentLoaded', () => {
 
     const infoContainer = document.querySelector(".info");
     infoContainer.innerHTML = `
-      <h3 class="info-item">Prix : ${trajetReserve.prix} €</h3>
+      <h3 class="info-item">Prix : ${trajetReserve.prix} crédits </h3>
       <h3 class="info-item">Durée : ${trajetReserve.duration || "?"}</h3>
       <h3 class="info-item">Places réservées : ${trajetReserve.placesReservees}</h3>
     `;
@@ -169,7 +169,7 @@ document.addEventListener('pageContentLoaded', () => {
       date: 'Vendredi 16 septembre',
       timeStart: '16h00',
       timeEnd: '20h30',
-      price: '30€',
+      price: '30 crédits',
       type: 'Economique',
       driver: { name: 'Jean', rating: '★★★★☆', photo: 'images/profil4m.png' },
       duration: '4h30',
@@ -189,7 +189,7 @@ document.addEventListener('pageContentLoaded', () => {
       date: 'Samedi 17 septembre',
       timeStart: '10h00',
       timeEnd: '13h00',
-      price: '25€',
+      price: '25 crédits',
       type: 'Hybride',
       driver: { name: 'Marie', rating: '★★★★★', photo: 'images/profil1.png' },
       duration: '3h00',
@@ -208,7 +208,7 @@ document.addEventListener('pageContentLoaded', () => {
       date: 'Dimanche 18 septembre',
       timeStart: '09h30',
       timeEnd: '12h00',
-      price: '20€',
+      price: '20 crédits',
       type: 'Thermique',
       driver: { name: 'Luc', rating: '★★★☆☆', photo: 'images/profil3m.png' },
       duration: '2h30',
@@ -227,7 +227,7 @@ document.addEventListener('pageContentLoaded', () => {
       date: 'Lundi 19 septembre',
       timeStart: '14h00',
       timeEnd: '17h00',
-      price: '35€',
+      price: '35 crédits',
       type: 'Electrique',
       driver: { name: 'Sophie', rating: '★★★★☆', photo: 'images/profil2w.png' },
       duration: '3h00',

@@ -299,8 +299,10 @@
       &.reserve {
         background: $color-very-light-beige;
         border: 1px solid $color-medium-green;
-      }
+      } 
     }
+
+    
 
     // ---- Responsive ----
     @media (max-width: 1415px) {
@@ -318,6 +320,7 @@
         }
       }
     }
+
 
     @media (max-width: 576px) {
       form { padding: 10px 20px 35px; }
@@ -338,6 +341,13 @@
       }
 
       .trajet-price { font-size: $font-size-small !important; }
+
     }
+  }
+}
+
+@media (max-width: 1240px) {
+  #user-trajects-form .search-input {
+   width: 100% !important;
   }
 }

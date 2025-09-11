@@ -79,7 +79,6 @@ export function initTrajets() {
       }
     }
   }
-
 }
 
 // -------------------- Gestion soumission formulaire --------------------
@@ -89,9 +88,6 @@ function handleTrajetSubmit(e) {
   console.log("📝 Soumission du formulaire trajet");
 
   const formData = new FormData(e.target);
-
-  // 👉 on génère un id si on est en ajout
-  const newId = crypto.randomUUID();
 
   const trajetData = {
     id: (editingIndex !== null && trajets[editingIndex]) 
@@ -208,9 +204,9 @@ function handleTrajetActions(e) {
       if (vehiculeInput) vehiculeInput.value = trajet.vehicule || '';
     }
 
-    // On stocke l'ID du trajet en cours d'édition (plus l'index)
-    editingTrajetId = id;
-    console.log("✏️ Trajet prêt pour modification (ID:", id, "):", trajet);
+    // ✅ Correction : on utilise editingIndex au lieu de editingTrajetId
+    editingIndex = trajets.findIndex(t => t.id === id);
+    console.log("✏️ Trajet prêt pour modification (index:", editingIndex, "):", trajet);
 
     // Bonus UX → scroll vers le formulaire
     form.scrollIntoView({ behavior: "smooth" });
@@ -303,8 +299,9 @@ function renderTrajetsInProgress() {
     else if (trajet.role === "passager") {
       if (trajet.status === "reserve") {
         bgClass = "trajet-card reserve";
+        const detailUrl = `/detail?id=${trajet.detailId}`;  // id du mock → retrouvé par detail.js
         actionHtml = `
-          <button class="btn-trajet trajet-detail-btn" data-id="${trajet.id}">Détail</button>
+          <a href="${detailUrl}" data-link class="btn-trajet trajet-detail-btn">Détail</a>
           <button class="btn-trajet trajet-cancel-btn" data-id="${trajet.id}">Annuler</button>
         `;
       }
@@ -352,37 +349,36 @@ function renderTrajetsInProgress() {
 // -------------------- Historique --------------------
 
 function renderHistorique() {
-    const container = document.querySelector('.trajets-historique');
-    if (!container) return;
-  
-    container.innerHTML = `<h2>Mes trajets passés</h2>`;
-  
-    const passe = trajets.filter(t => t.status === "valide");
-  
-    if (passe.length === 0) {
-      container.innerHTML += `<p>Aucun trajet terminé</p>`;
-      return;
-    }
-  
-    passe.forEach(trajet => {
-      const placesReservees = trajet.placesReservees || 0;
-    
-      container.innerHTML += `
-        <div class="trajet-card valide">
-          <div class="trajet-body">
-            <div class="trajet-info">
-              <strong>Covoiturage (${trajet.date || ""}) : <br>${trajet.depart} --&gt; ${trajet.arrivee}</strong>
-              <span class="details">
-                ${trajet.heureDepart || ""} -----&gt; ${trajet.heureArrivee || ""} • ${placesReservees} places réservées
-              </span>
-            </div>
-            <div class="trajet-price">${trajet.prix} crédits</div>
-          </div>
-        </div>
-      `;
-    });
+  const container = document.querySelector('.trajets-historique');
+  if (!container) return;
+
+  container.innerHTML = `<h2>Mes trajets passés</h2>`;
+
+  const passe = trajets.filter(t => t.status === "valide");
+
+  if (passe.length === 0) {
+    container.innerHTML += `<p>Aucun trajet terminé</p>`;
+    return;
   }
 
+  passe.forEach(trajet => {
+    const placesReservees = trajet.placesReservees || 0;
+  
+    container.innerHTML += `
+      <div class="trajet-card valide">
+        <div class="trajet-body">
+          <div class="trajet-info">
+            <strong>Covoiturage (${trajet.date || ""}) : <br>${trajet.depart} --&gt; ${trajet.arrivee}</strong>
+            <span class="details">
+              ${trajet.heureDepart || ""} -----&gt; ${trajet.heureArrivee || ""} • ${placesReservees} places réservées
+            </span>
+          </div>
+          <div class="trajet-price">${trajet.prix} crédits</div>
+        </div>
+      </div>
+    `;
+  });
+}
 
 // -------------------- Persistance --------------------
 function getTrajets() {
@@ -406,11 +402,11 @@ function saveTrajets() {
 
 // -------------------- Reset formulaire --------------------
 function resetForm(form) {
-    if (form) {
-      form.reset();
-    }
-    editingIndex = null; // on sort du mode édition
+  if (form) {
+    form.reset();
   }
+  editingIndex = null; // on sort du mode édition
+}
 
 // -------------------- Injection dynamique véhicules --------------------
 

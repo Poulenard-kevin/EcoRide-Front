@@ -41,21 +41,6 @@ const removePreviousAssets = () => {
 };
 
 const attachDetailBtnListeners = () => {
-  document.querySelectorAll('.detail-btn').forEach(original => {
-    if (!original) return;
-    const newNode = original.cloneNode(true);
-    original.replaceWith(newNode);
-  });
-
-  document.querySelectorAll('.detail-btn').forEach(button => {
-    button.addEventListener('click', () => {
-      const id = button.dataset.id || "";
-      const newPath = `/detail/${encodeURIComponent(id)}`;
-      window.history.pushState({}, "", newPath);
-      LoadContentPage();
-    });
-  });
-
   document.querySelectorAll('a[data-link]').forEach(a => {
     a.addEventListener('click', (e) => {
       e.preventDefault();

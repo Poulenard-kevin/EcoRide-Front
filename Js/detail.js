@@ -3,42 +3,161 @@ console.log("detail.js chargé");
 function reserverTrajet(trajet) {
   let trajets = JSON.parse(localStorage.getItem('ecoride_trajets')) || [];
 
-  // Éviter les doublons
-  const existingIndex = trajets.findIndex(t => t.id === trajet.id);
-  
-  if (existingIndex === -1) {
-    // Nouveau trajet passager
-    const trajetReserve = {
-      id: trajet.id,
-      depart: trajet.from,
-      arrivee: trajet.to,
-      date: trajet.date,
-      heureDepart: trajet.timeStart,
-      heureArrivee: trajet.timeEnd,
-      prix: parseInt(trajet.price.replace("€", ""), 10),
-      placesReservees: 1,
-      role: "passager", // 👈 IMPORTANT
-      status: "reserve",
-      avis: null,
-      note: null
-    };
-    trajets.push(trajetReserve);
-    localStorage.setItem("ecoride_trajets", JSON.stringify(trajets));
+  // Vérifier si déjà réservé
+  const existingIndex = trajets.findIndex(t => t.detailId === trajet.id && t.role === "passager");
+  if (existingIndex !== -1) {
+    alert("Vous avez déjà réservé ce trajet !");
+    return;
   }
+
+  // Demander combien de places
+  const maxPlaces = trajet.seats || 1;
+  let placesReservees = parseInt(prompt(`Combien de places voulez-vous réserver ? (max ${maxPlaces})`), 10);
+  if (isNaN(placesReservees) || placesReservees < 1 || placesReservees > maxPlaces) {
+    alert("Nombre de places invalide !");
+    return;
+  }
+
+  // 💾 Sauver toutes les infos (mock complet)
+  const trajetReserve = {
+    id: crypto.randomUUID(),
+    detailId: trajet.detailId || trajet.id,
+    depart: trajet.from,
+    arrivee: trajet.to,
+    date: trajet.date,
+    heureDepart: trajet.timeStart,
+    heureArrivee: trajet.timeEnd,
+    prix: parseInt(trajet.price.replace("€", ""), 10),
+    placesReservees,
+    role: "passager",
+    status: "reserve",
   
+    // 👇 infos supplémentaires
+    type: trajet.type || "Economique",
+    driver: trajet.driver || {},
+    duration: trajet.duration || "",
+    prefs: trajet.prefs || [],
+    vehicle: trajet.vehicle || {},
+    reviews: trajet.reviews || []
+  };
+
+  trajets.push(trajetReserve);
+  localStorage.setItem("ecoride_trajets", JSON.stringify(trajets));
+
   alert("Réservation effectuée !");
   window.location.href = "/espace-utilisateur?tab=trajets";
 }
 
 document.addEventListener('pageContentLoaded', () => {
-  console.log("detail.js exécuté après chargement contenu");
-
   const params = new URLSearchParams(window.location.search);
-  const id = params.get('id');
+  const id = params.get("id");
 
   if (!id) {
-    console.warn("Aucun ID trouvé dans l'URL");
+    document.getElementById('main-page').innerHTML = "<p>Trajet introuvable.</p>";
     return;
+  }
+
+  // ① Vérifier dans localStorage
+  const trajets = JSON.parse(localStorage.getItem("ecoride_trajets")) || [];
+  const trajetReserve = trajets.find(t => t.detailId === id);
+
+  if (trajetReserve) {
+    console.log("✅ Trajet réservé trouvé :", trajetReserve);
+
+    // Injection villes
+    const fromEl = document.querySelector('.location-time:first-child .location');
+    const toEl = document.querySelector('.location-time:last-child .location');
+    if (fromEl) fromEl.textContent = trajetReserve.depart;
+    if (toEl) toEl.textContent = trajetReserve.arrivee;
+
+    // injection complète (driver, prefs, véhicule, etc.)
+    document.querySelector(".pseudo").textContent = trajetReserve.driver?.name || "Conducteur";
+    document.querySelector(".profile-photo img").src = trajetReserve.driver?.photo || "/images/default.png";
+    document.querySelector(".rating").textContent = trajetReserve.driver?.rating || "★★★★☆";
+    document.querySelector(".badge-date").textContent = trajetReserve.date;
+    document.querySelector(".time-depart").textContent = trajetReserve.heureDepart;
+    document.querySelector(".time-arrivee").textContent = trajetReserve.heureArrivee;
+
+    const infoContainer = document.querySelector(".info");
+    infoContainer.innerHTML = `
+      <h3 class="info-item">Prix : ${trajetReserve.prix} €</h3>
+      <h3 class="info-item">Durée : ${trajetReserve.duration || "?"}</h3>
+      <h3 class="info-item">Places réservées : ${trajetReserve.placesReservees}</h3>
+    `;
+
+    // Injection préférences
+    const prefContainer = document.querySelector(".preferences");
+    if (prefContainer) {
+      prefContainer.innerHTML = "";
+      trajetReserve.prefs.forEach(pref => {
+        const prefEl = document.createElement("h3");
+        prefEl.className = "pref-item";
+        prefEl.textContent = pref;
+        prefContainer.appendChild(prefEl);
+      });
+    }
+
+    // Injection véhicule
+    const vehicleInfo = document.querySelector(".vehicle-info");
+    if (vehicleInfo && trajetReserve.vehicle) {
+      vehicleInfo.innerHTML = "";
+      if (trajetReserve.vehicle.model) {
+        const modelEl = document.createElement("h3");
+        modelEl.className = "vehicle-item";
+        modelEl.textContent = trajetReserve.vehicle.model;
+        vehicleInfo.appendChild(modelEl);
+      }
+      if (trajetReserve.vehicle.color) {
+        const colorEl = document.createElement("h3");
+        colorEl.className = "vehicle-item";
+        colorEl.textContent = trajetReserve.vehicle.color;
+        vehicleInfo.appendChild(colorEl);
+      }
+      if (trajetReserve.vehicle.type) {
+        const typeEl = document.createElement("h3");
+        typeEl.className = "vehicle-item";
+        typeEl.textContent = trajetReserve.vehicle.type;
+        vehicleInfo.appendChild(typeEl);
+      }
+    }
+
+    // Injection avis
+    const reviewContainer = document.querySelector(".driver-reviews");
+    if (reviewContainer) {
+      reviewContainer.innerHTML = "";
+      trajetReserve.reviews.forEach(review => {
+        const blockquote = document.createElement("blockquote");
+        blockquote.className = "review";
+        blockquote.textContent = `"${review}"`;
+        reviewContainer.appendChild(blockquote);
+      });
+    }
+
+    // Badge type (Economique, Hybride, etc.)
+    const badgeTypeEl = document.querySelector('.badge-economique');
+    if (badgeTypeEl && trajetReserve.type) {
+      const typeText = trajetReserve.type.charAt(0).toUpperCase() + trajetReserve.type.slice(1);
+      badgeTypeEl.textContent = typeText;
+      badgeTypeEl.className = 'badge';
+      badgeTypeEl.classList.add(`badge-${trajetReserve.type.toLowerCase()}`);
+    }
+
+    // bouton devient ANNULER
+    const btnReserve = document.querySelector(".reserve-btn");
+    if (btnReserve) {
+      btnReserve.textContent = "Annuler";
+      btnReserve.onclick = () => {
+        const index = trajets.findIndex(t => t.detailId === trajetReserve.detailId);
+        if (index !== -1) {
+          trajets.splice(index, 1);
+          localStorage.setItem("ecoride_trajets", JSON.stringify(trajets));
+          alert("Réservation annulée !");
+          location.href = "/espace-utilisateur?tab=trajets";
+        }
+      };
+    }
+
+    return; // ✅ terminé
   }
 
   // Données mock complètes avec tous trajets
@@ -128,6 +247,8 @@ document.addEventListener('pageContentLoaded', () => {
     return;
   }
 
+  console.log("✅ Affichage trajet mock:", trip);
+
   // Mise à jour du badge type
   const badgeTypeEl = document.querySelector('.badge-economique');
   if (badgeTypeEl && trip.type) {
@@ -142,8 +263,8 @@ document.addEventListener('pageContentLoaded', () => {
   const ratingEl = document.querySelector('.rating');
   const photoEl = document.querySelector('.profile-photo img');
   const dateBadge = document.querySelector('.badge-date');
-  const fromEl = document.querySelector('.locations span:first-child');
-  const toEl = document.querySelector('.locations span:last-child');
+  const fromEl = document.querySelector('.location-time:first-child .location');
+  const toEl = document.querySelector('.location-time:last-child .location');
   const timeDepartEl = document.querySelector('.time-depart');
   const timeArriveeEl = document.querySelector('.time-arrivee');
   const infoContainer = document.querySelector('.info');
@@ -216,8 +337,23 @@ document.addEventListener('pageContentLoaded', () => {
   // Bouton réserver
   const btnReserve = document.querySelector('.reserve-btn');
   if (btnReserve) {
-    btnReserve.addEventListener('click', () => {
-      reserverTrajet(trip); // ← Appel de ta vraie fonction
-    });
+    const trajets = JSON.parse(localStorage.getItem("ecoride_trajets")) || [];
+    const dejaReserve = trajets.some(t => t.detailId === trip.id);
+
+    if (dejaReserve) {
+      btnReserve.textContent = "Annuler";
+      btnReserve.onclick = () => {
+        const index = trajets.findIndex(t => t.detailId === trip.id && t.role === "passager");
+        if (index !== -1) {
+          trajets.splice(index, 1);
+          localStorage.setItem("ecoride_trajets", JSON.stringify(trajets));
+          alert("Réservation annulée !");
+          location.href = "/espace-utilisateur?tab=trajets";
+        }
+      };
+    } else {
+      btnReserve.textContent = "Réserver"; 
+      btnReserve.onclick = () => reserverTrajet(trip);
+    }
   }
 });

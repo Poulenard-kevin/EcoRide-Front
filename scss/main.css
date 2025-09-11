@@ -14373,6 +14373,11 @@ button.nav-link.dropdown-toggle:hover:active {
   }
 }
 
+@media (max-width: 1240px) {
+  #user-trajects-form .search-input {
+    width: 100% !important;
+  }
+}
 #user-vehicles-form h1, #user-vehicles-form .h1 {
   text-align: center;
   margin: 35px;

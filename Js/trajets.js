@@ -85,132 +85,178 @@ export function initTrajets() {
 // -------------------- Gestion soumission formulaire --------------------
 
 function handleTrajetSubmit(e) {
-    e.preventDefault();
-    console.log("📝 Soumission du formulaire trajet");
-  
-    const formData = new FormData(e.target);
-    const trajetData = {
-      depart: formData.get('depart')?.trim() || '',
-      arrivee: formData.get('arrivee')?.trim() || '',
-      date: formData.get('date') || '',
-      heureDepart: formData.get('heure-depart') || '',
-      heureArrivee: formData.get('heure-arrivee') || '',
-      prix: formData.get('prix') || '',
-      vehicule: formData.get('vehicule') || '',
-      status: 'ajoute' // valeur par défaut
-    };
-  
-    if (!trajetData.depart || !trajetData.arrivee || !trajetData.date) {
-      alert('Veuillez remplir les champs obligatoires (départ, arrivée, date)');
-      return;
-    }
-  
-    if (editingIndex !== null && trajets[editingIndex]) {
-        // Mode édition
-        trajetData.status = trajets[editingIndex].status; 
-        trajets[editingIndex] = trajetData;
-        console.log("✏️ Trajet modifié:", trajetData);
-        editingIndex = null;
-      } else if (editingIndex !== null && !trajets[editingIndex]) {
-        console.warn("⚠️ Trajet à éditer introuvable, ajout normal");
-        trajets.push(trajetData);
-        editingIndex = null;
-      } else {
-        // Ajout normal
-        trajets.push(trajetData);
-        console.log("➕ Nouveau trajet ajouté:", trajetData);
-      }
-  
-    saveTrajets();
-    renderTrajetsInProgress();
-    renderHistorique();
-    e.target.reset();
+  e.preventDefault();
+  console.log("📝 Soumission du formulaire trajet");
 
-    // Réapplique les classes .empty après reset
-    document.querySelectorAll('input[type="date"], input[type="time"], input[type="text"], input[type="number"], select')
-    .forEach(input => {
-      if (!input.value) {
-        input.classList.add('empty');
-      } else {
-        input.classList.remove('empty');
-      }
-    });
+  const formData = new FormData(e.target);
+
+  // 👉 on génère un id si on est en ajout
+  const newId = crypto.randomUUID();
+
+  const trajetData = {
+    id: (editingIndex !== null && trajets[editingIndex]) 
+      ? trajets[editingIndex].id 
+      : crypto.randomUUID(), // 👈 ID unique
+    depart: formData.get('depart')?.trim() || '',
+    arrivee: formData.get('arrivee')?.trim() || '',
+    date: formData.get('date') || '',
+    heureDepart: formData.get('heure-depart') || '',
+    heureArrivee: formData.get('heure-arrivee') || '',
+    prix: formData.get('prix') || '',
+    vehicule: formData.get('vehicule') || '',
+    role: "chauffeur",
+    status: 'ajoute'
+  };
+
+  if (!trajetData.depart || !trajetData.arrivee || !trajetData.date) {
+    alert('Veuillez remplir les champs obligatoires (départ, arrivée, date)');
+    return;
   }
+
+  if (editingIndex !== null && trajets[editingIndex]) {
+    // Mode édition
+    trajetData.status = trajets[editingIndex].status; 
+    trajets[editingIndex] = trajetData;
+    console.log("✏️ Trajet modifié:", trajetData);
+    editingIndex = null;
+  } 
+  else if (editingIndex !== null && !trajets[editingIndex]) {
+    console.warn("⚠️ Trajet à éditer introuvable, ajout normal");
+    trajets.push(trajetData);
+    editingIndex = null;
+  } 
+  else {
+    // Ajout normal
+    trajets.push(trajetData);
+    console.log("➕ Nouveau trajet ajouté:", trajetData);
+  }
+
+  saveTrajets();
+  renderTrajetsInProgress();
+  renderHistorique();
+  e.target.reset();
+
+  // Réapplique les classes .empty après reset
+  document.querySelectorAll('input[type="date"], input[type="time"], input[type="text"], input[type="number"], select')
+  .forEach(input => {
+    if (!input.value) {
+      input.classList.add('empty');
+    } else {
+      input.classList.remove('empty');
+    }
+  });
+}
 
 // -------------------- Gestion des actions --------------------
 
 function handleTrajetActions(e) {
-    const target = e.target;
-  
-    if (target.classList.contains('trajet-start-btn')) {
-      const index = parseInt(target.dataset.index, 10);
-      trajets[index].status = 'demarre';
+  const target = e.target;
+
+  if (target.classList.contains('trajet-start-btn')) {
+    const id = target.dataset.id;
+    const trajet = trajets.find(t => t.id === id);
+    if (trajet && trajet.role === "chauffeur") {
+      trajet.status = "demarre";
       saveTrajets();
       renderTrajetsInProgress();
+      console.log("🚀 Trajet démarré :", trajet);
     }
-  
-    if (target.classList.contains('trajet-arrive-btn')) {
-        const index = parseInt(target.dataset.index, 10);
-        trajets[index].status = 'termine';
-        saveTrajets();
-        renderTrajetsInProgress();
-        renderHistorique();
-    }
-  
-    if (target.classList.contains('trajet-edit-btn')) {
-        const index = parseInt(target.dataset.index, 10);
-        const trajet = trajets[index];
-      
-        const form = document.querySelector('#trajet-form');
-        if (form) {
-          const departInput = form.querySelector('[name="depart"]');
-          if (departInput) departInput.value = trajet.depart || '';
-      
-          const arriveeInput = form.querySelector('[name="arrivee"]');
-          if (arriveeInput) arriveeInput.value = trajet.arrivee || '';
-      
-          const dateInput = form.querySelector('[name="date"]');
-          if (dateInput) dateInput.value = trajet.date || '';
+  }
 
-          const heureDepartInput = form.querySelector('[name="heure-depart"]');
-          if (heureDepartInput) heureDepartInput.value = trajet.heureDepart || '';
-      
-          const heureArriveeInput = form.querySelector('[name="heure-arrivee"]');
-          if (heureArriveeInput) heureArriveeInput.value = trajet.heureArrivee || '';
-      
-          const prixInput = form.querySelector('[name="prix"]');
-          if (prixInput) prixInput.value = trajet.prix || '';
-
-          const vehiculeInput = form.querySelector('[name="vehicule"]');
-          if (vehiculeInput) vehiculeInput.value = trajet.vehicule || '';
-        }
-      
-        editingIndex = index; // 👈 on se souvient de quel trajet on édite
-        console.log("✏️ Trajet prêt pour modification (index:", index, "):", trajet);
-      
-        // Bonus UX → scroll vers le formulaire
-        form.scrollIntoView({ behavior: "smooth" });
+  if (target.classList.contains('trajet-arrive-btn')) {
+    const id = target.dataset.id;
+    const trajet = trajets.find(t => t.id === id);
+    if (trajet && trajet.role === 'chauffeur') {
+      trajet.status = 'termine';
+      saveTrajets();
+      renderTrajetsInProgress();
+      renderHistorique();
+      console.log("🏁 Trajet terminé :", trajet);
     }
-  
-    if (target.classList.contains('trajet-delete-btn')) {
-      const index = parseInt(target.dataset.index, 10);
+  }
+
+  if (target.classList.contains('trajet-edit-btn')) {
+    const id = target.dataset.id;
+    const trajet = trajets.find(t => t.id === id);
+    
+    // Seuls les trajets chauffeur peuvent être édités
+    if (!trajet || trajet.role !== 'chauffeur') {
+      return;
+    }
+
+    const form = document.querySelector('#trajet-form');
+    if (form) {
+      const departInput = form.querySelector('[name="depart"]');
+      if (departInput) departInput.value = trajet.depart || '';
+
+      const arriveeInput = form.querySelector('[name="arrivee"]');
+      if (arriveeInput) arriveeInput.value = trajet.arrivee || '';
+
+      const dateInput = form.querySelector('[name="date"]');
+      if (dateInput) dateInput.value = trajet.date || '';
+
+      const heureDepartInput = form.querySelector('[name="heure-depart"]');
+      if (heureDepartInput) heureDepartInput.value = trajet.heureDepart || '';
+
+      const heureArriveeInput = form.querySelector('[name="heure-arrivee"]');
+      if (heureArriveeInput) heureArriveeInput.value = trajet.heureArrivee || '';
+
+      const prixInput = form.querySelector('[name="prix"]');
+      if (prixInput) prixInput.value = trajet.prix || '';
+
+      const vehiculeInput = form.querySelector('[name="vehicule"]');
+      if (vehiculeInput) vehiculeInput.value = trajet.vehicule || '';
+    }
+
+    // On stocke l'ID du trajet en cours d'édition (plus l'index)
+    editingTrajetId = id;
+    console.log("✏️ Trajet prêt pour modification (ID:", id, "):", trajet);
+
+    // Bonus UX → scroll vers le formulaire
+    form.scrollIntoView({ behavior: "smooth" });
+  }
+
+  if (target.classList.contains('trajet-delete-btn')) {
+    const id = target.dataset.id;
+    const index = trajets.findIndex(t => t.id === id);
+    if (index !== -1) {
       if (confirm("Voulez-vous vraiment supprimer ce trajet ?")) {
         trajets.splice(index, 1);
         saveTrajets();
         renderTrajetsInProgress();
-        console.log("🗑️ Trajet supprimé");
+        console.log("🗑️ Trajet supprimé (ID:", id, ")");
       }
     }
+  }
 
-    if (target.classList.contains('trajet-close-btn')) {
-        const index = parseInt(target.dataset.index, 10);
-        trajets[index].status = 'valide'; // ✅ on bascule en historique
-        saveTrajets();
-        renderTrajetsInProgress();
-        renderHistorique();
-        console.log("📂 Trajet déplacé dans l’historique :", trajets[index]);
+  if (target.classList.contains('trajet-close-btn')) {
+    const id = target.dataset.id;
+    const trajet = trajets.find(t => t.id === id);
+    if (trajet && trajet.role === 'chauffeur') {
+      trajet.status = 'valide'; // ✅ on bascule en historique
+      saveTrajets();
+      renderTrajetsInProgress();
+      renderHistorique();
+      console.log("📂 Trajet déplacé dans l'historique :", trajet);
     }
   }
+
+  if (target.classList.contains('trajet-cancel-btn')) {
+    const id = target.dataset.id;
+    const index = trajets.findIndex(t => t.id === id);
+    if (index !== -1) {
+      const trajet = trajets[index];
+      if (trajet && trajet.role === 'passager') {
+        if (confirm("Voulez-vous vraiment annuler cette réservation ?")) {
+          trajets.splice(index, 1);
+          saveTrajets();
+          renderTrajetsInProgress();
+          console.log("❌ Réservation annulée (ID:", id, ")");
+        }
+      }
+    }
+  }
+}
 
 // -------------------- Rendu dynamique --------------------
 
@@ -230,42 +276,43 @@ function renderTrajetsInProgress() {
   }
 
   enCours.forEach((trajet, index) => {
-    // Détermination du style selon status
     let bgClass = "";
     let actionHtml = "";
-
-    if (trajet.status === "ajoute") {
-      bgClass = "trajet-card actif";
-      actionHtml = `
-        <button type="button" class="btn-trajet trajet-edit-btn" data-index="${index}">Modifier</button>
-        <button type="button" class="btn-trajet trajet-delete-btn" data-index="${index}">Supprimer</button>
-        <button type="button" class="btn-trajet trajet-start-btn" data-index="${index}">Démarrer</button>
-      `;
+  
+    if (trajet.role === "chauffeur") {
+      if (trajet.status === "ajoute") {
+        bgClass = "trajet-card actif";
+        actionHtml = `
+          <button class="btn-trajet trajet-edit-btn" data-id="${trajet.id}">Modifier</button>
+          <button class="btn-trajet trajet-delete-btn" data-id="${trajet.id}">Supprimer</button>
+          <button class="btn-trajet trajet-start-btn" data-id="${trajet.id}">Démarrer</button>
+        `;
+      } else if (trajet.status === "demarre") {
+        bgClass = "trajet-card termine";
+        actionHtml = `
+          <button class="btn-trajet trajet-arrive-btn" data-id="${trajet.id}">Arrivée à destination</button>
+        `;
+      } else if (trajet.status === "termine") {
+        bgClass = "trajet-card attente";
+        actionHtml = `
+          <span class="trajet-status">En attente de validation des passagers...</span>
+          <button class="btn-trajet trajet-close-btn" data-id="${trajet.id}">Clôturer</button>
+        `;
+      }
     } 
-    else if (trajet.status === "demarre") {
-      bgClass = "trajet-card termine";
-      actionHtml = `
-        <button type="button" class="btn-trajet trajet-arrive-btn" data-index="${index}">Arrivée à destination</button>
-      `;
-    } 
-    else if (trajet.status === "termine") {
-      bgClass = "trajet-card attente";
-      actionHtml = `
-        <span class="trajet-status">En attente de validation des passagers...</span>
-        <button type="button" class="btn-trajet trajet-close-btn" data-index="${index}">Clôturer</button>
-      `;
-    } 
-    else if (trajet.status === "reserve" && trajet.role === "passager") {
-      bgClass = "trajet-card attente";
-      actionHtml = `
-        <button type="button" class="btn-trajet trajet-detail-btn" data-id="${trajet.id}">Détail</button>
-        <button type="button" class="btn-trajet trajet-cancel-btn" data-index="${index}">Annuler</button>
-      `;
+    else if (trajet.role === "passager") {
+      if (trajet.status === "reserve") {
+        bgClass = "trajet-card reserve";
+        actionHtml = `
+          <button class="btn-trajet trajet-detail-btn" data-id="${trajet.id}">Détail</button>
+          <button class="btn-trajet trajet-cancel-btn" data-id="${trajet.id}">Annuler</button>
+        `;
+      }
     }
 
     // Insertion de la carte
     container.innerHTML += `
-      <div class="${bgClass}">
+      <div class="${bgClass}" data-id="${trajet.id}">
         <div class="trajet-body">
           <div class="trajet-info">
             <strong>Covoiturage (${trajet.date || ""}) : <br>${trajet.depart} → ${trajet.arrivee}</strong>
@@ -301,6 +348,8 @@ function renderTrajetsInProgress() {
     }
   }
 }
+
+// -------------------- Historique --------------------
 
 function renderHistorique() {
     const container = document.querySelector('.trajets-historique');

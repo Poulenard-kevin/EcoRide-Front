@@ -1,25 +1,30 @@
 console.log("detail.js chargé");
 
 function reserverTrajet(trajet) {
-  const trajets = JSON.parse(localStorage.getItem('ecoride_trajets')) || [];
+  let trajets = JSON.parse(localStorage.getItem('ecoride_trajets')) || [];
 
-  const trajetReserve = {
-    id: trajet.id,
-    depart: trajet.from,
-    arrivee: trajet.to,
-    date: trajet.date,
-    heureDepart: trajet.timeStart,
-    heureArrivee: trajet.timeEnd,
-    prix: parseInt(trajet.price.replace("€", ""), 10), // Stocke juste 30 (nombre)
-    placesReservees: 1,
-    role: "passager",
-    status: "reserve",
-    avis: null,
-    note: null
-  };
-
-  trajets.push(trajetReserve);
-  localStorage.setItem("ecoride_trajets", JSON.stringify(trajets));
+  // Éviter les doublons
+  const existingIndex = trajets.findIndex(t => t.id === trajet.id);
+  
+  if (existingIndex === -1) {
+    // Nouveau trajet passager
+    const trajetReserve = {
+      id: trajet.id,
+      depart: trajet.from,
+      arrivee: trajet.to,
+      date: trajet.date,
+      heureDepart: trajet.timeStart,
+      heureArrivee: trajet.timeEnd,
+      prix: parseInt(trajet.price.replace("€", ""), 10),
+      placesReservees: 1,
+      role: "passager", // 👈 IMPORTANT
+      status: "reserve",
+      avis: null,
+      note: null
+    };
+    trajets.push(trajetReserve);
+    localStorage.setItem("ecoride_trajets", JSON.stringify(trajets));
+  }
   
   alert("Réservation effectuée !");
   window.location.href = "/espace-utilisateur?tab=trajets";

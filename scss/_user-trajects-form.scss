@@ -292,8 +292,13 @@
       }
 
       &.attente {
-        border: 1px solid $color-medium-green;
+        //border: 1px solid $color-medium-green;
         background: $color-very-light-beige;
+      }
+
+      &.reserve {
+        background: $color-very-light-beige;
+        border: 1px solid $color-medium-green;
       }
     }
 

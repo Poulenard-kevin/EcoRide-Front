@@ -14323,8 +14323,11 @@ button.nav-link.dropdown-toggle:hover:active {
   background: #CACFAA;
 }
 #user-trajects-form #trajets-en-cours .trajet-card.attente {
-  border: 1px solid #4B8A47;
   background: #F8F0E5;
+}
+#user-trajects-form #trajets-en-cours .trajet-card.reserve {
+  background: #F8F0E5;
+  border: 1px solid #4B8A47;
 }
 @media (max-width: 1415px) {
   #user-trajects-form #trajets-en-cours .trajet-card .trajet-body {

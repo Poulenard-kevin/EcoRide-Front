@@ -112,6 +112,39 @@
         box-shadow: 0 0 5px 2px $color-dark-green;   /* halo lumineux vert */
       }
     }
+
+    select.form-input {
+      border-radius: 20px;
+      padding: 12px 20px;
+      font-weight: $weight-semibold;
+      font-size: $font-size-nav;
+      color: $color-dark-green;
+      background-color: $color-very-light-beige;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+      outline: none;
+      transition: box-shadow 0.3s ease;
+      
+      /* On supprime la flèche native */
+      appearance: none;
+      -moz-appearance: none;
+      -webkit-appearance: none;
+    
+      /* 🔥 Flèche custom */
+      background-image: url("data:image/svg+xml;utf8,<svg fill='%237a8a6f' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 20px center; /* 👈 décale la flèche vers la gauche */
+      background-size: 25px;
+    
+      &:focus {
+        background-color: $color-very-light-beige;
+        box-shadow: 0 0 5px 2px $color-dark-green;
+      }
+    
+      /* Placeholder (option sélectionnée vide) */
+      &:has(option[value=""]:checked) {
+        color: #7a8a6f;
+      }
+    }
     
     label {
       font-family: $font-body;

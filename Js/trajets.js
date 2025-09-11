@@ -424,6 +424,7 @@ function populateVehicles() {
       const marque = v.brand || v.marque || '';
       const modele = v.vehicleModel || v.modele || '';
       const couleur = v.color || v.couleur || '';
+      const type = v.type || '';
 
       const option = document.createElement('option');
       option.value = `${marque} ${modele} ${couleur}`.trim();

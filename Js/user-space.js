@@ -169,6 +169,7 @@ function initVehicleManagement() {
     const brand = parts[0] || '';
     const model = parts[1] || '';
     const color = parts[2] || '';
+    const type = profileForm.querySelector('#vehicleType').value.trim();
     const seats = profileForm.querySelector('#seats').value.trim();
     const preferences = Array.from(profileForm.querySelectorAll('input[name="preferences"]:checked')).map(el => el.value);
     const other = profileForm.querySelector('#other').value.trim();
@@ -186,7 +187,8 @@ function initVehicleManagement() {
       color,
       seats,
       preferences,
-      other
+      other,
+      type
     };
 
     if (editingVehicleIndex !== null) {
@@ -285,6 +287,7 @@ function showVehicleModal(vehicle) {
     <p><strong>Marque :</strong> ${vehicle.brand}</p>
     <p><strong>Modèle :</strong> ${vehicle.vehicleModel}</p>
     <p><strong>Couleur :</strong> ${vehicle.color}</p>
+    <p><strong>Type :</strong> ${vehicle.type}</p>
     <p><strong>Plaque :</strong> ${vehicle.plate}</p>
     <p><strong>Date d'immatriculation :</strong> ${vehicle.registrationDate}</p>
     <p><strong>Nombre de places :</strong> ${vehicle.seats}</p>

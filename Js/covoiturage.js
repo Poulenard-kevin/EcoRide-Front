@@ -131,7 +131,7 @@ document.addEventListener('pageContentLoaded', () => {
               <p class="time">${trajet.heureArrivee}</p>
             </div>
             <div class="column">
-              <p class="price">${trajet.prix}€</p>
+              <p class="price">${trajet.prix} crédits</p>
               <button class="detail-btn">Détail</button>
             </div>
           </div>

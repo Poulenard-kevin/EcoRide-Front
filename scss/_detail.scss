@@ -157,13 +157,23 @@
     }
 
     .badge-economique, .badge-electrique, .badge-thermique, .badge-hybride {
-      background-color: $color-light-beige;
-      padding: 0.5rem 1.5rem;
-      border-radius: 5px;
-      font-family: $font-title;
-      font-weight: $weight-medium;
-      font-size: $font-size-h3;
-      color: $color-dark-green;
+      background-color: $color-light-beige !important;
+      padding: 0.5rem 1.5rem !important;
+      border-radius: 5px !important;
+      font-family: $font-title !important;
+      font-weight: $weight-medium !important;
+      font-size: $font-size-h3 !important;
+      color: $color-dark-green !important;
+    }
+
+    .type-economique, .type-electrique, .type-thermique, .type-hybride {
+      background-color: $color-light-beige !important;
+      padding: 0.5rem 1.5rem !important;
+      border-radius: 5px !important;
+      font-family: $font-title !important;
+      font-weight: $weight-medium !important;
+      font-size: $font-size-h3 !important;
+      color: $color-dark-green !important;
     }
 
     .search-btn {

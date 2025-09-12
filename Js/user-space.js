@@ -155,6 +155,33 @@ function initVehicleManagement() {
     return;
   }
 
+  // ⚡ NOUVEAU : Formatage automatique de la plaque d'immatriculation
+  const plateInput = document.getElementById("plate");
+  if (plateInput) {
+    plateInput.addEventListener("input", (e) => {
+      let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); // Majuscule + uniquement lettres/chiffres
+      value = value.slice(0, 7); // max 7 caractères utiles
+
+      // On force par position
+      let cleaned = "";
+      for (let i = 0; i < value.length; i++) {
+        if ((i < 2 || i > 4) && /[A-Z]/.test(value[i])) {
+          cleaned += value[i]; // Lettres aux positions 0-1 et 5-6
+        } else if (i >= 2 && i <= 4 && /[0-9]/.test(value[i])) {
+          cleaned += value[i]; // Chiffres aux positions 2-4
+        }
+      }
+
+      // Formatage final avec " - "
+      let formatted = "";
+      if (cleaned.length > 0) formatted += cleaned.slice(0, 2);
+      if (cleaned.length > 2) formatted += " - " + cleaned.slice(2, 5);
+      if (cleaned.length > 5) formatted += " - " + cleaned.slice(5, 7);
+
+      e.target.value = formatted;
+    });
+  }
+
   vehicles.push(...getVehicles());
 
   profileForm.addEventListener('submit', (e) => {
@@ -163,12 +190,18 @@ function initVehicleManagement() {
     console.log('editingVehicleIndex au submit:', editingVehicleIndex);
 
     const plate = profileForm.querySelector('#plate').value.trim();
+    
+    // ⚡ NOUVEAU : Validation du format de plaque
+    const regex = /^[A-Z]{2} - \d{3} - [A-Z]{2}$/;
+    if (!regex.test(plate)) {
+      alert("⚠️ La plaque doit être au format : AB - 123 - CD");
+      return;
+    }
+
     const registrationDate = profileForm.querySelector('#registration-date').value.trim();
-    const vehicleModelRaw = profileForm.querySelector('#vehicle-model').value.trim();
-    const parts = vehicleModelRaw.split(',').map(s => s.trim());
-    const brand = parts[0] || '';
-    const model = parts[1] || '';
-    const color = parts[2] || '';
+    const marque = profileForm.querySelector('#vehicle-marque').value.trim();
+    const model = profileForm.querySelector('#vehicle-model').value.trim();
+    const color = profileForm.querySelector('#vehicle-color').value.trim();
     const type = profileForm.querySelector('#vehicleType').value.trim();
     const seats = profileForm.querySelector('#seats').value.trim();
     const preferences = Array.from(profileForm.querySelectorAll('input[name="preferences"]:checked')).map(el => el.value);
@@ -180,15 +213,16 @@ function initVehicleManagement() {
     }
 
     const vehicleData = {
+      id: plate,        // 🔑 La plaque comme ID unique
       plate,
       registrationDate,
-      brand,
-      vehicleModel: model,
+      marque,
+      model,
       color,
+      type,
       seats,
       preferences,
-      other,
-      type
+      other
     };
 
     if (editingVehicleIndex !== null) {
@@ -218,7 +252,7 @@ function renderVehicleList() {
     <form>
       <div class="form-fields">
         <div class="title-my-used-vehicles">
-          <h2>Mes véhicules utilisées</h2>
+          <h2>Mes véhicules utilisés</h2>
         </div>
         <div id="vehicleList"></div>
         <div class="btn-add-vehicle">
@@ -238,9 +272,10 @@ function renderVehicleList() {
     vehicleLine.className = 'form-field';
     vehicleLine.style.cursor = 'pointer';
     vehicleLine.innerHTML = `
-      <div class="brand">${v.brand}</div>
-      <div class="model">${v.vehicleModel}</div>
-      <div class="color">${v.color}</div>
+      <div class="brand">${v.marque || 'Marque ?'}</div>
+      <div class="model">${v.model || 'Modèle ?'}</div>
+      <div class="color">${v.color || 'Couleur ?'}</div>
+      <div class="type">${v.type || 'Type ?'}</div>
     `;
 
     vehicleLine.addEventListener('click', () => {
@@ -284,15 +319,15 @@ function showVehicleModal(vehicle) {
 
   const modalBody = modal.querySelector('.modal-body');
   modalBody.innerHTML = `
-    <p><strong>Marque :</strong> ${vehicle.brand}</p>
-    <p><strong>Modèle :</strong> ${vehicle.vehicleModel}</p>
-    <p><strong>Couleur :</strong> ${vehicle.color}</p>
-    <p><strong>Type :</strong> ${vehicle.type}</p>
-    <p><strong>Plaque :</strong> ${vehicle.plate}</p>
-    <p><strong>Date d'immatriculation :</strong> ${vehicle.registrationDate}</p>
-    <p><strong>Nombre de places :</strong> ${vehicle.seats}</p>
-    <p><strong>Préférences :</strong> ${vehicle.preferences.join(', ')}</p>
-    <p><strong>Autre :</strong> ${vehicle.other}</p>
+    <p><strong>Marque :</strong> ${vehicle.marque || "Non spécifiée"}</p>
+    <p><strong>Modèle :</strong> ${vehicle.model || "Non spécifié"}</p>
+    <p><strong>Couleur :</strong> ${vehicle.color || "Non spécifiée"}</p>
+    <p><strong>Type :</strong> ${vehicle.type || "Non spécifié"}</p>
+    <p><strong>Plaque :</strong> ${vehicle.id || vehicle.plate || "Non spécifiée"}</p>
+    <p><strong>Date d'immatriculation :</strong> ${vehicle.registrationDate || "Non spécifiée"}</p>
+    <p><strong>Nombre de places :</strong> ${vehicle.seats || "Non spécifié"}</p>
+    <p><strong>Préférences :</strong> ${(vehicle.preferences && vehicle.preferences.length > 0) ? vehicle.preferences.join(', ') : "Aucune"}</p>
+    <p><strong>Autre :</strong> ${vehicle.other || "N/A"}</p>
   `;
 
   const bsModal = new bootstrap.Modal(modal);

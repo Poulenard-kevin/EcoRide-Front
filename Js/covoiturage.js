@@ -1,9 +1,8 @@
 document.addEventListener('pageContentLoaded', () => {
-    const resultsContainer = document.querySelector('.results');
-    if (!resultsContainer) {
-      console.error('Conteneur .results introuvable');
-      return;
-    }
+  const resultsContainer = document.querySelector('.results');
+  if (!resultsContainer) {
+    return; // 🚪 sort si pas sur la page covoiturage
+  }
 
     // =================== ⚡ Gestion placeholders input date/heure ⚡ ===================
     document.querySelectorAll('input[type="date"], input[type="time"]').forEach(input => {
@@ -111,6 +110,8 @@ document.addEventListener('pageContentLoaded', () => {
       const card = document.createElement('div');
       card.classList.add('result-card');
       card.dataset.id = trajet.id;
+
+      
   
       card.innerHTML = `
         <div class="result-header">
@@ -146,7 +147,9 @@ document.addEventListener('pageContentLoaded', () => {
       `;
   
       card.querySelector('.detail-btn').addEventListener('click', () => {
-        window.location.href = `${window.location.origin}#/detail?id=${trajet.id}`;
+        const newPath = `/detail/${trajet.id}`;
+        window.history.pushState({}, "", newPath);
+        window.dispatchEvent(new Event("popstate"));
       });
   
       return card;

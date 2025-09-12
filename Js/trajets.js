@@ -89,6 +89,12 @@ function handleTrajetSubmit(e) {
 
   const formData = new FormData(e.target);
 
+  // 🔹 Récupérer l'objet véhicule complet depuis localStorage
+  const vehicules = JSON.parse(localStorage.getItem('ecoride_vehicules') || "[]");
+  const selectedPlate = formData.get('vehicule'); // value = plaque / identifiant unique
+
+  const selectedVehicule = vehicules.find(v => v.plate === selectedPlate);
+
   const trajetData = {
     id: (editingIndex !== null && trajets[editingIndex]) 
       ? trajets[editingIndex].id 
@@ -99,49 +105,39 @@ function handleTrajetSubmit(e) {
     heureDepart: formData.get('heure-depart') || '',
     heureArrivee: formData.get('heure-arrivee') || '',
     prix: formData.get('prix') || '',
-    vehicule: formData.get('vehicule') || '',
+    vehicule: selectedVehicule || null, // 👉 objet véhicule complet
     role: "chauffeur",
     status: 'ajoute'
   };
 
+  // 🔎 Vérification champs obligatoires
   if (!trajetData.depart || !trajetData.arrivee || !trajetData.date) {
     alert('Veuillez remplir les champs obligatoires (départ, arrivée, date)');
     return;
   }
 
+  // ✏️ Mise à jour ou ajout
   if (editingIndex !== null && trajets[editingIndex]) {
     trajetData.status = trajets[editingIndex].status; 
     trajets[editingIndex] = trajetData;
     console.log("✏️ Trajet modifié:", trajetData);
     editingIndex = null;
-  } 
-  else if (editingIndex !== null && !trajets[editingIndex]) {
-    console.warn("⚠️ Trajet à éditer introuvable, ajout normal");
-    trajets.push(trajetData);
-    editingIndex = null;
-  } 
-  else {
+  } else {
     trajets.push(trajetData);
     console.log("➕ Nouveau trajet ajouté:", trajetData);
   }
 
+  // 💾 Sauvegarde et mise à jour UI
   saveTrajets();
-
-  // 🚀 NOUVEAU : Ajouter aussi à la liste covoiturage
   ajouterAuCovoiturage(trajetData);
-
   renderTrajetsInProgress();
   renderHistorique();
-  e.target.reset();
 
-  // Réapplique les classes .empty après reset
-  document.querySelectorAll('input[type="date"], input[type="time"], input[type="text"], input[type="number"], select')
-  .forEach(input => {
-    if (!input.value) {
-      input.classList.add('empty');
-    } else {
-      input.classList.remove('empty');
-    }
+  // 🔄 Reset du formulaire
+  e.target.reset();
+  document.querySelectorAll('input, select').forEach(input => {
+    if (!input.value) input.classList.add('empty'); 
+    else input.classList.remove('empty');
   });
 }
 
@@ -444,21 +440,16 @@ function populateVehicles() {
     const select = document.querySelector('#vehicule');
     if (!select) return;
 
-    select.innerHTML = '<option value="">-- Sélectionner un véhicule --</option>';
+    select.innerHTML = '<option value="" selected hidden>-- Sélectionner un véhicule --</option>';
 
     vehicles.forEach(v => {
-      const marque = v.brand || v.marque || '';
-      const modele = v.vehicleModel || v.modele || '';
-      const couleur = v.color || v.couleur || '';
-      const type = v.type || '';
-
       const option = document.createElement('option');
-      option.value = `${marque} ${modele} ${couleur}`.trim();
-      option.textContent = option.value;
+      option.value = v.plate; // identifiant unique pour retrouver l'objet
+      option.textContent = `${v.brand || ""} ${v.vehicleModel || ""} ${v.color || ""}`.trim();
       select.appendChild(option);
     });
 
-    console.log("🚗 Véhicules injectés:", vehicles.length);
+    console.log("🚗 Véhicules injectés:", vehicles.length, vehicles);
   } catch (err) {
     console.error("❌ Erreur chargement véhicules:", err);
   }
@@ -466,6 +457,8 @@ function populateVehicles() {
 
 // -------------------- Ajout au covoiturage --------------------
 function ajouterAuCovoiturage(trajetData) {
+  console.log("🚗 trajetData.vehicule:", trajetData.vehicule);
+  console.log("🏷️ getVehicleType result:", getVehicleType(trajetData.vehicule));
   // Convertir le format de trajets.js vers le format covoiturage.js
   const trajetCovoiturage = {
     id: trajetData.id,
@@ -503,17 +496,42 @@ function formatDateForCovoiturage(dateISO) {
 }
 
 // Fonction helper pour déduire le type de véhicule
-function getVehicleType(vehiculeString) {
-  if (!vehiculeString) return 'economique';
-  
-  const vehiculeLower = vehiculeString.toLowerCase();
-  if (vehiculeLower.includes('tesla') || vehiculeLower.includes('électrique')) {
-    return 'electrique';
-  } else if (vehiculeLower.includes('hybride') || vehiculeLower.includes('prius')) {
-    return 'hybride';
-  } else {
-    return 'thermique';
+function getVehicleType(vehicule) {
+  if (!vehicule) return "Economique";
+
+  // 🔹 Si c'est déjà une chaîne
+  if (typeof vehicule === "string") {
+    const vehiculeLower = vehicule.toLowerCase();
+    if (vehiculeLower.includes("tesla") || vehiculeLower.includes("électrique")) {
+      return "Electrique";  
+    } else if (vehiculeLower.includes("hybride") || vehiculeLower.includes("prius")) {
+      return "Hybride";     
+    } else {
+      return "Thermique";   
+    }
   }
+
+  // 🔹 Si c'est un objet
+  if (typeof vehicule === "object") {
+    if (vehicule.type) {
+      // Capitaliser la première lettre
+      const type = vehicule.type.toLowerCase();
+      return type.charAt(0).toUpperCase() + type.slice(1);
+    }
+
+    const brand = (vehicule.brand || vehicule.marque || "").toLowerCase();
+    const model = (vehicule.vehicleModel || vehicule.modele || "").toLowerCase();
+
+    if (brand.includes("tesla") || model.includes("électrique")) {
+      return "Electrique";
+    } else if (brand.includes("toyota") || model.includes("hybride") || model.includes("prius")) {
+      return "Hybride";
+    } else {
+      return "Thermique";
+    }
+  }
+
+  return "Economique";
 }
 
 // -------------------- Exports debug --------------------

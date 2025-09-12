@@ -1,8 +1,11 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const params = new URLSearchParams(window.location.search);
-  const id = params.get("id");
+console.log("🔍 detail.js chargé !");
 
-  console.log("🔍 ID du trajet recherché:", id);
+document.addEventListener("pageContentLoaded", () => {
+  console.log("🎯 DOMContentLoaded dans detail.js");
+  
+  // =================== Récupération de l'ID depuis le pathname ===================
+  const parts = window.location.pathname.split("/");
+  const id = parts[2] || null; // après "/detail/"
 
   // =================== Récupération des trajets ===================
   
@@ -25,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
       rating: 4,
       passagers: ['Alice', 'Bob'],
       duree: 4.5,
-      vehicule: { model: 'Peugeot 308', color: 'Bleu', type: 'Économique' },
+      vehicule: { marque: 'Peugeot' , model: '308', color: 'Bleu', type: 'Économique' },
       preferences: ['Non-fumeur', 'Animaux acceptés', 'Musique'],
       reviews: [
         "Super expérience avec EcoRide ! Jean était très ponctuel et la voiture impeccable. Je recommande !",
@@ -47,7 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
       rating: 5,
       passagers: ['Paul', 'Sophie'],
       duree: 3,
-      vehicule: { model: 'Toyota Prius', color: 'Blanc', type: 'Hybride' },
+      vehicule: { marque: 'Toyota' , model: 'Prius', color: 'Blanc', type: 'Hybride' },
       preferences: ['Non-fumeur', 'Pas d\'animaux', 'Silence'],
       reviews: [
         "Marie est une excellente conductrice ! Trajet très confortable.",
@@ -69,7 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
       rating: 3,
       passagers: ['Emma'],
       duree: 2.5,
-      vehicule: { model: 'Renault Clio', color: 'Rouge', type: 'Thermique' },
+      vehicule: { marque: 'Renault' , model: 'Clio', color: 'Rouge', type: 'Thermique' },
       preferences: ['Fumeur autorisé', 'Animaux acceptés', 'Musique'],
       reviews: [
         "Trajet correct, rien d'exceptionnel mais ça fait le travail.",
@@ -91,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
       rating: 4,
       passagers: ['Marc', 'Julie', 'Nina'],
       duree: 3,
-      vehicule: { model: 'Tesla Model 3', color: 'Noir', type: 'Électrique' },
+      vehicule: { marque: 'Tesla' , model: 'Model 3', color: 'Noir', type: 'Électrique' },
       preferences: ['Non-fumeur', 'Animaux acceptés', 'Musique douce'],
       reviews: [
         "Tesla très confortable ! Sophie conduit très bien.",
@@ -101,21 +104,29 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   ];
 
-
   // Fusion des deux sources
   const trajets = [...trajetsMock, ...trajetsSauvegardes];
+
+  // ⚡ DEBUG - Logs pour identifier le problème
+  console.log("🟢 ID reçu dans detail.js:", id);
+  console.log("📋 Tous les trajets accessibles:", trajets.map(t => t.id));
+
   const trajet = trajets.find(t => t.id === id);
 
-  console.log("📋 Trajets disponibles:", trajets.map(t => t.id));
-  console.log("🎯 Trajet trouvé:", trajet);
+  if (!trajet) {
+    console.error("❌ Aucun trajet trouvé pour cet ID:", id);
+  } else {
+    console.log("✅ Trajet trouvé:", trajet);
+  }
 
   // =================== Gestion trajet introuvable ===================
   if (!trajet) {
-    document.querySelector(".detail-container").innerHTML = `
+    const container = document.querySelector(".detail-container") || document.querySelector("main") || document.body;
+    container.innerHTML = `
       <div style="text-align: center; padding: 50px;">
         <h2>❌ Trajet introuvable</h2>
         <p>Le trajet avec l'ID "${id}" n'existe pas ou a été supprimé.</p>
-        <a href="covoiturage.html" class="search-btn reserve-btn">← Retour aux trajets</a>
+        <a href="/covoiturage" data-link class="search-btn reserve-btn">← Retour aux trajets</a>
       </div>
     `;
     return;
@@ -126,59 +137,82 @@ document.addEventListener("DOMContentLoaded", () => {
   // Photo et infos chauffeur
   const photoElement = document.getElementById("detail-photo");
   if (photoElement) {
-    photoElement.src = trajet.chauffeur?.photo || "images/default-avatar.png";
+    let src = trajet.chauffeur?.photo || "images/default-avatar.png";
+
+    // Supprimer un éventuel "/" en début
+    if (!src.startsWith("http") && src.startsWith("/")) {
+      src = src.substring(1);
+    }
+
+    photoElement.src = "/" + src;
+    console.log("📸 Photo mise à jour:", photoElement.src);
   }
 
   const pseudoElement = document.getElementById("detail-pseudo");
   if (pseudoElement) {
     pseudoElement.textContent = trajet.chauffeur?.pseudo || "Inconnu";
+    console.log("👤 Pseudo mis à jour:", pseudoElement.textContent);
   }
 
   const ratingElement = document.getElementById("detail-rating");
   if (ratingElement) {
     const rating = trajet.chauffeur?.rating || 0;
     ratingElement.textContent = "★".repeat(rating) + "☆".repeat(5 - rating);
+    console.log("⭐ Rating mis à jour:", ratingElement.textContent);
   }
 
-  // Type de véhicule (badge)
-  const typeElement = document.getElementById("detail-type");
-  if (typeElement) {
-    typeElement.textContent = capitalize(trajet.type || "economique");
-    // Nettoyer les anciennes classes badge-*
-    typeElement.className = typeElement.className.replace(/badge-\w+/g, '');
-    typeElement.classList.add(`badge-${trajet.type || "economique"}`);
+  // Type de trajet (badge dans l'entête)
+  const trajetTypeElement = document.getElementById("detail-type");
+  if (trajetTypeElement) {
+    trajetTypeElement.textContent = capitalize(trajet.type || "Économique");
+  
+    // 🔄 On nettoie les anciennes "badge-xxx"
+    trajetTypeElement.classList.forEach(cls => {
+      if (cls.startsWith("badge-") && cls !== "badge") {
+        trajetTypeElement.classList.remove(cls);
+      }
+    });
+  
+    // ✅ Toujours ajouter les deux : "badge" + "badge-electrique|hybride|thermique"
+    trajetTypeElement.classList.add(`type-${(trajet.type || "economique").toLowerCase()}`)
   }
 
   // Date et trajets
   const dateElement = document.getElementById("detail-date");
   if (dateElement) {
     dateElement.textContent = trajet.date || "";
+    console.log("📅 Date mise à jour:", dateElement.textContent);
   }
 
   const departElement = document.getElementById("detail-depart");
   if (departElement) {
     departElement.textContent = trajet.depart || "";
+    console.log("🚀 Départ mis à jour:", departElement.textContent);
   }
 
   const arriveeElement = document.getElementById("detail-arrivee");
   if (arriveeElement) {
     arriveeElement.textContent = trajet.arrivee || "";
+    console.log("🎯 Arrivée mise à jour:", arriveeElement.textContent);
   }
 
   const heureDepartElement = document.getElementById("detail-heureDepart");
   if (heureDepartElement) {
     heureDepartElement.textContent = trajet.heureDepart || "";
+    console.log("⏰ Heure départ mise à jour:", heureDepartElement.textContent);
   }
 
   const heureArriveeElement = document.getElementById("detail-heureArrivee");
   if (heureArriveeElement) {
     heureArriveeElement.textContent = trajet.heureArrivee || "";
+    console.log("⏰ Heure arrivée mise à jour:", heureArriveeElement.textContent);
   }
 
   // Informations (prix, durée, places)
   const prixElement = document.getElementById("detail-prix");
   if (prixElement) {
     prixElement.textContent = `Prix : ${trajet.prix || 0} crédits`;
+    console.log("💰 Prix mis à jour:", prixElement.textContent);
   }
 
   const dureeElement = document.getElementById("detail-duree");
@@ -187,6 +221,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const heures = Math.floor(duree);
     const minutes = Math.round((duree - heures) * 60);
     dureeElement.textContent = `Durée : ${heures}h${minutes.toString().padStart(2, '0')}`;
+    console.log("⏱️ Durée mise à jour:", dureeElement.textContent);
   }
 
   const placesElement = document.getElementById("detail-places");
@@ -194,6 +229,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const placesDisponibles = trajet.places || 0;
     const pluriel = placesDisponibles > 1 ? "s" : "";
     placesElement.textContent = `Place${pluriel} disponible${pluriel} : ${placesDisponibles}`;
+    console.log("🪑 Places mises à jour:", placesElement.textContent);
   }
 
   // Préférences
@@ -203,26 +239,39 @@ document.addEventListener("DOMContentLoaded", () => {
     if (prefElement) {
       prefElement.textContent = preferences[index] || "";
       prefElement.style.display = preferences[index] ? "block" : "none";
+      console.log(`🎯 Préférence ${index + 1} mise à jour:`, preferences[index] || "vide");
     }
   });
 
   // Véhicule
-  const vehicule = trajet.vehicule || { model: 'Véhicule non spécifié', color: '', type: trajet.type || 'economique' };
-  
-  const vehiculeModelElement = document.getElementById("detail-vehicule-model");
-  if (vehiculeModelElement) {
-    vehiculeModelElement.textContent = vehicule.model || "Véhicule non spécifié";
+  const vehicule = trajet.vehicule || {};
+
+  // Marque
+  const marqueElement = document.getElementById("detail-vehicule-marque");
+  if (marqueElement) {
+    const marque = vehicule.brand || vehicule.marque || ""; 
+    marqueElement.textContent = marque || "Marque non spécifiée";
   }
 
-  const vehiculeColorElement = document.getElementById("detail-vehicule-color");
-  if (vehiculeColorElement) {
-    vehiculeColorElement.textContent = vehicule.color || "";
-    vehiculeColorElement.style.display = vehicule.color ? "block" : "none";
+  // Modèle
+  const modelElement = document.getElementById("detail-vehicule-model");
+  if (modelElement) {
+    const modele = vehicule.vehicleModel || vehicule.model || vehicule.modele || "";
+    modelElement.textContent = modele || "Modèle non spécifié";
   }
 
-  const vehiculeTypeElement = document.getElementById("detail-vehicule-type");
-  if (vehiculeTypeElement) {
-    vehiculeTypeElement.textContent = capitalize(vehicule.type || trajet.type || "economique");
+  // Couleur
+  const colorElement = document.getElementById("detail-vehicule-color");
+  if (colorElement) {
+    const couleur = vehicule.color || vehicule.couleur || "";
+    colorElement.textContent = couleur || "Couleur non spécifiée";
+  }
+
+  // Type
+  const typeVehiculeElement = document.getElementById("detail-vehicule-type");
+  if (typeVehiculeElement) {
+    const typeVehicule = vehicule.type || "Non spécifié";
+    typeVehiculeElement.textContent = typeVehicule;
   }
 
   // Avis du conducteur
@@ -237,6 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (reviewElement) {
       reviewElement.textContent = reviews[index] || "";
       reviewElement.style.display = reviews[index] ? "block" : "none";
+      console.log(`💬 Avis ${index + 1} mis à jour:`, reviews[index] || "vide");
     }
   });
 
@@ -255,9 +305,10 @@ document.addEventListener("DOMContentLoaded", () => {
         reserverPlace(trajet);
       }
     });
+    console.log("🎫 Bouton réserver configuré");
   }
 
-  console.log("✅ Page détail chargée pour le trajet:", trajet.id);
+  console.log("✅ Page détail chargée et remplie pour le trajet:", trajet.id);
 });
 
 // =================== Fonctions utilitaires ===================
@@ -317,5 +368,6 @@ function reserverPlace(trajet) {
   alert("✅ Réservation confirmée ! Vous pouvez voir vos trajets dans votre espace utilisateur.");
   
   // Optionnel : rediriger vers l'espace utilisateur
-  // window.location.href = "user-space.html";
+  // window.history.pushState({}, '', '/espace-utilisateur');
+  // window.dispatchEvent(new Event('popstate'));
 }

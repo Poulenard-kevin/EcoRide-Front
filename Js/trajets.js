@@ -92,7 +92,7 @@ function handleTrajetSubmit(e) {
   const trajetData = {
     id: (editingIndex !== null && trajets[editingIndex]) 
       ? trajets[editingIndex].id 
-      : crypto.randomUUID(), // 👈 ID unique
+      : crypto.randomUUID(),
     depart: formData.get('depart')?.trim() || '',
     arrivee: formData.get('arrivee')?.trim() || '',
     date: formData.get('date') || '',
@@ -110,7 +110,6 @@ function handleTrajetSubmit(e) {
   }
 
   if (editingIndex !== null && trajets[editingIndex]) {
-    // Mode édition
     trajetData.status = trajets[editingIndex].status; 
     trajets[editingIndex] = trajetData;
     console.log("✏️ Trajet modifié:", trajetData);
@@ -122,12 +121,15 @@ function handleTrajetSubmit(e) {
     editingIndex = null;
   } 
   else {
-    // Ajout normal
     trajets.push(trajetData);
     console.log("➕ Nouveau trajet ajouté:", trajetData);
   }
 
   saveTrajets();
+
+  // 🚀 NOUVEAU : Ajouter aussi à la liste covoiturage
+  ajouterAuCovoiturage(trajetData);
+
   renderTrajetsInProgress();
   renderHistorique();
   e.target.reset();
@@ -208,8 +210,16 @@ function handleTrajetActions(e) {
     editingIndex = trajets.findIndex(t => t.id === id);
     console.log("✏️ Trajet prêt pour modification (index:", editingIndex, "):", trajet);
 
+    // 🚀 Forcer l'onglet "Mes trajets" avec Bootstrap
+    const tabTrigger = document.querySelector('[data-bs-target="#tab-trajets"]');
+    if (tabTrigger) {
+      new bootstrap.Tab(tabTrigger).show();
+    }
+
     // Bonus UX → scroll vers le formulaire
-    form.scrollIntoView({ behavior: "smooth" });
+    if (form) {
+      form.scrollIntoView({ behavior: "smooth" });
+    }
   }
 
   if (target.classList.contains('trajet-delete-btn')) {
@@ -217,10 +227,19 @@ function handleTrajetActions(e) {
     const index = trajets.findIndex(t => t.id === id);
     if (index !== -1) {
       if (confirm("Voulez-vous vraiment supprimer ce trajet ?")) {
+        // Supprime depuis ecoride_trajets
         trajets.splice(index, 1);
         saveTrajets();
+  
+        // 🚀 Supprime aussi depuis nouveauxTrajets (covoiturage)
+        let trajetsCovoit = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+        trajetsCovoit = trajetsCovoit.filter(t => t.id !== id);
+        localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoit));
+  
         renderTrajetsInProgress();
-        console.log("🗑️ Trajet supprimé (ID:", id, ")");
+        renderHistorique();
+  
+        console.log("🗑️ Trajet supprimé (ID:", id, ") et retiré du covoiturage");
       }
     }
   }
@@ -231,9 +250,15 @@ function handleTrajetActions(e) {
     if (trajet && trajet.role === 'chauffeur') {
       trajet.status = 'valide'; // ✅ on bascule en historique
       saveTrajets();
+  
+      // 🚀 Supprimer aussi de la liste covoiturage
+      let trajetsCovoit = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+      trajetsCovoit = trajetsCovoit.filter(t => t.id !== id);
+      localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoit));
+  
       renderTrajetsInProgress();
       renderHistorique();
-      console.log("📂 Trajet déplacé dans l'historique :", trajet);
+      console.log("📂 Trajet déplacé dans l'historique ET retiré du covoiturage :", trajet);
     }
   }
 
@@ -299,9 +324,10 @@ function renderTrajetsInProgress() {
     else if (trajet.role === "passager") {
       if (trajet.status === "reserve") {
         bgClass = "trajet-card reserve";
-        const detailUrl = `/detail?id=${trajet.detailId}`;  // id du mock → retrouvé par detail.js
+        // 🚀 FIX: Utiliser detail.html au lieu de /detail
+        const detailUrl = `detail.html?id=${trajet.detailId}`;
         actionHtml = `
-          <a href="${detailUrl}" data-link class="btn-trajet trajet-detail-btn">Détail</a>
+          <a href="${detailUrl}" class="btn-trajet trajet-detail-btn">Détail</a>
           <button class="btn-trajet trajet-cancel-btn" data-id="${trajet.id}">Annuler</button>
         `;
       }
@@ -435,6 +461,58 @@ function populateVehicles() {
     console.log("🚗 Véhicules injectés:", vehicles.length);
   } catch (err) {
     console.error("❌ Erreur chargement véhicules:", err);
+  }
+}
+
+// -------------------- Ajout au covoiturage --------------------
+function ajouterAuCovoiturage(trajetData) {
+  // Convertir le format de trajets.js vers le format covoiturage.js
+  const trajetCovoiturage = {
+    id: trajetData.id,
+    date: formatDateForCovoiturage(trajetData.date), // "Vendredi 16 septembre"
+    chauffeur: {
+      pseudo: "Moi", // À récupérer du profil utilisateur plus tard
+      rating: 0,     // Pas encore noté
+      photo: "images/default-avatar.png" // Avatar par défaut
+    },
+    type: getVehicleType(trajetData.vehicule), // Déduire le type depuis le véhicule
+    places: 4, // Par défaut, à ajuster selon le véhicule
+    depart: trajetData.depart,
+    arrivee: trajetData.arrivee,
+    heureDepart: trajetData.heureDepart.replace(':', 'h'), // "16:00" → "16h00"
+    heureArrivee: trajetData.heureArrivee.replace(':', 'h'),
+    prix: parseInt(trajetData.prix) || 0,
+    rating: 0,
+    passagers: []
+  };
+
+  // Sauvegarder dans le localStorage pour covoiturage.js
+  let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+  trajetsCovoiturage.push(trajetCovoiturage);
+  localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
+
+  console.log("🚗 Trajet ajouté au covoiturage:", trajetCovoiturage);
+}
+
+// Fonction helper pour formater la date
+function formatDateForCovoiturage(dateISO) {
+  if (!dateISO) return '';
+  const date = new Date(dateISO);
+  const options = { weekday: 'long', day: 'numeric', month: 'long' };
+  return date.toLocaleDateString('fr-FR', options);
+}
+
+// Fonction helper pour déduire le type de véhicule
+function getVehicleType(vehiculeString) {
+  if (!vehiculeString) return 'economique';
+  
+  const vehiculeLower = vehiculeString.toLowerCase();
+  if (vehiculeLower.includes('tesla') || vehiculeLower.includes('électrique')) {
+    return 'electrique';
+  } else if (vehiculeLower.includes('hybride') || vehiculeLower.includes('prius')) {
+    return 'hybride';
+  } else {
+    return 'thermique';
   }
 }
 

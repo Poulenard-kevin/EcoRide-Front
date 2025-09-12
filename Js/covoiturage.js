@@ -20,7 +20,7 @@ document.addEventListener('pageContentLoaded', () => {
     });
   
     // Données des trajets
-    const trajets = [
+    let trajets = [
       {
         id: 'trajet1',
         date: 'Vendredi 16 septembre',
@@ -78,6 +78,13 @@ document.addEventListener('pageContentLoaded', () => {
         passagers: ['Marc', 'Julie', 'Nina'],
       },
     ];
+
+    // Charger les trajets publiés depuis l'espace utilisateur (localStorage)
+    const trajetsSauvegardes = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+    if (trajetsSauvegardes.length > 0) {
+        trajets.push(...trajetsSauvegardes);
+        console.log("🚗 Trajets fusionnés avec ceux de l'utilisateur :", trajetsSauvegardes);
+    }
   
     // Convertit "HHhMM" en minutes
     function timeStringToMinutes(timeStr) {
@@ -139,7 +146,7 @@ document.addEventListener('pageContentLoaded', () => {
       `;
   
       card.querySelector('.detail-btn').addEventListener('click', () => {
-        window.location.href = `/detail?id=${trajet.id}`;
+        window.location.href = `${window.location.origin}#/detail?id=${trajet.id}`;
       });
   
       return card;

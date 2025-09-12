@@ -6,32 +6,39 @@
 
 <section class="covoiturage-search-bar">
     <div class="search-container">
-        <input type="text" id="inputDepartCovoiturage" class="search-input" placeholder="Lieux de départ">
-        <input type="text" id="inputArriveeCovoiturage" class="search-input" placeholder="Lieux d'arrivée">
+        <input type="text" id="inputDepartCovoiturage" name="depart" class="search-input" placeholder="Lieux de départ">
+
+        <input type="text" id="inputArriveeCovoiturage" name="arrivee" class="search-input" placeholder="Lieux d'arrivée">
+
         <div class="input-group">
             <label for="date-depart-input">Date de départ</label>
-            <input type="date" class="search-input" id="date-depart-input" />
-          </div>
-          <div class="input-group">
+            <input type="date" class="search-input" id="date-depart-input" name="date">
+        </div>
+
+        <div class="input-group">
             <label for="heure-depart-input">Heure de départ</label>
-            <input type="time" class="search-input" id="heure-depart-input" />
-          </div>
+            <input type="time" class="search-input" id="heure-depart-input" name="heure">
+        </div>
+
         <input
             type="number"
             class="search-input"
             id="nombre-passagers-input"
+            name="passagers"
             placeholder="Nombre de passagers"
             min="1"
             max="7"
             step="1"
-            />
-            <select class="search-input" id="type-trajet-select" required>
-                <option value="" disabled selected hidden>-- Type du trajet --</option>
-                <option value="electrique">Électrique</option>
-                <option value="hybride">Hybride</option>
-                <option value="thermique">Thermique</option>
-                <option value="economique">Trajet économique</option>
-              </select>
+        />
+
+        <select class="search-input" id="type-trajet-select" name="typeTrajet" required>
+            <option value="" disabled selected hidden>-- Type du trajet --</option>
+            <option value="electrique">Électrique</option>
+            <option value="hybride">Hybride</option>
+            <option value="thermique">Thermique</option>
+            <option value="economique">Trajet économique</option>
+        </select>
+
         <button class="search-btn reserve-btn">Recherche</button>
     </div>
 </section>

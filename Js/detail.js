@@ -197,8 +197,14 @@ document.addEventListener("pageContentLoaded", () => {
 
   renderPlaces();
 
-  const preferences = trajet.preferences || ['Non-fumeur', 'Animaux acceptés', 'Musique'];
-  ['detail-pref1', 'detail-pref2', 'detail-pref3'].forEach((id, index) => {
+  const vehicleOther = (trajet.vehicle?.other ?? trajet.vehicule?.other ?? "").trim();
+  const basePreferences = trajet.preferences || ['Non-fumeur', 'Animaux acceptés', 'Musique'];
+
+  const preferences = vehicleOther
+    ? [...basePreferences, vehicleOther]
+    : basePreferences;
+
+  ['detail-pref1', 'detail-pref2', 'detail-pref3', 'detail-pref4'].forEach((id, index) => {
     const prefElement = document.getElementById(id);
     if (prefElement) {
       prefElement.textContent = preferences[index] || "";

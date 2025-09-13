@@ -1,15 +1,23 @@
 // -------------------- Helpers --------------------
-function getVehicleLabel(v) {
-  const brand = v.brand || v.marque || '';
-  const model = v.model || v.vehicleModel || v.modele || '';
-  const color = v.color || v.couleur || '';
-  return `${brand} ${model} ${color}`.trim();
-}
-
 document.addEventListener('pageContentLoaded', () => {
   const resultsContainer = document.querySelector('.results');
   if (!resultsContainer) {
     return; // 🚪 sort si pas sur la page covoiturage
+  }
+
+  // === Code bouton dev pour effacer trajets ajoutés ===
+  const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const btn = document.getElementById('clear-user-trajets-dev');
+  if (isDev && btn) {
+    btn.style.display = 'block';
+
+    btn.addEventListener('click', () => {
+      if (confirm("⚠️ [DEV] Effacer tous les trajets ajoutés ?")) {
+        localStorage.removeItem('nouveauxTrajets');
+        alert("✅ Trajets ajoutés effacés (DEV).");
+        window.location.reload();
+      }
+    });
   }
 
     // =================== ⚡ Gestion placeholders input date/heure ⚡ ===================
@@ -86,11 +94,25 @@ document.addEventListener('pageContentLoaded', () => {
       },
     ];
 
-    // Charger les trajets publiés depuis l'espace utilisateur (localStorage)
+    // Charger et normaliser les trajets publiés depuis l'espace utilisateur (localStorage)
     const trajetsSauvegardes = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
     if (trajetsSauvegardes.length > 0) {
-        trajets.push(...trajetsSauvegardes);
-        console.log("🚗 Trajets fusionnés avec ceux de l'utilisateur :", trajetsSauvegardes);
+      // const vehicles = JSON.parse(localStorage.getItem('ecoride_vehicles') || '[]'); // optionnel si besoin
+      const normalized = trajetsSauvegardes.map(t => {
+        const nt = {...t};
+        nt.passagers = Array.isArray(nt.passagers) ? nt.passagers : [];
+        // Si capacity manquante : prendre vehicle.places ou nt.places ou fallback 4
+        const vehiclePlaces = nt.vehicle?.places ?? nt.vehicle?.seats ?? null;
+        nt.capacity = (nt.capacity !== undefined && nt.capacity !== null)
+          ? Number(nt.capacity)
+          : (vehiclePlaces !== null ? Number(vehiclePlaces) : (nt.places !== undefined ? Number(nt.places) : 4));
+        // Si places manquante : initialiser à capacity si création (ou garder si existe)
+        nt.places = (nt.places !== undefined && nt.places !== null) ? Number(nt.places) : Number(nt.capacity);
+        return nt;
+      });
+
+      trajets.push(...normalized);
+      console.log("🚗 Trajets fusionnés avec ceux de l'utilisateur :", normalized);
     }
   
     // Convertit "HHhMM" en minutes
@@ -119,8 +141,22 @@ document.addEventListener('pageContentLoaded', () => {
       card.classList.add('result-card');
       card.dataset.id = trajet.id;
 
-      
-  
+      // ======= Calcul des places restantes (source unique) =======
+      // Priorité : trajet.places si c'est un nombre
+      // Sinon si capacity défini => capacity - passagers.length
+      // Sinon fallback 0
+      const passagersArray = Array.isArray(trajet.passagers) ? trajet.passagers : [];
+      const remaining = (typeof trajet.places === 'number')
+        ? trajet.places
+        : (typeof trajet.capacity === 'number'
+            ? Math.max(0, trajet.capacity - passagersArray.length)
+            : (typeof trajet.places === 'string' && !isNaN(Number(trajet.places)) ? Number(trajet.places) : 0)
+        );
+
+      const placesText = `${remaining} place${remaining > 1 ? 's' : ''} disponible${remaining > 1 ? 's' : ''}`;
+
+      // ===========================================================
+
       card.innerHTML = `
         <div class="result-header">
           <p class="date">${trajet.date}</p>
@@ -134,7 +170,7 @@ document.addEventListener('pageContentLoaded', () => {
             </div>
             <div class="column">
               <p class="type">${capitalize(trajet.type)}</p>
-              <p class="places">Place: ${trajet.places}</p>
+              <p class="places">${placesText}</p>
             </div>
           </div>
           <div class="details">
@@ -153,13 +189,16 @@ document.addEventListener('pageContentLoaded', () => {
           </div>
         </div>
       `;
-  
-      card.querySelector('.detail-btn').addEventListener('click', () => {
-        const newPath = `/detail/${trajet.id}`;
-        window.history.pushState({}, "", newPath);
-        window.dispatchEvent(new Event("popstate"));
-      });
-  
+
+      const btn = card.querySelector('.detail-btn');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          const newPath = `/detail/${trajet.id}`;
+          window.history.pushState({}, "", newPath);
+          window.dispatchEvent(new Event("popstate"));
+        });
+      }
+
       return card;
     }
   
@@ -380,4 +419,6 @@ document.addEventListener('pageContentLoaded', () => {
   
     // Affiche tous les trajets au départ
     displayTrajets(trajets);
-  });
+  
+  
+});

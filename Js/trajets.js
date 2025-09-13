@@ -111,6 +111,9 @@ function handleTrajetSubmit(e) {
 
   const selectedVehicle = vehicles.find(v => v.plate === selectedPlate);
 
+  console.log("DEBUG selectedPlate:", selectedPlate);
+  console.log("DEBUG selectedVehicle:", selectedVehicle);
+
   const trajetData = {
     id: (editingIndex !== null && trajets[editingIndex]) 
       ? trajets[editingIndex].id 
@@ -122,6 +125,9 @@ function handleTrajetSubmit(e) {
     heureArrivee: formData.get('heure-arrivee') || '',
     prix: formData.get('prix') || '',
     vehicle: selectedVehicle || null, // 👉 objet véhicule complet
+    places: (selectedVehicle && selectedVehicle.places !== undefined && selectedVehicle.places !== null)
+    ? Number(selectedVehicle.places)
+    : (formData.get('places') ? Number(formData.get('places')) : 4),
     role: "chauffeur",
     status: 'ajoute'
   };
@@ -476,23 +482,29 @@ function ajouterAuCovoiturage(trajetData) {
   console.log("🚗 trajetData.vehicle:", trajetData.vehicle);
   console.log("🏷️ getVehicleType result:", getVehicleType(trajetData.vehicle));
   // Convertir le format de trajets.js vers le format covoiturage.js
+  const capacity = (trajetData.vehicle && trajetData.vehicle.places !== undefined)
+  ? Number(trajetData.vehicle.places)
+  : (trajetData.places !== undefined ? Number(trajetData.places) : 4);
+
   const trajetCovoiturage = {
     id: trajetData.id,
-    date: formatDateForCovoiturage(trajetData.date), // "Vendredi 16 septembre"
+    date: formatDateForCovoiturage(trajetData.date),
     chauffeur: {
-      pseudo: "Moi", // À récupérer du profil utilisateur plus tard
-      rating: 0,     // Pas encore noté
-      photo: "images/default-avatar.png" // Avatar par défaut
+      pseudo: "Moi",
+      rating: 0,
+      photo: "images/default-avatar.png"
     },
-    type: getVehicleType(trajetData.vehicle), // Déduire le type depuis le véhicule
-    //places: 3, // Par défaut, à ajuster selon le véhicule
+    type: getVehicleType(trajetData.vehicle),
+    capacity,                 // capacité totale
+    places: capacity,         // places restantes (sera décrémentée)
     depart: trajetData.depart,
     arrivee: trajetData.arrivee,
-    heureDepart: trajetData.heureDepart.replace(':', 'h'), // "16:00" → "16h00"
-    heureArrivee: trajetData.heureArrivee.replace(':', 'h'),
+    heureDepart: trajetData.heureDepart ? trajetData.heureDepart.replace(':', 'h') : '',
+    heureArrivee: trajetData.heureArrivee ? trajetData.heureArrivee.replace(':', 'h') : '',
     prix: parseInt(trajetData.prix) || 0,
     rating: 0,
-    passagers: []
+    passagers: [],            // tableau des noms/id des passagers
+    vehicle: trajetData.vehicle || null
   };
 
   // Sauvegarder dans le localStorage pour covoiturage.js

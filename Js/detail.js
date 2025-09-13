@@ -7,7 +7,6 @@ document.addEventListener("pageContentLoaded", () => {
 
   if (!id) {
     const parts = window.location.pathname.split('/');
-    // Exemple : ['', 'detail', '1234']
     if (parts.length >= 3 && parts[1] === 'detail') {
       id = parts[2];
     }
@@ -16,11 +15,9 @@ document.addEventListener("pageContentLoaded", () => {
   console.log("🟢 ID récupéré dans detail.js:", id);
 
   // =================== Récupération des trajets ===================
-  
-  // Trajets sauvegardés depuis l'espace utilisateur
+
   const trajetsSauvegardes = JSON.parse(localStorage.getItem("nouveauxTrajets") || "[]");
-  
-  // Trajets mock (ceux de base dans covoiturage.js)
+
   const trajetsMock = [
     {
       id: 'trajet1',
@@ -36,7 +33,7 @@ document.addEventListener("pageContentLoaded", () => {
       rating: 4,
       passagers: ['Alice', 'Bob'],
       duree: 4.5,
-      vehicle: { brand: 'Peugeot' , model: '308', color: 'Bleu', type: 'Économique' },
+      vehicle: { brand: 'Peugeot', model: '308', color: 'Bleu', type: 'Économique' },
       preferences: ['Non-fumeur', 'Animaux acceptés', 'Musique'],
       reviews: [
         "Super expérience avec EcoRide ! Jean était très ponctuel et la voiture impeccable. Je recommande !",
@@ -58,7 +55,7 @@ document.addEventListener("pageContentLoaded", () => {
       rating: 5,
       passagers: ['Paul', 'Sophie'],
       duree: 3,
-      vehicle: { brand: 'Toyota' , model: 'Prius', color: 'Blanc', type: 'Hybride' },
+      vehicle: { brand: 'Toyota', model: 'Prius', color: 'Blanc', type: 'Hybride' },
       preferences: ['Non-fumeur', 'Pas d\'animaux', 'Silence'],
       reviews: [
         "Marie est une excellente conductrice ! Trajet très confortable.",
@@ -80,7 +77,7 @@ document.addEventListener("pageContentLoaded", () => {
       rating: 3,
       passagers: ['Emma'],
       duree: 2.5,
-      vehicle: { brand: 'Renault' , model: 'Clio', color: 'Rouge', type: 'Thermique' },
+      vehicle: { brand: 'Renault', model: 'Clio', color: 'Rouge', type: 'Thermique' },
       preferences: ['Fumeur autorisé', 'Animaux acceptés', 'Musique'],
       reviews: [
         "Trajet correct, rien d'exceptionnel mais ça fait le travail.",
@@ -102,7 +99,7 @@ document.addEventListener("pageContentLoaded", () => {
       rating: 4,
       passagers: ['Marc', 'Julie', 'Nina'],
       duree: 3,
-      vehicle: { brand: 'Tesla' , model: 'Model 3', color: 'Noir', type: 'Électrique' },
+      vehicle: { brand: 'Tesla', model: 'Model 3', color: 'Noir', type: 'Électrique' },
       preferences: ['Non-fumeur', 'Animaux acceptés', 'Musique douce'],
       reviews: [
         "Tesla très confortable ! Sophie conduit très bien.",
@@ -112,22 +109,9 @@ document.addEventListener("pageContentLoaded", () => {
     }
   ];
 
-  // Fusion des deux sources
   const trajets = [...trajetsMock, ...trajetsSauvegardes];
-
-  // ⚡ DEBUG - Logs pour identifier le problème
-  console.log("🟢 ID reçu dans detail.js:", id);
-  console.log("📋 Tous les trajets accessibles:", trajets.map(t => t.id));
-
   const trajet = trajets.find(t => t.id === id);
 
-  if (!trajet) {
-    console.error("❌ Aucun trajet trouvé pour cet ID:", id);
-  } else {
-    console.log("✅ Trajet trouvé:", trajet);
-  }
-
-  // =================== Gestion trajet introuvable ===================
   if (!trajet) {
     const container = document.querySelector(".detail-container") || document.querySelector("main") || document.body;
     container.innerHTML = `
@@ -142,86 +126,48 @@ document.addEventListener("pageContentLoaded", () => {
 
   // =================== Injection des données dans le HTML ===================
 
-  // Photo et infos chauffeur
   const photoElement = document.getElementById("detail-photo");
   if (photoElement) {
     let src = trajet.chauffeur?.photo || "images/default-avatar.png";
-
-    // Supprimer un éventuel "/" en début
-    if (!src.startsWith("http") && src.startsWith("/")) {
-      src = src.substring(1);
-    }
-
+    if (!src.startsWith("http") && src.startsWith("/")) src = src.substring(1);
     photoElement.src = "/" + src;
-    console.log("📸 Photo mise à jour:", photoElement.src);
   }
 
   const pseudoElement = document.getElementById("detail-pseudo");
-  if (pseudoElement) {
-    pseudoElement.textContent = trajet.chauffeur?.pseudo || "Inconnu";
-    console.log("👤 Pseudo mis à jour:", pseudoElement.textContent);
-  }
+  if (pseudoElement) pseudoElement.textContent = trajet.chauffeur?.pseudo || "Inconnu";
 
   const ratingElement = document.getElementById("detail-rating");
   if (ratingElement) {
     const rating = trajet.chauffeur?.rating || 0;
     ratingElement.textContent = "★".repeat(rating) + "☆".repeat(5 - rating);
-    console.log("⭐ Rating mis à jour:", ratingElement.textContent);
   }
 
-  // Type de trajet (badge dans l'entête)
   const trajetTypeElement = document.getElementById("detail-type");
   if (trajetTypeElement) {
     trajetTypeElement.textContent = capitalize(trajet.type || "Économique");
-  
-    // 🔄 On nettoie les anciennes "badge-xxx"
     trajetTypeElement.classList.forEach(cls => {
-      if (cls.startsWith("badge-") && cls !== "badge") {
-        trajetTypeElement.classList.remove(cls);
-      }
+      if (cls.startsWith("badge-") && cls !== "badge") trajetTypeElement.classList.remove(cls);
     });
-  
-    // ✅ Toujours ajouter les deux : "badge" + "badge-electrique|hybride|thermique"
-    trajetTypeElement.classList.add(`type-${(trajet.type || "economique").toLowerCase()}`)
+    trajetTypeElement.classList.add(`type-${(trajet.type || "economique").toLowerCase()}`);
   }
 
-  // Date et trajets
   const dateElement = document.getElementById("detail-date");
-  if (dateElement) {
-    dateElement.textContent = trajet.date || "";
-    console.log("📅 Date mise à jour:", dateElement.textContent);
-  }
+  if (dateElement) dateElement.textContent = trajet.date || "";
 
   const departElement = document.getElementById("detail-depart");
-  if (departElement) {
-    departElement.textContent = trajet.depart || "";
-    console.log("🚀 Départ mis à jour:", departElement.textContent);
-  }
+  if (departElement) departElement.textContent = trajet.depart || "";
 
   const arriveeElement = document.getElementById("detail-arrivee");
-  if (arriveeElement) {
-    arriveeElement.textContent = trajet.arrivee || "";
-    console.log("🎯 Arrivée mise à jour:", arriveeElement.textContent);
-  }
+  if (arriveeElement) arriveeElement.textContent = trajet.arrivee || "";
 
   const heureDepartElement = document.getElementById("detail-heureDepart");
-  if (heureDepartElement) {
-    heureDepartElement.textContent = trajet.heureDepart || "";
-    console.log("⏰ Heure départ mise à jour:", heureDepartElement.textContent);
-  }
+  if (heureDepartElement) heureDepartElement.textContent = trajet.heureDepart || "";
 
   const heureArriveeElement = document.getElementById("detail-heureArrivee");
-  if (heureArriveeElement) {
-    heureArriveeElement.textContent = trajet.heureArrivee || "";
-    console.log("⏰ Heure arrivée mise à jour:", heureArriveeElement.textContent);
-  }
+  if (heureArriveeElement) heureArriveeElement.textContent = trajet.heureArrivee || "";
 
-  // Informations (prix, durée, places)
   const prixElement = document.getElementById("detail-prix");
-  if (prixElement) {
-    prixElement.textContent = `Prix : ${trajet.prix || 0} crédits`;
-    console.log("💰 Prix mis à jour:", prixElement.textContent);
-  }
+  if (prixElement) prixElement.textContent = `Prix : ${trajet.prix || 0} crédits`;
 
   const dureeElement = document.getElementById("detail-duree");
   if (dureeElement) {
@@ -229,87 +175,76 @@ document.addEventListener("pageContentLoaded", () => {
     const heures = Math.floor(duree);
     const minutes = Math.round((duree - heures) * 60);
     dureeElement.textContent = `Durée : ${heures}h${minutes.toString().padStart(2, '0')}`;
-    console.log("⏱️ Durée mise à jour:", dureeElement.textContent);
   }
 
   const placesElement = document.getElementById("detail-places");
-  if (placesElement) {
-    const placesDisponibles = trajet.places || 0;
-    const pluriel = placesDisponibles > 1 ? "s" : "";
-    placesElement.textContent = `Place${pluriel} disponible${pluriel} : ${placesDisponibles}`;
-    console.log("🪑 Places mises à jour:", placesElement.textContent);
+
+  function computeRemaining(trajetObj) {
+    const passagers = Array.isArray(trajetObj.passagers) ? trajetObj.passagers : [];
+    if (typeof trajetObj.places === 'number') return trajetObj.places;
+    if (typeof trajetObj.capacity === 'number') return Math.max(0, trajetObj.capacity - passagers.length);
+    if (trajetObj.vehicle?.places !== undefined) return Math.max(0, Number(trajetObj.vehicle.places) - passagers.length);
+    if (trajetObj.vehicule?.places !== undefined) return Math.max(0, Number(trajetObj.vehicule.places) - passagers.length);
+    return 0;
   }
 
-  // Préférences
+  function renderPlaces() {
+    if (!placesElement) return;
+    const remaining = computeRemaining(trajet);
+    const pluriel = remaining > 1 ? "s" : "";
+    placesElement.textContent = `Place${pluriel} disponible${pluriel} : ${remaining}`;
+  }
+
+  renderPlaces();
+
   const preferences = trajet.preferences || ['Non-fumeur', 'Animaux acceptés', 'Musique'];
   ['detail-pref1', 'detail-pref2', 'detail-pref3'].forEach((id, index) => {
     const prefElement = document.getElementById(id);
     if (prefElement) {
       prefElement.textContent = preferences[index] || "";
       prefElement.style.display = preferences[index] ? "block" : "none";
-      console.log(`🎯 Préférence ${index + 1} mise à jour:`, preferences[index] || "vide");
     }
   });
 
-  // Vehicle
   const vehicle = trajet.vehicle || {};
-
-  // Brand
   const brandElement = document.getElementById("detail-vehicle-marque");
-  if (brandElement) {
-    brandElement.textContent = vehicle.brand || "Marque non spécifiée";
-  }
+  if (brandElement) brandElement.textContent = vehicle.brand || "Marque non spécifiée";
 
-  // Model
   const modelElement = document.getElementById("detail-vehicle-model");
-  if (modelElement) {
-    modelElement.textContent = vehicle.model || "Modèle non spécifié";
-  }
+  if (modelElement) modelElement.textContent = vehicle.model || "Modèle non spécifié";
 
-  // Color
   const colorElement = document.getElementById("detail-vehicle-color");
-  if (colorElement) {
-    colorElement.textContent = vehicle.color || "Couleur non spécifiée";
-  }
+  if (colorElement) colorElement.textContent = vehicle.color || "Couleur non spécifiée";
 
-  // Type
   const typeElement = document.getElementById("detail-vehicle-type");
-  if (typeElement) {
-    typeElement.textContent = vehicle.type || "Non spécifié";
-  }
+  if (typeElement) typeElement.textContent = vehicle.type || "Non spécifié";
 
-  // Avis du conducteur
-  const reviews = trajet.reviews || [
-    "Aucun avis disponible pour ce conducteur.",
-    "",
-    ""
-  ];
-  
+  const reviews = trajet.reviews || ["Aucun avis disponible pour ce conducteur.", "", ""];
   ['detail-review1', 'detail-review2', 'detail-review3'].forEach((id, index) => {
     const reviewElement = document.getElementById(id);
     if (reviewElement) {
       reviewElement.textContent = reviews[index] || "";
       reviewElement.style.display = reviews[index] ? "block" : "none";
-      console.log(`💬 Avis ${index + 1} mis à jour:`, reviews[index] || "vide");
     }
   });
 
   // =================== Bouton Réserver ===================
   const reserverBtn = document.getElementById("detail-reserver");
   if (reserverBtn) {
-    reserverBtn.addEventListener('click', () => {
-      // Vérifier si l'utilisateur peut réserver (pas son propre trajet, places disponibles, etc.)
-      if (trajet.places <= 0) {
-        alert("❌ Aucune place disponible pour ce trajet.");
+    reserverBtn.addEventListener('click', async () => {
+      const remaining = computeRemaining(trajet);
+      if (remaining <= 0) {
+        alert("❌ Aucune place disponible.");
         return;
       }
 
-      if (confirm(`Voulez-vous réserver une place pour le trajet ${trajet.depart} → ${trajet.arrivee} le ${trajet.date} ?`)) {
-        // Logique de réservation (à adapter selon tes besoins)
-        reserverPlace(trajet);
+      const seats = await showSeatSelector(remaining);
+      if (!seats) return;
+
+      if (confirm(`Confirmer la réservation de ${seats} place${seats > 1 ? 's' : ''} ?`)) {
+        reserverPlace(trajet, seats);
       }
     });
-    console.log("🎫 Bouton réserver configuré");
   }
 
   console.log("✅ Page détail chargée et remplie pour le trajet:", trajet.id);
@@ -324,26 +259,104 @@ function capitalize(str) {
 
 function calculerDuree(heureDepart, heureArrivee) {
   if (!heureDepart || !heureArrivee) return 0;
-  
   const timeStringToMinutes = (timeStr) => {
     const [hours, minutes] = timeStr.replace('h', ':').split(':').map(Number);
     return hours * 60 + (minutes || 0);
   };
-
   const departMinutes = timeStringToMinutes(heureDepart);
   const arriveeMinutes = timeStringToMinutes(heureArrivee);
   let dureeMinutes = arriveeMinutes - departMinutes;
-  
-  if (dureeMinutes < 0) dureeMinutes += 24 * 60; // Trajet sur 2 jours
-  
-  return dureeMinutes / 60; // Retour en heures décimales
+  if (dureeMinutes < 0) dureeMinutes += 24 * 60;
+  return dureeMinutes / 60;
 }
 
-function reserverPlace(trajet) {
-  // Créer une réservation dans l'espace utilisateur
+// =================== Modal sélecteur de places ===================
+function showSeatSelector(max) {
+  return new Promise(resolve => {
+    const modalId = 'seatSelectorModal';
+    let modalEl = document.getElementById(modalId);
+    if (modalEl) modalEl.remove();
+
+    const html = `
+      <div class="modal fade" id="${modalId}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Choisir le nombre de places</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body text-center">
+              <p class="mb-3 text-muted">Maximum disponible : <strong>${max}</strong></p>
+              <div class="d-flex align-items-center justify-content-center gap-3">
+                <button class="btn btn-outline-secondary btn-lg px-3" id="modal-minus">−</button>
+                <span class="fs-3 fw-bold" id="modal-count">1</span>
+                <button class="btn btn-outline-secondary btn-lg px-3" id="modal-plus">+</button>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+              <button class="btn btn-primary" id="modal-confirm">Confirmer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = html;
+    document.body.appendChild(wrapper);
+
+    modalEl = document.getElementById(modalId);
+    const bsModal = new bootstrap.Modal(modalEl);
+    bsModal.show();
+
+    const countEl = modalEl.querySelector('#modal-count');
+    const minusBtn = modalEl.querySelector('#modal-minus');
+    const plusBtn = modalEl.querySelector('#modal-plus');
+    const confirmBtn = modalEl.querySelector('#modal-confirm');
+    const cancelBtn = modalEl.querySelector('[data-bs-dismiss="modal"]');
+
+    let count = 1;
+
+    minusBtn.addEventListener('click', () => {
+      if (count > 1) {
+        count--;
+        countEl.textContent = count;
+      }
+    });
+
+    plusBtn.addEventListener('click', () => {
+      if (count < max) {
+        count++;
+        countEl.textContent = count;
+      }
+    });
+
+    const cleanup = (result) => {
+      try { bsModal.hide(); } catch (e) {}
+      setTimeout(() => {
+        wrapper.remove();
+        resolve(result);
+      }, 300);
+    };
+
+    confirmBtn.addEventListener('click', () => cleanup(count));
+    cancelBtn.addEventListener('click', () => cleanup(null));
+
+    modalEl.addEventListener('hidden.bs.modal', () => {
+      if (document.body.contains(wrapper)) wrapper.remove();
+    });
+  });
+}
+
+// =================== Fonction de réservation ===================
+function reserverPlace(trajet, seats = 1) {
+  seats = Number(seats) || 1;
+  if (seats <= 0) seats = 1;
+
   const reservation = {
     id: crypto.randomUUID(),
-    detailId: trajet.id, // Référence vers le trajet original
+    detailId: trajet.id,
     depart: trajet.depart,
     arrivee: trajet.arrivee,
     date: trajet.date,
@@ -353,25 +366,58 @@ function reserverPlace(trajet) {
     chauffeur: trajet.chauffeur?.pseudo || "Inconnu",
     role: "passager",
     status: "reserve",
-    placesReservees: 1
+    placesReservees: seats
   };
 
-  // Sauvegarder dans l'espace utilisateur (trajets.js)
   let trajetsUtilisateur = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
   trajetsUtilisateur.push(reservation);
   localStorage.setItem('ecoride_trajets', JSON.stringify(trajetsUtilisateur));
 
-  // Réduire les places disponibles dans le trajet original
   let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
   const trajetIndex = trajetsCovoiturage.findIndex(t => t.id === trajet.id);
+
+  let userPseudo = "Moi";
+  try {
+    const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
+    if (me && me.pseudo) userPseudo = me.pseudo;
+  } catch(e) {}
+
   if (trajetIndex !== -1) {
-    trajetsCovoiturage[trajetIndex].places = Math.max(0, trajetsCovoiturage[trajetIndex].places - 1);
+    const target = trajetsCovoiturage[trajetIndex];
+    target.passagers = Array.isArray(target.passagers) ? target.passagers : [];
+
+    const alreadyIndex = target.passagers.findIndex(p => typeof p === 'string' && p.startsWith(userPseudo));
+    if (alreadyIndex !== -1) {
+      alert("⚠️ Vous avez déjà une réservation sur ce trajet.");
+      return;
+    }
+
+    const entry = seats > 1 ? `${userPseudo} x${seats}` : userPseudo;
+    target.passagers.push(entry);
+
+    const vehiclePlaces = target.vehicle?.places ?? target.vehicule?.places ?? null;
+    target.capacity = (typeof target.capacity === 'number')
+      ? target.capacity
+      : (vehiclePlaces !== null ? Number(vehiclePlaces) : (typeof target.places === 'number' ? Number(target.places) : 4));
+
+    const totalOccupied = target.passagers.reduce((sum, p) => {
+      if (typeof p === 'string') {
+        const m = p.match(/x(\d+)$/);
+        return sum + (m ? Number(m[1]) : 1);
+      }
+      return sum + 1;
+    }, 0);
+
+    target.places = Math.max(0, Number(target.capacity) - totalOccupied);
+    trajetsCovoiturage[trajetIndex] = target;
     localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
+
+    trajet.passagers = target.passagers;
+    trajet.capacity = target.capacity;
+    trajet.places = target.places;
   }
 
-  alert("✅ Réservation confirmée ! Vous pouvez voir vos trajets dans votre espace utilisateur.");
-  
-  // Optionnel : rediriger vers l'espace utilisateur
-  // window.history.pushState({}, '', '/espace-utilisateur');
-  // window.dispatchEvent(new Event('popstate'));
+  try { renderPlaces(); } catch(e) {}
+
+  alert(`✅ Réservation confirmée : ${seats} place${seats > 1 ? 's' : ''}. Vous pouvez voir vos trajets dans votre espace utilisateur.`);
 }

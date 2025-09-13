@@ -444,13 +444,6 @@ function saveTrajets() {
   }
 }
 
-// -------------------- Reset formulaire --------------------
-function resetForm(form) {
-  if (form) {
-    form.reset();
-  }
-  editingIndex = null; // on sort du mode édition
-}
 
 // -------------------- Injection dynamique véhicules --------------------
 

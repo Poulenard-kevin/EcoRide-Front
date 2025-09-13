@@ -526,24 +526,30 @@ function switchToTab(tabId) {
   const offcanvasTabs = userSpaceSection.querySelectorAll('.nav-pills.user-tabs-offcanvas .nav-link');
   const forms = userSpaceSection.querySelectorAll('.user-space-form');
 
+  // Cacher tous les formulaires
   forms.forEach(form => form.style.display = 'none');
+
+  // Désactiver tous les onglets
   desktopTabs.forEach(tab => tab.classList.remove('active'));
   offcanvasTabs.forEach(tab => tab.classList.remove('active'));
 
+  // Afficher le formulaire ciblé
   const targetForm = document.getElementById(tabId);
   if (targetForm) targetForm.style.display = 'block';
 
-  desktopTabs.forEach(tab => {
-    if (tab.textContent.trim().toLowerCase().includes('véhicules') && tabId === 'user-vehicles-form') {
-      tab.classList.add('active');
-    }
-  });
+  // Fonction pour activer l'onglet correspondant
+  function activateTab(tabs) {
+    tabs.forEach(tab => {
+      // Récupérer l'attribut href ou data-target (selon ta structure)
+      const href = tab.getAttribute('href') || tab.dataset.target || '';
+      if (href === `#${tabId}`) {
+        tab.classList.add('active');
+      }
+    });
+  }
 
-  offcanvasTabs.forEach(tab => {
-    if (tab.textContent.trim().toLowerCase().includes('véhicules') && tabId === 'user-vehicles-form') {
-      tab.classList.add('active');
-    }
-  });
+  activateTab(desktopTabs);
+  activateTab(offcanvasTabs);
 }
 
 // -------------------- Persistance véhicules --------------------
@@ -559,16 +565,6 @@ function saveVehicles() {
 
   } catch (err) {
     console.error("❌ Erreur sauvegarde véhicules:", err);
-  }
-}
-
-function getVehicles() {
-  try {
-    const stored = localStorage.getItem('ecoride_vehicles');
-    return stored ? JSON.parse(stored) : [];
-  } catch (err) {
-    console.error("❌ Erreur lecture véhicules localStorage:", err);
-    return [];
   }
 }
 

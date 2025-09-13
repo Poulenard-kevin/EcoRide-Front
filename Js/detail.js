@@ -207,8 +207,12 @@ document.addEventListener("pageContentLoaded", () => {
   });
 
   const vehicle = trajet.vehicle || {};
+  console.log("🔎 trajet:", trajet);
+  console.log("🔎 vehicle keys:", Object.keys(vehicle));
+  console.log("🔎 vehicle raw:", vehicle);
+  
   const brandElement = document.getElementById("detail-vehicle-marque");
-  if (brandElement) brandElement.textContent = vehicle.brand || "Marque non spécifiée";
+  if (brandElement) brandElement.textContent = vehicle.marque || "Marque non spécifiée";
 
   const modelElement = document.getElementById("detail-vehicle-model");
   if (modelElement) modelElement.textContent = vehicle.model || "Modèle non spécifié";
@@ -411,7 +415,7 @@ function reserverPlace(trajet, seats = 1) {
     target.places = Math.max(0, Number(target.capacity) - totalOccupied);
     trajetsCovoiturage[trajetIndex] = target;
     localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
-
+      
     trajet.passagers = target.passagers;
     trajet.capacity = target.capacity;
     trajet.places = target.places;
@@ -420,4 +424,7 @@ function reserverPlace(trajet, seats = 1) {
   try { renderPlaces(); } catch(e) {}
 
   alert(`✅ Réservation confirmée : ${seats} place${seats > 1 ? 's' : ''}. Vous pouvez voir vos trajets dans votre espace utilisateur.`);
+
+  // ← Ici, redirection vers espace utilisateur avec onglet trajets ouvert
+  window.location.href = "/espace-utilisateur?tab=trajets";
 }

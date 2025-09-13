@@ -1,0 +1,79 @@
+   <!-- Onglet Profile / Rôle -->
+    <h1>Profil / Rôle</h1>
+    <form>
+      <div class="form-fields">
+        <!-- 1. Rôle -->
+        <div class="form-group role-group">
+          <label><input type="radio" name="role" value="chauffeur"> Chauffeur</label>
+          <label><input type="radio" name="role" value="passager"> Passager</label>
+          <label><input type="radio" name="role" value="les-deux"> Les deux</label>
+        </div>
+      
+        <h2>Ajouter un véhicule</h2>
+        <!-- 2. Plaque -->
+        <div class="form-field">
+          <label for="plate">Plaque d'immatriculation</label>
+          <input type="text" id="plate" class="form-control" placeholder="AB - 123 - CD">
+        </div>
+      
+        <!-- 3. Date -->
+        <div class="form-field">
+          <label for="registration-date">Date de première immatriculation</label>
+          <input type="date" id="registration-date" class="form-control">
+        </div>
+      
+        <!-- Marque -->
+        <div class="form-field">
+          <label for="vehicle-marque">Marque</label>
+          <input type="text" id="vehicle-marque" class="form-control" placeholder="Tesla">
+        </div>
+        
+        <!-- Modèle -->
+        <div class="form-field">
+          <label for="vehicle-model">Modèle</label>
+          <input type="text" id="vehicle-model" class="form-control" placeholder="Model 3">
+        </div>
+        
+        <!-- Couleur -->
+        <div class="form-field">
+          <label for="vehicle-color">Couleur</label>
+          <input type="text" id="vehicle-color" class="form-control" placeholder="Noir">
+        </div>
+
+        <!-- 5. Type de vehicule-->
+        <div class="form-field">
+          <label for="vehicleType">Type de véhicule</label>
+          <select id="vehicleType" name="vehicleType" class="form-input">
+            <option value="" selected hidden>-- Sélectionner un type--</option>
+            <option value="Électrique">Électrique</option>
+            <option value="Hybride">Hybride</option>
+            <option value="Thermique">Thermique</option>
+          </select>
+        </div>
+      
+        <!-- 6. Nombre de places -->
+        <div class="form-field">
+          <label for="seats">Nombre de places disponibles</label>
+          <input type="number" id="seats" class="form-control" placeholder="3">
+        </div>
+      
+        <!-- 7. Préférences chauffeur -->
+        <div class="form-field">
+          <label>Préférences chauffeur</label>
+          <div class="checkbox-group">
+            <label><input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="fumeur"> Fumeur</label>
+            <label><input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="animal"> Animal</label>
+            <label><input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="musique"> Musique</label>
+          </div>
+        </div>
+      
+        <!-- 8. Autre -->
+        <div class="form-field">
+          <label for="other">Autre</label>
+          <input type="text" id="other" class="form-control" placeholder="Discussion...">
+        </div>
+      
+        <!-- 9. Bouton -->
+        <button type="submit" class="btn">Enregistrer</button>
+      </div>
+    </form>

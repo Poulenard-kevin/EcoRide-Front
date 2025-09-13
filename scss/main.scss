@@ -10,6 +10,12 @@
 @import 'index';
 @import 'detail';
 
+@import 'user-space';
+// Import des styles spécifiques aux onglets
+@import 'user-profile-form';
+@import 'user-trajects-form';
+@import 'user-vehicles-form';
+@import 'user-history-form';
 
 
 html{

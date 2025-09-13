@@ -1,0 +1,68 @@
+<div class="hero-scene">
+  <div class="hero-scene-content">
+    <h1 class="big-title">Espace utilisateur</h1>
+  </div>
+</div>
+
+<section class="user-space-section container">
+  <!-- Liste dans le HTML desktop -->
+  <ul class="nav nav-pills user-tabs">
+    <li class="nav-item">
+      <a class="nav-link active" href="javascript:void(0);">Profil / Rôle</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="javascript:void(0);" data-tab="trajets">Mes trajets</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="javascript:void(0);">Mes véhicules</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="javascript:void(0);">Historique</a>
+    </li>
+  </ul>
+
+  <!-- Bouton pour ouvrir l'Offcanvas -->
+  <button class="btn btn-primary user-space-toggle" type="button" data-bs-toggle="offcanvas" data-bs-target="#userSpaceOffcanvas" aria-controls="userSpaceOffcanvas">
+    Menu espace utilisateur
+  </button>
+
+  <!-- Offcanvas -->
+  <div class="offcanvas offcanvas-start" tabindex="-1" id="userSpaceOffcanvas" aria-labelledby="userSpaceOffcanvasLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="userSpaceOffcanvasLabel">Menu espace utilisateur</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      <!-- Liste dans l'Offcanvas -->
+      <ul class="nav nav-pills user-tabs-offcanvas">
+        <li class="nav-item">
+          <a class="nav-link active" href="javascript:void(0);">Profil / Rôle</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="javascript:void(0);" data-tab="trajets">Mes trajets</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="javascript:void(0);">Mes véhicules</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="javascript:void(0);">Historique</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Contenu des onglets -->
+  <div id="user-profile-form" class="user-space-form active">
+    <!-- Le contenu sera chargé dynamiquement ici -->
+  </div>
+  <div id="user-trajects-form" class="user-space-form" style="display: none;">
+    <!-- Le contenu sera chargé dynamiquement ici -->
+  </div>
+  <div id="user-vehicles-form" class="user-space-form" style="display: none;">
+    <!-- Le contenu sera chargé dynamiquement ici -->
+  </div>
+  <div id="user-history-form" class="user-space-form" style="display: none;">
+    <!-- Le contenu sera chargé dynamiquement ici -->
+  </div>
+</section>
+

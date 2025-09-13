@@ -29,7 +29,7 @@ export function initTrajets() {
   console.log("📥 Trajets chargés:", trajets);
 
   // ⚡ Injection dynamique des véhicules
-  populateVehicles();
+  populateVehiclesDatalist();
 
   if (form) {
     form.addEventListener('submit', handleTrajetSubmit);
@@ -41,7 +41,7 @@ export function initTrajets() {
 
   renderTrajetsInProgress();
   renderHistorique();
-  populateVehicles();
+  populateVehiclesDatalist();
 
   // =================== ⚡ Gestion placeholder Date / Time ===================
   document.querySelectorAll('input[type="date"], input[type="time"]').forEach(input => {
@@ -447,7 +447,7 @@ function saveTrajets() {
 
 // -------------------- Injection dynamique véhicules --------------------
 
-function populateVehicles() {
+function populateVehiclesDatalist() {
   try {
     const stored = localStorage.getItem('ecoride_vehicles');
     const vehicles = stored ? JSON.parse(stored) : [];

@@ -3,6 +3,23 @@ let editingVehicleIndex = null;
 let vehicleToDeleteIndex = null;
 const vehicles = [];
 
+// -------------------- Sauvegarde les vehicules --------------------
+
+function loadVehicles() {
+  try {
+    const stored = localStorage.getItem('ecoride_vehicles');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        vehicles.length = 0; // vide le tableau
+        vehicles.push(...parsed); // remplit avec les données existantes
+      }
+    }
+  } catch (e) {
+    console.error("Erreur chargement véhicules depuis localStorage", e);
+  }
+}
+
 // -------------------- Helpers --------------------
 function getVehicleLabel(v) {
   const brand = v.brand || v.marque || '';
@@ -17,6 +34,8 @@ import { initTrajets } from '../Js/trajets.js';
 // -------------------- Initialisation principale --------------------
 export async function initUserSpace() {
   console.log("🚀 Initialisation de l'espace utilisateur...");
+
+  loadVehicles();
 
   // 🔄 Migration des anciennes clés localStorage
   const oldVehicules = localStorage.getItem('ecoride_vehicules');
@@ -312,23 +331,41 @@ function renderVehicleList() {
   vehiclesLocal.forEach((v, index) => {
     const vehicleContainer = document.createElement('div');
     vehicleContainer.className = 'vehicle-container';
-
+  
+    // Création du conteneur flex pour la ligne véhicule
     const vehicleLine = document.createElement('div');
-    vehicleLine.className = 'form-field vehicle-label';
+    vehicleLine.className = 'form-field vehicle-label vehicle-line';
     vehicleLine.style.cursor = 'pointer';
-    vehicleLine.textContent = getVehicleLabel(v);
-
+  
+    // Création des divs pour marque, modèle et couleur
+    const brandDiv = document.createElement('div');
+    brandDiv.className = 'vehicle-brand';
+    brandDiv.textContent = v.marque || v.brand || '';
+  
+    const modelDiv = document.createElement('div');
+    modelDiv.className = 'vehicle-model';
+    modelDiv.textContent = v.model || '';
+  
+    const colorDiv = document.createElement('div');
+    colorDiv.className = 'vehicle-color';
+    colorDiv.textContent = v.color || '';
+  
+    // Ajout des divs dans vehicleLine
+    vehicleLine.appendChild(brandDiv);
+    vehicleLine.appendChild(modelDiv);
+    vehicleLine.appendChild(colorDiv);
+  
     vehicleLine.addEventListener('click', () => {
       showVehicleModal(v);
     });
-
+  
     const actionDiv = document.createElement('div');
     actionDiv.className = 'form-field-modify-delete';
     actionDiv.innerHTML = `
       <a href="javascript:void(0);" class="link-modify" data-index="${index}">Modifier</a>
       <a href="#" class="link-delete" data-bs-toggle="modal" data-bs-target="#deleteModal">Supprimer</a>
     `;
-
+  
     vehicleContainer.appendChild(vehicleLine);
     vehicleContainer.appendChild(actionDiv);
     listDiv.appendChild(vehicleContainer);
@@ -517,7 +554,7 @@ function handleConfirmDelete() {
   }
 }
 
-// -------------------- Changement d'onglet --------------------
+// -------------------- Changement d'onglet + actualisation --------------------
 function switchToTab(tabId) {
   const userSpaceSection = document.querySelector('.user-space-section');
   if (!userSpaceSection) return;
@@ -540,7 +577,6 @@ function switchToTab(tabId) {
   // Fonction pour activer l'onglet correspondant
   function activateTab(tabs) {
     tabs.forEach(tab => {
-      // Récupérer l'attribut href ou data-target (selon ta structure)
       const href = tab.getAttribute('href') || tab.dataset.target || '';
       if (href === `#${tabId}`) {
         tab.classList.add('active');
@@ -550,6 +586,27 @@ function switchToTab(tabId) {
 
   activateTab(desktopTabs);
   activateTab(offcanvasTabs);
+
+  if (tabId === 'user-trajects-form') {  // ou l’id de l’onglet création trajet
+    loadVehicles();       // recharge les véhicules depuis localStorage
+    renderVehicleList();  // rafraîchit la liste affichée
+    if (typeof populateVehiclesSelect === 'function') {
+      populateVehiclesSelect();
+    }
+  }
+}
+
+// Fonction globale pour remplir le datalist/select des véhicules
+function populateVehiclesSelect() {
+  const datalist = document.getElementById('vehiclesDatalist');
+  if (!datalist) return;
+
+  datalist.innerHTML = '';
+  vehicles.forEach(v => {
+    const option = document.createElement('option');
+    option.value = getVehicleLabel(v);
+    datalist.appendChild(option);
+  });
 }
 
 // -------------------- Persistance véhicules --------------------
@@ -559,13 +616,18 @@ function saveVehicles() {
     console.log("💾 Véhicules sauvegardés:", vehicles.length);
 
     // ⚡ Mise à jour immédiate du datalist côté trajets
-    if (typeof populateVehicles === 'function') {
-      populateVehicles();
+    if (typeof populateVehiclesSelect === 'function') {
+      populateVehiclesSelect();
     }
 
   } catch (err) {
     console.error("❌ Erreur sauvegarde véhicules:", err);
   }
+
+  // après avoir écrit dans localStorage
+  window.dispatchEvent(new CustomEvent('ecoride:vehiclesUpdated', {
+    detail: { vehicles: JSON.parse(localStorage.getItem('ecoride_vehicles') || '[]') }
+  }));
 }
 
 // -------------------- Lancement --------------------

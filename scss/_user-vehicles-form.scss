@@ -184,19 +184,27 @@
     color: $color-light-beige; /* Couleur bleue Bootstrap au survol */
   }
 
-  .vehicle-line > div.brand {
+  .vehicle-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .vehicle-brand {
+    flex: 1;
     text-align: left;
-    flex-basis: 33%;
   }
   
-  .vehicle-line > div.model {
+  .vehicle-model {
+    flex: 1;
     text-align: center;
-    flex-basis: 33%;
   }
   
-  .vehicle-line > div.color {
+  .vehicle-color {
+    flex: 1;
     text-align: right;
-    flex-basis: 33%;
   }
 
   

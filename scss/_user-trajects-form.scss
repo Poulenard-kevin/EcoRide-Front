@@ -351,3 +351,9 @@
    width: 100% !important;
   }
 }
+
+.vehicle-label {
+  display: inline-block;   /* évite que ça prenne toute la ligne */
+  font-weight: 500;        /* un peu plus visible */
+  white-space: nowrap;     /* empêche les retours à la ligne */
+}

@@ -1,3 +1,11 @@
+// -------------------- Helpers --------------------
+function getVehicleLabel(v) {
+  const brand = v.brand || v.marque || '';
+  const model = v.model || v.vehicleModel || v.modele || '';
+  const color = v.color || v.couleur || '';
+  return `${brand} ${model} ${color}`.trim();
+}
+
 // -------------------- Variables globales --------------------
 let trajets = [];
 let editingIndex = null; // 👈 nouvel indicateur d'édition
@@ -5,6 +13,14 @@ let editingIndex = null; // 👈 nouvel indicateur d'édition
 // -------------------- Fonction principale d'initialisation --------------------
 export function initTrajets() {
   console.log("🚀 Initialisation des trajets");
+
+  // 🔄 Migration des anciennes clés localStorage
+  const oldVehicules = localStorage.getItem('ecoride_vehicules');
+  if (oldVehicules) {
+    localStorage.setItem('ecoride_vehicles', oldVehicules);
+    localStorage.removeItem('ecoride_vehicules');
+    console.log("🔄 Migration effectuée : ecoride_vehicules ➝ ecoride_vehicles");
+  }
 
   const form = document.querySelector('#trajet-form');
   console.log("📋 Formulaire trouvé:", form);
@@ -90,10 +106,10 @@ function handleTrajetSubmit(e) {
   const formData = new FormData(e.target);
 
   // 🔹 Récupérer l'objet véhicule complet depuis localStorage
-  const vehicules = JSON.parse(localStorage.getItem('ecoride_vehicules') || "[]");
-  const selectedPlate = formData.get('vehicule'); // value = plaque / identifiant unique
+  const vehicles = JSON.parse(localStorage.getItem('ecoride_vehicles') || "[]");
+  const selectedPlate = formData.get('vehicle');
 
-  const selectedVehicule = vehicules.find(v => v.plate === selectedPlate);
+  const selectedVehicle = vehicles.find(v => v.plate === selectedPlate);
 
   const trajetData = {
     id: (editingIndex !== null && trajets[editingIndex]) 
@@ -105,7 +121,7 @@ function handleTrajetSubmit(e) {
     heureDepart: formData.get('heure-depart') || '',
     heureArrivee: formData.get('heure-arrivee') || '',
     prix: formData.get('prix') || '',
-    vehicule: selectedVehicule || null, // 👉 objet véhicule complet
+    vehicle: selectedVehicle || null, // 👉 objet véhicule complet
     role: "chauffeur",
     status: 'ajoute'
   };
@@ -198,9 +214,9 @@ function handleTrajetActions(e) {
       const prixInput = form.querySelector('[name="prix"]');
       if (prixInput) prixInput.value = trajet.prix || '';
 
-      const vehiculeInput = form.querySelector('[name="vehicule"]');
-      if (vehiculeInput) vehiculeInput.value = trajet.vehicule || '';
-    }
+      const vehicleInput = form.querySelector('[name="vehicle"]');
+      if (vehicleInput) vehicleInput.value = trajet.vehicle ? trajet.vehicle.plate : '';
+      }
 
     // ✅ Correction : on utilise editingIndex au lieu de editingTrajetId
     editingIndex = trajets.findIndex(t => t.id === id);
@@ -321,7 +337,7 @@ function renderTrajetsInProgress() {
       if (trajet.status === "reserve") {
         bgClass = "trajet-card reserve";
         // 🚀 FIX: Utiliser detail.html au lieu de /detail
-        const detailUrl = `detail.html?id=${trajet.detailId}`;
+        const detailUrl = `detail.html?id=${trajet.id}`;
         actionHtml = `
           <a href="${detailUrl}" class="btn-trajet trajet-detail-btn">Détail</a>
           <button class="btn-trajet trajet-cancel-btn" data-id="${trajet.id}">Annuler</button>
@@ -434,22 +450,22 @@ function resetForm(form) {
 
 function populateVehicles() {
   try {
-    const stored = localStorage.getItem('ecoride_vehicules');
+    const stored = localStorage.getItem('ecoride_vehicles');
     const vehicles = stored ? JSON.parse(stored) : [];
 
-    const select = document.querySelector('#vehicule');
+    const select = document.querySelector('#vehicle'); // ⚠️ bien "#vehicle"
     if (!select) return;
 
     select.innerHTML = '<option value="" selected hidden>-- Sélectionner un véhicule --</option>';
 
     vehicles.forEach(v => {
       const option = document.createElement('option');
-      option.value = v.plate; // identifiant unique pour retrouver l'objet
-      option.textContent = `${v.brand || ""} ${v.vehicleModel || ""} ${v.color || ""}`.trim();
+      option.value = v.plate;
+      option.textContent = getVehicleLabel(v); 
       select.appendChild(option);
     });
 
-    console.log("🚗 Véhicules injectés:", vehicles.length, vehicles);
+    console.log("🚗 Véhicules injectés dans le select:", vehicles.length, vehicles);
   } catch (err) {
     console.error("❌ Erreur chargement véhicules:", err);
   }
@@ -457,8 +473,8 @@ function populateVehicles() {
 
 // -------------------- Ajout au covoiturage --------------------
 function ajouterAuCovoiturage(trajetData) {
-  console.log("🚗 trajetData.vehicule:", trajetData.vehicule);
-  console.log("🏷️ getVehicleType result:", getVehicleType(trajetData.vehicule));
+  console.log("🚗 trajetData.vehicle:", trajetData.vehicle);
+  console.log("🏷️ getVehicleType result:", getVehicleType(trajetData.vehicle));
   // Convertir le format de trajets.js vers le format covoiturage.js
   const trajetCovoiturage = {
     id: trajetData.id,
@@ -468,8 +484,8 @@ function ajouterAuCovoiturage(trajetData) {
       rating: 0,     // Pas encore noté
       photo: "images/default-avatar.png" // Avatar par défaut
     },
-    type: getVehicleType(trajetData.vehicule), // Déduire le type depuis le véhicule
-    places: 4, // Par défaut, à ajuster selon le véhicule
+    type: getVehicleType(trajetData.vehicle), // Déduire le type depuis le véhicule
+    //places: 3, // Par défaut, à ajuster selon le véhicule
     depart: trajetData.depart,
     arrivee: trajetData.arrivee,
     heureDepart: trajetData.heureDepart.replace(':', 'h'), // "16:00" → "16h00"
@@ -496,15 +512,15 @@ function formatDateForCovoiturage(dateISO) {
 }
 
 // Fonction helper pour déduire le type de véhicule
-function getVehicleType(vehicule) {
-  if (!vehicule) return "Economique";
+function getVehicleType(vehicle) {
+  if (!vehicle) return "Economique";
 
   // 🔹 Si c'est déjà une chaîne
-  if (typeof vehicule === "string") {
-    const vehiculeLower = vehicule.toLowerCase();
-    if (vehiculeLower.includes("tesla") || vehiculeLower.includes("électrique")) {
+  if (typeof vehicle === "string") {
+    const vehicleLower = vehicle.toLowerCase();
+    if (vehicleLower.includes("tesla") || vehicleLower.includes("électrique")) {
       return "Electrique";  
-    } else if (vehiculeLower.includes("hybride") || vehiculeLower.includes("prius")) {
+    } else if (vehicleLower.includes("hybride") || vehicleLower.includes("prius")) {
       return "Hybride";     
     } else {
       return "Thermique";   
@@ -512,15 +528,15 @@ function getVehicleType(vehicule) {
   }
 
   // 🔹 Si c'est un objet
-  if (typeof vehicule === "object") {
-    if (vehicule.type) {
+  if (typeof vehicle === "object") {
+    if (vehicle.type) {
       // Capitaliser la première lettre
-      const type = vehicule.type.toLowerCase();
+      const type = vehicle.type.toLowerCase();
       return type.charAt(0).toUpperCase() + type.slice(1);
     }
 
-    const brand = (vehicule.brand || vehicule.marque || "").toLowerCase();
-    const model = (vehicule.vehicleModel || vehicule.modele || "").toLowerCase();
+    const brand = (vehicle.brand || vehicle.marque || "").toLowerCase();
+    const model = (vehicle.vehicleModel || vehicle.modele || "").toLowerCase();
 
     if (brand.includes("tesla") || model.includes("électrique")) {
       return "Electrique";

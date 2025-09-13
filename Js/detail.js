@@ -2,10 +2,18 @@ console.log("🔍 detail.js chargé !");
 
 document.addEventListener("pageContentLoaded", () => {
   console.log("🎯 DOMContentLoaded dans detail.js");
-  
-  // =================== Récupération de l'ID depuis le pathname ===================
-  const parts = window.location.pathname.split("/");
-  const id = parts[2] || null; // après "/detail/"
+
+  let id = new URLSearchParams(window.location.search).get('id');
+
+  if (!id) {
+    const parts = window.location.pathname.split('/');
+    // Exemple : ['', 'detail', '1234']
+    if (parts.length >= 3 && parts[1] === 'detail') {
+      id = parts[2];
+    }
+  }
+
+  console.log("🟢 ID récupéré dans detail.js:", id);
 
   // =================== Récupération des trajets ===================
   
@@ -28,7 +36,7 @@ document.addEventListener("pageContentLoaded", () => {
       rating: 4,
       passagers: ['Alice', 'Bob'],
       duree: 4.5,
-      vehicule: { marque: 'Peugeot' , model: '308', color: 'Bleu', type: 'Économique' },
+      vehicle: { brand: 'Peugeot' , model: '308', color: 'Bleu', type: 'Économique' },
       preferences: ['Non-fumeur', 'Animaux acceptés', 'Musique'],
       reviews: [
         "Super expérience avec EcoRide ! Jean était très ponctuel et la voiture impeccable. Je recommande !",
@@ -50,7 +58,7 @@ document.addEventListener("pageContentLoaded", () => {
       rating: 5,
       passagers: ['Paul', 'Sophie'],
       duree: 3,
-      vehicule: { marque: 'Toyota' , model: 'Prius', color: 'Blanc', type: 'Hybride' },
+      vehicle: { brand: 'Toyota' , model: 'Prius', color: 'Blanc', type: 'Hybride' },
       preferences: ['Non-fumeur', 'Pas d\'animaux', 'Silence'],
       reviews: [
         "Marie est une excellente conductrice ! Trajet très confortable.",
@@ -72,7 +80,7 @@ document.addEventListener("pageContentLoaded", () => {
       rating: 3,
       passagers: ['Emma'],
       duree: 2.5,
-      vehicule: { marque: 'Renault' , model: 'Clio', color: 'Rouge', type: 'Thermique' },
+      vehicle: { brand: 'Renault' , model: 'Clio', color: 'Rouge', type: 'Thermique' },
       preferences: ['Fumeur autorisé', 'Animaux acceptés', 'Musique'],
       reviews: [
         "Trajet correct, rien d'exceptionnel mais ça fait le travail.",
@@ -94,7 +102,7 @@ document.addEventListener("pageContentLoaded", () => {
       rating: 4,
       passagers: ['Marc', 'Julie', 'Nina'],
       duree: 3,
-      vehicule: { marque: 'Tesla' , model: 'Model 3', color: 'Noir', type: 'Électrique' },
+      vehicle: { brand: 'Tesla' , model: 'Model 3', color: 'Noir', type: 'Électrique' },
       preferences: ['Non-fumeur', 'Animaux acceptés', 'Musique douce'],
       reviews: [
         "Tesla très confortable ! Sophie conduit très bien.",
@@ -243,35 +251,31 @@ document.addEventListener("pageContentLoaded", () => {
     }
   });
 
-  // Véhicule
-  const vehicule = trajet.vehicule || {};
+  // Vehicle
+  const vehicle = trajet.vehicle || {};
 
-  // Marque
-  const marqueElement = document.getElementById("detail-vehicule-marque");
-  if (marqueElement) {
-    const marque = vehicule.brand || vehicule.marque || ""; 
-    marqueElement.textContent = marque || "Marque non spécifiée";
+  // Brand
+  const brandElement = document.getElementById("detail-vehicle-marque");
+  if (brandElement) {
+    brandElement.textContent = vehicle.brand || "Marque non spécifiée";
   }
 
-  // Modèle
-  const modelElement = document.getElementById("detail-vehicule-model");
+  // Model
+  const modelElement = document.getElementById("detail-vehicle-model");
   if (modelElement) {
-    const modele = vehicule.vehicleModel || vehicule.model || vehicule.modele || "";
-    modelElement.textContent = modele || "Modèle non spécifié";
+    modelElement.textContent = vehicle.model || "Modèle non spécifié";
   }
 
-  // Couleur
-  const colorElement = document.getElementById("detail-vehicule-color");
+  // Color
+  const colorElement = document.getElementById("detail-vehicle-color");
   if (colorElement) {
-    const couleur = vehicule.color || vehicule.couleur || "";
-    colorElement.textContent = couleur || "Couleur non spécifiée";
+    colorElement.textContent = vehicle.color || "Couleur non spécifiée";
   }
 
   // Type
-  const typeVehiculeElement = document.getElementById("detail-vehicule-type");
-  if (typeVehiculeElement) {
-    const typeVehicule = vehicule.type || "Non spécifié";
-    typeVehiculeElement.textContent = typeVehicule;
+  const typeElement = document.getElementById("detail-vehicle-type");
+  if (typeElement) {
+    typeElement.textContent = vehicle.type || "Non spécifié";
   }
 
   // Avis du conducteur

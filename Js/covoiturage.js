@@ -1,3 +1,11 @@
+// -------------------- Helpers --------------------
+function getVehicleLabel(v) {
+  const brand = v.brand || v.marque || '';
+  const model = v.model || v.vehicleModel || v.modele || '';
+  const color = v.color || v.couleur || '';
+  return `${brand} ${model} ${color}`.trim();
+}
+
 document.addEventListener('pageContentLoaded', () => {
   const resultsContainer = document.querySelector('.results');
   if (!resultsContainer) {

@@ -3,12 +3,28 @@ let editingVehicleIndex = null;
 let vehicleToDeleteIndex = null;
 const vehicles = [];
 
+// -------------------- Helpers --------------------
+function getVehicleLabel(v) {
+  const brand = v.brand || v.marque || '';
+  const model = v.model || v.vehicleModel || v.modele || '';
+  const color = v.color || v.couleur || '';
+  return `${brand} ${model} ${color}`.trim();
+}
+
 // -------------------- Import --------------------
 import { initTrajets } from '../Js/trajets.js';
 
 // -------------------- Initialisation principale --------------------
 export async function initUserSpace() {
   console.log("🚀 Initialisation de l'espace utilisateur...");
+
+  // 🔄 Migration des anciennes clés localStorage
+  const oldVehicules = localStorage.getItem('ecoride_vehicules');
+  if (oldVehicules) {
+    localStorage.setItem('ecoride_vehicles', oldVehicules);
+    localStorage.removeItem('ecoride_vehicules');
+    console.log("🔄 Migration effectuée : ecoride_vehicules ➝ ecoride_vehicles");
+  }
 
   const userSpaceSection = document.querySelector(".user-space-section");
   if (!userSpaceSection) {
@@ -81,6 +97,8 @@ export async function initUserSpace() {
   console.log("initUserSpace end");
 
   console.log("✅ Espace utilisateur initialisé");
+
+  renderVehicleList();
 }
 
 // -------------------- Chargement HTML dynamique --------------------
@@ -145,25 +163,37 @@ function initRoleForm() {
   toggleVehicleFields();
 }
 
+// -------------------- Fonctions utilitaires --------------------
+
+// ⚡ Conversion jj/mm/aaaa → yyyy-mm-dd
+function convertFRtoISO(dateStr) {
+  if (!dateStr) return "";
+  const parts = dateStr.split("/");
+  if (parts.length !== 3) return "";
+  const [day, month, year] = parts;
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
+
 // -------------------- Gestion des véhicules --------------------
 function initVehicleManagement() {
   const profileForm = document.querySelector('#user-profile-form form');
   const vehicleListContainer = document.getElementById('user-vehicles-form');
+  const plateInput = document.getElementById("plate");
 
-  if (!profileForm || !vehicleListContainer) {
+  if (!profileForm || !vehicleListContainer || !plateInput) {
     console.warn('Formulaire profil ou conteneur véhicules introuvable');
     return;
   }
 
-  // ⚡ NOUVEAU : Formatage automatique de la plaque d'immatriculation
-  const plateInput = document.getElementById("plate");
-  if (plateInput) {
-    plateInput.addEventListener("input", (e) => {
-      let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); // Majuscule + uniquement lettres/chiffres
-      value = value.slice(0, 7); // max 7 caractères utiles
+  // ⚡ Formatage automatique de la plaque
+  plateInput.addEventListener("input", (e) => {
+    let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
-      // On force par position
-      let cleaned = "";
+    // Limiter à 7 caractères utiles (AB123CD)
+    value = value.slice(0, 7);
+
+    // Ajouter format AB - 123 - CD
+    let cleaned = "";
       for (let i = 0; i < value.length; i++) {
         if ((i < 2 || i > 4) && /[A-Z]/.test(value[i])) {
           cleaned += value[i]; // Lettres aux positions 0-1 et 5-6
@@ -171,34 +201,39 @@ function initVehicleManagement() {
           cleaned += value[i]; // Chiffres aux positions 2-4
         }
       }
+    let formatted = "";
+    if (cleaned.length > 0) formatted += cleaned.slice(0, 2);
+    if (cleaned.length > 2) formatted += " - " + cleaned.slice(2, 5);
+    if (cleaned.length > 5) formatted += " - " + cleaned.slice(5, 7);
 
-      // Formatage final avec " - "
-      let formatted = "";
-      if (cleaned.length > 0) formatted += cleaned.slice(0, 2);
-      if (cleaned.length > 2) formatted += " - " + cleaned.slice(2, 5);
-      if (cleaned.length > 5) formatted += " - " + cleaned.slice(5, 7);
+    e.target.value = formatted;
+  });
 
-      e.target.value = formatted;
-    });
-  }
+  renderVehicleList()
 
-  vehicles.push(...getVehicles());
-
+  // ⚡ Validation + sauvegarde
   profileForm.addEventListener('submit', (e) => {
     e.preventDefault();
-
+  
     console.log('editingVehicleIndex au submit:', editingVehicleIndex);
-
+  
     const plate = profileForm.querySelector('#plate').value.trim();
     
-    // ⚡ NOUVEAU : Validation du format de plaque
+    // ⚡ Validation format de plaque
     const regex = /^[A-Z]{2} - \d{3} - [A-Z]{2}$/;
     if (!regex.test(plate)) {
       alert("⚠️ La plaque doit être au format : AB - 123 - CD");
       return;
     }
-
-    const registrationDate = profileForm.querySelector('#registration-date').value.trim();
+  
+    // ⚡ Récupération de la date
+    let registrationDate = profileForm.querySelector('#registration-date').value.trim();
+  
+    // Si l’utilisateur saisit en jj/mm/aaaa → on convertit en YYYY-MM-DD
+    if (registrationDate.includes("/")) {
+      registrationDate = convertFRtoISO(registrationDate);
+    }
+  
     const marque = profileForm.querySelector('#vehicle-marque').value.trim();
     const model = profileForm.querySelector('#vehicle-model').value.trim();
     const color = profileForm.querySelector('#vehicle-color').value.trim();
@@ -206,16 +241,16 @@ function initVehicleManagement() {
     const seats = profileForm.querySelector('#seats').value.trim();
     const preferences = Array.from(profileForm.querySelectorAll('input[name="preferences"]:checked')).map(el => el.value);
     const other = profileForm.querySelector('#other').value.trim();
-
+  
     if (!model) {
       alert('Le modèle est obligatoire');
       return;
     }
-
+  
     const vehicleData = {
-      id: plate,        // 🔑 La plaque comme ID unique
+      id: plate,       // 🔑 La plaque comme ID unique
       plate,
-      registrationDate,
+      registrationDate,   // ✅ toujours en YYYY-MM-DD
       marque,
       model,
       color,
@@ -224,17 +259,15 @@ function initVehicleManagement() {
       preferences,
       other
     };
-
+  
     if (editingVehicleIndex !== null) {
       vehicles[editingVehicleIndex] = vehicleData;
       editingVehicleIndex = null;
     } else {
       vehicles.push(vehicleData);
     }
-
-    // ✅ Sauvegarde persistante
+  
     saveVehicles();
-
     profileForm.reset();
     renderVehicleList();
     switchToTab('user-vehicles-form');
@@ -263,20 +296,27 @@ function renderVehicleList() {
   `;
 
   const listDiv = container.querySelector('#vehicleList');
+  listDiv.innerHTML = "";
 
-  vehicles.forEach((v, index) => {
+  // 🔥 On recharge direct depuis localStorage (fiable)
+  const stored = localStorage.getItem('ecoride_vehicles');
+  const vehiclesLocal = stored ? JSON.parse(stored) : [];
+
+  console.log("📋 Véhicules trouvés pour l'affichage :", vehiclesLocal);
+
+  if (vehiclesLocal.length === 0) {
+    listDiv.innerHTML = "<p>Aucun véhicule enregistré.</p>";
+    return;
+  }
+
+  vehiclesLocal.forEach((v, index) => {
     const vehicleContainer = document.createElement('div');
     vehicleContainer.className = 'vehicle-container';
 
     const vehicleLine = document.createElement('div');
-    vehicleLine.className = 'form-field';
+    vehicleLine.className = 'form-field vehicle-label';
     vehicleLine.style.cursor = 'pointer';
-    vehicleLine.innerHTML = `
-      <div class="brand">${v.marque || 'Marque ?'}</div>
-      <div class="model">${v.model || 'Modèle ?'}</div>
-      <div class="color">${v.color || 'Couleur ?'}</div>
-      <div class="type">${v.type || 'Type ?'}</div>
-    `;
+    vehicleLine.textContent = getVehicleLabel(v);
 
     vehicleLine.addEventListener('click', () => {
       showVehicleModal(v);
@@ -291,7 +331,6 @@ function renderVehicleList() {
 
     vehicleContainer.appendChild(vehicleLine);
     vehicleContainer.appendChild(actionDiv);
-
     listDiv.appendChild(vehicleContainer);
   });
 }
@@ -361,6 +400,15 @@ function injectDeleteModal() {
 }
 
 // -------------------- Gestion des événements globaux --------------------
+
+// ⚡ Fonction utilitaire pour formater les dates dans input[type="date"]
+function formatDateForInput(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d)) return "";
+  return d.toISOString().split("T")[0]; // 👉 retourne YYYY-MM-DD
+}
+
 document.body.addEventListener('click', (event) => {
   const target = event.target;
 
@@ -398,14 +446,17 @@ function handleModifyClick(index) {
   }
 
   profileForm.querySelector('#plate').value = vehicle.plate || '';
-  profileForm.querySelector('#registration-date').value = vehicle.registrationDate || '';
-  profileForm.querySelector('#vehicle-model').value = `${vehicle.brand}, ${vehicle.vehicleModel}, ${vehicle.color}`.trim();
+  profileForm.querySelector('#registration-date').value = formatDateForInput(vehicle.registrationDate);
+  profileForm.querySelector('#vehicle-marque').value = vehicle.marque || '';
+  profileForm.querySelector('#vehicle-model').value = vehicle.model || '';
+  profileForm.querySelector('#vehicle-color').value = vehicle.color || '';
+  profileForm.querySelector('#vehicleType').value = vehicle.type || '';  
   profileForm.querySelector('#seats').value = vehicle.seats || '';
   profileForm.querySelector('#other').value = vehicle.other || '';
 
   const preferencesInputs = profileForm.querySelectorAll('input[name="preferences"]');
   preferencesInputs.forEach(input => {
-    input.checked = vehicle.preferences.includes(input.value);
+    input.checked = vehicle.preferences && vehicle.preferences.includes(input.value);
   });
 
   const roleConducteur = profileForm.querySelector('input[name="role"][value="conducteur"]');
@@ -498,7 +549,7 @@ function switchToTab(tabId) {
 // -------------------- Persistance véhicules --------------------
 function saveVehicles() {
   try {
-    localStorage.setItem('ecoride_vehicules', JSON.stringify(vehicles));
+    localStorage.setItem('ecoride_vehicles', JSON.stringify(vehicles));
     console.log("💾 Véhicules sauvegardés:", vehicles.length);
 
     // ⚡ Mise à jour immédiate du datalist côté trajets
@@ -513,7 +564,7 @@ function saveVehicles() {
 
 function getVehicles() {
   try {
-    const stored = localStorage.getItem('ecoride_vehicules');
+    const stored = localStorage.getItem('ecoride_vehicles');
     return stored ? JSON.parse(stored) : [];
   } catch (err) {
     console.error("❌ Erreur lecture véhicules localStorage:", err);

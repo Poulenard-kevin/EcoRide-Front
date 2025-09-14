@@ -165,6 +165,23 @@ function handleTrajetSubmit(e) {
 
 // -------------------- Gestion des actions --------------------
 
+// Helper : retry until fn() returns true (ou maxAttempts atteintes)
+function tryUntilExists(fn, maxAttempts = 8, intervalMs = 80) {
+  let attempts = 0;
+  return new Promise(resolve => {
+    const runner = () => {
+      try {
+        const ok = fn();
+        if (ok) return resolve(true);
+      } catch (err) { /* ignore */ }
+      attempts++;
+      if (attempts >= maxAttempts) return resolve(false);
+      setTimeout(runner, intervalMs);
+    };
+    runner();
+  });
+}
+
 function handleTrajetActions(e) {
   const target = e.target;
 
@@ -192,52 +209,88 @@ function handleTrajetActions(e) {
   }
 
   if (target.classList.contains('trajet-edit-btn')) {
+    e.preventDefault?.();           // empêcher comportement par défaut
+    e.stopPropagation?.();          // empêcher propagation
+
     const id = target.dataset.id;
     const trajet = trajets.find(t => t.id === id);
-    
+
     // Seuls les trajets chauffeur peuvent être édités
-    if (!trajet || trajet.role !== 'chauffeur') {
-      return;
+    if (!trajet || trajet.role !== 'chauffeur') return;
+
+    // Forcer l'onglet "Mes trajets"
+    if (typeof switchToTab === 'function') {
+      switchToTab('user-trajects-form');
+      console.log('switchToTab called for user-trajects-form');
     }
 
-    const form = document.querySelector('#trajet-form');
-    if (form) {
-      const departInput = form.querySelector('[name="depart"]');
-      if (departInput) departInput.value = trajet.depart || '';
-
-      const arriveeInput = form.querySelector('[name="arrivee"]');
-      if (arriveeInput) arriveeInput.value = trajet.arrivee || '';
-
-      const dateInput = form.querySelector('[name="date"]');
-      if (dateInput) dateInput.value = trajet.date || '';
-
-      const heureDepartInput = form.querySelector('[name="heure-depart"]');
-      if (heureDepartInput) heureDepartInput.value = trajet.heureDepart || '';
-
-      const heureArriveeInput = form.querySelector('[name="heure-arrivee"]');
-      if (heureArriveeInput) heureArriveeInput.value = trajet.heureArrivee || '';
-
-      const prixInput = form.querySelector('[name="prix"]');
-      if (prixInput) prixInput.value = trajet.prix || '';
-
-      const vehicleInput = form.querySelector('[name="vehicle"]');
-      if (vehicleInput) vehicleInput.value = trajet.vehicle ? trajet.vehicle.plate : '';
+    // Attendre que le formulaire soit présent / prêt dans le DOM
+    tryUntilExists(() => {
+      return document.querySelector('#trajet-form') !== null;
+    }, 12, 80).then(found => {
+      if (!found) {
+        console.warn('trajet-form introuvable après retries');
+        return;
       }
 
-    // ✅ Correction : on utilise editingIndex au lieu de editingTrajetId
-    editingIndex = trajets.findIndex(t => t.id === id);
-    console.log("✏️ Trajet prêt pour modification (index:", editingIndex, "):", trajet);
+      const form = document.querySelector('#trajet-form');
+      if (!form) return;
 
-    // 🚀 Forcer l'onglet "Mes trajets" avec Bootstrap
-    const tabTrigger = document.querySelector('[data-bs-target="#tab-trajets"]');
-    if (tabTrigger) {
-      new bootstrap.Tab(tabTrigger).show();
-    }
+      // Pré-remplissage
+      const setIf = (selector, value) => {
+        const el = form.querySelector(selector);
+        if (el) el.value = value || '';
+      };
 
-    // Bonus UX → scroll vers le formulaire
-    if (form) {
-      form.scrollIntoView({ behavior: "smooth" });
-    }
+      setIf('[name="depart"]', trajet.depart);
+      setIf('[name="arrivee"]', trajet.arrivee);
+      setIf('[name="date"]', trajet.date);
+      setIf('[name="heure-depart"]', trajet.heureDepart);
+      setIf('[name="heure-arrivee"]', trajet.heureArrivee);
+      setIf('[name="prix"]', trajet.prix);
+      setIf('[name="vehicle"]', trajet.vehicle ? trajet.vehicle.plate : '');
+
+      // marque l'index d'édition
+      editingIndex = trajets.findIndex(t => t.id === id);
+      console.log("✏️ Trajet prêt pour modification (index:", editingIndex, "):", trajet);
+
+      // Scroll robuste vers le formulaire (gère parents scrollables)
+      const getScrollableParent = el => {
+        let node = el.parentElement;
+        while (node) {
+          const style = window.getComputedStyle(node);
+          const overflow = style.overflow + style.overflowY + style.overflowX;
+          if (/(auto|scroll)/.test(overflow)) return node;
+          node = node.parentElement;
+        }
+        return document.scrollingElement || document.documentElement;
+      };
+
+      const robustScrollTo = (el) => {
+        try {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          const parent = getScrollableParent(el);
+          if (parent && parent !== document.scrollingElement && parent !== document.documentElement) {
+            const elRect = el.getBoundingClientRect();
+            const parentRect = parent.getBoundingClientRect();
+            const offset = (elRect.top - parentRect.top) - (parentRect.height / 2) + (elRect.height / 2);
+            parent.scrollTo({ top: parent.scrollTop + offset, behavior: 'smooth' });
+          }
+        } catch (err) {
+          console.error('robustScrollTo error', err);
+        }
+      };
+
+      // Laisser un petit délai si nécessaire (après injection du contenu)
+      setTimeout(() => {
+        robustScrollTo(form);
+        // focus premier champ pour montrer visuellement que c'est prêt
+        const first = form.querySelector('input, textarea, select, button');
+        if (first) first.focus({ preventScroll: true });
+      }, 40);
+    });
+
+    return; // sortir du handler pour éviter autres branches
   }
 
   if (target.classList.contains('trajet-delete-btn')) {
@@ -248,15 +301,15 @@ function handleTrajetActions(e) {
         // Supprime depuis ecoride_trajets
         trajets.splice(index, 1);
         saveTrajets();
-  
+
         // 🚀 Supprime aussi depuis nouveauxTrajets (covoiturage)
         let trajetsCovoit = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
         trajetsCovoit = trajetsCovoit.filter(t => t.id !== id);
         localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoit));
-  
+
         renderTrajetsInProgress();
         renderHistorique();
-  
+
         console.log("🗑️ Trajet supprimé (ID:", id, ") et retiré du covoiturage");
       }
     }
@@ -268,12 +321,12 @@ function handleTrajetActions(e) {
     if (trajet && trajet.role === 'chauffeur') {
       trajet.status = 'valide'; // ✅ on bascule en historique
       saveTrajets();
-  
+
       // 🚀 Supprimer aussi de la liste covoiturage
       let trajetsCovoit = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
       trajetsCovoit = trajetsCovoit.filter(t => t.id !== id);
       localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoit));
-  
+
       renderTrajetsInProgress();
       renderHistorique();
       console.log("📂 Trajet déplacé dans l'historique ET retiré du covoiturage :", trajet);

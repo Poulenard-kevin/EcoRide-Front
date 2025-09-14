@@ -293,26 +293,88 @@ function handleTrajetActions(e) {
     return; // sortir du handler pour éviter autres branches
   }
 
+  // -------------------- trajet-delete-btn --------------------
+
   if (target.classList.contains('trajet-delete-btn')) {
     const id = target.dataset.id;
     const index = trajets.findIndex(t => t.id === id);
-    if (index !== -1) {
-      if (confirm("Voulez-vous vraiment supprimer ce trajet ?")) {
-        // Supprime depuis ecoride_trajets
-        trajets.splice(index, 1);
-        saveTrajets();
-
-        // 🚀 Supprime aussi depuis nouveauxTrajets (covoiturage)
-        let trajetsCovoit = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
-        trajetsCovoit = trajetsCovoit.filter(t => t.id !== id);
-        localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoit));
-
-        renderTrajetsInProgress();
-        renderHistorique();
-
-        console.log("🗑️ Trajet supprimé (ID:", id, ") et retiré du covoiturage");
-      }
+    if (index === -1) return;
+  
+    if (!confirm("Voulez-vous vraiment supprimer ce trajet ? Les passagers seront notifiés que le trajet a été annulé par le chauffeur.")) {
+      return;
     }
+  
+    // 1) Supprimer le trajet local (chauffeur)
+    const removed = trajets.splice(index, 1)[0];
+    saveTrajets();
+  
+    // 2) Supprimer le covoiturage (nouveauxTrajets)
+    let trajetsCovoit = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+    const covoIndex = trajetsCovoit.findIndex(t => t.id === id);
+    let removedCovo = null;
+    if (covoIndex !== -1) {
+      removedCovo = trajetsCovoit.splice(covoIndex, 1)[0];
+      localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoit));
+      console.log("🚮 Covoiturage supprimé depuis nouveauxTrajets (ID:", id, ")");
+    } else {
+      console.log("ℹ️ Aucun covoiturage trouvé dans nouveauxTrajets pour l'ID:", id);
+    }
+  
+    // 3) Marquer les réservations liées dans ecoride_trajets et créer notifications
+    let userTrajets = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+    let notifications = JSON.parse(localStorage.getItem('ecoride_notifications') || '[]');
+  
+    const beforeCount = userTrajets.length;
+    let affected = 0;
+  
+    // helper pour récupérer un identifiant utilisateur depuis une réservation (si présent)
+    const getPassengerIdentifier = (res) => {
+      return res.userId || res.passagerId || res.pseudo || (res.user && res.user.id) || (res.passager && res.passager.id) || null;
+    };
+  
+    userTrajets = userTrajets.map(res => {
+      const ref = res.covoiturageId || res.detailId || null;
+      if (ref === id) {
+        affected++;
+  
+        // Marquer la réservation comme annulée par le chauffeur
+        res.status = 'annule_par_chauffeur';
+        res.cancellationReason = res.cancellationReason || "Trajet annulé par le chauffeur";
+        res.cancellationAt = new Date().toISOString();
+        res.notified = false; // on pourra utiliser ce flag pour afficher une notif non lue
+  
+        // Créer une notification destinée au passager
+        const passengerId = getPassengerIdentifier(res);
+        const notification = {
+          id: crypto.randomUUID ? crypto.randomUUID() : ('notif_' + Date.now() + Math.random().toString(36).slice(2)),
+          to: passengerId, // peut être null si pas d'identifiant lié
+          message: `Le trajet ${removedCovo ? (removedCovo.depart + ' → ' + removedCovo.arrivee) : ''} du ${removedCovo ? removedCovo.date : ''} a été annulé par le chauffeur.`,
+          relatedCovoiturageId: id,
+          type: 'trajet_annule',
+          read: false,
+          createdAt: new Date().toISOString()
+        };
+        notifications.push(notification);
+      }
+      return res;
+    });
+  
+    if (affected > 0) {
+      localStorage.setItem('ecoride_trajets', JSON.stringify(userTrajets));
+      localStorage.setItem('ecoride_notifications', JSON.stringify(notifications));
+      console.log(`🔔 ${affected} réservation(s) marquée(s) 'annule_par_chauffeur' et notifications créées.`);
+    } else {
+      console.log("ℹ️ Aucune réservation utilisateur liée trouvée.");
+    }
+  
+    // 4) Re-render + event global pour que l'UI se mette à jour
+    if (typeof renderTrajetsInProgress === 'function') renderTrajetsInProgress();
+    if (typeof renderHistorique === 'function') renderHistorique();
+    window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+    window.dispatchEvent(new CustomEvent('ecoride:notificationsUpdated'));
+  
+    // 5) Message au chauffeur
+    alert(`Trajet supprimé. ${affected} réservation(s) ont été marquée(s) comme annulée(s) et les passagers ont été notifiés.`);
   }
 
   if (target.classList.contains('trajet-close-btn')) {

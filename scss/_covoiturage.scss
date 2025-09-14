@@ -26,7 +26,7 @@
         padding: 35px;
       }
       
-      @media (max-width: 910px) {
+      @media (max-width: 960px) {
         grid-template-columns: 1fr; /* Passe à une seule colonne */
         gap: 15px; /* Réduit l'espacement entre les éléments */
         padding: 35px;

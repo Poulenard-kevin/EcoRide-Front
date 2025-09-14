@@ -525,40 +525,93 @@ function populateVehiclesDatalist() {
 
 // -------------------- Ajout au covoiturage --------------------
 function ajouterAuCovoiturage(trajetData) {
-  console.log("🚗 trajetData.vehicle:", trajetData.vehicle);
-  console.log("🏷️ getVehicleType result:", getVehicleType(trajetData.vehicle));
-  // Convertir le format de trajets.js vers le format covoiturage.js
-  const capacity = (trajetData.vehicle && trajetData.vehicle.places !== undefined)
-  ? Number(trajetData.vehicle.places)
-  : (trajetData.places !== undefined ? Number(trajetData.places) : 4);
+  console.log("🚗 ajout/update covoiturage pour:", trajetData.id);
 
-  const trajetCovoiturage = {
+  // Charger la liste existante
+  let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+
+  // Déterminer la capacity (priorité : vehicle.places, puis trajetData.places, sinon 4)
+  const capacity = (trajetData.vehicle && trajetData.vehicle.places !== undefined)
+    ? Number(trajetData.vehicle.places)
+    : (trajetData.places !== undefined ? Number(trajetData.places) : 4);
+
+  // Construire l'objet standardisé pour le covoiturage
+  const baseTrajetCovoit = {
     id: trajetData.id,
     date: formatDateForCovoiturage(trajetData.date),
     chauffeur: {
-      pseudo: "Moi",
-      rating: 0,
-      photo: "images/default-avatar.png"
+      pseudo: trajetData.chauffeur?.pseudo || "Moi",
+      rating: trajetData.chauffeur?.rating || 0,
+      photo: trajetData.chauffeur?.photo || "images/default-avatar.png"
     },
     type: getVehicleType(trajetData.vehicle),
-    capacity,                 // capacité totale
-    places: capacity,         // places restantes (sera décrémentée)
+    capacity,
+    places: capacity, // valeur par défaut, sera réajustée ensuite
     depart: trajetData.depart,
     arrivee: trajetData.arrivee,
     heureDepart: trajetData.heureDepart ? trajetData.heureDepart.replace(':', 'h') : '',
     heureArrivee: trajetData.heureArrivee ? trajetData.heureArrivee.replace(':', 'h') : '',
     prix: parseInt(trajetData.prix) || 0,
-    rating: 0,
-    passagers: [],            // tableau des noms/id des passagers
+    rating: trajetData.rating || 0,
+    passagers: Array.isArray(trajetData.passagers) ? trajetData.passagers.slice() : [],
     vehicle: trajetData.vehicle || null
   };
 
-  // Sauvegarder dans le localStorage pour covoiturage.js
-  let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
-  trajetsCovoiturage.push(trajetCovoiturage);
-  localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
+  // Chercher si le covoiturage existe déjà
+  const idx = trajetsCovoiturage.findIndex(t => t.id === baseTrajetCovoit.id);
 
-  console.log("🚗 Trajet ajouté au covoiturage:", trajetCovoiturage);
+  if (idx !== -1) {
+    // Mise à jour : ne pas écraser passagers ni places sans recalcul
+    const existing = trajetsCovoiturage[idx];
+
+    // Conserver les passagers existants s'il y en a (priorité aux existants)
+    baseTrajetCovoit.passagers = Array.isArray(existing.passagers) && existing.passagers.length > 0
+      ? existing.passagers.slice()
+      : baseTrajetCovoit.passagers;
+
+    // Si la capacité a changé (p.ex. véhicule modifié), recalculer places restantes
+    const totalOccupied = baseTrajetCovoit.passagers.reduce((sum, p) => {
+      if (typeof p === 'string') {
+        const m = p.match(/x(\d+)$/);
+        return sum + (m ? Number(m[1]) : 1);
+      }
+      return sum + 1;
+    }, 0);
+
+    const newCapacity = baseTrajetCovoit.capacity;
+    baseTrajetCovoit.capacity = (typeof existing.capacity === 'number') ? existing.capacity : newCapacity;
+
+    // Si on détecte que vehicle a changé => mettre à jour capacity puis places
+    if (newCapacity !== baseTrajetCovoit.capacity) {
+      // si capacity réduit en dessous de occupants, places=0 sinon capacity - occupied
+      baseTrajetCovoit.places = Math.max(0, newCapacity - totalOccupied);
+    } else {
+      // sinon préserver places si existant sinon calculer
+      baseTrajetCovoit.places = (typeof existing.places === 'number') ? existing.places : Math.max(0, newCapacity - totalOccupied);
+    }
+
+    // Merge non destructif (préserver champs existants si présents)
+    trajetsCovoiturage[idx] = Object.assign({}, existing, baseTrajetCovoit);
+    console.log("🔁 Trajet covoiturage mis à jour :", trajetsCovoiturage[idx]);
+  } else {
+    // Nouveau covoiturage : recalculer places en fonction des passagers actuels
+    const occupied = baseTrajetCovoit.passagers.reduce((sum, p) => {
+      if (typeof p === 'string') {
+        const m = p.match(/x(\d+)$/);
+        return sum + (m ? Number(m[1]) : 1);
+      }
+      return sum + 1;
+    }, 0);
+    baseTrajetCovoit.places = Math.max(0, capacity - occupied);
+
+    trajetsCovoiturage.push(baseTrajetCovoit);
+    console.log("➕ Nouveau trajet covoiturage ajouté :", baseTrajetCovoit);
+  }
+
+  // Sauvegarde
+  localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
+  // Notifier si tu utilises l'événement global
+  window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
 }
 
 // Fonction helper pour formater la date

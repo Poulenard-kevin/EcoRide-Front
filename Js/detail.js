@@ -382,9 +382,14 @@ function reserverPlace(trajet, seats = 1) {
   let trajetsUtilisateur = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
   trajetsUtilisateur.push(reservation);
   localStorage.setItem('ecoride_trajets', JSON.stringify(trajetsUtilisateur));
-
+ 
   let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
   const trajetIndex = trajetsCovoiturage.findIndex(t => t.id === trajet.id);
+
+  // Dispatch d'un événement pour informer le module trajets
+  window.dispatchEvent(new CustomEvent('ecoride:reservationAdded', { detail: reservation }));
+  // Optionnel : événement générique pour forcer reload
+  window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
 
   let userPseudo = "Moi";
   try {

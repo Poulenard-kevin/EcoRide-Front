@@ -25,7 +25,8 @@ export function initTrajets() {
   const form = document.querySelector('#trajet-form');
   console.log("📋 Formulaire trouvé:", form);
 
-  trajets = getTrajets();
+  trajets = getTrajets()
+
   updatePlacesReservees()
 
   console.log("📥 Trajets chargés:", trajets);
@@ -98,6 +99,21 @@ export function initTrajets() {
       }
     }
   }
+  window.addEventListener('ecoride:reservationAdded', (e) => {
+    try {
+      const reservation = e.detail;
+  
+      // Vérifier si la réservation existe déjà (évite doublons)
+      if (!trajets.find(r => r.id === reservation.id)) {
+        trajets.push(reservation);
+        saveTrajets(); // sauve la variable globale trajets
+        updatePlacesReservees();
+        renderTrajetsInProgress();
+      }
+    } catch (err) {
+      console.warn('Erreur lors du traitement de l\'événement reservationAdded', err);
+    }
+  });
 }
 
 // -------------------- Gestion soumission formulaire --------------------
@@ -460,15 +476,28 @@ function updatePlacesReservees() {
   const reservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
 
   trajets.forEach(trajet => {
-    const id = trajet.id;
-    const count = reservations.reduce((acc, res) => {
-      const ref = res.covoiturageId || res.detailId || null;
-      if (ref === id && res.status === 'reserve') {
-        return acc + (typeof res.placesReservees === 'number' ? res.placesReservees : 1);
+    if (trajet.role === 'chauffeur') {
+      // Somme des places réservées par les passagers pour ce covoiturage
+      const id = trajet.id;
+      const count = reservations.reduce((acc, res) => {
+        const ref = res.covoiturageId || res.detailId || null;
+        if (ref === id && res.status === 'reserve') {
+          return acc + (typeof res.placesReservees === 'number' ? res.placesReservees : 1);
+        }
+        return acc;
+      }, 0);
+      trajet.placesReservees = count;
+    } else if (trajet.role === 'passager') {
+      // Trouver la réservation correspondante dans localStorage
+      const res = reservations.find(r => r.id === trajet.id);
+      if (res && typeof res.placesReservees === 'number') {
+        trajet.placesReservees = res.placesReservees;
+      } else {
+        trajet.placesReservees = 1; // valeur par défaut
       }
-      return acc;
-    }, 0);
-    trajet.placesReservees = count;
+    } else {
+      trajet.placesReservees = 0;
+    }
   });
 }
 
@@ -487,22 +516,8 @@ function renderTrajetsInProgress() {
     return;
   }
 
-  // Charger les réservations utilisateur
-  const reservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
-
-  // Calculer places réservées par trajet
-  enCours.forEach(trajet => {
-    const id = trajet.id;
-    const count = reservations.reduce((acc, res) => {
-      const ref = res.covoiturageId || res.detailId || null;
-      if (ref === id && res.status === 'reserve') {
-        // Si placesReservees existe et est un nombre, on l'utilise, sinon 1
-        return acc + (typeof res.placesReservees === 'number' ? res.placesReservees : 1);
-      }
-      return acc;
-    }, 0);
-    trajet.placesReservees = count;
-  });
+  updatePlacesReservees();
+  console.log("DEBUG — enCours après updatePlacesReservees:", trajets.filter(t => t.status !== "valide"));
 
   enCours.forEach((trajet, index) => {
     let bgClass = "";
@@ -613,7 +628,7 @@ function renderHistorique() {
 }
 
 // -------------------- Persistance --------------------
-function getTrajets() {
+export function getTrajets() {
   try {
     const stored = localStorage.getItem('ecoride_trajets');
     return stored ? JSON.parse(stored) : [];

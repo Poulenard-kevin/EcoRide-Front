@@ -204,8 +204,11 @@ function tryUntilExists(fn, maxAttempts = 8, intervalMs = 80) {
   });
 }
 
+
 function handleTrajetActions(e) {
   const target = e.target;
+
+  // -------------------- trajet-start-btn --------------------
 
   if (target.classList.contains('trajet-start-btn')) {
     const id = target.dataset.id;
@@ -219,6 +222,8 @@ function handleTrajetActions(e) {
     }
   }
 
+  // -------------------- trajet-arrive-btn --------------------
+
   if (target.classList.contains('trajet-arrive-btn')) {
     const id = target.dataset.id;
     const trajet = trajets.find(t => t.id === id);
@@ -231,6 +236,8 @@ function handleTrajetActions(e) {
       console.log("🏁 Trajet terminé :", trajet);
     }
   }
+
+  // -------------------- trajet-edit-btn --------------------
 
   if (target.classList.contains('trajet-edit-btn')) {
     e.preventDefault?.();           // empêcher comportement par défaut
@@ -404,6 +411,8 @@ function handleTrajetActions(e) {
     alert(`Trajet supprimé. ${affected} réservation(s) ont été marquée(s) comme annulée(s) et les passagers ont été notifiés.`);
   }
 
+  // -------------------- trajet-close-btn --------------------
+
   if (target.classList.contains('trajet-close-btn')) {
     const id = target.dataset.id;
     const trajet = trajets.find(t => t.id === id);
@@ -423,50 +432,101 @@ function handleTrajetActions(e) {
     }
   }
 
+  // -------------------- trajet-cancel-btn --------------------
+
   if (target.classList.contains('trajet-cancel-btn')) {
     const id = target.dataset.id;
     const index = trajets.findIndex(t => t.id === id);
-    if (index !== -1) {
-      const trajet = trajets[index];
-      if (trajet && trajet.role === 'passager') {
-        if (confirm("Voulez-vous vraiment annuler cette réservation ?")) {
-          // 1) Supprimer la réservation dans trajets (ecoride_trajets)
-          trajets.splice(index, 1);
-          saveTrajets();
-  
-          // 2) Mettre à jour le covoiturage dans nouveauxTrajets
-          let trajetsCovoit = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
-          const covoIndex = trajetsCovoit.findIndex(t => t.id === trajet.detailId || trajet.covoiturageId || null);
-          if (covoIndex !== -1) {
-            const covo = trajetsCovoit[covoIndex];
-  
-            // Recalculer places restantes
-            const reservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
-            const totalReserved = reservations.reduce((acc, res) => {
-              const ref = res.covoiturageId || res.detailId || null;
-              if (ref === covo.id && res.status === 'reserve') {
-                return acc + (typeof res.placesReservees === 'number' ? res.placesReservees : 1);
-              }
-              return acc;
-            }, 0);
-  
-            covo.places = Math.max(0, covo.capacity - totalReserved);
-  
-            // Sauvegarder la mise à jour
-            trajetsCovoit[covoIndex] = covo;
-            localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoit));
-            console.log("🔄 Covoiturage mis à jour après annulation réservation :", covo);
+    if (index === -1) return;
+
+    const trajet = trajets[index];
+    if (!trajet || trajet.role !== 'passager') return;
+
+    if (!confirm("Voulez-vous vraiment annuler cette réservation ?")) return;
+
+    // --- 1) Supprimer la réservation locale (trajets global / ecoride_trajets) ---
+    const removed = trajets.splice(index, 1)[0];
+    saveTrajets(); // écrit dans localStorage 'ecoride_trajets'
+    console.log("🗑 Réservation supprimée de trajets (local) :", removed);
+
+    // --- 2) Mettre à jour ecoride_trajets (source de vérité pour réservations utilisateur) ---
+    // (saveTrajets() a déjà mis à jour localStorage mais on s'assure)
+    let userReservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+    userReservations = userReservations.filter(r => r.id !== id);
+    localStorage.setItem('ecoride_trajets', JSON.stringify(userReservations));
+    console.log("🔁 ecoride_trajets mis à jour, count:", userReservations.length);
+
+    // --- 3) Mettre à jour le covoiturage dans nouveauxTrajets ---
+    let trajetsCovoit = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+    const refId = trajet.detailId || trajet.covoiturageId || null;
+    const covoIndex = trajetsCovoit.findIndex(t => t.id === refId);
+
+    if (covoIndex === -1) {
+      console.log("ℹ️ Aucun covoiturage trouvé pour la référence:", refId);
+    } else {
+      const covo = trajetsCovoit[covoIndex];
+
+      // récupérer pseudo courant (fallback "Moi")
+      let userPseudo = "Moi";
+      try {
+        const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
+        if (me && me.pseudo) userPseudo = me.pseudo;
+      } catch (e) { /* ignore */ }
+
+      console.log("🔎 Annulation pour pseudo:", userPseudo, "avant passagers:", covo.passagers);
+
+      // 1) Retirer toutes les entrées correspondant au pseudo courant (objets ou chaînes)
+      //    et normaliser le reste en { pseudo, places }
+      covo.passagers = (Array.isArray(covo.passagers) ? covo.passagers : [])
+        .filter(p => {
+          if (!p) return false;
+          if (typeof p === 'object' && p.pseudo) return p.pseudo !== userPseudo;
+          if (typeof p === 'string') {
+            // accepter différentes variantes "Moi", "Moi x3", "Pseudo x2"
+            return !p.startsWith(userPseudo) && !p.startsWith("Moi");
           }
-  
-          // 3) Mettre à jour l'UI
-          updatePlacesReservees();
-          renderTrajetsInProgress();
-          renderHistorique();
-  
-          console.log("❌ Réservation annulée (ID:", id, ")");
-        }
-      }
+          return true;
+        })
+        .map(p => {
+          if (typeof p === 'object' && p.pseudo) {
+            return { pseudo: p.pseudo, places: Number(p.places || 1) };
+          }
+          if (typeof p === 'string') {
+            const m = p.match(/^(.+?)\s*x(\d+)$/i);
+            return m ? { pseudo: m[1].trim(), places: Number(m[2]) } : { pseudo: p.trim(), places: 1 };
+          }
+          return null;
+        })
+        .filter(Boolean);
+
+      // 2) Recalculer occupants depuis covo.passagers normalisés
+      const totalOccupiedFromPassagers = (Array.isArray(covo.passagers) ? covo.passagers : [])
+        .reduce((sum, p) => sum + (Number(p.places) || 1), 0);
+
+      // 3) Déterminer/mettre à jour la capacité
+      const vehiclePlaces = covo.vehicle?.places ?? covo.vehicule?.places ?? null;
+      covo.capacity = (typeof covo.capacity === 'number')
+        ? covo.capacity
+        : (vehiclePlaces !== null ? Number(vehiclePlaces) : (typeof covo.places === 'number' ? Number(covo.places) : 4));
+
+      // 4) Mettre à jour places en fonction des passagers normalisés
+      covo.places = Math.max(0, covo.capacity - totalOccupiedFromPassagers);
+
+      // 5) Sauvegarder le covoiturage mis à jour
+      trajetsCovoit[covoIndex] = covo;
+      localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoit));
+
+      console.log("🔄 Covoiturage mis à jour après annulation :", covo);
     }
+
+    // --- 4) Forcer mise à jour UI / events ---
+    updatePlacesReservees();
+    renderTrajetsInProgress();
+    renderHistorique();
+    window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+    window.dispatchEvent(new CustomEvent('ecoride:reservationCancelled', { detail: { id } }));
+
+    alert("✅ Réservation annulée.");
   }
 }
 

@@ -400,33 +400,26 @@ function reserverPlace(trajet, seats = 1) {
   if (trajetIndex !== -1) {
     const target = trajetsCovoiturage[trajetIndex];
     target.passagers = Array.isArray(target.passagers) ? target.passagers : [];
-
-    const alreadyIndex = target.passagers.findIndex(p => typeof p === 'string' && p.startsWith(userPseudo));
+  
+    const alreadyIndex = target.passagers.findIndex(p => p.pseudo === userPseudo);
     if (alreadyIndex !== -1) {
       alert("⚠️ Vous avez déjà une réservation sur ce trajet.");
       return;
     }
-
-    const entry = seats > 1 ? `${userPseudo} x${seats}` : userPseudo;
-    target.passagers.push(entry);
-
+  
+    target.passagers.push({ pseudo: userPseudo, places: seats });
+  
     const vehiclePlaces = target.vehicle?.places ?? target.vehicule?.places ?? null;
     target.capacity = (typeof target.capacity === 'number')
       ? target.capacity
       : (vehiclePlaces !== null ? Number(vehiclePlaces) : (typeof target.places === 'number' ? Number(target.places) : 4));
-
-    const totalOccupied = target.passagers.reduce((sum, p) => {
-      if (typeof p === 'string') {
-        const m = p.match(/x(\d+)$/);
-        return sum + (m ? Number(m[1]) : 1);
-      }
-      return sum + 1;
-    }, 0);
-
+  
+    const totalOccupied = target.passagers.reduce((sum, p) => sum + (p.places || 1), 0);
+  
     target.places = Math.max(0, Number(target.capacity) - totalOccupied);
     trajetsCovoiturage[trajetIndex] = target;
     localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
-      
+  
     trajet.passagers = target.passagers;
     trajet.capacity = target.capacity;
     trajet.places = target.places;

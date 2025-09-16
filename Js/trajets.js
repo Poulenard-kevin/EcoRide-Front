@@ -6,6 +6,25 @@ function getVehicleLabel(v) {
   return `${brand} ${model} ${color}`.trim();
 }
 
+// Helper pour obtenir l'ID du covoiturage à partir d'un objet trajet/réservation
+function getCovoId(item) {
+  return item?.detailId || item?.covoiturageId || item?.id || null;
+}
+
+function normalizePassagers(list = []) {
+  return list.map(p => {
+    if (!p) return null;
+    if (typeof p === 'object' && p.pseudo) {
+      return { pseudo: p.pseudo, places: Number(p.places || 1) };
+    }
+    if (typeof p === 'string') {
+      const m = p.match(/^(.+?)\s*x(\d+)$/i);
+      return m ? { pseudo: m[1].trim(), places: Number(m[2]) } : { pseudo: p.trim(), places: 1 };
+    }
+    return null;
+  }).filter(Boolean);
+}
+
 // -------------------- Variables globales --------------------
 let trajets = [];
 let editingIndex = null; // 👈 nouvel indicateur d'édition
@@ -364,7 +383,7 @@ function handleTrajetActions(e) {
     };
   
     userTrajets = userTrajets.map(res => {
-      const ref = res.covoiturageId || res.detailId || null;
+      const ref = getCovoId(res);
       if (ref === id) {
         affected++;
   
@@ -458,7 +477,13 @@ function handleTrajetActions(e) {
 
     // --- 3) Mettre à jour le covoiturage dans nouveauxTrajets ---
     let trajetsCovoit = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
-    const refId = trajet.detailId || trajet.covoiturageId || null;
+    const refId = getCovoId(trajet);
+
+    if (!refId) {
+      console.warn("❌ Impossible de trouver l'ID du covoiturage pour la réservation :", trajet);
+      return;
+    }
+
     const covoIndex = trajetsCovoit.findIndex(t => t.id === refId);
 
     if (covoIndex === -1) {
@@ -540,7 +565,7 @@ function updatePlacesReservees() {
       // Somme des places réservées par les passagers pour ce covoiturage
       const id = trajet.id;
       const count = reservations.reduce((acc, res) => {
-        const ref = res.covoiturageId || res.detailId || null;
+        const ref = getCovoId(res);
         if (ref === id && res.status === 'reserve') {
           return acc + (typeof res.placesReservees === 'number' ? res.placesReservees : 1);
         }
@@ -603,16 +628,22 @@ function renderTrajetsInProgress() {
           <button class="btn-trajet trajet-close-btn" data-id="${trajet.id}">Clôturer</button>
         `;
       }
-    } else if (trajet.role === "passager") {
-      if (trajet.status === "reserve") {
-        bgClass = "trajet-card reserve";
-        const detailUrl = `detail.html?id=${trajet.id}`;
-        actionHtml = `
-          <a href="${detailUrl}" class="btn-trajet trajet-detail-btn">Détail</a>
-          <button class="btn-trajet trajet-cancel-btn" data-id="${trajet.id}">Annuler</button>
-        `;
-      }
-    }
+    } 
+
+    else if (trajet.role === 'passager') {
+          if (trajet.status === 'reserve') {
+            bgClass = "trajet-card reserve";
+
+            // Récupérer l'ID du covoiturage (priorité detailId / covoiturageId)
+            const refId = getCovoId(trajet);
+
+            // Utiliser un bouton avec data-covo-id (on évite href incorrect)
+            actionHtml = `
+              <button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>
+              <button class="btn-trajet trajet-cancel-btn" data-id="${trajet.id}">Annuler</button>
+            `;
+          }
+        }
   
     container.innerHTML += `
       <div class="${bgClass}" data-id="${trajet.id}">
@@ -651,6 +682,35 @@ function renderTrajetsInProgress() {
       });
     }
   }
+  // Attacher les listeners "Détail" (à ré-attacher à chaque rendu)
+  container.querySelectorAll('.trajet-detail-btn').forEach(btn => {
+    if (btn._detailHandler) btn.removeEventListener('click', btn._detailHandler);
+  
+    const handler = (ev) => {
+      ev.preventDefault?.();
+      const covoId = btn.dataset.covoId;
+  
+      if (!covoId || covoId === 'null' || covoId === 'undefined') {
+        console.warn('Aucun ID de covoiturage disponible pour ce trajet.', covoId);
+        return;
+      }
+  
+      const newPath = `/detail/${encodeURIComponent(covoId)}`;
+  
+      try {
+        // Format attendu par ton router : { id }
+        history.pushState({ id: covoId }, '', newPath);
+        const pop = new PopStateEvent('popstate', { state: { id: covoId } });
+        window.dispatchEvent(pop);
+      } catch (err) {
+        console.error('Erreur navigation détail:', err);
+        window.location.href = newPath; // fallback
+      }
+    };
+  
+    btn._detailHandler = handler;
+    btn.addEventListener('click', handler);
+  });
 }
 
 // -------------------- Historique --------------------
@@ -767,6 +827,8 @@ function ajouterAuCovoiturage(trajetData) {
     vehicle: trajetData.vehicle || null
   };
 
+  baseTrajetCovoit.passagers = normalizePassagers(baseTrajetCovoit.passagers);
+
   // Chercher si le covoiturage existe déjà
   const idx = trajetsCovoiturage.findIndex(t => t.id === baseTrajetCovoit.id);
 
@@ -774,18 +836,16 @@ function ajouterAuCovoiturage(trajetData) {
     // Mise à jour : ne pas écraser passagers ni places sans recalcul
     const existing = trajetsCovoiturage[idx];
 
-    // Conserver les passagers existants s'il y en a (priorité aux existants)
-    baseTrajetCovoit.passagers = Array.isArray(existing.passagers) && existing.passagers.length > 0
-      ? existing.passagers.slice()
+    
+    // Normaliser les passagers existants (s'ils existent) et les utiliser si présents
+    const existingPassagers = normalizePassagers(Array.isArray(existing.passagers) ? existing.passagers : []);
+    baseTrajetCovoit.passagers = existingPassagers.length > 0
+      ? existingPassagers.slice()
       : baseTrajetCovoit.passagers;
 
     // Si la capacité a changé (p.ex. véhicule modifié), recalculer places restantes
     const totalOccupied = baseTrajetCovoit.passagers.reduce((sum, p) => {
-      if (typeof p === 'string') {
-        const m = p.match(/x(\d+)$/);
-        return sum + (m ? Number(m[1]) : 1);
-      }
-      return sum + 1;
+      return sum + (Number(p.places) || 1);
     }, 0);
 
     const newCapacity = baseTrajetCovoit.capacity;
@@ -806,11 +866,7 @@ function ajouterAuCovoiturage(trajetData) {
   } else {
     // Nouveau covoiturage : recalculer places en fonction des passagers actuels
     const occupied = baseTrajetCovoit.passagers.reduce((sum, p) => {
-      if (typeof p === 'string') {
-        const m = p.match(/x(\d+)$/);
-        return sum + (m ? Number(m[1]) : 1);
-      }
-      return sum + 1;
+      return sum + (Number(p.places) || 1);
     }, 0);
     baseTrajetCovoit.places = Math.max(0, capacity - occupied);
 

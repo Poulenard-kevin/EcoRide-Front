@@ -1,5 +1,160 @@
 console.log("🔍 detail.js chargé !");
 
+// =================== Helpers ===================
+function getCovoId(item) {
+  return item?.detailId || item?.covoiturageId || item?.id || null;
+}
+
+function getUserReservationForCovoiturage(covoiturageId) {
+  const reservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+  return reservations.find(r => getCovoId(r) === covoiturageId && r.role === 'passager' && r.status === 'reserve') || null;
+}
+
+function cancelReservationById(reservationId) {
+  if (!reservationId) return false;
+
+  // 1) Retirer la réservation de trajets globaux
+  let trajets = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+  const beforeLen = trajets.length;
+  trajets = trajets.filter(t => t.id !== reservationId);
+  localStorage.setItem('ecoride_trajets', JSON.stringify(trajets));
+
+  if (trajets.length === beforeLen) {
+    console.warn("Aucune réservation trouvée à supprimer (cancelReservationById)");
+    return false;
+  }
+
+  let userPseudo = "Moi";
+  try {
+    const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
+    if (me && me.pseudo) userPseudo = me.pseudo;
+  } catch(e) {}
+
+  let nouveaux = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+  nouveaux = nouveaux.map(covo => {
+    covo.passagers = (Array.isArray(covo.passagers) ? covo.passagers : [])
+      .filter(p => {
+        if (typeof p === 'object' && p.pseudo) return p.pseudo !== userPseudo;
+        if (typeof p === 'string') return !(p.startsWith(userPseudo) || p.startsWith('Moi'));
+        return true;
+      })
+      .map(p => {
+        if (typeof p === 'object' && p.pseudo) return p;
+        if (typeof p === 'string') {
+          const m = p.match(/^(.+?)\s*x(\d+)$/i);
+          return m ? { pseudo: m[1].trim(), places: Number(m[2]) } : { pseudo: p.trim(), places: 1 };
+        }
+        return null;
+      })
+      .filter(Boolean);
+
+    // Recalcul places
+    const totalOccupied = covo.passagers.reduce((sum, p) => sum + (Number(p.places) || 1), 0);
+    const capacity = typeof covo.capacity === 'number' ? covo.capacity : (covo.vehicle?.places ?? covo.places ?? 4);
+    covo.places = Math.max(0, capacity - totalOccupied);
+
+    return covo;
+  });
+
+  localStorage.setItem('nouveauxTrajets', JSON.stringify(nouveaux));
+
+  // 3) Notifier / events
+  window.dispatchEvent(new CustomEvent('ecoride:reservationCancelled', { detail: { id: reservationId } }));
+  window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+
+  return true;
+}
+
+function renderActionButton(trajet) {
+  const reservation = getUserReservationForCovoiturage(trajet.id);
+  const actionsContainer = document.querySelector('.actions');
+  if (!actionsContainer) {
+    console.warn('Conteneur .actions introuvable');
+    return;
+  }
+
+  // Supprimer d'éventuels boutons existants (sécurité)
+  const oldReserve = actionsContainer.querySelector('#detail-reserver');
+  const oldCancel = actionsContainer.querySelector('#cancel-reservation-btn');
+  if (oldReserve) oldReserve.remove();
+  if (oldCancel) oldCancel.remove();
+
+  const typeEl = document.getElementById('detail-type');
+
+  if (reservation) {
+    const cancelBtn = document.createElement('button');
+    cancelBtn.id = 'cancel-reservation-btn';
+    cancelBtn.className = 'btn btn-danger';
+    cancelBtn.textContent = 'Annuler ma réservation';
+    cancelBtn.dataset.reservationId = reservation.id;
+
+    // insertion avant le type si possible, sinon en tête
+    if (typeEl && typeEl.parentNode === actionsContainer) {
+      actionsContainer.insertBefore(cancelBtn, typeEl);
+    } else {
+      actionsContainer.prepend(cancelBtn);
+    }
+
+    cancelBtn.addEventListener('click', () => {
+      if (!confirm("Voulez-vous vraiment annuler cette réservation ?")) return;
+      const ok = cancelReservationById(reservation.id);
+      if (ok) {
+        alert("✅ Réservation annulée.");
+        window.location.href = "/covoiturage";
+      } else {
+        alert("⚠️ Échec lors de l'annulation.");
+      }
+    });
+
+  } else {
+    const reserveBtn = document.createElement('button');
+    reserveBtn.id = 'detail-reserver';
+    reserveBtn.className = 'search-btn reserve-btn';
+    reserveBtn.textContent = 'Réserver';
+
+    // insertion avant le type si possible, sinon en tête
+    if (typeEl && typeEl.parentNode === actionsContainer) {
+      actionsContainer.insertBefore(reserveBtn, typeEl);
+    } else {
+      actionsContainer.prepend(reserveBtn);
+    }
+
+    reserveBtn.addEventListener('click', async () => {
+      const remaining = computeRemaining(trajet);
+      if (remaining <= 0) {
+        alert("❌ Aucune place disponible.");
+        return;
+      }
+      const seats = await showSeatSelector(remaining);
+      if (!seats) return;
+      if (confirm(`Confirmer la réservation de ${seats} place${seats > 1 ? 's' : ''} ?`)) {
+        reserverPlace(trajet, seats);
+      }
+    });
+  }
+}
+
+// ======= Helpers globaux (placer en haut du fichier) =======
+function computeRemaining(trajetObj) {
+  if (!trajetObj) return 0;
+  const passagers = Array.isArray(trajetObj.passagers) ? trajetObj.passagers : [];
+  if (typeof trajetObj.places === 'number') return trajetObj.places;
+  if (typeof trajetObj.capacity === 'number') return Math.max(0, trajetObj.capacity - passagers.length);
+  if (trajetObj.vehicle?.places !== undefined) return Math.max(0, Number(trajetObj.vehicle.places) - passagers.length);
+  if (trajetObj.vehicule?.places !== undefined) return Math.max(0, Number(trajetObj.vehicule.places) - passagers.length);
+  return 0;
+}
+
+function renderPlaces(trajetObj) {
+  const placesElement = document.getElementById("detail-places");
+  if (!placesElement) return;
+  const remaining = computeRemaining(trajetObj);
+  const pluriel = remaining > 1 ? "s" : "";
+  placesElement.textContent = `Place${pluriel} disponible${pluriel} : ${remaining}`;
+}
+
+// =================== Main ===================
+
 document.addEventListener("pageContentLoaded", () => {
   console.log("🎯 DOMContentLoaded dans detail.js");
 
@@ -196,6 +351,7 @@ document.addEventListener("pageContentLoaded", () => {
   }
 
   renderPlaces();
+  renderActionButton(trajet);
 
   const vehicleOther = (trajet.vehicle?.other ?? trajet.vehicule?.other ?? "").trim();
   const basePreferences = trajet.preferences || ['Non-fumeur', 'Animaux acceptés', 'Musique'];
@@ -237,25 +393,6 @@ document.addEventListener("pageContentLoaded", () => {
       reviewElement.style.display = reviews[index] ? "block" : "none";
     }
   });
-
-  // =================== Bouton Réserver ===================
-  const reserverBtn = document.getElementById("detail-reserver");
-  if (reserverBtn) {
-    reserverBtn.addEventListener('click', async () => {
-      const remaining = computeRemaining(trajet);
-      if (remaining <= 0) {
-        alert("❌ Aucune place disponible.");
-        return;
-      }
-
-      const seats = await showSeatSelector(remaining);
-      if (!seats) return;
-
-      if (confirm(`Confirmer la réservation de ${seats} place${seats > 1 ? 's' : ''} ?`)) {
-        reserverPlace(trajet, seats);
-      }
-    });
-  }
 
   console.log("✅ Page détail chargée et remplie pour le trajet:", trajet.id);
 });

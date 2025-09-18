@@ -95,6 +95,16 @@ function renderActionButton(trajet) {
       actionsContainer.prepend(cancelBtn);
     }
 
+    // === Ajout du style inline au hover ===
+    cancelBtn.addEventListener('mouseenter', () => {
+      cancelBtn.style.setProperty('background-color', '#dc3545', 'important');
+      cancelBtn.style.setProperty('color', '#fff', 'important');
+    });
+    cancelBtn.addEventListener('mouseleave', () => {
+      cancelBtn.style.removeProperty('background-color');
+      cancelBtn.style.removeProperty('color');
+    });
+
     cancelBtn.addEventListener('click', () => {
       if (!confirm("Voulez-vous vraiment annuler cette réservation ?")) return;
       const ok = cancelReservationById(reservation.id);

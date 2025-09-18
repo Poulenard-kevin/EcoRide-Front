@@ -25,6 +25,20 @@ function normalizePassagers(list = []) {
   }).filter(Boolean);
 }
 
+(function injectDangerStyle() {
+  if (document.getElementById('danger-style')) return;
+  const style = document.createElement('style');
+  style.id = 'danger-style';
+  style.textContent = `
+    .btn-danger {
+      background-color: #dc3545 !important;
+      border-color: #dc3545 !important;
+      color: #fff !important;
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
 // -------------------- Variables globales --------------------
 let trajets = [];
 let editingIndex = null; // 👈 nouvel indicateur d'édition
@@ -133,6 +147,7 @@ export function initTrajets() {
       console.warn('Erreur lors du traitement de l\'événement reservationAdded', err);
     }
   });
+
 }
 
 // -------------------- Gestion soumission formulaire --------------------
@@ -551,6 +566,23 @@ function handleTrajetActions(e) {
     window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
     window.dispatchEvent(new CustomEvent('ecoride:reservationCancelled', { detail: { id } }));
 
+    // Forcer l'onglet "Mes trajets" actif
+    const ongletMesTrajets = document.getElementById('tab-mes-trajets') || document.querySelector('.tab-mes-trajets');
+    if (ongletMesTrajets) {
+      // Ajouter la classe active
+      ongletMesTrajets.classList.add('active');
+      // Retirer la classe active des autres onglets
+      document.querySelectorAll('.tab').forEach(tab => {
+        if (tab !== ongletMesTrajets) tab.classList.remove('active');
+      });
+    }
+
+    // Optionnel : scroller vers la section "Mes trajets"
+    const sectionMesTrajets = document.querySelector('#mes-trajets-section');
+    if (sectionMesTrajets) {
+      sectionMesTrajets.scrollIntoView({ behavior: 'smooth' });
+    }
+
     alert("✅ Réservation annulée.");
   }
 }
@@ -710,6 +742,21 @@ function renderTrajetsInProgress() {
   
     btn._detailHandler = handler;
     btn.addEventListener('click', handler);
+  });
+
+  // Attacher les listeners "Annuler" et "Supprimer" pour changer la couleur au clic
+  container.querySelectorAll('.trajet-cancel-btn, .trajet-delete-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const target = e.currentTarget;
+      console.log('Bouton cliqué, on force style rouge', target);
+  
+      target.classList.add('btn-danger');
+  
+      // Forcer le style inline (priorité max)
+      target.style.setProperty('background-color', '#dc3545', 'important');
+      target.style.setProperty('border-color', '#dc3545', 'important');
+      target.style.setProperty('color', '#fff', 'important');
+    });
   });
 }
 

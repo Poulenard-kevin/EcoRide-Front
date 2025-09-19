@@ -8,7 +8,13 @@ function getVehicleLabel(v) {
 
 // Helper pour obtenir l'ID du covoiturage à partir d'un objet trajet/réservation
 function getCovoId(item) {
-  return item?.detailId || item?.covoiturageId || item?.id || null;
+  if (!item) return null;
+  return item.detailId
+    || item.covoId
+    || item.covoiturageId
+    || item.tripId
+    || (item.covoiturage && item.covoiturage.id)
+    || null;
 }
 
 function normalizePassagers(list = []) {
@@ -25,19 +31,107 @@ function normalizePassagers(list = []) {
   }).filter(Boolean);
 }
 
-(function injectDangerStyle() {
-  if (document.getElementById('danger-style')) return;
-  const style = document.createElement('style');
-  style.id = 'danger-style';
-  style.textContent = `
-    .btn-danger {
-      background-color: #dc3545 !important;
-      border-color: #dc3545 !important;
-      color: #fff !important;
-    }
+function openRatingModal({ reservationId, onSubmit }) {
+  // structure simple bootstrap modal
+  const modalId = 'ratingModal';
+  // nettoyage s'il existe déjà
+  const existing = document.getElementById(modalId);
+  if (existing) existing.remove();
+
+  const html = `
+  <div class="modal fade" id="${modalId}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Valider le trajet & laisser un avis</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+        </div>
+        <div class="modal-body">
+          <p>Merci d'indiquer votre note et un commentaire (facultatif).</p>
+          <div class="rating-stars mb-3" id="${modalId}-stars" style="font-size: 1.6rem; display:flex; gap:8px;">
+            <button type="button" class="star" data-value="1">☆</button>
+            <button type="button" class="star" data-value="2">☆</button>
+            <button type="button" class="star" data-value="3">☆</button>
+            <button type="button" class="star" data-value="4">☆</button>
+            <button type="button" class="star" data-value="5">☆</button>
+          </div>
+          <textarea id="${modalId}-review" class="form-control" rows="4" placeholder="Ton avis (facultatif)"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="button" class="btn btn-primary" id="${modalId}-submit">Valider</button>
+        </div>
+      </div>
+    </div>
+  </div>
   `;
-  document.head.appendChild(style);
-})();
+
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = html;
+  document.body.appendChild(wrapper);
+
+  const modalEl = document.getElementById(modalId);
+  const bsModal = new bootstrap.Modal(modalEl);
+  bsModal.show();
+
+  let currentRating = 5; // valeur par défaut
+
+  const stars = modalEl.querySelectorAll('.star');
+  const updateStars = (value) => {
+    currentRating = value;
+    stars.forEach(s => {
+      const v = Number(s.dataset.value);
+      s.textContent = v <= value ? '★' : '☆';
+      s.style.color = v <= value ? '#ffc107' : '#6c757d';
+      s.style.border = 'none';
+      s.style.background = 'transparent';
+      s.style.cursor = 'pointer';
+    });
+  };
+
+  stars.forEach(s => {
+    s.addEventListener('click', () => updateStars(Number(s.dataset.value)));
+    s.addEventListener('mouseenter', () => {
+      const v = Number(s.dataset.value);
+      stars.forEach(ss => ss.textContent = Number(ss.dataset.value) <= v ? '★' : '☆');
+    });
+    s.addEventListener('mouseleave', () => updateStars(currentRating));
+  });
+
+  updateStars(currentRating);
+
+  const reviewEl = modalEl.querySelector(`#${modalId}-review`);
+  const submitBtn = modalEl.querySelector(`#${modalId}-submit`);
+
+  const cleanup = () => {
+    try { bsModal.hide(); } catch(e){}
+    setTimeout(() => { wrapper.remove(); }, 300);
+  };
+
+  submitBtn.addEventListener('click', () => {
+    const review = reviewEl.value.trim();
+    cleanup();
+    if (typeof onSubmit === 'function') onSubmit({ rating: currentRating, review });
+  });
+
+  modalEl.addEventListener('hidden.bs.modal', () => {
+    if (document.body.contains(wrapper)) wrapper.remove();
+  });
+}
+
+function getCurrentUserPseudo() {
+  try {
+    const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
+    return me && me.pseudo ? me.pseudo : 'Moi';
+  } catch (e) { return 'Moi'; }
+}
+
+function genId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  return 'id_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+
 
 // -------------------- Variables globales --------------------
 let trajets = [];
@@ -148,6 +242,15 @@ export function initTrajets() {
     }
   });
 
+  // à exécuter une fois, par ex. dans initTrajets
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.trajet-cancel-btn, .trajet-delete-btn');
+    if (!btn) return;
+    btn.classList.add('btn-danger');
+    btn.style.setProperty('background-color', '#dc3545', 'important');
+    btn.style.setProperty('border-color', '#dc3545', 'important');
+    btn.style.setProperty('color', '#fff', 'important');
+  });
 }
 
 // -------------------- Gestion soumission formulaire --------------------
@@ -172,7 +275,7 @@ function handleTrajetSubmit(e) {
   const trajetData = {
     id: (editingIndex !== null && trajets[editingIndex]) 
       ? trajets[editingIndex].id 
-      : crypto.randomUUID(),
+      : genId(),
     depart: formData.get('depart')?.trim() || '',
     arrivee: formData.get('arrivee')?.trim() || '',
     date: formData.get('date') || '',
@@ -252,7 +355,7 @@ function handleTrajetActions(e) {
       saveTrajets();
       updatePlacesReservees()
       renderTrajetsInProgress();
-      console.log("🚀 Trajet démarré :", trajet);
+      //console.log("🚀 Trajet démarré :", trajet);
     }
   }
 
@@ -268,6 +371,46 @@ function handleTrajetActions(e) {
       renderTrajetsInProgress();
       renderHistorique();
       console.log("🏁 Trajet terminé :", trajet);
+    }
+  
+    try {
+      const covoId = trajet.id;
+      let reservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+  
+      let updated = false;
+      reservations = reservations.map(r => {
+        if (getCovoId(r) === covoId && r.role === 'passager' && r.status === 'reserve') {
+          r.status = 'a_valider'; // nouveau statut : attente de validation par le passager
+          updated = true;
+        }
+        return r;
+      });
+  
+      console.log('Réservation avant mise à jour:', reservations);
+      console.log('getCovoId pour chaque réservation:', reservations.map(r => getCovoId(r)));
+  
+      if (updated) {
+        localStorage.setItem('ecoride_trajets', JSON.stringify(reservations));
+  
+        // Synchroniser la variable trajets en mémoire
+        reservations.forEach(r => {
+          const idx = trajets.findIndex(t => t.id === r.id);
+          if (idx !== -1) {
+            trajets[idx].status = r.status;
+          }
+        });
+  
+        // Re-render UI
+        updatePlacesReservees();
+        renderTrajetsInProgress();
+        renderHistorique();
+  
+        window.dispatchEvent(new CustomEvent('ecoride:reservationsAwaitingValidation', { detail: { covoId } }));
+        window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+        console.log(`🔔 Réservations pour le covo ${covoId} marquées 'a_valider'`);
+      }
+    } catch (err) {
+      console.error('Erreur lors du marquage a_valider :', err);
     }
   }
 
@@ -411,7 +554,7 @@ function handleTrajetActions(e) {
         // Créer une notification destinée au passager
         const passengerId = getPassengerIdentifier(res);
         const notification = {
-          id: crypto.randomUUID ? crypto.randomUUID() : ('notif_' + Date.now() + Math.random().toString(36).slice(2)),
+          id: genId ? genId() : ('notif_' + Date.now() + Math.random().toString(36).slice(2)),
           to: passengerId, // peut être null si pas d'identifiant lié
           message: `Le trajet ${removedCovo ? (removedCovo.depart + ' → ' + removedCovo.arrivee) : ''} du ${removedCovo ? removedCovo.date : ''} a été annulé par le chauffeur.`,
           relatedCovoiturageId: id,
@@ -585,6 +728,112 @@ function handleTrajetActions(e) {
 
     alert("✅ Réservation annulée.");
   }
+
+  // -------------------- trajet-validate-btn --------------------
+  if (target.classList && target.classList.contains('trajet-validate-btn')) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Forcer l'onglet "Mes trajets"
+    if (typeof switchToTab === 'function') {
+      switchToTab('user-trajects-form');
+    }
+
+    const reservationId = target.dataset.id;
+    if (!reservationId) return;
+
+    openRatingModal({
+      reservationId,
+      onSubmit: async ({ rating, review, flagged }) => {
+        try {
+          let reservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+          const idx = reservations.findIndex(r => r.id === reservationId);
+          if (idx === -1) {
+            alert('Réservation introuvable.');
+            return;
+          }
+
+          // Mettre la réservation en historique (status 'valide') et ajouter modération
+          reservations[idx].status = 'valide';
+          reservations[idx].rating = rating;
+          reservations[idx].review = review;
+          reservations[idx].validatedAt = new Date().toISOString();
+          reservations[idx].reviewModeration = {
+            status: 'pending',
+            flagged: !!flagged,
+            submittedAt: new Date().toISOString(),
+            reviewedBy: null,
+            reviewedAt: null,
+            adminComment: null
+          };
+
+          localStorage.setItem('ecoride_trajets', JSON.stringify(reservations));
+
+          try {
+            // mettre à jour l'objet en mémoire si présent
+            const localIdx = trajets.findIndex(t => t.id === reservationId);
+            if (localIdx !== -1) {
+              trajets[localIdx] = { ...trajets[localIdx], ...reservations[idx] };
+              saveTrajets(); // ré-écrit ecoride_trajets depuis trajets (si tu veux garder trajets maître)
+            } else {
+              // sinon recharger depuis storage pour être sûr
+              trajets = getTrajets();
+            }
+          } catch (e) { console.warn('sync trajets failed', e); }
+
+          // Mise à jour covoiturage : retirer le passager
+          let nouveaux = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+          const reservation = reservations[idx];
+          const covoId = getCovoId(reservation);
+          const covoIndex = nouveaux.findIndex(t => t.id === covoId);
+          if (covoIndex !== -1) {
+            const covo = nouveaux[covoIndex];
+            const userPseudo = (() => {
+              try {
+                const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
+                return (me && me.pseudo) ? me.pseudo : 'Moi';
+              } catch (e) { return 'Moi'; }
+            })();
+
+            covo.passagers = (Array.isArray(covo.passagers) ? covo.passagers : [])
+              .filter(p => {
+                if (!p) return false;
+                if (typeof p === 'object' && p.pseudo) return p.pseudo !== userPseudo;
+                if (typeof p === 'string') return !(p.startsWith(userPseudo) || p.startsWith('Moi'));
+                return true;
+              })
+              .map(p => {
+                if (typeof p === 'object' && p.pseudo) return { pseudo: p.pseudo, places: Number(p.places || 1) };
+                if (typeof p === 'string') {
+                  const m = p.match(/^(.+?)\s*x(\d+)$/i);
+                  return m ? { pseudo: m[1].trim(), places: Number(m[2]) } : { pseudo: p.trim(), places: 1 };
+                }
+                return null;
+              }).filter(Boolean);
+
+            const totalOccupied = covo.passagers.reduce((sum, p) => sum + (Number(p.places) || 1), 0);
+            const capacity = typeof covo.capacity === 'number' ? covo.capacity : (covo.vehicle?.places ?? covo.places ?? 4);
+            covo.places = Math.max(0, capacity - totalOccupied);
+
+            nouveaux[covoIndex] = covo;
+            localStorage.setItem('nouveauxTrajets', JSON.stringify(nouveaux));
+          }
+
+          // Mise à jour UI
+          window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+          updatePlacesReservees();
+          renderTrajetsInProgress();
+          renderHistorique();
+
+          alert('✅ Merci ! Votre validation et avis ont bien été enregistrés (en attente de modération).');
+        } catch (err) {
+          console.error('Erreur validation trajet :', err);
+          alert('⚠️ Une erreur est survenue lors de l’enregistrement.');
+        }
+      }
+    });
+    return;
+  }
 }
 
 // -------------------- Rendu dynamique --------------------
@@ -663,19 +912,25 @@ function renderTrajetsInProgress() {
     } 
 
     else if (trajet.role === 'passager') {
-          if (trajet.status === 'reserve') {
-            bgClass = "trajet-card reserve";
-
-            // Récupérer l'ID du covoiturage (priorité detailId / covoiturageId)
-            const refId = getCovoId(trajet);
-
-            // Utiliser un bouton avec data-covo-id (on évite href incorrect)
-            actionHtml = `
-              <button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>
-              <button class="btn-trajet trajet-cancel-btn" data-id="${trajet.id}">Annuler</button>
-            `;
-          }
-        }
+      if (trajet.status === 'reserve') {
+        bgClass = "trajet-card reserve";
+        const refId = getCovoId(trajet);
+        actionHtml = `
+          <button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>
+          <button class="btn-trajet trajet-cancel-btn" data-id="${trajet.id}">Annuler</button>
+        `;
+      } else if (trajet.status === 'a_valider') {
+        bgClass = "trajet-card attente";
+        actionHtml = `
+          <button class="btn-trajet trajet-detail-btn" data-covo-id="${getCovoId(trajet)}">Détail</button>
+          <button class="btn-trajet trajet-validate-btn" data-id="${trajet.id}">Valider</button>
+        `;
+      } else {
+        // statut inattendu ou autre -> afficher au minimum Détail
+        const refId = getCovoId(trajet);
+        actionHtml = `<button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>`;
+      }
+    }
   
     container.innerHTML += `
       <div class="${bgClass}" data-id="${trajet.id}">
@@ -742,21 +997,6 @@ function renderTrajetsInProgress() {
   
     btn._detailHandler = handler;
     btn.addEventListener('click', handler);
-  });
-
-  // Attacher les listeners "Annuler" et "Supprimer" pour changer la couleur au clic
-  container.querySelectorAll('.trajet-cancel-btn, .trajet-delete-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const target = e.currentTarget;
-      console.log('Bouton cliqué, on force style rouge', target);
-  
-      target.classList.add('btn-danger');
-  
-      // Forcer le style inline (priorité max)
-      target.style.setProperty('background-color', '#dc3545', 'important');
-      target.style.setProperty('border-color', '#dc3545', 'important');
-      target.style.setProperty('color', '#fff', 'important');
-    });
   });
 }
 
@@ -832,6 +1072,10 @@ function populateVehiclesDatalist() {
       option.value = v.plate;
       option.textContent = getVehicleLabel(v); 
       select.appendChild(option);
+
+      // normalisation minimale
+      v.seats = Number(v.seats ?? v.places ?? 4);
+      v.plate = v.plate || v.licencePlate || v.immatriculation || '';
     });
 
     console.log("🚗 Véhicules injectés dans le select:", vehicles.length, vehicles);

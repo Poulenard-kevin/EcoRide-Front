@@ -735,15 +735,14 @@ function handleTrajetActions(e) {
   if (target.classList && target.classList.contains('trajet-validate-btn')) {
     e.preventDefault();
     e.stopPropagation();
-
-    // Forcer l'onglet "Mes trajets"
+  
     if (typeof switchToTab === 'function') {
       switchToTab('user-trajects-form');
     }
-
+  
     const reservationId = target.dataset.id;
     if (!reservationId) return;
-
+  
     openRatingModal({
       reservationId,
       onSubmit: async ({ rating, review, flagged }) => {
@@ -754,8 +753,7 @@ function handleTrajetActions(e) {
             alert('Réservation introuvable.');
             return;
           }
-
-          // Mettre la réservation en historique (status 'valide') et ajouter modération
+  
           reservations[idx].status = 'valide';
           reservations[idx].rating = rating;
           reservations[idx].review = review;
@@ -768,21 +766,16 @@ function handleTrajetActions(e) {
             reviewedAt: null,
             adminComment: null
           };
-
+  
           localStorage.setItem('ecoride_trajets', JSON.stringify(reservations));
-
-          try {
-            // mettre à jour l'objet en mémoire si présent
-            const localIdx = trajets.findIndex(t => t.id === reservationId);
-            if (localIdx !== -1) {
-              trajets[localIdx] = { ...trajets[localIdx], ...reservations[idx] };
-              saveTrajets(); // ré-écrit ecoride_trajets depuis trajets (si tu veux garder trajets maître)
-            } else {
-              // sinon recharger depuis storage pour être sûr
-              trajets = getTrajets();
-            }
-          } catch (e) { console.warn('sync trajets failed', e); }
-
+  
+          const localIdx = trajets.findIndex(t => t.id === reservationId);
+          if (localIdx !== -1) {
+            trajets[localIdx] = { ...trajets[localIdx], ...reservations[idx] };
+          } else {
+            trajets = getTrajets();
+          }
+  
           // Mise à jour covoiturage : retirer le passager
           let nouveaux = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
           const reservation = reservations[idx];
@@ -796,7 +789,7 @@ function handleTrajetActions(e) {
                 return (me && me.pseudo) ? me.pseudo : 'Moi';
               } catch (e) { return 'Moi'; }
             })();
-
+  
             covo.passagers = (Array.isArray(covo.passagers) ? covo.passagers : [])
               .filter(p => {
                 if (!p) return false;
@@ -812,21 +805,30 @@ function handleTrajetActions(e) {
                 }
                 return null;
               }).filter(Boolean);
-
+  
             const totalOccupied = covo.passagers.reduce((sum, p) => sum + (Number(p.places) || 1), 0);
             const capacity = typeof covo.capacity === 'number' ? covo.capacity : (covo.vehicle?.places ?? covo.places ?? 4);
             covo.places = Math.max(0, capacity - totalOccupied);
-
+  
             nouveaux[covoIndex] = covo;
             localStorage.setItem('nouveauxTrajets', JSON.stringify(nouveaux));
           }
-
-          // Mise à jour UI
-          window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+  
+          // Passer le trajet chauffeur en historique et le retirer de nouveauxTrajets
+          const trajetChauffeurIndex = trajets.findIndex(t => t.id === covoId && t.role === 'chauffeur');
+          if (trajetChauffeurIndex !== -1) {
+            trajets[trajetChauffeurIndex].status = 'valide';
+          }
+  
+          let trajetsCovoit = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+          trajetsCovoit = trajetsCovoit.filter(t => t.id !== covoId);
+          localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoit));
+  
+          saveTrajets();
           updatePlacesReservees();
           renderTrajetsInProgress();
           renderHistorique();
-
+  
           alert('✅ Merci ! Votre validation et avis ont bien été enregistrés (en attente de modération).');
         } catch (err) {
           console.error('Erreur validation trajet :', err);
@@ -877,6 +879,7 @@ function renderTrajetsInProgress() {
 
   container.innerHTML = ''; // On vide uniquement la liste, pas le titre 😉
 
+  // Filtrer les trajets en cours (exclure ceux en 'valide')
   const enCours = trajets.filter(t => t.status !== "valide");
 
   if (enCours.length === 0) {
@@ -885,13 +888,18 @@ function renderTrajetsInProgress() {
   }
 
   updatePlacesReservees();
-  console.log("DEBUG — enCours après updatePlacesReservees:", trajets.filter(t => t.status !== "valide"));
+  console.log("DEBUG — enCours après updatePlacesReservees:", enCours);
 
   enCours.forEach((trajet, index) => {
     let bgClass = "";
     let actionHtml = "";
-  
+
     if (trajet.role === "chauffeur") {
+      // Ne pas afficher les trajets chauffeur en 'valide' (déjà filtrés, mais on double la sécurité)
+      if (trajet.status === "valide") {
+        return; // ne rien afficher
+      }
+
       if (trajet.status === "ajoute") {
         bgClass = "trajet-card actif";
         actionHtml = `
@@ -908,12 +916,10 @@ function renderTrajetsInProgress() {
         bgClass = "trajet-card attente";
         actionHtml = `
           <span class="trajet-status">En attente de validation des passagers...</span>
-          <button class="btn-trajet trajet-close-btn" data-id="${trajet.id}">Clôturer</button>
+          <!-- bouton clôturer supprimé -->
         `;
       }
-    } 
-
-    else if (trajet.role === 'passager') {
+    } else if (trajet.role === 'passager') {
       if (trajet.status === 'reserve') {
         bgClass = "trajet-card reserve";
         const refId = getCovoId(trajet);
@@ -933,7 +939,7 @@ function renderTrajetsInProgress() {
         actionHtml = `<button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>`;
       }
     }
-  
+
     container.innerHTML += `
       <div class="${bgClass}" data-id="${trajet.id}">
         <div class="trajet-body">
@@ -971,21 +977,22 @@ function renderTrajetsInProgress() {
       });
     }
   }
+
   // Attacher les listeners "Détail" (à ré-attacher à chaque rendu)
   container.querySelectorAll('.trajet-detail-btn').forEach(btn => {
     if (btn._detailHandler) btn.removeEventListener('click', btn._detailHandler);
-  
+
     const handler = (ev) => {
       ev.preventDefault?.();
       const covoId = btn.dataset.covoId;
-  
+
       if (!covoId || covoId === 'null' || covoId === 'undefined') {
         console.warn('Aucun ID de covoiturage disponible pour ce trajet.', covoId);
         return;
       }
-  
+
       const newPath = `/detail/${encodeURIComponent(covoId)}`;
-  
+
       try {
         // Format attendu par ton router : { id }
         history.pushState({ id: covoId }, '', newPath);
@@ -996,7 +1003,7 @@ function renderTrajetsInProgress() {
         window.location.href = newPath; // fallback
       }
     };
-  
+
     btn._detailHandler = handler;
     btn.addEventListener('click', handler);
   });

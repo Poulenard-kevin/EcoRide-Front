@@ -81,11 +81,13 @@ function openRatingModal({ reservationId, onSubmit }) {
     currentRating = value;
     stars.forEach(s => {
       const v = Number(s.dataset.value);
-      s.textContent = v <= value ? '★' : '☆';
-      s.style.color = v <= value ? '#ffc107' : '#6c757d';
-      s.style.border = 'none';
-      s.style.background = 'transparent';
-      s.style.cursor = 'pointer';
+      if (v <= value) {
+        s.textContent = '★';
+        s.classList.add('filled');
+      } else {
+        s.textContent = '☆';
+        s.classList.remove('filled');
+      }
     });
   };
 

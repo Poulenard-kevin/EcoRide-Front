@@ -370,3 +370,21 @@
 .btn-trajet.trajet-delete-btn {
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
+
+#ratingModal {
+  .star {
+    background: transparent;  /* supprime le fond blanc */
+    border: none;             /* supprime la bordure noire */
+    box-shadow: none;         /* supprime toute ombre éventuelle */
+    padding: 0;               /* ajuste le padding si besoin */
+    margin: 0 4px;            /* espace horizontal entre étoiles */
+    cursor: pointer;
+    font-size: 3rem;
+    color: $color-medium-green;           /* couleur verte pour étoiles pleines */
+    user-select: none;
+
+    &.filled {
+      color: $color-medium-green;
+    }
+  }
+}

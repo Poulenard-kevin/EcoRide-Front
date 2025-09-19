@@ -894,6 +894,15 @@ function renderTrajetsInProgress() {
     let bgClass = "";
     let actionHtml = "";
 
+    let dateToDisplay = formatDateForCovoiturage(trajet.date) || "";
+    if (trajet.role === 'passager') {
+      const covoId = getCovoId(trajet);
+      const trajetChauffeur = trajets.find(t => t.id === covoId && t.role === 'chauffeur');
+      if (trajetChauffeur) {
+        dateToDisplay = formatDateForCovoiturage(trajetChauffeur.date) || dateToDisplay;
+      }
+    }
+
     if (trajet.role === "chauffeur") {
      
       if (trajet.status === "valide") {
@@ -944,7 +953,7 @@ function renderTrajetsInProgress() {
       <div class="${bgClass}" data-id="${trajet.id}">
         <div class="trajet-body">
           <div class="trajet-info">
-            <strong>Covoiturage (${trajet.date || ""}) : <br>${trajet.depart} → ${trajet.arrivee}</strong>
+            <strong>Covoiturage (${dateToDisplay}) : <br>${trajet.depart} → ${trajet.arrivee}</strong>
             <span class="details">
               ${trajet.heureDepart || ""} → ${trajet.heureArrivee || ""} • ${trajet.placesReservees} place${trajet.placesReservees > 1 ? 's' : ''} réservée${trajet.placesReservees > 1 ? 's' : ''}
             </span>
@@ -1037,7 +1046,7 @@ function renderHistorique() {
       <div class="${cardClass}">
         <div class="trajet-body">
           <div class="trajet-info">
-            <strong>Covoiturage (${trajet.date || ""}) : <br>${trajet.depart} → ${trajet.arrivee}</strong>
+            <strong>Covoiturage (${formatDateForCovoiturage(trajet.date) || ""}) : <br>${trajet.depart} → ${trajet.arrivee}</strong>
             <span class="details">
               ${trajet.heureDepart || ""} → ${trajet.heureArrivee || ""} • ${placesReservees} place${placesReservees > 1 ? 's' : ''} réservée${placesReservees > 1 ? 's' : ''}
             </span>
@@ -1190,7 +1199,7 @@ function ajouterAuCovoiturage(trajetData) {
 function formatDateForCovoiturage(dateISO) {
   if (!dateISO) return '';
   const date = new Date(dateISO);
-  const options = { weekday: 'long', day: 'numeric', month: 'long' };
+  const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
   return date.toLocaleDateString('fr-FR', options);
 }
 

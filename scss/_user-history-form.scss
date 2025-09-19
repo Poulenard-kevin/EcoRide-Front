@@ -133,7 +133,7 @@
             justify-content: flex-start; // Aligne les éléments au début
             flex-wrap: wrap;
             gap: 20px; // Ajoute un espace fixe entre les éléments
-            color: $color-light-beige;
+            
     
             @media (max-width: 1215px) {
               flex-direction: column; // Passe en disposition verticale
@@ -254,6 +254,12 @@
           &.validé {
             background: $color-background;
           }
+
+          &.reserve {
+            background: $color-very-light-beige;
+            border: 1px solid $color-medium-green;
+            color: $color-dark-green !important;
+          } 
         }
       }
     

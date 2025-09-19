@@ -847,23 +847,23 @@ function updatePlacesReservees() {
 
   trajets.forEach(trajet => {
     if (trajet.role === 'chauffeur') {
-      // Somme des places réservées par les passagers pour ce covoiturage
       const id = trajet.id;
       const count = reservations.reduce((acc, res) => {
         const ref = getCovoId(res);
-        if (ref === id && res.status === 'reserve') {
-          return acc + (typeof res.placesReservees === 'number' ? res.placesReservees : 1);
+        const okStatus = ['reserve', 'a_valider', 'valide'];
+        if (ref === id && okStatus.includes(res.status)) {
+          const places = Number(res.placesReservees ?? res.places ?? res.placesReserved ?? 1);
+          return acc + (isNaN(places) ? 1 : places);
         }
         return acc;
       }, 0);
       trajet.placesReservees = count;
     } else if (trajet.role === 'passager') {
-      // Trouver la réservation correspondante dans localStorage
       const res = reservations.find(r => r.id === trajet.id);
-      if (res && typeof res.placesReservees === 'number') {
-        trajet.placesReservees = res.placesReservees;
+      if (res) {
+        trajet.placesReservees = Number(res.placesReservees ?? res.places ?? res.placesReserved ?? 1);
       } else {
-        trajet.placesReservees = 1; // valeur par défaut
+        trajet.placesReservees = 1;
       }
     } else {
       trajet.placesReservees = 0;
@@ -895,9 +895,9 @@ function renderTrajetsInProgress() {
     let actionHtml = "";
 
     if (trajet.role === "chauffeur") {
-      // Ne pas afficher les trajets chauffeur en 'valide' (déjà filtrés, mais on double la sécurité)
+     
       if (trajet.status === "valide") {
-        return; // ne rien afficher
+        return; 
       }
 
       if (trajet.status === "ajoute") {
@@ -1026,14 +1026,20 @@ function renderHistorique() {
 
   passe.forEach(trajet => {
     const placesReservees = trajet.placesReservees || 0;
+    let cardClass = 'trajet-card valide';
+  
+    if (trajet.role === 'passager') {
+      // Garder la classe 'reserve' pour le style passager
+      cardClass = 'trajet-card reserve';
+    }
   
     container.innerHTML += `
-      <div class="trajet-card valide">
+      <div class="${cardClass}">
         <div class="trajet-body">
           <div class="trajet-info">
-            <strong>Covoiturage (${trajet.date || ""}) : <br>${trajet.depart} --&gt; ${trajet.arrivee}</strong>
+            <strong>Covoiturage (${trajet.date || ""}) : <br>${trajet.depart} → ${trajet.arrivee}</strong>
             <span class="details">
-              ${trajet.heureDepart || ""} -----&gt; ${trajet.heureArrivee || ""} • ${placesReservees} places réservées
+              ${trajet.heureDepart || ""} → ${trajet.heureArrivee || ""} • ${placesReservees} place${placesReservees > 1 ? 's' : ''} réservée${placesReservees > 1 ? 's' : ''}
             </span>
           </div>
           <div class="trajet-price">${trajet.prix} crédits</div>

@@ -118,11 +118,21 @@
     display: flex;
     flex-direction: column; /* Empile les éléments verticalement */
     align-items: center; /* Centre les éléments horizontalement */
-    gap: 15px; /* Ajoute un espace entre les champs */
+    gap: 10px; /* Ajoute un espace entre les champs */
     margin: 0 auto; /* Centre le conteneur horizontalement */
     width: 100%; /* Prend toute la largeur disponible */
     max-width: 400px; /* Limite la largeur maximale */
     margin-bottom: 20px; /* Ajoute un espace en dessous du conteneur */
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column; /* Empile les éléments verticalement */
+  align-items: center; /* Centre les éléments horizontalement */
+  gap: 10px; /* Ajoute un espace entre les champs */
+  margin: 0 auto; /* Centre le conteneur horizontalement */
+  width: 100%; /* Prend toute la largeur disponible */
+  max-width: 400px; /* Limite la largeur maximale */
 }
 
 .auth-input, .password-input {
@@ -334,6 +344,7 @@ input[type="checkbox"] {
   }
 
   .auth-form h3,
+  .form-group
   .auth-input-container label,
   .auth-input-container input,
   .auth-button,
@@ -389,6 +400,52 @@ input[type="checkbox"] {
     gap: 10px; /* Ajoute un espacement entre la case à cocher et le texte */
   }
 }
+
+/* style basique si tu n'utilises pas Bootstrap */
+/*#register-form input.valid {
+  border: 1px solid #28a745;
+  box-shadow: 0 0 0 0.12rem rgba(40,167,69,0.15);
+}
+#register-form input.invalid {
+  border: 1px solid #dc3545;
+  box-shadow: 0 0 0 0.12rem rgba(220,53,69,0.08);
+}*/
+
+/* Garder le fond beige clair sur tous les inputs, même au focus et avec validation */
+.auth-input-container input.form-control,
+.auth-input-container input.form-control:focus,
+.auth-input-container input.form-control.is-valid,
+.auth-input-container input.form-control.is-valid:focus,
+.auth-input-container input.form-control.is-invalid,
+.auth-input-container input.form-control.is-invalid:focus {
+  background-color: $color-very-light-beige !important; /* ton beige clair */
+  color: $color-dark-green; /* couleur texte */
+  border-color: #ccc; /* bordure neutre par défaut */
+}
+
+.auth-input-container input.form-control.is-valid {
+  border-color: $color-medium-green!important; /* vert */
+  box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25) !important; /* ombre verte */
+  /* background-image est géré par Bootstrap, donc icône visible */
+}
+
+.auth-input-container input.form-control.is-invalid {
+  border-color: #dc3545 !important; /* rouge */
+  box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important; /* ombre rouge */
+  /* background-image est géré par Bootstrap, donc icône visible */
+}
+
+
+.valid-feedback,
+  .invalid-feedback {
+    font-size: 1.4rem; /* Ajuste la taille selon ton besoin */
+    margin-top: 0px !important;
+  }
+
+
+
+
+
 
 
   

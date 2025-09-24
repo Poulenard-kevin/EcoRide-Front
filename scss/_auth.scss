@@ -1,120 +1,132 @@
-.auth-form {
-    display: none;
-}
-
-.auth-form.active {
-    display: block;
-}
-
-//=== Connexion ===//
-//=== Connexion ===//
-//=== Connexion ===//
-//=== Connexion ===//
-
-.auth-form form {
-    background-color: $color-light-beige; /* Utilise la variable définie */
-    padding: 35px; /* Ajoute un espace interne */
-    padding-left: 30px;
-    padding-right: 30px;
-    border-radius: 30px; /* Ajoute des coins arrondis */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    text-align: center;
-}
-
-.auth-form h3 {
-    margin-bottom: 20px; /* Ajuste uniquement la marge des h3 dans .auth-form */
-    font-family: $font-title; /* Utilise la police définie */
-    font-weight: $weight-medium; /* Poids du texte */
-    font-size: $font-size-h3; /* Taille du texte */
-    line-height: $line-height-normal; /* Hauteur de ligne */
-    color: $color-dark-green; /* Couleur du texte */
-    text-align: center; /* Centre le texte */
-}
-
-.auth-tabs {
-    display: flex;
-    justify-content: center; /* Centre les boutons horizontalement */
-    gap: 20px; /* Ajoute un espace entre les boutons */
-    margin-bottom: 20px; /* Ajoute un espace en dessous des boutons */
-}
-
-.auth-tabs .nav-link {
-    background-color: $color-light-beige; /* Couleur de fond */
-    color: $color-dark-green; /* Couleur du texte */
-    width: 220px;
-    border: none; /* Supprime les bordures */
-    border-radius: 20px; /* Ajoute des coins arrondis */
-    padding: 12px 30px; /* Ajoute de l'espace interne */
-    font-family: $font-title; /* Utilise la police définie */
-    font-size: $font-size-h3; /* Taille du texte */
-    font-weight: $weight-medium; /* Texte en gras */
-    text-align: center; /* Centre le texte */
-    cursor: pointer; /* Change le curseur au survol */
-    transition: background-color 0.3s ease, transform 0.3s ease; /* Ajoute une transition fluide */
-    box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
-}
-
-.auth-tabs .nav-link.active {
-    background-color: $color-medium-green; /* Couleur de fond pour l'onglet actif */
-    color: $color-light-beige; /* Couleur du texte pour l'onglet actif */
-}
-
-.auth-tabs .nav-link:hover {
-    background-color: $color-dark-green; /* Couleur de fond au survol */
-    color: $color-light-beige; /* Couleur du texte au survol */
-}
-
-.auth-button {
-    background-color: $color-medium-green; /* Couleur de fond */
-    color: $color-light-beige; /* Couleur du texte */
-    width: 220px; /* Largeur identique */
-    border: none; /* Supprime les bordures */
-    border-radius: 20px; /* Ajoute des coins arrondis */
-    padding: 12px 30px; /* Ajoute de l'espace interne */
-    font-family: $font-title; /* Utilise la police définie */
-    font-size: $font-size-h3; /* Taille du texte */
-    font-weight: $weight-medium; /* Texte en gras */
-    text-align: center; /* Centre le texte */
-    cursor: pointer; /* Change le curseur au survol */
-    transition: background-color 0.3s ease, transform 0.3s ease; /* Ajoute une transition fluide */
-    box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5); /* Ajoute une ombre */
-    margin-bottom: 20px;
-}
-
-.auth-button:hover {
-    background-color: $color-dark-green; /* Couleur de fond au survol */
-    color: $color-light-beige; /* Couleur du texte au survol */
-}
-
-.auth-section {
-    gap: 20px; /* Espacement entre les éléments */
-    background-color: $color-background;
-    border-radius: 30px;
-    padding: 100px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin-left: 100px;
-    margin-right: 100px;
-    padding-bottom: 60px;
-    padding-top: 30px;
-    
-
-    @media (max-width: 768px) {
-        padding: 50px;
-        padding-top: 30px;
-        padding-bottom: 60px;
-        margin-left: 50px;
-        margin-right: 50px;  
-      }
+#auth {
+  .auth-form {
+      display: none;
+  }
   
-      @media (max-width: 576px) {
-        padding: 20px;
-        padding-bottom: 60px;
-        margin-left: 25px;
-        margin-right: 25px;
-    }
-}
+  .auth-form.active {
+      display: block;
+  }
 
-.auth-input-container {
+  //=== Connexion ===//
+  //=== Connexion ===//
+  //=== Connexion ===//
+  //=== Connexion ===//
+
+  .auth-form form {
+      background-color: $color-light-beige; /* Utilise la variable définie */
+      padding: 35px; /* Ajoute un espace interne */
+      padding-left: 30px;
+      padding-right: 30px;
+      border-radius: 30px; /* Ajoute des coins arrondis */
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      text-align: center;
+  }
+
+  .auth-form h3 {
+      margin-bottom: 20px; /* Ajuste uniquement la marge des h3 dans .auth-form */
+      font-family: $font-title; /* Utilise la police définie */
+      font-weight: $weight-medium; /* Poids du texte */
+      font-size: $font-size-h3; /* Taille du texte */
+      line-height: $line-height-normal; /* Hauteur de ligne */
+      color: $color-dark-green; /* Couleur du texte */
+      text-align: center; /* Centre le texte */
+  }
+
+  .auth-tabs {
+      display: flex;
+      justify-content: center; /* Centre les boutons horizontalement */
+      gap: 20px; /* Ajoute un espace entre les boutons */
+      margin-bottom: 20px; /* Ajoute un espace en dessous des boutons */
+  }
+
+  .auth-tabs .nav-link {
+      background-color: $color-light-beige; /* Couleur de fond */
+      color: $color-dark-green; /* Couleur du texte */
+      width: 220px;
+      border: none; /* Supprime les bordures */
+      border-radius: 20px; /* Ajoute des coins arrondis */
+      padding: 12px 30px; /* Ajoute de l'espace interne */
+      font-family: $font-title; /* Utilise la police définie */
+      font-size: $font-size-h3; /* Taille du texte */
+      font-weight: $weight-medium; /* Texte en gras */
+      text-align: center; /* Centre le texte */
+      cursor: pointer; /* Change le curseur au survol */
+      transition: background-color 0.3s ease, transform 0.3s ease; /* Ajoute une transition fluide */
+      box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
+  }
+
+  .auth-tabs .nav-link.active {
+      background-color: $color-medium-green; /* Couleur de fond pour l'onglet actif */
+      color: $color-light-beige; /* Couleur du texte pour l'onglet actif */
+  }
+
+  .auth-tabs .nav-link:hover {
+      background-color: $color-dark-green; /* Couleur de fond au survol */
+      color: $color-light-beige; /* Couleur du texte au survol */
+  }
+
+  .auth-button {
+      background-color: $color-medium-green; /* Couleur de fond */
+      color: $color-light-beige; /* Couleur du texte */
+      width: 220px; /* Largeur identique */
+      border: none; /* Supprime les bordures */
+      border-radius: 20px; /* Ajoute des coins arrondis */
+      padding: 12px 30px; /* Ajoute de l'espace interne */
+      font-family: $font-title; /* Utilise la police définie */
+      font-size: $font-size-h3; /* Taille du texte */
+      font-weight: $weight-medium; /* Texte en gras */
+      text-align: center; /* Centre le texte */
+      cursor: pointer; /* Change le curseur au survol */
+      transition: background-color 0.3s ease, transform 0.3s ease; /* Ajoute une transition fluide */
+      box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5); /* Ajoute une ombre */
+      margin-bottom: 20px;
+  }
+
+  .auth-button:hover {
+      background-color: $color-dark-green; /* Couleur de fond au survol */
+      color: $color-light-beige; /* Couleur du texte au survol */
+  }
+
+  .auth-section {
+      gap: 20px; /* Espacement entre les éléments */
+      background-color: $color-background;
+      border-radius: 30px;
+      padding: 100px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-left: 100px;
+      margin-right: 100px;
+      padding-bottom: 60px;
+      padding-top: 30px;
+      
+
+      @media (max-width: 768px) {
+          padding: 50px;
+          padding-top: 30px;
+          padding-bottom: 60px;
+          margin-left: 50px;
+          margin-right: 50px;  
+        }
+    
+        @media (max-width: 576px) {
+          padding: 20px;
+          padding-bottom: 60px;
+          margin-left: 25px;
+          margin-right: 25px;
+      }
+  }
+
+  .auth-input-container {
+      display: flex;
+      flex-direction: column; /* Empile les éléments verticalement */
+      align-items: center; /* Centre les éléments horizontalement */
+      gap: 10px; /* Ajoute un espace entre les champs */
+      margin: 0 auto; /* Centre le conteneur horizontalement */
+      width: 100%; /* Prend toute la largeur disponible */
+      max-width: 400px; /* Limite la largeur maximale */
+      margin-bottom: 20px; /* Ajoute un espace en dessous du conteneur */
+  }
+
+  .form-group {
     display: flex;
     flex-direction: column; /* Empile les éléments verticalement */
     align-items: center; /* Centre les éléments horizontalement */
@@ -122,168 +134,9 @@
     margin: 0 auto; /* Centre le conteneur horizontalement */
     width: 100%; /* Prend toute la largeur disponible */
     max-width: 400px; /* Limite la largeur maximale */
-    margin-bottom: 20px; /* Ajoute un espace en dessous du conteneur */
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column; /* Empile les éléments verticalement */
-  align-items: center; /* Centre les éléments horizontalement */
-  gap: 10px; /* Ajoute un espace entre les champs */
-  margin: 0 auto; /* Centre le conteneur horizontalement */
-  width: 100%; /* Prend toute la largeur disponible */
-  max-width: 400px; /* Limite la largeur maximale */
-}
-
-.auth-input, .password-input {
-  border: none;
-  border-radius: 20px;
-  padding: 12px 20px;
-  font-weight: $weight-semibold;
-  font-size: $font-size-nav;
-  color: $color-dark-green;
-  background-color: $color-very-light-beige;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-  outline: none;
-  transition: box-shadow 0.3s ease;
-  width: 100%; /* Prend toute la largeur du conteneur */
-}
-
-.auth-input::placeholder {
-    color: #7a8a6f;
-}
-
-.auth-social-icons {
-    display: flex;
-    justify-content: center; /* Centre les icônes horizontalement */
-    gap: 20px; /* Ajuste l'espacement entre les icônes */
-    margin-bottom: 20px; /* Ajoute un espace en dessous des icônes */
-}
-
-.auth-social-icons a {
-    font-size: 24px; /* Taille des icônes */
-    color: $color-medium-green; /* Couleur des icônes */
-    transition: transform 0.3s ease, color 0.3s ease; /* Ajoute une transition pour le survol */
-}
-
-.auth-social-icons a:hover {
-    color: $color-medium-green; /* Change la couleur au survol */
-    transform: scale(1.2); /* Agrandit légèrement les icônes au survol */
-}
-
-.auth-text {
-    font-family: $font-body; /* Utilise la police définie */
-    font-size: $font-size-body; /* Taille du texte */
-    line-height: $line-height-normal; /* Hauteur de ligne */
-    color: $color-dark-green; /* Couleur du texte */
-    margin-bottom: 20px; /* Ajoute un espace au-dessous */
-    display: flex; /* Active Flexbox */
-    flex-direction: center; /* Aligne les éléments horizontalement */
-    align-items: center; /* Centre les éléments verticalement */
-    justify-content: center;
-    gap: 20px; /* Ajoute un espacement entre les éléments */
-}
-
-.auth-text a {
-    text-align: center;
-    color: $color-medium-green; /* Couleur du lien */
-    transition: color 0.3s ease; /* Ajoute une transition pour le survol */
-    margin-left:10px;
-    margin-right:10px;
-
-}
-
-.auth-text a:hover {
-    color: $color-medium-green; /* Change la couleur au survol */
-}
-
-input[type="checkbox"] {
-    width: 13px;
-    height: 13px;
-    appearance: none;
-    background-color: $color-very-light-beige;
-    border: 2px solid $color-medium-green;
-    border-radius: 4px;
-    cursor: pointer;
-    position: relative;
-
-    &:checked {
-      background-color: $color-medium-green;
-      border-color: $color-medium-green;
-
-      &::after {
-        content: '✔';
-        color: $color-light-beige;
-        font-size: 10px;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-      }
-    }
   }
 
-.auth-suscribe {
-    display: flex; /* Active Flexbox */
-    flex-direction: center; /* Aligne les éléments horizontalement */
-    align-items: center; /* Centre les éléments verticalement */
-    justify-content: center;
-    gap: 20px; /* Ajoute un espacement entre les éléments */
-    margin: 0; /* Supprime toute marge */
-}
-
-.auth-suscribe p {
-    font-family: $font-body; /* Utilise la police définie */
-    font-size: $font-size-body; /* Taille du texte */
-    line-height: $line-height-normal; /* Hauteur de ligne */
-    color: $color-dark-green; /* Couleur du texte */
-    text-align: center; /* Centre le texte */
-    margin: 0; /* Supprime toute marge */
-}
-
-.auth-suscribe p a {
-    text-align: center;
-    text-decoration: underline; /* Ajoute un soulignement au lien */
-    color: $color-medium-green; /* Couleur du lien */
-    transition: color 0.3s ease; /* Ajoute une transition pour le survol */
-
-}
-
-.auth-suscribe p a:hover {
-    color: $color-dark-green; /* Change la couleur au survol */
-}
-
-//=== Inscription ===//
-//=== Inscription ===//
-//=== Inscription ===//
-//=== Inscription ===//
-
-#register-form {
-    display: none; /* Masque par défaut */
-}
-
-#register-form.active {
-    display: block; /* Affiche lorsque l'onglet est actif */
-}
-
-#register-form h3 {
-    margin-bottom: 20px; /* Ajoute un espace en dessous du titre */
-    font-family: $font-title; /* Utilise la police définie */
-    font-weight: $weight-medium; /* Poids du texte */
-    font-size: $font-size-h3; /* Taille du texte */
-    line-height: $line-height-normal; /* Hauteur de ligne */
-    color: $color-dark-green; /* Couleur du texte */
-    text-align: center; /* Centre le texte */
-}
-
-.auth-input-container label {
-    font-family: $font-body; /* Utilise la police définie */
-    font-size: $font-size-body; /* Taille du texte */
-    color: $color-dark-green; /* Couleur du texte */
-    text-align: left; /* Aligne le texte à gauche */
-}
-
-.auth-input-container input {
+  .auth-input, .password-input {
     border: none;
     border-radius: 20px;
     padding: 12px 20px;
@@ -293,156 +146,304 @@ input[type="checkbox"] {
     background-color: $color-very-light-beige;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
     outline: none;
-    width: 100%; /* Prend toute la largeur disponible */
-}
+    transition: box-shadow 0.3s ease;
+    width: 100%; /* Prend toute la largeur du conteneur */
+  }
 
-.auth-input-container input::placeholder {
-    color: #7a8a6f;
-    font-style: italic;
-}
+  .auth-input::placeholder {
+      color: #7a8a6f;
+  }
 
-.checkbox-container {
-    display: flex; /* Active Flexbox */
-    flex-direction: row; /* Aligne la case à cocher et le texte horizontalement */
-    align-items: center; /* Centre les éléments verticalement */
-    justify-content: center; /* Centre les éléments horizontalement */
-    gap: 10px; /* Ajoute un espacement entre la case à cocher et le texte */
-}
+  .auth-social-icons {
+      display: flex;
+      justify-content: center; /* Centre les icônes horizontalement */
+      gap: 20px; /* Ajuste l'espacement entre les icônes */
+      margin-bottom: 20px; /* Ajoute un espace en dessous des icônes */
+  }
 
-@media (max-width: 990px) {
+  .auth-social-icons a {
+      font-size: 24px; /* Taille des icônes */
+      color: $color-medium-green; /* Couleur des icônes */
+      transition: transform 0.3s ease, color 0.3s ease; /* Ajoute une transition pour le survol */
+  }
+
+  .auth-social-icons a:hover {
+      color: $color-medium-green; /* Change la couleur au survol */
+      transform: scale(1.2); /* Agrandit légèrement les icônes au survol */
+  }
+
   .auth-text {
-    display: flex; /* Active Flexbox */
-    flex-direction: column; /* Empile les éléments verticalement */
-    align-items: center; /* Centre les éléments horizontalement */
-    gap: 10px; /* Ajoute un espacement entre les éléments */
+      font-family: $font-body; /* Utilise la police définie */
+      font-size: $font-size-body; /* Taille du texte */
+      line-height: $line-height-normal; /* Hauteur de ligne */
+      color: $color-dark-green; /* Couleur du texte */
+      margin-bottom: 20px; /* Ajoute un espace au-dessous */
+      display: flex; /* Active Flexbox */
+      flex-direction: center; /* Aligne les éléments horizontalement */
+      align-items: center; /* Centre les éléments verticalement */
+      justify-content: center;
+      gap: 20px; /* Ajoute un espacement entre les éléments */
   }
 
-  .checkbox-container {
-    display: flex; /* Active Flexbox */
-    flex-direction: row; /* Aligne la case à cocher et le texte horizontalement */
-    align-items: center; /* Centre les éléments verticalement */
-    gap: 10px; /* Ajoute un espacement entre la case à cocher et le texte */
+  .auth-text a {
+      text-align: center;
+      color: $color-medium-green; /* Couleur du lien */
+      transition: color 0.3s ease; /* Ajoute une transition pour le survol */
+      margin-left:10px;
+      margin-right:10px;
+
   }
 
-  .forgot-password {
-    text-align: center; /* Centre le texte horizontalement */
-    margin-top: 10px; /* Ajoute un espace au-dessus pour séparer */
+  .auth-text a:hover {
+      color: $color-medium-green; /* Change la couleur au survol */
   }
+
+  input[type="checkbox"] {
+      width: 13px;
+      height: 13px;
+      appearance: none;
+      background-color: $color-very-light-beige;
+      border: 2px solid $color-medium-green;
+      border-radius: 4px;
+      cursor: pointer;
+      position: relative;
+
+      &:checked {
+        background-color: $color-medium-green;
+        border-color: $color-medium-green;
+
+        &::after {
+          content: '✔';
+          color: $color-light-beige;
+          font-size: 10px;
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+        }
+      }
+    }
 
   .auth-suscribe {
-    display: flex; /* Active Flexbox */
-    flex-direction: column; /* Empile les éléments verticalement */
-    align-items: center; /* Centre les éléments horizontalement */
-    gap: 10px; /* Ajoute un espacement entre les éléments */
-  }
-}
-
-
-@media (max-width: 576px) {
-  * {
-    font-size: 16px !important; /* Force la taille minimale de tous les éléments */
+      display: flex; /* Active Flexbox */
+      flex-direction: center; /* Aligne les éléments horizontalement */
+      align-items: center; /* Centre les éléments verticalement */
+      justify-content: center;
+      gap: 20px; /* Ajoute un espacement entre les éléments */
+      margin: 0; /* Supprime toute marge */
   }
 
-  .auth-form h3,
-  .form-group
-  .auth-input-container label,
-  .auth-input-container input,
-  .auth-button,
-  .auth-tabs .nav-link,
-  .auth-suscribe p,
+  .auth-suscribe p {
+      font-family: $font-body; /* Utilise la police définie */
+      font-size: $font-size-body; /* Taille du texte */
+      line-height: $line-height-normal; /* Hauteur de ligne */
+      color: $color-dark-green; /* Couleur du texte */
+      text-align: center; /* Centre le texte */
+      margin: 0; /* Supprime toute marge */
+  }
+
   .auth-suscribe p a {
-    font-size: 16px !important; /* Applique la taille minimale aux éléments spécifiques */
+      text-align: center;
+      text-decoration: underline; /* Ajoute un soulignement au lien */
+      color: $color-medium-green; /* Couleur du lien */
+      transition: color 0.3s ease; /* Ajoute une transition pour le survol */
+
+  }
+
+  .auth-suscribe p a:hover {
+      color: $color-dark-green; /* Change la couleur au survol */
+  }
+
+  //=== Inscription ===//
+  //=== Inscription ===//
+  //=== Inscription ===//
+  //=== Inscription ===//
+
+  #register-form {
+      display: none; /* Masque par défaut */
+  }
+
+  #register-form.active {
+      display: block; /* Affiche lorsque l'onglet est actif */
+  }
+
+  #register-form h3 {
+      margin-bottom: 20px; /* Ajoute un espace en dessous du titre */
+      font-family: $font-title; /* Utilise la police définie */
+      font-weight: $weight-medium; /* Poids du texte */
+      font-size: $font-size-h3; /* Taille du texte */
+      line-height: $line-height-normal; /* Hauteur de ligne */
+      color: $color-dark-green; /* Couleur du texte */
+      text-align: center; /* Centre le texte */
+  }
+
+  .auth-input-container label {
+      font-family: $font-body; /* Utilise la police définie */
+      font-size: $font-size-body; /* Taille du texte */
+      color: $color-dark-green; /* Couleur du texte */
+      text-align: left; /* Aligne le texte à gauche */
   }
 
   .auth-input-container input {
-    padding: 8px 15px; /* Réduit l'espace interne des champs */
-    font-size: 12px !important; /* Réduit la taille du texte dans les champs */
+      border: none;
+      border-radius: 20px;
+      padding: 12px 20px;
+      font-weight: $weight-semibold;
+      font-size: $font-size-nav;
+      color: $color-dark-green;
+      background-color: $color-very-light-beige;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+      outline: none;
+      width: 100%; /* Prend toute la largeur disponible */
   }
 
-  .auth-button {
-    padding: 10px 20px; /* Réduit l'espace interne du bouton */
-    font-size: 16px !important; /* Réduit la taille du texte du bouton */
-  }
-
-  .auth-text {
-    display: flex;
-    flex-direction: column; /* Empile les éléments verticalement */
-    align-items: center; /* Centre les éléments horizontalement */
-    gap: 10px; /* Ajoute un espacement entre les éléments */
-  }
-
-  .auth-text input[type="checkbox"] {
-    margin-bottom: 0; /* Ajoute un espace en dessous de la case à cocher */
-  }
-
-  .auth-suscribe {
-    display: flex;
-    flex-direction: column; /* Empile les éléments verticalement */
-    align-items: center; /* Centre les éléments horizontalement */
-    gap: 10px; /* Ajoute un espacement entre les éléments */
+  .auth-input-container input::placeholder {
+      color: #7a8a6f;
+      font-style: italic;
   }
 
   .checkbox-container {
-    display: flex; /* Active Flexbox */
-    flex-direction: row; /* Aligne la case à cocher et le texte horizontalement */
-    align-items: center; /* Centre les éléments verticalement */
-    gap: 10px; /* Ajoute un espacement entre la case à cocher et le texte */
+      display: flex; /* Active Flexbox */
+      flex-direction: row; /* Aligne la case à cocher et le texte horizontalement */
+      align-items: center; /* Centre les éléments verticalement */
+      justify-content: center; /* Centre les éléments horizontalement */
+      gap: 10px; /* Ajoute un espacement entre la case à cocher et le texte */
   }
 
-  .forgot-password {
-    text-align: center; /* Centre le texte horizontalement */
-  }
+  @media (max-width: 990px) {
+    .auth-text {
+      display: flex; /* Active Flexbox */
+      flex-direction: column; /* Empile les éléments verticalement */
+      align-items: center; /* Centre les éléments horizontalement */
+      gap: 10px; /* Ajoute un espacement entre les éléments */
+    }
 
-  .auth-text .checkbox-container {
-    display: flex; /* Active Flexbox */
-    flex-direction: row; /* Aligne la case à cocher et le texte horizontalement */
-    align-items: center; /* Centre les éléments verticalement */
-    gap: 10px; /* Ajoute un espacement entre la case à cocher et le texte */
-  }
-}
+    .checkbox-container {
+      display: flex; /* Active Flexbox */
+      flex-direction: row; /* Aligne la case à cocher et le texte horizontalement */
+      align-items: center; /* Centre les éléments verticalement */
+      gap: 10px; /* Ajoute un espacement entre la case à cocher et le texte */
+    }
 
-/* style basique si tu n'utilises pas Bootstrap */
-/*#register-form input.valid {
-  border: 1px solid #28a745;
-  box-shadow: 0 0 0 0.12rem rgba(40,167,69,0.15);
-}
-#register-form input.invalid {
-  border: 1px solid #dc3545;
-  box-shadow: 0 0 0 0.12rem rgba(220,53,69,0.08);
-}*/
+    .forgot-password {
+      text-align: center; /* Centre le texte horizontalement */
+      margin-top: 10px; /* Ajoute un espace au-dessus pour séparer */
+    }
 
-/* Garder le fond beige clair sur tous les inputs, même au focus et avec validation */
-.auth-input-container input.form-control,
-.auth-input-container input.form-control:focus,
-.auth-input-container input.form-control.is-valid,
-.auth-input-container input.form-control.is-valid:focus,
-.auth-input-container input.form-control.is-invalid,
-.auth-input-container input.form-control.is-invalid:focus {
-  background-color: $color-very-light-beige !important; /* ton beige clair */
-  color: $color-dark-green; /* couleur texte */
-  border-color: #ccc; /* bordure neutre par défaut */
-}
-
-.auth-input-container input.form-control.is-valid {
-  border-color: $color-medium-green!important; /* vert */
-  box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25) !important; /* ombre verte */
-  /* background-image est géré par Bootstrap, donc icône visible */
-}
-
-.auth-input-container input.form-control.is-invalid {
-  border-color: #dc3545 !important; /* rouge */
-  box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important; /* ombre rouge */
-  /* background-image est géré par Bootstrap, donc icône visible */
-}
-
-
-.valid-feedback,
-  .invalid-feedback {
-    font-size: 1.4rem; /* Ajuste la taille selon ton besoin */
-    margin-top: 0px !important;
+    .auth-suscribe {
+      display: flex; /* Active Flexbox */
+      flex-direction: column; /* Empile les éléments verticalement */
+      align-items: center; /* Centre les éléments horizontalement */
+      gap: 10px; /* Ajoute un espacement entre les éléments */
+    }
   }
 
 
+  @media (max-width: 576px) {
+    * {
+      font-size: 16px !important; /* Force la taille minimale de tous les éléments */
+    }
+
+    .auth-form h3,
+    .form-group
+    .auth-input-container label,
+    .auth-input-container input,
+    .auth-button,
+    .auth-tabs .nav-link,
+    .auth-suscribe p,
+    .auth-suscribe p a {
+      font-size: 16px !important; /* Applique la taille minimale aux éléments spécifiques */
+    }
+
+    .auth-input-container input {
+      padding: 8px 15px; /* Réduit l'espace interne des champs */
+      font-size: 12px !important; /* Réduit la taille du texte dans les champs */
+    }
+
+    .auth-button {
+      padding: 10px 20px; /* Réduit l'espace interne du bouton */
+      font-size: 16px !important; /* Réduit la taille du texte du bouton */
+    }
+
+    .auth-text {
+      display: flex;
+      flex-direction: column; /* Empile les éléments verticalement */
+      align-items: center; /* Centre les éléments horizontalement */
+      gap: 10px; /* Ajoute un espacement entre les éléments */
+    }
+
+    .auth-text input[type="checkbox"] {
+      margin-bottom: 0; /* Ajoute un espace en dessous de la case à cocher */
+    }
+
+    .auth-suscribe {
+      display: flex;
+      flex-direction: column; /* Empile les éléments verticalement */
+      align-items: center; /* Centre les éléments horizontalement */
+      gap: 10px; /* Ajoute un espacement entre les éléments */
+    }
+
+    .checkbox-container {
+      display: flex; /* Active Flexbox */
+      flex-direction: row; /* Aligne la case à cocher et le texte horizontalement */
+      align-items: center; /* Centre les éléments verticalement */
+      gap: 10px; /* Ajoute un espacement entre la case à cocher et le texte */
+    }
+
+    .forgot-password {
+      text-align: center; /* Centre le texte horizontalement */
+    }
+
+    .auth-text .checkbox-container {
+      display: flex; /* Active Flexbox */
+      flex-direction: row; /* Aligne la case à cocher et le texte horizontalement */
+      align-items: center; /* Centre les éléments verticalement */
+      gap: 10px; /* Ajoute un espacement entre la case à cocher et le texte */
+    }
+  }
+
+  /* style basique si tu n'utilises pas Bootstrap */
+  /*#register-form input.valid {
+    border: 1px solid #28a745;
+    box-shadow: 0 0 0 0.12rem rgba(40,167,69,0.15);
+  }
+  #register-form input.invalid {
+    border: 1px solid #dc3545;
+    box-shadow: 0 0 0 0.12rem rgba(220,53,69,0.08);
+  }*/
+
+  /* Garder le fond beige clair sur tous les inputs, même au focus et avec validation */
+  .auth-input-container input.form-control,
+  .auth-input-container input.form-control:focus,
+  .auth-input-container input.form-control.is-valid,
+  .auth-input-container input.form-control.is-valid:focus,
+  .auth-input-container input.form-control.is-invalid,
+  .auth-input-container input.form-control.is-invalid:focus {
+    background-color: $color-very-light-beige !important; /* ton beige clair */
+    color: $color-dark-green; /* couleur texte */
+    border-color: #ccc; /* bordure neutre par défaut */
+  }
+
+  .auth-input-container input.form-control.is-valid {
+    border-color: $color-medium-green!important; /* vert */
+    box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25) !important; /* ombre verte */
+    /* background-image est géré par Bootstrap, donc icône visible */
+  }
+
+  .auth-input-container input.form-control.is-invalid {
+    border-color: #dc3545 !important; /* rouge */
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important; /* ombre rouge */
+    /* background-image est géré par Bootstrap, donc icône visible */
+  }
+
+
+  .valid-feedback,
+    .invalid-feedback {
+      font-size: 1.4rem; /* Ajuste la taille selon ton besoin */
+      margin-top: 0px !important;
+    }
+
+}
 
 
 

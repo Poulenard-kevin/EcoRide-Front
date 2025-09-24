@@ -4,128 +4,130 @@
     </div>
 </div>
 
-<section class="auth-section">
-    <ul class="nav nav-pills auth-tabs">
-        <li class="nav-item">
-            <a id="login-tab" class="nav-link active" href="javascript:void(0);">Connexion</a>
-        </li>
-        <li class="nav-item">
-            <a id="register-tab" class="nav-link" href="javascript:void(0);">Inscription</a>
-        </li>
-    </ul>
+<div id="auth">
+  <section class="auth-section">
+      <ul class="nav nav-pills auth-tabs">
+          <li class="nav-item">
+              <a id="login-tab" class="nav-link active" href="javascript:void(0);">Connexion</a>
+          </li>
+          <li class="nav-item">
+              <a id="register-tab" class="nav-link" href="javascript:void(0);">Inscription</a>
+          </li>
+      </ul>
 
-    <div id="login-form" class="auth-form active">
-        <form id="loginForm" action="/api/login" method="POST" novalidate>
-          <h3>Connectez-vous avec :</h3>
-      
-          <div class="auth-social-icons">
-            <a href="#" aria-label="Google"><i class="bi bi-google"></i></a>
-            <a href="#" aria-label="X"><i class="bi bi-twitter-x"></i></a>
-            <a href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
-          </div>
-      
-          <h3>Ou :</h3>
-      
-          <div class="auth-input-container">
-            <div class="form-group">
-              <input
-                type="email"
-                id="EmailInput"
-                name="email"
-                class="form-control auth-input"
-                placeholder="E-mail"
-                required
-                autocomplete="email"
-              />
-              <div class="invalid-feedback">Le mail n'est pas au bon format.</div>
-              <div class="valid-feedback">Mail valide.</div>
+      <div id="login-form" class="auth-form active">
+          <form id="loginForm" action="/api/login" method="POST" novalidate>
+            <h3>Connectez-vous avec :</h3>
+        
+            <div class="auth-social-icons">
+              <a href="#" aria-label="Google"><i class="bi bi-google"></i></a>
+              <a href="#" aria-label="X"><i class="bi bi-twitter-x"></i></a>
+              <a href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
             </div>
-      
-            <div class="form-group">
-              <input
-                type="password"
-                id="PasswordInput"
-                name="password"
-                class="form-control auth-input password-input"
-                placeholder="Mot de passe"
-                required
-                autocomplete="current-password"
-              />
-              <div class="invalid-feedback">Veuillez entrer votre mot de passe.</div>
-              <div class="valid-feedback">Mot de passe saisi.</div>
-            </div>
-          </div>
-      
-          <div class="auth-text">
-            <div class="checkbox-container">
-              <input type="checkbox" id="remember-me" name="remember" />
-              <label for="remember-me">Souviens-toi de moi</label>
-            </div>
-            <div class="forgot-password">
-              <a href="#">Mot de passe oublié ?</a>
-            </div>
-          </div>
-      
-          <button
-            type="submit"
-            class="auth-button btn btn-success"
-            id="btn-validation-connexion"
-            disabled
-          >
-            Se connecter
-          </button>
-      
-          <div class="auth-suscribe">
-            <p>Pas encore membre ?</p>
-            <p><a href="/auth?tab=register" id="switch-to-register">Inscrivez-vous</a></p>
-          </div>
-      
-          <!-- zone pour messages généraux du serveur (ex: identifiants incorrects) -->
-          <div id="login-global-feedback" class="mt-2" aria-live="polite"></div>
-        </form>
-      </div>
-
-    <!-- Formulaire d'inscription -->
-    <div id="register-form" class="auth-form" style="display:none;">
-        <form>
-        <h3>Inscrivez-vous :</h3>
-        <div class="auth-input-container">
-            <div class="form-group">
-              <input type="text" id="NomInput" name="Nom" class="form-control" placeholder="Votre nom" required>
-              <div class="invalid-feedback">Le nom est requis.</div>
-              <div class="valid-feedback">Nom valide.</div>
-            </div>
-          
-            <div class="form-group">
-              <input type="text" id="PrenomInput" name="Prenom" class="form-control" placeholder="Votre prénom" required>
-              <div class="invalid-feedback">Le prénom est requis.</div>
-              <div class="valid-feedback">Prénom valide.</div>
-            </div>
-          
-            <div class="form-group">
-              <input type="email" id="register-email" name="email" class="form-control" placeholder="Votre e-mail" required>
-              <div class="invalid-feedback">Le mail n'est pas au bon format.</div>
-              <div class="valid-feedback">Mail valide.</div>
-            </div>
-          
-            <div class="form-group">
-              <input type="password" id="register-password" name="password" class="form-control" placeholder="Votre mot de passe" required>
-              <div class="invalid-feedback">
-                Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.
+        
+            <h3>Ou :</h3>
+        
+            <div class="auth-input-container">
+              <div class="form-group">
+                <input
+                  type="email"
+                  id="EmailInput"
+                  name="email"
+                  class="form-control auth-input"
+                  placeholder="E-mail"
+                  required
+                  autocomplete="email"
+                />
+                <div class="invalid-feedback">Le mail n'est pas au bon format.</div>
+                <div class="valid-feedback">Mail valide.</div>
               </div>
-              <div class="valid-feedback">Mot de passe valide.</div>
+        
+              <div class="form-group">
+                <input
+                  type="password"
+                  id="PasswordInput"
+                  name="password"
+                  class="form-control auth-input password-input"
+                  placeholder="Mot de passe"
+                  required
+                  autocomplete="current-password"
+                />
+                <div class="invalid-feedback">Veuillez entrer votre mot de passe.</div>
+                <div class="valid-feedback">Mot de passe saisi.</div>
+              </div>
             </div>
-          
-            <div class="form-group">
-              <input type="password" id="register-confirm-password" name="confirm-password" class="form-control" placeholder="Confirmez votre mot de passe" required>
-              <div class="invalid-feedback">Les mots de passe ne correspondent pas.</div>
-              <div class="valid-feedback">Mot de passe confirmé.</div>
+        
+            <div class="auth-text">
+              <div class="checkbox-container">
+                <input type="checkbox" id="remember-me" name="remember" />
+                <label for="remember-me">Souviens-toi de moi</label>
+              </div>
+              <div class="forgot-password">
+                <a href="#">Mot de passe oublié ?</a>
+              </div>
             </div>
-          </div>
-        <button type="submit" class="auth-button btn btn-success" id="btn-validation-inscription" disabled>S'inscrire</button>
-        </form>
-    </div>
-</section>
+        
+            <button
+              type="submit"
+              class="auth-button btn btn-success"
+              id="btn-validation-connexion"
+              disabled
+            >
+              Se connecter
+            </button>
+        
+            <div class="auth-suscribe">
+              <p>Pas encore membre ?</p>
+              <p><a href="/auth?tab=register" id="switch-to-register">Inscrivez-vous</a></p>
+            </div>
+        
+            <!-- zone pour messages généraux du serveur (ex: identifiants incorrects) -->
+            <div id="login-global-feedback" class="mt-2" aria-live="polite"></div>
+          </form>
+        </div>
+
+      <!-- Formulaire d'inscription -->
+      <div id="register-form" class="auth-form" style="display:none;">
+          <form>
+          <h3>Inscrivez-vous :</h3>
+          <div class="auth-input-container">
+              <div class="form-group">
+                <input type="text" id="NomInput" name="Nom" class="form-control" placeholder="Votre nom" required>
+                <div class="invalid-feedback">Le nom est requis.</div>
+                <div class="valid-feedback">Nom valide.</div>
+              </div>
+            
+              <div class="form-group">
+                <input type="text" id="PrenomInput" name="Prenom" class="form-control" placeholder="Votre prénom" required>
+                <div class="invalid-feedback">Le prénom est requis.</div>
+                <div class="valid-feedback">Prénom valide.</div>
+              </div>
+            
+              <div class="form-group">
+                <input type="email" id="register-email" name="email" class="form-control" placeholder="Votre e-mail" required>
+                <div class="invalid-feedback">Le mail n'est pas au bon format.</div>
+                <div class="valid-feedback">Mail valide.</div>
+              </div>
+            
+              <div class="form-group">
+                <input type="password" id="register-password" name="password" class="form-control" placeholder="Votre mot de passe" required>
+                <div class="invalid-feedback">
+                  Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.
+                </div>
+                <div class="valid-feedback">Mot de passe valide.</div>
+              </div>
+            
+              <div class="form-group">
+                <input type="password" id="register-confirm-password" name="confirm-password" class="form-control" placeholder="Confirmez votre mot de passe" required>
+                <div class="invalid-feedback">Les mots de passe ne correspondent pas.</div>
+                <div class="valid-feedback">Mot de passe confirmé.</div>
+              </div>
+            </div>
+          <button type="submit" class="auth-button btn btn-success" id="btn-validation-inscription" disabled>S'inscrire</button>
+          </form>
+      </div>
+  </section>
+</div>
 
 
 

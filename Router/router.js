@@ -54,9 +54,10 @@ const attachDetailBtnListeners = () => {
 };
 
 const LoadContentPage = async () => {
-const pathname = window.location.pathname;
+  const pathname = window.location.pathname;
   const queryParams = new URLSearchParams(window.location.search);
-  // Compatibilité : utilise la fonction disponible
+
+  // Compatibilité : supporte getRouteByPathname ou getRouteByUrl
   const route = (typeof getRouteByPathname === 'function')
     ? getRouteByPathname(pathname)
     : (typeof getRouteByUrl === 'function' ? getRouteByUrl(pathname) : null);
@@ -74,40 +75,77 @@ const pathname = window.location.pathname;
     const html = await res.text();
 
     // mainPage fallback
-    const mainPageEl = typeof mainPage !== 'undefined' ? mainPage : document.getElementById("main-page");
-    if (mainPageEl) mainPageEl.innerHTML = html;
+    const mainPageEl = typeof mainPage !== 'undefined' && mainPage ? mainPage : document.getElementById("main-page");
+    if (!mainPageEl) {
+      console.error("main-page introuvable");
+      return;
+    }
 
-    // Nettoie les scripts précédemment chargés par les routes
+    // Nettoie les anciens scripts gérés par les routes
     document.querySelectorAll('script[data-route-script]').forEach(s => s.remove());
 
-    const doAfterLoad = () => {
-      typeof attachDetailBtnListeners === 'function' && attachDetailBtnListeners();
-      // Dispatch un CustomEvent avec les queryParams pour compatibilité et info
-      document.dispatchEvent(new CustomEvent('pageContentLoaded', { detail: { queryParams } }));
-      // Pour compatibilité ascendante si du code écoute 'routeLoaded'
-      document.dispatchEvent(new CustomEvent('routeLoaded', { detail: { queryParams } }));
-    };
+    // Parse le HTML pour extraire les scripts sans les laisser inertes
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const scripts = Array.from(doc.querySelectorAll('script'));
 
-    if (route.pathJS && route.pathJS.trim() !== "") {
-      const scriptTag = document.createElement("script");
-      scriptTag.type = "text/javascript";
-      scriptTag.src = route.pathJS;
-      scriptTag.setAttribute("data-route-script", route.pathJS);
-      scriptTag.onload = () => {
-        doAfterLoad();
-      };
-      scriptTag.onerror = () => {
-        console.warn("Impossible de charger le script:", route.pathJS);
-        doAfterLoad();
-      };
-      document.body.appendChild(scriptTag);
-    } else {
-      doAfterLoad();
+    // Injecte le HTML sans les balises <script>
+    mainPageEl.innerHTML = '';
+    Array.from(doc.body.childNodes).forEach(node => {
+      if (!(node.tagName && node.tagName.toLowerCase() === 'script')) {
+        mainPageEl.appendChild(node.cloneNode(true));
+      }
+    });
+
+    // Helpers pour exécuter/charger scripts
+    function runInlineScript(content, isModule) {
+      const s = document.createElement('script');
+      if (isModule) s.type = 'module';
+      s.textContent = content;
+      s.setAttribute('data-route-script', 'inline');
+      document.body.appendChild(s);
     }
+
+    function loadExternalScript(src, isModule) {
+      return new Promise(resolve => {
+        const s = document.createElement('script');
+        s.src = src;
+        if (isModule) s.type = 'module';
+        s.setAttribute('data-route-script', src);
+        s.onload = () => resolve();
+        s.onerror = () => {
+          console.warn("Impossible de charger le script:", src);
+          resolve();
+        };
+        document.body.appendChild(s);
+      });
+    }
+
+    // Exécute les scripts trouvés dans le HTML (inline ou externes)
+    for (const s of scripts) {
+      const isModule = s.type === 'module';
+      if (s.src) {
+        await loadExternalScript(s.src, isModule);
+      } else {
+        runInlineScript(s.textContent, isModule);
+      }
+    }
+
+    // Ensuite, charge route.pathJS s'il est défini (comme avant)
+    if (route.pathJS && route.pathJS.trim() !== "") {
+      // détecte module si l'info est fournie sur la route (optionnel)
+      const isModule = route.isModule === true;
+      await loadExternalScript(route.pathJS, isModule);
+    }
+
+    // Attache listeners et dispatch events — inclut queryParams pour compatibilité
+    typeof attachDetailBtnListeners === 'function' && attachDetailBtnListeners();
+    document.dispatchEvent(new CustomEvent('pageContentLoaded', { detail: { queryParams } }));
+    document.dispatchEvent(new CustomEvent('routeLoaded', { detail: { queryParams } }));
 
     document.title = `${route.title} - ${websiteName || ''}`;
   } catch (err) {
-    const mainPageEl = typeof mainPage !== 'undefined' ? mainPage : document.getElementById("main-page");
+    const mainPageEl = typeof mainPage !== 'undefined' && mainPage ? mainPage : document.getElementById("main-page");
     if (mainPageEl) mainPageEl.innerHTML = '<p style="color:red; text-align:center;">Erreur lors du chargement de la page.</p>';
     console.error("Erreur fetch page:", err);
   } finally {

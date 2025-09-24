@@ -116,22 +116,38 @@ document.addEventListener('DOMContentLoaded', () => {
 // routeLoaded : seulement basculer sur l'onglet demandé (ne retourne pas si éléments manquants)
 document.addEventListener('routeLoaded', async (event) => {
   try {
+    // attente courte pour être sûr que le DOM injecté est présent
+    await new Promise(r => setTimeout(r, 20));
+
+    // récupère les forms injectés
+    const registerForm = document.getElementById('register-form');
+    const loginForm = document.getElementById('login-form');
+
+    // initialise les validations si présents
+    if (registerForm && typeof setupAuthValidationForRegister === 'function') {
+      setupAuthValidationForRegister(registerForm);
+    }
+    if (loginForm && typeof setupAuthValidationForLogin === 'function') {
+      setupAuthValidationForLogin(loginForm);
+    }
+
+    // comportement d'onglet / scroll original
     const tab = event?.detail?.queryParams?.get('tab');
     if (tab === 'register') {
       if (typeof showRegister === 'function') await showRegister();
 
-      const registerForm = document.getElementById('register-form');
-      if (!registerForm) return;
-      void registerForm.offsetWidth;
+      const rf = document.getElementById('register-form');
+      if (!rf) return;
+      void rf.offsetWidth;
       await new Promise(r => setTimeout(r, 80));
-      const rect = registerForm.getBoundingClientRect();
+      const rect = rf.getBoundingClientRect();
       const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
       const targetPosition = rect.top + scrollTop - 100;
       try { document.documentElement.scrollTo(0, targetPosition); } catch (err) { window.scrollTo(0, targetPosition); }
       setTimeout(() => {
         try { window.scrollTo({ top: targetPosition, behavior: 'smooth' }); } catch (e) {}
       }, 20);
-      registerForm.querySelector('input')?.focus();
+      rf.querySelector('input')?.focus();
     } else {
       showLogin && showLogin();
     }

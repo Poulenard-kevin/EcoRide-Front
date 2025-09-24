@@ -1,3 +1,43 @@
+function initRememberMe() {
+  const rememberCheckbox = document.querySelector('input[type="checkbox"][name="rememberMe"]');
+  const emailInput = document.querySelector('input[name="email"], input#EmailInput');
+
+  if (!rememberCheckbox) {
+    console.log('Checkbox "Souviens-toi de moi" non trouvée');
+    return;
+  }
+  if (!emailInput) {
+    console.log('Input email non trouvé');
+    return;
+  }
+
+  // Restaure l'état depuis localStorage
+  const savedRemember = localStorage.getItem('rememberMe') === 'true';
+  rememberCheckbox.checked = savedRemember;
+
+  if (savedRemember) {
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    if (savedEmail) {
+      emailInput.value = savedEmail;
+    }
+  }
+
+  rememberCheckbox.addEventListener('change', () => {
+    localStorage.setItem('rememberMe', rememberCheckbox.checked);
+    if (!rememberCheckbox.checked) {
+      localStorage.removeItem('rememberedEmail');
+    } else if (emailInput.value.trim() !== '') {
+      localStorage.setItem('rememberedEmail', emailInput.value.trim());
+    }
+  });
+
+  emailInput.addEventListener('input', () => {
+    if (rememberCheckbox.checked) {
+      localStorage.setItem('rememberedEmail', emailInput.value.trim());
+    }
+  });
+}
+
 function blurActiveIfNotBody() {
   const active = document.activeElement;
   if (active && active !== document.body && active !== document.documentElement) {
@@ -68,6 +108,7 @@ function showRegister(options = { focus: false }) {
 
 // Initialise au chargement du DOM
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM ready - gestion rememberMe active');
   console.log('auth.js chargé correctement (unified init)');
 
   // initialisation si présents
@@ -130,6 +171,43 @@ document.addEventListener('DOMContentLoaded', () => {
     // cible le scope auth si présent, sinon global
     const authScope = document.getElementById('auth') || document;
     attachForgotPasswordListener(authScope);
+  }
+
+  // Gestion de la checkbox "Souviens-toi de moi"
+  const rememberCheckbox = document.querySelector('input[type="checkbox"][name="rememberMe"]');
+  const emailInput = document.querySelector('input[name="email"], input#EmailInput');
+
+  if (rememberCheckbox) {
+    // Restaure l'état depuis localStorage
+    const savedRemember = localStorage.getItem('rememberMe') === 'true';
+    rememberCheckbox.checked = savedRemember;
+
+    // Pré-remplir email si checkbox cochée et email mémorisé
+    if (savedRemember && emailInput) {
+      const savedEmail = localStorage.getItem('rememberedEmail');
+      if (savedEmail) {
+        emailInput.value = savedEmail;
+      }
+    }
+
+    // Sauvegarde l'état à chaque changement
+    rememberCheckbox.addEventListener('change', () => {
+      localStorage.setItem('rememberMe', rememberCheckbox.checked);
+      if (!rememberCheckbox.checked) {
+        localStorage.removeItem('rememberedEmail');
+      } else if (emailInput && emailInput.value.trim() !== '') {
+        localStorage.setItem('rememberedEmail', emailInput.value.trim());
+      }
+    });
+
+    // Met à jour l'email mémorisé à chaque modification si checkbox cochée
+    if (emailInput) {
+      emailInput.addEventListener('input', () => {
+        if (rememberCheckbox.checked) {
+          localStorage.setItem('rememberedEmail', emailInput.value.trim());
+        }
+      });
+    }
   }
 });
 
@@ -276,6 +354,8 @@ document.addEventListener('routeLoaded', async (event) => {
     }
 
     attachForgotPasswordListener(document.getElementById('auth') || document);
+
+    initRememberMe();
 
     const tab = event?.detail?.queryParams?.get('tab');
 

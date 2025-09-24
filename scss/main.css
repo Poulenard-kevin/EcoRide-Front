@@ -14134,6 +14134,23 @@ button.nav-link.dropdown-toggle:hover:active {
   padding: 0;
 }
 
+.auth-scope #forgot-email {
+  background-color: #F8F0E5;
+  font-size: 1.2rem;
+  color: #333;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e6e6e6;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.auth-scope #forgot-email:focus {
+  background-color: #F8F0E5;
+  border-color: rgba(75, 138, 71, 0.9);
+  box-shadow: 0 0 0 0.15rem rgba(75, 138, 71, 0.12);
+  outline: none;
+}
+
 /* Boutons dans le scope auth (n'écrase pas .btn global hors scope) */
 .auth-scope .btn {
   background-color: #4B8A47;

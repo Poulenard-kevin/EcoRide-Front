@@ -14118,6 +14118,58 @@ button.nav-link.dropdown-toggle:hover:active {
   margin-top: 0px !important;
 }
 
+/* Modal content scoped to auth */
+.auth-scope .modal-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  color: var(--bs-modal-color, #212529);
+  pointer-events: auto;
+  background-color: var(--bs-modal-bg, #F1E7D1);
+  background-clip: padding-box;
+  border: var(--bs-modal-border-width, 1px) solid var(--bs-modal-border-color, rgba(0, 0, 0, 0.08));
+  border-radius: var(--bs-modal-border-radius, 12px);
+  outline: 0;
+  padding: 0;
+}
+
+/* Boutons dans le scope auth (n'écrase pas .btn global hors scope) */
+.auth-scope .btn {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  border: none;
+  border-radius: 30px;
+  padding: 10px 20px;
+  font-family: "Poppins", sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  transition: background 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 6px 18px rgba(75, 138, 71, 0.12);
+}
+
+/* Hover / active / focus */
+.auth-scope .btn:hover {
+  background-color: #4B8A47;
+  transform: translateY(-2px);
+}
+
+.auth-scope .btn:active {
+  transform: translateY(0);
+}
+
+.auth-scope .btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 0.18rem rgba(75, 138, 71, 0.12);
+}
+
+/* Small responsive tweak so big buttons don't overflow */
+@media (max-width: 480px) {
+  .auth-scope .btn {
+    font-size: 18px;
+    padding: 10px 16px;
+  }
+}
 html {
   position: relative;
   min-height: 100%;

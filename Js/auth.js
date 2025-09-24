@@ -1,3 +1,10 @@
+function blurActiveIfNotBody() {
+  const active = document.activeElement;
+  if (active && active !== document.body && active !== document.documentElement) {
+    try { active.blur(); } catch (e) { /* ignore */ }
+  }
+}
+
 // Helpers pour afficher / cacher et initialiser
 function showLogin() {
   const loginTab = document.getElementById('login-tab');
@@ -17,7 +24,7 @@ function showLogin() {
   if (registerForm) registerForm.style.display = 'none';
 }
 
-function showRegister() {
+function showRegister(options = { focus: false }) {
   return new Promise((resolve) => {
     const loginTab = document.getElementById('login-tab');
     const registerTab = document.getElementById('register-tab');
@@ -31,12 +38,30 @@ function showRegister() {
       registerForm.style.display = 'block';
       // forcer reflow pour s'assurer que le style est appliqué
       void registerForm.offsetWidth;
+
+      // Reset validation state (préventif)
+      registerForm.querySelectorAll('input').forEach(i => {
+        i.classList.remove('is-valid', 'is-invalid');
+        try { i.touched = false; } catch (e) {}
+      });
     }
     if (loginForm) loginForm.style.display = 'none';
 
-    // donne le temps au navigateur d'appliquer les styles, puis resolve
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => resolve());
+      requestAnimationFrame(() => {
+        // focus only if explicitly requested (and page has focus)
+        if (options.focus && document.hasFocus()) {
+          const firstInput = registerForm?.querySelector('input');
+          // don't steal focus if something else already has it (eg search)
+          const active = document.activeElement;
+          const activeIsBody = !active || active === document.body || active === document.documentElement;
+          if (firstInput && activeIsBody) {
+            // slight delay to avoid racing with other programmatic events
+            setTimeout(() => firstInput.focus(), 120);
+          }
+        }
+        resolve();
+      });
     });
   });
 }
@@ -55,7 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupAuthValidationForLogin(loginForm);
   }
   if (registerForm && typeof setupAuthValidationForRegister === 'function') {
-    // on initialise aussi le register si présent (safe)
     setupAuthValidationForRegister(registerForm);
   }
 
@@ -79,51 +103,171 @@ document.addEventListener('DOMContentLoaded', () => {
     linkInscrivezVous.addEventListener('click', async (e) => {
       e.preventDefault();
 
-      // Affiche l'onglet inscription et attendre que showRegister ait fini
       if (typeof showRegister === 'function') {
         await showRegister();
       }
 
-      // Récupération et forçage de reflow
       const registerForm = document.getElementById('register-form');
       if (!registerForm) return;
       void registerForm.offsetWidth;
 
-      // Petit délai pour s'assurer que le layout est stable
       await new Promise(r => setTimeout(r, 80));
 
-      // Calculer la position cible et scroller (instant puis smooth)
       const rect = registerForm.getBoundingClientRect();
       const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const targetPosition = rect.top + scrollTop - 100; // ajuste l'offset si besoin
+      const targetPosition = rect.top + scrollTop - 100;
 
-      // Tentative instant pour forcer la position (utile si smooth est écrasé)
       try { document.documentElement.scrollTo(0, targetPosition); } catch (err) { window.scrollTo(0, targetPosition); }
 
-      // Puis smooth (fallback si supporté)
-      setTimeout(() => {
-        try { window.scrollTo({ top: targetPosition, behavior: 'smooth' }); }
-        catch (e) { /* ignore */ }
-      }, 20);
-
-      // Focus sur le premier champ pour attirer l'attention
-      registerForm.querySelector('input')?.focus();
+        setTimeout(() => {
+          registerForm.querySelector('input')?.focus();
+        }, 120); // 80-200 ms fonctionne bien ; ajuste si nécessaire
     });
   }
 
+  // Attacher le listener "Mot de passe oublié" pour la page chargée
+  if (typeof attachForgotPasswordListener === 'function') {
+    // cible le scope auth si présent, sinon global
+    const authScope = document.getElementById('auth') || document;
+    attachForgotPasswordListener(authScope);
+  }
 });
+
+// Modal mot de passe oublié//
+// Modal mot de passe oublié//
+// Modal mot de passe oublié//
+
+function showForgotPasswordModal() {
+  return new Promise(resolve => {
+    const modalId = 'forgotPasswordModal';
+    let modalEl = document.getElementById(modalId);
+    if (modalEl) modalEl.remove();
+
+    const html = `
+      <div class="modal fade" id="${modalId}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content auth-scope">
+            <div class="modal-header">
+              <h5 class="modal-title">Réinitialiser le mot de passe</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body">
+              <p class="text-muted">Entrez votre adresse e‑mail pour recevoir les instructions de réinitialisation.</p>
+              <div class="mb-3">
+                <input type="email" id="forgot-email" class="form-control" placeholder="Votre e‑mail" required>
+                <div class="invalid-feedback">Veuillez entrer une adresse email valide.</div>
+              </div>
+              <div id="forgot-feedback" class="mt-2" aria-live="polite"></div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+              <button class="btn btn-primary" id="forgot-confirm">Envoyer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = html;
+    document.body.appendChild(wrapper);
+
+    modalEl = document.getElementById(modalId);
+    const bsModal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: true });
+    bsModal.show();
+
+    const emailInput = modalEl.querySelector('#forgot-email');
+    const confirmBtn = modalEl.querySelector('#forgot-confirm');
+    const cancelBtn = modalEl.querySelector('[data-bs-dismiss="modal"]');
+    const feedback = modalEl.querySelector('#forgot-feedback');
+
+    function cleanup(result) {
+      try { bsModal.hide(); } catch (e) {}
+      setTimeout(() => {
+        wrapper.remove();
+        resolve(result);
+      }, 250);
+    }
+
+    // Validation basique email
+    function isValidEmail(v) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((v||'').trim());
+    }
+
+    // Enable/disable confirm
+    function updateState() {
+      confirmBtn.disabled = !isValidEmail(emailInput.value);
+    }
+    emailInput.addEventListener('input', updateState);
+    updateState();
+
+    // Soumission
+    confirmBtn.addEventListener('click', async () => {
+      const email = (emailInput.value || '').trim();
+      if (!isValidEmail(email)) {
+        emailInput.classList.add('is-invalid');
+        return;
+      }
+      emailInput.classList.remove('is-invalid');
+      confirmBtn.disabled = true;
+      feedback.textContent = 'Envoi en cours...';
+
+      try {
+        // Exemple d'appel backend — adapte l'URL et la gestion d'erreur selon ton API
+        const res = await fetch('/api/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+
+        if (!res.ok) {
+          const errMsg = await res.text().catch(() => 'Erreur serveur');
+          feedback.innerHTML = `<span style="color:#b73a3a">${errMsg}</span>`;
+          confirmBtn.disabled = false;
+          return;
+        }
+
+        feedback.innerHTML = `<span style="color:green">Email envoyé si le compte existe. Vérifiez votre boîte.</span>`;
+        setTimeout(() => cleanup(email), 1200);
+      } catch (err) {
+        console.error('forgot-password error', err);
+        feedback.innerHTML = `<span style="color:#b73a3a">Erreur réseau. Réessayez.</span>`;
+        confirmBtn.disabled = false;
+      }
+    });
+
+    // Cancel
+    cancelBtn.addEventListener('click', () => cleanup(null));
+
+    modalEl.addEventListener('hidden.bs.modal', () => {
+      if (document.body.contains(wrapper)) wrapper.remove();
+    });
+  });
+}
+
+function attachForgotPasswordListener(scope = document) {
+  const forgotLinks = scope.querySelectorAll('.forgot-password a, a.forgot-password-link');
+  forgotLinks.forEach(a => {
+    if (a.dataset.forgotAttached === 'true') return;
+    a.dataset.forgotAttached = 'true';
+    a.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const result = await showForgotPasswordModal();
+      if (result) {
+        console.log('forgot password requested for', result);
+      }
+    });
+  });
+}
 
 // routeLoaded : seulement basculer sur l'onglet demandé (ne retourne pas si éléments manquants)
 document.addEventListener('routeLoaded', async (event) => {
   try {
-    // attente courte pour être sûr que le DOM injecté est présent
     await new Promise(r => setTimeout(r, 20));
 
-    // récupère les forms injectés
     const registerForm = document.getElementById('register-form');
     const loginForm = document.getElementById('login-form');
 
-    // initialise les validations si présents
     if (registerForm && typeof setupAuthValidationForRegister === 'function') {
       setupAuthValidationForRegister(registerForm);
     }
@@ -131,10 +275,19 @@ document.addEventListener('routeLoaded', async (event) => {
       setupAuthValidationForLogin(loginForm);
     }
 
-    // comportement d'onglet / scroll original
+    attachForgotPasswordListener(document.getElementById('auth') || document);
+
     const tab = event?.detail?.queryParams?.get('tab');
+
+    // detect if navigation was user-initiated (try event.isTrusted or custom flag set by menu)
+    const userInitiated = !!(event && event.isTrusted) || !!(event?.detail && event.detail.userInitiated);
+
     if (tab === 'register') {
-      if (typeof showRegister === 'function') await showRegister();
+      // blur any currently focused element to avoid browser stealing focus
+      blurActiveIfNotBody();
+
+      // show register; allow focus only when user actually initiated navigation
+      if (typeof showRegister === 'function') await showRegister({ focus: !!userInitiated });
 
       const rf = document.getElementById('register-form');
       if (!rf) return;
@@ -147,7 +300,12 @@ document.addEventListener('routeLoaded', async (event) => {
       setTimeout(() => {
         try { window.scrollTo({ top: targetPosition, behavior: 'smooth' }); } catch (e) {}
       }, 20);
-      rf.querySelector('input')?.focus();
+
+      // focus already handled by showRegister when userInitiated === true
+      if (userInitiated) {
+        // just in case, attempt a small delayed focus
+        setTimeout(() => rf.querySelector('input')?.focus(), 180);
+      }
     } else {
       showLogin && showLogin();
     }
@@ -186,21 +344,20 @@ function setupAuthValidationForRegister(formElement) {
     inputValidatePassword: formElement.querySelector('input[name="confirm-password"]')
   };
 
-  for (const key in inputs) {
-    if (!inputs[key]) {
-      console.error(`Input manquant: ${key}`);
-      return;
-    }
-  }
-
+  // Remplacement de la boucle d'ajout des listeners
   for (const key in inputs) {
     inputs[key].touched = false;
-    inputs[key].addEventListener('input', () => {
+
+    // input : ne marque touched que si event.isTrusted (user)
+    inputs[key].addEventListener('input', (e) => {
+      if (!e.isTrusted) return; // ignore programmatic changes / autofill
       inputs[key].touched = true;
       validateForm();
     });
-    inputs[key].addEventListener('blur', () => {
-      inputs[key].touched = true;
+
+    // blur : idem, et on force la validation visuelle
+    inputs[key].addEventListener('blur', (e) => {
+      if (e && e.isTrusted) inputs[key].touched = true;
       validateForm();
     });
   }
@@ -282,16 +439,21 @@ function setupAuthValidationForRegister(formElement) {
     }
   }
 
-  inputs.inputNom.addEventListener('blur', () => {
-    inputs.inputNom.value = capitalizeFirstLetter(inputs.inputNom.value);
-    inputs.inputNom.touched = true;
-    validateForm();
+  inputs.inputNom.addEventListener('blur', (e) => {
+    // ne capitalise que si blur user-triggered
+    if (e && e.isTrusted) {
+      inputs.inputNom.value = capitalizeFirstLetter(inputs.inputNom.value);
+      inputs.inputNom.touched = true;
+      validateForm();
+    }
   });
-
-  inputs.inputPrenom.addEventListener('blur', () => {
-    inputs.inputPrenom.value = capitalizeFirstLetter(inputs.inputPrenom.value);
-    inputs.inputPrenom.touched = true;
-    validateForm();
+  
+  inputs.inputPrenom.addEventListener('blur', (e) => {
+    if (e && e.isTrusted) {
+      inputs.inputPrenom.value = capitalizeFirstLetter(inputs.inputPrenom.value);
+      inputs.inputPrenom.touched = true;
+      validateForm();
+    }
   });
 
   function validateForm() {

@@ -19,10 +19,16 @@
           <form id="loginForm" action="/api/login" method="POST" novalidate>
             <h3>Connectez-vous avec :</h3>
         
-            <div class="auth-social-icons">
-              <a href="#" aria-label="Google"><i class="bi bi-google"></i></a>
-              <a href="#" aria-label="X"><i class="bi bi-twitter-x"></i></a>
-              <a href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+            <div class="auth-social-icons social-login">
+              <a href="#" class="social-btn google" data-provider="google" aria-label="Se connecter avec Google">
+                <i class="bi bi-google"></i>
+              </a>
+              <a href="#" class="social-btn x" data-provider="x" aria-label="Se connecter avec X">
+                <i class="bi bi-twitter-x"></i>
+              </a>
+              <a href="#" class="social-btn facebook" data-provider="facebook" aria-label="Se connecter avec Facebook">
+                <i class="bi bi-facebook"></i>
+              </a>
             </div>
         
             <h3>Ou :</h3>

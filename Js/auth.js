@@ -394,18 +394,26 @@ document.addEventListener('routeLoaded', async (event) => {
   }
 });
 
-// délégation pour onglets (robuste si les éléments sont injectés plus tard)
+// délégation pour onglets (déjà dans ton fichier)
 document.addEventListener('click', (e) => {
   const tab = e.target.closest && e.target.closest('#login-tab, #register-tab');
   if (!tab) return;
   e.preventDefault();
   if (tab.id === 'register-tab') {
-    console.log('Clic detecté: register-tab');
     showRegister();
   } else if (tab.id === 'login-tab') {
-    console.log('Clic detecté: login-tab');
     showLogin();
   }
+});
+
+// délégation pour les icônes sociales (recommandée)
+document.addEventListener('click', (e) => {
+  const a = e.target.closest && e.target.closest('.auth-social-icons a');
+  if (!a) return;
+  e.preventDefault(); // attention : en production, n'empêche pas si href cible l'OAuth backend
+  const provider = a.getAttribute('data-provider') || a.getAttribute('aria-label') || 'provider';
+  alert(`Simulation : connexion via ${provider}`);
+  // Quand le backend est prêt, remplace par : window.location.href = `/auth/${provider.toLowerCase()}`;
 });
 
 // Validation du formulaire d'inscription//

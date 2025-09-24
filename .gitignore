@@ -12,4 +12,8 @@ scss/main.css.map
 .vscode/
 *.log
 
-sitting.json
+scss/*.bak
+
+.vscode/settings.json
+
+

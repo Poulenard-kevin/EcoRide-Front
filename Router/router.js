@@ -1,60 +1,132 @@
 import Route from "./Route.js";
 import { allRoutes, websiteName } from "./allRoutes.js";
 
-// Création d'une route pour la page 404 (page introuvable)
+const mainPage = document.getElementById("main-page");
+const loaderOverlay = document.getElementById("loader-overlay");
+
+function showLoader() {
+  if (loaderOverlay) loaderOverlay.style.display = "flex";
+  if (mainPage) mainPage.classList.add("loading");
+}
+
+function hideLoader() {
+  if (loaderOverlay) loaderOverlay.style.display = "none";
+  if (mainPage) mainPage.classList.remove("loading");
+}
+
 const route404 = new Route("404", "Page introuvable", "/pages/404.html");
 
-// Fonction pour récupérer la route correspondant à une URL donnée
-const getRouteByUrl = (url) => {
-  let currentRoute = null;
-  // Parcours de toutes les routes pour trouver la correspondance
-  allRoutes.forEach((element) => {
-    if (element.url == url) {
-      currentRoute = element;
-    }
+const getRouteByPathname = (pathname) => {
+  if (!pathname || pathname === "") pathname = "/";
+  const exact = allRoutes.find(r => r.url === pathname);
+  if (exact) return exact;
+  for (const r of allRoutes) {
+    if (r.url !== "/" && pathname.startsWith(r.url + "/")) return r;
+  }
+  return route404;
+};
+
+const attachDetailBtnListeners = () => {
+  document.querySelectorAll('.detail-btn').forEach(original => {
+    if (!original) return;
+    const newNode = original.cloneNode(true);
+    original.replaceWith(newNode);
   });
-  // Si aucune correspondance n'est trouvée, on retourne la route 404
-  if (currentRoute != null) {
-    return currentRoute;
-  } else {
-    return route404;
-  }
+
+  document.querySelectorAll('.detail-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      const id = button.dataset.id || "";
+      const newPath = `/detail/${encodeURIComponent(id)}`;
+      window.history.pushState({}, "", newPath);
+      LoadContentPage();
+    });
+  });
+
+  document.querySelectorAll('a[data-link]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const href = a.getAttribute('href');
+      const u = new URL(href, window.location.origin);
+      window.history.pushState({}, "", u.pathname + u.search);
+      LoadContentPage();
+    });
+  });
 };
 
-// Fonction pour charger le contenu de la page
 const LoadContentPage = async () => {
-  const path = window.location.pathname;
-  const queryParams = new URLSearchParams(window.location.search); // Récupère les paramètres de l'URL
-  const actualRoute = getRouteByUrl(path);
-  const html = await fetch(actualRoute.pathHtml).then((data) => data.text());
-  document.getElementById("main-page").innerHTML = html;
+const pathname = window.location.pathname;
+  const queryParams = new URLSearchParams(window.location.search);
+  // Compatibilité : utilise la fonction disponible
+  const route = (typeof getRouteByPathname === 'function')
+    ? getRouteByPathname(pathname)
+    : (typeof getRouteByUrl === 'function' ? getRouteByUrl(pathname) : null);
 
-  if (actualRoute.pathJS != "") {
-    var scriptTag = document.createElement("script");
-    scriptTag.setAttribute("type", "text/javascript");
-    scriptTag.setAttribute("src", actualRoute.pathJS);
-    document.querySelector("body").appendChild(scriptTag);
+  if (!route) {
+    console.error("Route introuvable pour :", pathname);
+    return;
   }
 
-  document.title = actualRoute.title + " - " + websiteName;
+  showLoader && showLoader();
 
-  // Déclenchement de l'événement personnalisé avec les paramètres
-  document.dispatchEvent(new CustomEvent("routeLoaded", { detail: { queryParams } }));
+  try {
+    const res = await fetch(route.pathHtml);
+    if (!res.ok) throw new Error("HTML non trouvé");
+    const html = await res.text();
+
+    // mainPage fallback
+    const mainPageEl = typeof mainPage !== 'undefined' ? mainPage : document.getElementById("main-page");
+    if (mainPageEl) mainPageEl.innerHTML = html;
+
+    // Nettoie les scripts précédemment chargés par les routes
+    document.querySelectorAll('script[data-route-script]').forEach(s => s.remove());
+
+    const doAfterLoad = () => {
+      typeof attachDetailBtnListeners === 'function' && attachDetailBtnListeners();
+      // Dispatch un CustomEvent avec les queryParams pour compatibilité et info
+      document.dispatchEvent(new CustomEvent('pageContentLoaded', { detail: { queryParams } }));
+      // Pour compatibilité ascendante si du code écoute 'routeLoaded'
+      document.dispatchEvent(new CustomEvent('routeLoaded', { detail: { queryParams } }));
+    };
+
+    if (route.pathJS && route.pathJS.trim() !== "") {
+      const scriptTag = document.createElement("script");
+      scriptTag.type = "text/javascript";
+      scriptTag.src = route.pathJS;
+      scriptTag.setAttribute("data-route-script", route.pathJS);
+      scriptTag.onload = () => {
+        doAfterLoad();
+      };
+      scriptTag.onerror = () => {
+        console.warn("Impossible de charger le script:", route.pathJS);
+        doAfterLoad();
+      };
+      document.body.appendChild(scriptTag);
+    } else {
+      doAfterLoad();
+    }
+
+    document.title = `${route.title} - ${websiteName || ''}`;
+  } catch (err) {
+    const mainPageEl = typeof mainPage !== 'undefined' ? mainPage : document.getElementById("main-page");
+    if (mainPageEl) mainPageEl.innerHTML = '<p style="color:red; text-align:center;">Erreur lors du chargement de la page.</p>';
+    console.error("Erreur fetch page:", err);
+  } finally {
+    hideLoader && hideLoader();
+  }
 };
 
-// Fonction pour gérer les événements de routage (clic sur les liens)
 const routeEvent = (event) => {
-  event = event || window.event;
   event.preventDefault();
-  // Mise à jour de l'URL dans l'historique du navigateur
-  window.history.pushState({}, "", event.target.href);
-  // Chargement du contenu de la nouvelle page
+  const a = event.target.closest('a');
+  if (!a) return;
+  const url = new URL(a.getAttribute('href'), window.location.origin);
+  window.history.pushState({}, "", url.pathname + url.search);
   LoadContentPage();
 };
 
-// Gestion de l'événement de retour en arrière dans l'historique du navigateur
 window.onpopstate = LoadContentPage;
-// Assignation de la fonction routeEvent à la propriété route de la fenêtre
 window.route = routeEvent;
-// Chargement du contenu de la page au chargement initial
-LoadContentPage();
+
+window.addEventListener('DOMContentLoaded', () => {
+  LoadContentPage();
+});

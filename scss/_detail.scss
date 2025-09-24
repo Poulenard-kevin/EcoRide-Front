@@ -1,0 +1,438 @@
+.detail-container {
+  display: flex;
+  flex-direction: column; /* Empile les sections verticalement */
+  align-items: center; /* Centre horizontalement les éléments */
+  padding: 100px;
+  padding-top: 35px;
+  padding-bottom: 0px;
+  background-color: $color-background;
+  border-radius: 30px;
+  font-family: $font-body;
+  color: $color-dark-green;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  margin-left: 100px;
+  margin-right: 100px;
+
+  @media (max-width: 990px) {
+    margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
+    margin-right: 50px;
+    padding-left: 50px; 
+    padding-right: 50px;
+  }
+
+  @media (max-width: 768px) {
+    display: flex;
+    margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
+    margin-right: 50px;
+    padding: 50px;
+    padding-top: 35px;
+    padding-bottom: 0px;
+    flex-direction: column; /* Empile les sections verticalement */
+    gap: 1rem; /* Ajoute un espace entre les sections */
+  }
+
+  @media (max-width: 576px) {
+    display: flex;
+    flex-direction: column;
+    margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
+    margin-right: 25px;
+    padding: 20px;
+    padding-top: 35px;
+    padding-bottom: 0px;
+  
+
+  h1 {
+    font-family: $font-title;
+    font-weight: $weight-semibold;
+    font-size: 22px; /* Ajustez la taille si nécessaire */
+    color: $color-dark-green;
+    margin-bottom: 2rem; /* Ajoute un espace sous le titre */
+    text-align: center
+  }
+
+  h2 {
+    font-size: 20px; /* Réduit la taille des titres h2 */
+    
+  }
+
+  h3 {
+    font-size: 16px; /* Réduit la taille des titres h3 */
+  }
+
+  p, span {
+    font-size: 16px; /* Réduit la taille des paragraphes et spans */
+  }
+
+  .pseudo {
+    flex-direction: row !important; /* Aligne les éléments en ligne */
+    max-width: none; /* Limite la largeur maximale du pseudo */
+    align-items: center !important; /* Centre verticalement les éléments */
+    text-align: center !important;
+  }
+
+  .profile-info{
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centre verticalement les éléments */
+  }
+
+  .badge-date {
+    font-size: 18px !important; /* Force la réduction de la taille pour .badge-date */
+  }
+
+  .location, .time-depart, .time-arrivee {
+    font-size: 16px !important;
+  }
+
+  .review {
+    font-size: 16px !important; /* Réduit la taille des avis */
+  }
+
+  .reserve-btn {
+    font-size: $font-size-nav; /* Réduit la taille des boutons */
+    padding: 8px 16px; /* Ajuste le padding des boutons */
+  }
+
+  .badge-economique, .badge-electrique, .badge-thermique, .badge-hybride {
+    font-size: 16px !important; /* Réduit la taille des badges */
+  }
+
+  .rating {
+    font-size: 20px !important; /* Réduit la taille des badges */
+  }
+
+  .trip-dates, .vehicle-info, .info .preferences {
+    margin-bottom: 2rem !important; /* Réduit la marge en bas des sections */
+  }
+
+  .preferences {
+    margin-bottom: 2rem !important; /* Réduit la marge en bas des sections */
+  }
+
+  .info {
+    margin-bottom: 2rem !important; /* Réduit la marge en bas des sections */
+  }
+}
+
+  .profile-section {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 2rem;
+    border-radius: 15px;
+    width: 100%;
+
+
+    .profile-photo img {
+      width: 150px; /* Taille fixe de la largeur */
+      height: 150px; /* Taille fixe de la hauteur */
+      object-fit: cover; /* Ajuste l'image à la taille définie */
+      object-position: center; /* Centre l'image */
+      border-radius: 50%; /* Rend la photo circulaire */
+      border: 4px solid $color-medium-green; /* Bordure verte */
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+      flex-shrink: 0; /* Empêche la photo de se réduire */
+    }
+
+    .profile-info {
+      flex-grow: 1;
+
+      .pseudo {
+        margin-bottom: 0.25rem;
+      }
+
+
+      .rating {
+        font-size: 2.8rem;
+        color: $color-medium-green;
+        margin-bottom:0;
+      }
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column; /* Empile les éléments verticalement */
+      align-items: center; /* Centre les éléments horizontalement */
+      gap: 5rem; /* Ajoute un espace entre le bouton et le badge */
+    }
+
+    .badge-economique, .badge-electrique, .badge-thermique, .badge-hybride {
+      background-color: $color-light-beige;
+      padding: 0.5rem 1.5rem;
+      border-radius: 5px;
+      font-family: $font-title;
+      font-weight: $weight-medium;
+      font-size: $font-size-h3;
+      color: $color-dark-green;
+    }
+
+    .search-btn {
+      width: 200px; /* Fixe la largeur du bouton */
+      padding: 12px 30px; /* Ajuste le padding pour un bon rendu */
+      border: none;
+      border-radius: 20px;
+      background-color: $color-medium-green;
+      color: $color-light-beige;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(74, 122, 63, 0.5);
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        background-color: $color-dark-green;
+      }
+    }
+  }
+
+  .trip-dates {
+    background-color: $color-light-beige;
+    border-radius: 30px;
+    margin-top: 3.5rem;
+    margin-bottom: 3.5rem;
+    padding: 2rem;
+    text-align: center;
+    font-family: $font-title;
+    font-weight: $weight-semibold;
+    font-size: $font-size-h3;
+    max-width: 600px;
+    width: 100%;
+    
+
+    .badge-date {
+      background-color: $color-medium-green;
+      color: $color-light-beige;
+      padding: 0.3rem 1.2rem;
+      border-radius: 20px;
+      display: inline-block;
+      margin-bottom: 1rem;
+      font-family: $font-title;
+      font-weight: $weight-medium;
+      font-size: 2.8rem;
+    }
+
+    .times {
+      background-color: $color-background;
+      color: $color-dark-green;
+      padding: 0.3rem 1.2rem;
+      border-radius: 20px;
+    }
+
+    .locations, .times {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 0.5rem;
+      font-family: $font-title;
+      font-weight: $weight-medium;
+      font-size: $font-size-h3;
+
+      span {
+        min-width: 80px;
+        text-align: center;
+        font-family: $font-title;
+        font-weight: $weight-medium;
+        font-size: $font-size-h3;
+      }
+    }
+
+    .locations-times {
+      display: flex;
+      justify-content: space-between;
+      max-width: 400px; /* ou la largeur que tu veux */
+      margin: 0 auto;
+      gap: 20px;
+    }
+    
+    .location-time {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 50%;
+    }
+
+    .time-arrivee, .time-depart {
+      color: $color-light-beige;
+      background-color: $color-medium-green;
+      margin-top: 0.5rem;
+      font-family: $font-title;
+      font-weight: $weight-medium;
+      font-size: $font-size-h3;
+      padding: 0.3rem 1.2rem;
+      border-radius: 20px;
+    }
+  }
+
+  .section-titles {
+    display: flex; /* Aligne les sections horizontalement */
+    justify-content: space-between; /* Ajoute de l'espace entre les sections */
+    gap: 1rem; /* Ajoute un espace entre les deux sections */
+    width: 100%;
+
+    .info-title, .preferences-title {
+      flex: 1; /* Les deux sections occupent une largeur égale */
+      max-width: 48%; /* Limite la largeur pour éviter qu'elles ne débordent */
+      text-align: center;
+    }
+  }
+
+  .info-preferences {
+    display: flex; /* Aligne les sections horizontalement */
+    justify-content: space-between; /* Ajoute de l'espace entre les sections */
+    gap: 1rem; /* Ajoute un espace entre les deux sections */
+    width: 100%;
+    
+
+    .info, .preferences {
+      background-color: $color-light-beige;
+      border-radius: 30px;
+      padding: 2rem;
+      flex: 1; /* Les deux sections occupent une largeur égale */
+      max-width: 48%; /* Limite la largeur pour éviter qu'elles ne débordent */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Ajoute une ombre légère */
+      text-align: center;
+      width: 100%;
+      min-width: 200px;
+      margin-bottom: 3.5rem; /* Ajoute une marge en bas */
+    }
+  }
+
+  .vehicle-info {
+    margin: 0 auto;
+    background-color: $color-light-beige;
+    border-radius: 30px;
+    padding: 2rem;
+    margin-bottom: 3.5rem;
+    font-family: $font-title;
+    font-weight: $weight-medium;
+    font-size: $font-size-h3;
+    text-align: center;
+    max-width: 600px; /* La div ne dépassera pas 300px */
+    width: 100%; /* Elle occupe toute la largeur disponible jusqu'à max-width */
+  }
+
+  .driver-reviews { 
+    font-family: $font-title;
+    font-weight: $weight-semibold;
+    margin-bottom: 6rem;
+    color: $color-dark-green;
+    background-color: $color-light-beige;
+    border-radius: 30px;
+    padding-top: 3.5rem;
+    padding-bottom: 2rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    width: 100%;
+    
+
+    .review {
+      background-color: $color-background;
+      border-radius: 30px;
+      padding: 2rem;
+      font-style: italic;
+      line-height: 1.4;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      font-family: $font-body;
+      font-weight: $weight-regular;
+      font-size: $font-size-body;
+      margin-bottom: 1.5rem;
+      
+    }
+  }
+
+  @media (max-width: 990px) {
+    .vehicle-info {
+      margin-left: 0px;
+      margin-right: 0px;
+      width: 100%;
+      max-width: 100%;
+    }
+    .info-preferences {
+      display: contents;
+
+      .info {
+        order: 2;
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .preferences {
+        order: 4;
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .info-preferences .info,
+      .info-preferences .preferences {
+        order: initial;
+      }
+    }
+
+    .section-titles {
+      display: contents;
+
+      .info-title {
+        order: 1;
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .preferences-title {
+        order: 3;
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .section-titles .info-title,
+      .section-titles .preferences-title {
+        order: initial;
+      }
+    }
+
+    .trip-dates {
+      margin-top: 20px; /* Supprime la marge supérieure */
+      max-width: 100%;
+    }
+
+    .profile-section {
+      display: flex;
+      flex-direction: column; /* Empile les éléments verticalement */
+      align-items: center; /* Centre horizontalement */
+      justify-content: center; /* Centre verticalement */
+      gap: 1.5rem; /* Ajoute un espace entre les éléments */
+      width: 100%; /* Prend toute la largeur disponible */
+      margin: 0 auto; /* Centre la section horizontalement */
+
+      .profile-photo {
+        order: 1; /* Place la photo en premier */
+      }
+
+      .profile-info {
+        order: 2; /* Place les informations du profil en second */
+      }
+
+      .pseudo {
+        text-align: center;
+      }
+
+      .rating {
+        text-align: center;
+      }
+
+      .actions {
+        gap: 20px; /* Ajoute un espace entre les éléments */
+      }
+  }
+
+    /* Déplacer Avis du conducteur et driver-reviews en dessous */
+    h1:nth-of-type(2) {
+      order: 5; /* Place le titre Avis du conducteur après les autres sections */
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .driver-reviews {
+      order: 6; /* Place la section driver-reviews après le titre Avis du conducteur */
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+}
+

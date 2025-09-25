@@ -894,7 +894,7 @@ function renderTrajetsInProgress() {
     let bgClass = "";
     let actionHtml = "";
 
-    let dateToDisplay = formatDateForCovoiturage(trajet.date) || "";
+    let dateToDisplay = formatDateForCovoiturage(trajet.date) || '';
     if (trajet.role === 'passager') {
       const covoId = getCovoId(trajet);
       const trajetChauffeur = trajets.find(t => t.id === covoId && t.role === 'chauffeur');
@@ -1199,6 +1199,7 @@ function ajouterAuCovoiturage(trajetData) {
 function formatDateForCovoiturage(dateISO) {
   if (!dateISO) return '';
   const date = new Date(dateISO);
+  if (isNaN(date.getTime())) return ''; // date invalide
   const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
   return date.toLocaleDateString('fr-FR', options);
 }

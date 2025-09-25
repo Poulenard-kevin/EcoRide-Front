@@ -194,7 +194,8 @@ $line-height-loose: 1.5;
   
 /* Ajoute de l'espace entre les éléments de la navbar */
 .navbar .nav-item {
-    margin-right: 5px; /* Ajoute un espace de 20px entre chaque élément */
+    margin-right: 10px; /* Ajoute un espace de 20px entre chaque élément */
+    
 }
 
 /* Style pour les liens de la navbar */
@@ -249,6 +250,7 @@ $transition-default: color 0.3s ease, transform 0.3s ease;
     border: none; /* Supprime la bordure si nécessaire */
     z-index: 1050 !important;
     font-size: $font-size-nav;
+    padding: 5px 5px; /* Ajuste le padding pour un meilleur espacement */
 }
 
 .dropdown-menu:hover {
@@ -304,9 +306,13 @@ button.nav-link.dropdown-toggle:hover:active {
 }
 
 
-.nav-link:hover {
-  background-color: $color-very-light-beige; /* Couleur légèrement différente au survol */
-  color: $color-dark-green; /* Couleur du texte au survol */
+@media (max-width: 1100px) { // breakpoint personnalisé
+  .navbar-expand-lg .navbar-collapse {
+    display: none !important;
+  }
+  .navbar-expand-lg .navbar-toggler {
+    display: block !important;
+  }
 }
  
 

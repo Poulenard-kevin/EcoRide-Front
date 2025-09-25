@@ -12121,7 +12121,7 @@ p {
 /* === RESPONSIVES HEADER + NAVBAR === */
 /* Ajoute de l'espace entre les éléments de la navbar */
 .navbar .nav-item {
-  margin-right: 5px; /* Ajoute un espace de 20px entre chaque élément */
+  margin-right: 10px; /* Ajoute un espace de 20px entre chaque élément */
 }
 
 /* Style pour les liens de la navbar */
@@ -12172,6 +12172,7 @@ p {
   border: none; /* Supprime la bordure si nécessaire */
   z-index: 1050 !important;
   font-size: 16px;
+  padding: 5px 5px; /* Ajuste le padding pour un meilleur espacement */
 }
 
 .dropdown-menu:hover {
@@ -12224,11 +12225,14 @@ button.nav-link.dropdown-toggle:hover:active {
   padding: 5px 0px; /* Ajuste le padding pour un meilleur espacement */
 }
 
-.nav-link:hover {
-  background-color: #F8F0E5; /* Couleur légèrement différente au survol */
-  color: #1F4924; /* Couleur du texte au survol */
+@media (max-width: 1100px) {
+  .navbar-expand-lg .navbar-collapse {
+    display: none !important;
+  }
+  .navbar-expand-lg .navbar-toggler {
+    display: block !important;
+  }
 }
-
 /* === RESPONSIVES FOOTER === */
 .footer-responsive {
   background-color: #1F4924; /* Couleur de fond */

@@ -401,6 +401,14 @@
       align-items: center; /* Centre les éléments verticalement */
       gap: 10px; /* Ajoute un espacement entre la case à cocher et le texte */
     }
+
+    .auth-tabs .nav-link {
+      padding: 8px 16px; /* Réduit l'espace interne des onglets */
+    }
+
+    .auth-button {
+      padding: 8px 16px; /* Réduit l'espace interne des onglets */
+    }
   }
 
   /* style basique si tu n'utilises pas Bootstrap */

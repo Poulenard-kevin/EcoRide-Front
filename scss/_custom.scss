@@ -299,6 +299,15 @@ button.nav-link.dropdown-toggle:hover:active {
     font-size: $font-size-small;
 }
 
+.dropdown-item {
+  padding: 5px 0px; /* Ajuste le padding pour un meilleur espacement */
+}
+
+
+.nav-link:hover {
+  background-color: $color-very-light-beige; /* Couleur légèrement différente au survol */
+  color: $color-dark-green; /* Couleur du texte au survol */
+}
  
 
 /* === RESPONSIVES FOOTER === */

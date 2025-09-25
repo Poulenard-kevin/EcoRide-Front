@@ -12220,6 +12220,15 @@ button.nav-link.dropdown-toggle:hover:active {
   font-size: 14px;
 }
 
+.dropdown-item {
+  padding: 5px 0px; /* Ajuste le padding pour un meilleur espacement */
+}
+
+.nav-link:hover {
+  background-color: #F8F0E5; /* Couleur légèrement différente au survol */
+  color: #1F4924; /* Couleur du texte au survol */
+}
+
 /* === RESPONSIVES FOOTER === */
 .footer-responsive {
   background-color: #1F4924; /* Couleur de fond */
@@ -14090,6 +14099,12 @@ button.nav-link.dropdown-toggle:hover:active {
     flex-direction: row; /* Aligne la case à cocher et le texte horizontalement */
     align-items: center; /* Centre les éléments verticalement */
     gap: 10px; /* Ajoute un espacement entre la case à cocher et le texte */
+  }
+  #auth .auth-tabs .nav-link {
+    padding: 8px 16px; /* Réduit l'espace interne des onglets */
+  }
+  #auth .auth-button {
+    padding: 8px 16px; /* Réduit l'espace interne des onglets */
   }
 }
 #auth .auth-input-container input.form-control,

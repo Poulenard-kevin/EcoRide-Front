@@ -54,7 +54,7 @@
       flex: 1 1 200px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 10px;
       text-align: left;
       min-width: 200px;
 
@@ -82,7 +82,7 @@
       }
 
       textarea {
-        min-height: 120px;
+        min-height: 200px;
       }
 
       button.btn-send {
@@ -186,7 +186,6 @@
       }
         
 
-
       form.contact-form input,
       form.contact-form textarea {
         padding: 12px 15px;
@@ -234,5 +233,37 @@
       transform: scale(1.05);
       outline: none;
     }
+  }
+
+    // Forcer bordures / halo pour états valid / invalid
+  .contact-form input.form-control.is-valid,
+  .contact-form textarea.form-control.is-valid {
+    border-color: $color-medium-green!important; /* vert */
+    box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25) !important;
+  }
+
+  .contact-form input.form-control.is-valid:focus,
+  .contact-form textarea.form-control.is-valid:focus {
+    border-color: $color-medium-green!important; /* vert */
+    box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25) !important;         // halo au focus
+  }
+
+  /* état invalide */
+  .contact-form input.form-control.is-invalid,
+  .contact-form textarea.form-control.is-invalid {
+    border-color: #dc3545 !important; /* rouge */
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
+  }
+
+  .contact-form input.form-control.is-invalid:focus,
+  .contact-form textarea.form-control.is-invalid:focus {
+    border-color: #dc3545 !important; /* rouge */
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important;
+  }
+
+  .valid-feedback,
+    .invalid-feedback {
+      font-size: 1.4rem; /* Ajuste la taille selon ton besoin */
+      margin-top: 0px !important;
   }
 }

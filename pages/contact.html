@@ -1,51 +1,60 @@
 <div class="hero-scene">
-    <div class="hero-scene-content">
-        <h1 class="big-title">Contact</h1>
-    </div>
+  <div class="hero-scene-content">
+    <h1 class="big-title">Contact</h1>
+  </div>
 </div>
 
 <div class="page-contact">
-<section class="contact-section">
+  <section class="contact-section">
     <h1 class="contact-title">Contactez - nous</h1>
     <div class="contact-container">
-      <form class="contact-form" action="#" method="post">
-        <input type="text" name="name" placeholder="Nom" required />
-        <input type="email" name="email" placeholder="Email" required />
-        <input type="text" name="subject" placeholder="Objet" required />
-        <textarea name="message" placeholder="Message" rows="5" required></textarea>
-        <button type="submit" class="btn btn-send">Envoyer</button>
+      <form id="contact-form" class="contact-form" action="#" method="post">
+        <input id="contact-name" class="form-control" type="text" name="name" placeholder="Nom" required />
+        <div class="invalid-feedback">Le nom est requis.</div>
+        <div class="valid-feedback">Nom valide.</div>
+      
+        <input id="contact-email" class="form-control" type="email" name="email" placeholder="Email" required />
+        <div class="invalid-feedback">Le mail n'est pas au bon format.</div>
+        <div class="valid-feedback">Mail valide.</div>
+      
+        <input id="contact-subject" class="form-control" type="text" name="subject" placeholder="Objet" required maxlength="100" />
+        <textarea id="contact-message" class="form-control" name="message" placeholder="Message" rows="5" required maxlength="1500"></textarea>
+      
+        <button type="submit" class="btn btn-send" disabled>Envoyer</button>
       </form>
       <div class="contact-info">
         <h3 class="contact-company">EcoRide</h3>
         <p class="contact-address">
-            <i class="bi bi-geo-alt-fill"></i>
-            <span class="address-text">
-              23 Rue Verte<br />
-              75000 Paris
-            </span>
-          </p>
+          <i class="bi bi-geo-alt-fill"></i>
+          <span class="address-text">
+            23 Rue Verte<br />
+            75000 Paris
+          </span>
+        </p>
         <p class="contact-phone">
-            <i class="bi bi-telephone-fill"></i>
+          <i class="bi bi-telephone-fill"></i>
           +33 1 23 45 67 99
         </p>
         <p class="contact-email">
-            <i class="bi bi-envelope-at-fill"></i>
+          <i class="bi bi-envelope-at-fill"></i>
           contact@ecoride.fr
         </p>
         <div class="contact-socials">
-            <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
-            <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
-            <a href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
-            <a href="#" aria-label="Twitter"><i class="bi bi-twitter"></i></a>
+          <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+          <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+          <a href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+          <a href="#" aria-label="Twitter"><i class="bi bi-twitter"></i></a>
         </div>
-      <div class="map-container" role="link" tabindex="0" aria-label="Voir l'emplacement sur Google Maps" onclick="window.open('https://www.google.com/maps?q=23+Rue+Verte,+75000+Paris', '_blank')" onkeypress="if(event.key === 'Enter') window.open('https://www.google.com/maps?q=23+Rue+Verte,+75000+Paris', '_blank')">
-        <iframe
+        <div class="map-container" role="link" tabindex="0" aria-label="Voir l'emplacement sur Google Maps"
+          onclick="window.open('https://www.google.com/maps?q=23+Rue+Verte,+75000+Paris', '_blank')"
+          onkeypress="if(event.key === 'Enter') window.open('https://www.google.com/maps?q=23+Rue+Verte,+75000+Paris', '_blank')">
+          <iframe
             src="https://www.google.com/maps?q=23+Rue+Verte,+75000+Paris&output=embed"
             allowfullscreen
             loading="lazy"
             referrerpolicy="no-referrer-when-downgrade"
             title="Mini carte EcoRide"
-        ></iframe>
+          ></iframe>
         </div>
       </div>
     </div>

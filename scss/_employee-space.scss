@@ -360,7 +360,7 @@
       }
       
       .modal-content {
-        background: $color-light-beige;
+        background: $color-background;
         color: $color-dark-green;
         border-radius: 12px;
         padding: 30px;
@@ -380,23 +380,6 @@
         inset: 0;
         z-index: 1000;
         background: rgba(0,0,0,0.5);
-      }
-      
-      .modal-content {
-        background: $color-light-beige;
-        color: $color-dark-green;
-        border-radius: 12px;
-        padding: 30px;
-        width: 500px;
-        max-width: 90%;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        text-align: left;
-      
-        /* centrage absolu */
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
       }
       
       /* Croix de fermeture */

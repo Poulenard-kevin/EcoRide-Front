@@ -26,7 +26,7 @@
         padding: 35px;
       }
       
-      @media (max-width: 910px) {
+      @media (max-width: 960px) {
         grid-template-columns: 1fr; /* Passe à une seule colonne */
         gap: 15px; /* Réduit l'espacement entre les éléments */
         padding: 35px;
@@ -56,10 +56,6 @@
           font-size: $font-size-nav; /* Réduit la taille des boutons */
           padding: 8px 16px; /* Ajuste le padding des boutons */
         }
-  
-        
-  
-        
       }
     }
   
@@ -203,6 +199,14 @@
       /* Placeholder (option sélectionnée vide) */
       &:has(option[value=""]:checked) {
         color: #7a8a6f;
+      }
+
+      @media (max-width: 576px) {
+        font-size: 12px !important; /* Taille de police adaptée aux petits écrans */
+        padding: 8px 16px !important; /* Ajuste le padding pour un affichage compact */
+        height: 34px !important;
+        background-position: right 15px center; /* 👈 décale la flèche vers la gauche */
+        background-size: 20px;
       }
     }
   }
@@ -601,13 +605,13 @@
                 flex-direction: column; /* Organise les éléments verticalement dans chaque colonne */
                 align-items: center; /* Centre les éléments horizontalement */
                 gap: 10px; /* Ajoute un espacement entre les lignes */
-  
-                .pseudo, .rating {
-                  display: flex; /* Organise Pseudo et Rating horizontalement */
-                  flex-direction: row; /* Aligne les éléments en ligne */
-                  justify-content: flex-start; /* Aligne les éléments à gauche */
-                  gap: 10px; /* Ajoute un espacement entre Pseudo et Rating */
-                }
+
+              .pseudo, .rating {
+                display: flex; /* Organise Pseudo et Rating horizontalement */
+                flex-direction: row; /* Aligne les éléments en ligne */
+                justify-content: flex-start; /* Aligne les éléments à gauche */
+                gap: 10px; /* Ajoute un espacement entre Pseudo et Rating */
+              }
             }
           }
   
@@ -809,9 +813,6 @@
         max-width: 200px; /* Fixe une largeur maximale pour la date */
       }
     }
-  
-    
-  
   
   
   @media (max-width: 1290px) {
@@ -1048,10 +1049,6 @@
         font-size: 12px !important; /* Taille de police adaptée aux petits écrans */
         padding: 8px 16px !important; /* Ajuste le padding pour un affichage compact */
         height: 34px !important;
-        
       }
     }
   }
-  
-  
-  

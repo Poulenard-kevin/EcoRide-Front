@@ -16,6 +16,12 @@ function hideLoader() {
 
 const route404 = new Route("404", "Page introuvable", "/pages/404.html");
 
+// Fonction pour récupérer la route correspondant à une URL donnée ou un pathname
+const getRouteByUrl = (url) => {
+  const currentRoute = allRoutes.find(element => element.url === url);
+  return currentRoute || route404;
+};
+
 const getRouteByPathname = (pathname) => {
   if (!pathname || pathname === "") pathname = "/";
   const exact = allRoutes.find(r => r.url === pathname);
@@ -26,22 +32,15 @@ const getRouteByPathname = (pathname) => {
   return route404;
 };
 
+// Supprime les scripts et styles précédemment ajoutés
+const removePreviousAssets = () => {
+  const scripts = document.querySelectorAll("script[data-dynamic], script[data-route-script]");
+  const styles = document.querySelectorAll("link[data-dynamic]");
+  scripts.forEach((script) => script.remove());
+  styles.forEach((style) => style.remove());
+};
+
 const attachDetailBtnListeners = () => {
-  document.querySelectorAll('.detail-btn').forEach(original => {
-    if (!original) return;
-    const newNode = original.cloneNode(true);
-    original.replaceWith(newNode);
-  });
-
-  document.querySelectorAll('.detail-btn').forEach(button => {
-    button.addEventListener('click', () => {
-      const id = button.dataset.id || "";
-      const newPath = `/detail/${encodeURIComponent(id)}`;
-      window.history.pushState({}, "", newPath);
-      LoadContentPage();
-    });
-  });
-
   document.querySelectorAll('a[data-link]').forEach(a => {
     a.addEventListener('click', (e) => {
       e.preventDefault();
@@ -51,6 +50,33 @@ const attachDetailBtnListeners = () => {
       LoadContentPage();
     });
   });
+};
+
+const loadScripts = async (scripts) => {
+  if (!scripts) return;
+
+  const loadOne = (src) => {
+    return new Promise((resolve) => {
+      const scriptTag = document.createElement("script");
+      scriptTag.type = "module"; // ✅ très important
+      scriptTag.src = src;
+      scriptTag.setAttribute("data-route-script", src);
+      scriptTag.onload = resolve;
+      scriptTag.onerror = () => {
+        console.warn("Impossible de charger le script:", src);
+        resolve();
+      };
+      document.body.appendChild(scriptTag);
+    });
+  };
+
+  if (Array.isArray(scripts)) {
+    for (const src of scripts) {
+      await loadOne(src);
+    }
+  } else {
+    await loadOne(scripts);
+  }
 };
 
 const LoadContentPage = async () => {
@@ -66,27 +92,21 @@ const LoadContentPage = async () => {
 
     if (mainPage) mainPage.innerHTML = html;
 
-    document.querySelectorAll('script[data-route-script]').forEach(s => s.remove());
+    // Supprime les anciens scripts dynamiques et styles
+    removePreviousAssets();
 
-    if (route.pathJS && route.pathJS.trim() !== "") {
-      const scriptTag = document.createElement("script");
-      scriptTag.type = "text/javascript";
-      scriptTag.src = route.pathJS;
-      scriptTag.setAttribute("data-route-script", route.pathJS);
-      scriptTag.onload = () => {
-        attachDetailBtnListeners();
-        document.dispatchEvent(new Event('pageContentLoaded'));
-      };
-      scriptTag.onerror = () => {
-        console.warn("Impossible de charger le script:", route.pathJS);
-        attachDetailBtnListeners();
-        document.dispatchEvent(new Event('pageContentLoaded'));
-      };
-      document.body.appendChild(scriptTag);
-    } else {
+    if (route.pathJS && (
+      typeof route.pathJS === 'string' ? route.pathJS.trim() !== "" 
+      : Array.isArray(route.pathJS) && route.pathJS.length > 0
+    )) {
+    await loadScripts(route.pathJS);
+  }
+  
+    // 🔥 Très important : on décale pour que les modules aient le temps de s’exécuter
+    setTimeout(() => {
       attachDetailBtnListeners();
       document.dispatchEvent(new Event('pageContentLoaded'));
-    }
+    }, 0);
 
     document.title = `${route.title} - ${websiteName}`;
   } catch (err) {
@@ -109,6 +129,7 @@ const routeEvent = (event) => {
 window.onpopstate = LoadContentPage;
 window.route = routeEvent;
 
+// Chargement initial au DOMContentLoaded
 window.addEventListener('DOMContentLoaded', () => {
   LoadContentPage();
 });

@@ -1,0 +1,212 @@
+#user-vehicles-form {
+  h1 {
+    text-align: center;
+    margin: 35px;
+  }
+
+  h2 {
+    text-align: left;
+    margin-bottom: 30px;
+  }
+
+
+  form {
+    background-color: $color-light-beige;
+    padding: 10px 35px 35px;
+    border-radius: 30px;
+    box-shadow: 0 4px 6px rgba(0,0,0,.1);
+    text-align: center;
+    margin-bottom: 35px;
+  }
+
+  .form-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .form-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: $color-background;
+    padding: 12px 20px;
+    border-radius: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,.1);
+    font-size: $font-size-body;
+    font-weight: $weight-regular;
+    font-family: $font-body;
+    text-align: left;
+    
+  }
+
+  .form-field-modify-delete {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    padding: 0px 20px;
+    margin-bottom: 10px;
+
+    .link-modify {
+      color: $color-medium-green;
+      text-decoration: underline;
+      font-size: $font-size-body;
+      font-family: $font-body;
+      cursor: pointer;
+
+      &:hover {
+        color: darken($color-medium-green, 10%);
+      }
+    }
+
+    .link-delete {
+      color: $color-dark-green;
+      text-decoration: underline;
+      font-size: $font-size-body;
+      font-family: $font-body;
+      cursor: pointer;
+
+      &:hover {
+        color: darken($color-dark-green, 10%);
+      }
+    }
+  }
+
+  .btn-add-vehicle {
+    margin-top: 20px;
+  }
+
+  .btn {
+    background-color: $color-medium-green;
+    color: $color-light-beige;
+    border: none;
+    border-radius: 30px;
+    padding: 10px 20px;
+    font-family: $font-title;
+    font-size: $font-size-body;
+    font-weight: $weight-medium;
+    transition: background .3s ease, transform .3s ease;
+    box-shadow: 0 6px 8px rgba(74,122,63,.5);
+    cursor: pointer;
+
+    &:hover {
+      background-color: $color-dark-green;
+      color: $color-light-beige;
+      transform: scale(1.05);
+      box-shadow: 0 6px 8px rgba(74,122,63,.5);
+    }
+  }
+
+  label {
+    font-weight: $weight-regular;
+    font-size: $font-size-nav;
+    font-family: $font-body;
+    font-style: italic;
+  }
+
+  @media (max-width: 768px) {
+      .btn {
+        font-size: $font-size-nav; /* Réduit la taille des boutons */
+        padding: 8px 16px; /* Ajuste le padding des boutons */
+      }
+
+      .form-field {
+        font-size: $font-size-nav; /* Réduit la taille de la police */
+      }
+
+      .form-field-modify-delete {
+
+        .link-modify, .link-delete {
+          font-size: $font-size-small; 
+          
+        }
+      }
+
+      form {
+        padding: 10px 20px 35px;
+      }
+    }
+
+  .vehicle-container {
+    margin-bottom: 15px;
+  }
+  
+  .vehicle-line {
+    display: flex;
+    justify-content: space-between; /* espace maximal entre les éléments */
+    align-items: center;
+    background-color: #c9d4b5; /* ta couleur */
+    padding: 10px 20px;
+    border-radius: 15px;
+    font-weight: 600;
+    font-family: 'Arial', sans-serif;
+    font-size: 1rem;
+    color: #2f4f2f;
+  }
+  
+  .form-field-modify-delete {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 20px 0 20px;
+    font-size: 0.9rem;
+  }
+  
+  .form-field-modify-delete a {
+    color: #2f4f2f;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  
+  .form-field-modify-delete a:hover {
+    color: #1e2f1e;
+  }
+
+  .form-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: $color-background;
+    padding: 12px 20px;
+    border-radius: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,.1);
+    font-size: $font-size-body;
+    font-weight: $weight-regular;
+    font-family: $font-body;
+    text-align: left;
+    cursor: pointer;
+    text-decoration: underline;
+    transition: color 0.3s ease;
+  }
+
+  .form-field:hover {
+    color: $color-light-beige; /* Couleur bleue Bootstrap au survol */
+  }
+
+  .vehicle-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .vehicle-brand {
+    flex: 1;
+    text-align: left;
+  }
+  
+  .vehicle-model {
+    flex: 1;
+    text-align: center;
+  }
+  
+  .vehicle-color {
+    flex: 1;
+    text-align: right;
+  }
+
+  
+
+}

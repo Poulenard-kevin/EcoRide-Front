@@ -58,7 +58,7 @@ const loadScripts = async (scripts) => {
   const loadOne = (src) => {
     return new Promise((resolve) => {
       const scriptTag = document.createElement("script");
-      scriptTag.type = "module"; // ✅ très important
+      scriptTag.type = "module"; // ✅ important
       scriptTag.src = src;
       scriptTag.setAttribute("data-route-script", src);
       scriptTag.onload = resolve;
@@ -81,39 +81,107 @@ const loadScripts = async (scripts) => {
 
 const LoadContentPage = async () => {
   const pathname = window.location.pathname;
-  const route = getRouteByPathname(pathname);
+  const queryParams = new URLSearchParams(window.location.search);
 
-  showLoader();
+  const route = (typeof getRouteByPathname === 'function')
+    ? getRouteByPathname(pathname)
+    : (typeof getRouteByUrl === 'function' ? getRouteByUrl(pathname) : null);
+
+  if (!route) {
+    console.error("Route introuvable pour :", pathname);
+    return;
+  }
+
+  showLoader && showLoader();
 
   try {
     const res = await fetch(route.pathHtml);
     if (!res.ok) throw new Error("HTML non trouvé");
     const html = await res.text();
 
-    if (mainPage) mainPage.innerHTML = html;
+    // mainPage fallback
+    const mainPageEl = typeof mainPage !== 'undefined' && mainPage ? mainPage : document.getElementById("main-page");
+    if (!mainPageEl) {
+      console.error("main-page introuvable");
+      return;
+    }
 
     // Supprime les anciens scripts dynamiques et styles
     removePreviousAssets();
 
+    // Nettoie les anciens scripts gérés par les routes
+    document.querySelectorAll('script[data-route-script]').forEach(s => s.remove());
+
+    // Parse le HTML pour extraire les scripts
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const scripts = Array.from(doc.querySelectorAll('script'));
+
+    // Injecte le HTML sans les balises <script>
+    mainPageEl.innerHTML = '';
+    Array.from(doc.body.childNodes).forEach(node => {
+      if (!(node.tagName && node.tagName.toLowerCase() === 'script')) {
+        mainPageEl.appendChild(node.cloneNode(true));
+      }
+    });
+
+    // Helpers pour exécuter les scripts
+    function runInlineScript(content, isModule) {
+      const s = document.createElement('script');
+      if (isModule) s.type = 'module';
+      s.textContent = content;
+      s.setAttribute('data-route-script', 'inline');
+      document.body.appendChild(s);
+    }
+
+    async function loadExternalScript(src, isModule) {
+      return new Promise(resolve => {
+        const s = document.createElement('script');
+        s.src = src;
+        if (isModule) s.type = 'module';
+        s.setAttribute('data-route-script', src);
+        s.onload = () => resolve();
+        s.onerror = () => {
+          console.warn("Impossible de charger le script:", src);
+          resolve();
+        };
+        document.body.appendChild(s);
+      });
+    }
+
+    // Exécute les scripts trouvés dans le HTML
+    for (const s of scripts) {
+      const isModule = s.type === 'module';
+      if (s.src) {
+        await loadExternalScript(s.src, isModule);
+      } else {
+        runInlineScript(s.textContent, isModule);
+      }
+    }
+
+    // Charge aussi les scripts définis dans la route
     if (route.pathJS && (
       typeof route.pathJS === 'string' ? route.pathJS.trim() !== "" 
       : Array.isArray(route.pathJS) && route.pathJS.length > 0
     )) {
-    await loadScripts(route.pathJS);
-  }
-  
-    // 🔥 Très important : on décale pour que les modules aient le temps de s’exécuter
+      await loadScripts(route.pathJS);
+    }
+
+    // Décale l’attachement des listeners et événements
     setTimeout(() => {
       attachDetailBtnListeners();
-      document.dispatchEvent(new Event('pageContentLoaded'));
+      document.dispatchEvent(new CustomEvent('pageContentLoaded', { detail: { queryParams } }));
+      document.dispatchEvent(new CustomEvent('routeLoaded', { detail: { queryParams } }));
     }, 0);
 
-    document.title = `${route.title} - ${websiteName}`;
+    document.title = `${route.title} - ${websiteName || ''}`;
+
   } catch (err) {
-    if (mainPage) mainPage.innerHTML = '<p style="color:red; text-align:center;">Erreur lors du chargement de la page.</p>';
+    const mainPageEl = typeof mainPage !== 'undefined' && mainPage ? mainPage : document.getElementById("main-page");
+    if (mainPageEl) mainPageEl.innerHTML = '<p style="color:red; text-align:center;">Erreur lors du chargement de la page.</p>';
     console.error("Erreur fetch page:", err);
   } finally {
-    hideLoader();
+    hideLoader && hideLoader();
   }
 };
 

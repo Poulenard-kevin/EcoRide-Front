@@ -1038,8 +1038,14 @@ function renderHistorique() {
     let cardClass = 'trajet-card valide';
   
     if (trajet.role === 'passager') {
-      // Garder la classe 'reserve' pour le style passager
       cardClass = 'trajet-card reserve';
+  
+      // Récupérer la date du trajet chauffeur lié
+      const covoId = getCovoId(trajet);
+      const trajetChauffeur = trajets.find(t => t.id === covoId && t.role === 'chauffeur');
+      if (trajetChauffeur && trajetChauffeur.date) {
+        trajet.date = trajetChauffeur.date; // injecter la date pour affichage
+      }
     }
   
     container.innerHTML += `

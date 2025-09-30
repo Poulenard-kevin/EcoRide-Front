@@ -11,6 +11,11 @@ export const allRoutes = [
   new Route("/user-history", "History", "/pages/user-history-form.html", null, "/scss/user-history-form.css"),
   new Route("/auth", "Connexion", "/pages/auth.html", "/Js/auth.js", "/scss/_auth.css"),
   new Route("/contact", "Contact", "/pages/contact.html","/JS/contact.js","/scss/contact.css"),
+  new Route("/espace-employe", "Espace Employé", "/pages/employee-space.html","/Js/employee-space.js","/scss/employee-space.css"),
 ];
 
+
+
+
+//Le titre s'affiche comme ceci : Route.titre - websitename
 export const websiteName = "EcoRide";

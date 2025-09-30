@@ -1,0 +1,79 @@
+<div class="hero-scene">
+    <div class="hero-scene-content">
+      <h1 class="big-title">Espace employé</h1>
+    </div>
+  </div>
+  
+  <section class="employee-space-section container">
+    <h1>Les trajets</h1>
+    
+    <!-- Formulaire Avis à valider -->
+    <form class="form-avis">
+      <div class="form-fields">
+        <div class="titre-reviews-to-validate">
+          <h2>Avis à valider</h2>
+        </div>
+        
+        <div class="avis-list">
+          <!-- Avis générés par JS -->
+          <!-- Exemple statique : -->
+          <div class="avis-card" data-id="1">
+            <h3 class="pseudo">Pseudo passager</h3>
+            <div class="stars">★★★★☆</div>
+            <p class="avis-text">Texte de l'avis</p>
+            <div class="actions">
+              <button type="button" class="btn valider">Valider</button>
+              <button type="button" class="btn refuser">Refuser</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  
+    <!-- Formulaire Trajets signalés -->
+    <form class="form-trajets">
+      <h2>Trajets signalés</h2>
+      <div class="trajets-signales">
+        <table class="trajets-table">
+          <thead>
+            <tr>
+              <th>Cov.</th>
+              <th>Chauffeur</th>
+              <th>Passager</th>
+              <th>Date</th>
+              <th>Trajet</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Lignes générées par JS -->
+            <!-- Exemple statique : -->
+            <tr data-id="1234">
+              <td>1234</td>
+              <td>PseudoChauffeur1</td>
+              <td>PseudoPassager1</td>
+              <td>12/04/25</td>
+              <td>Lyon → Grenoble</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </form>
+
+
+  <!-- Modal détails trajets -->
+<div id="trajet-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <h2>Détails du trajet signalé</h2>
+      <p><strong>ID covoiturage :</strong> <span id="modal-id"></span></p>
+      <p><strong>Chauffeur :</strong> <span id="modal-chauffeur"></span> (<span id="modal-chauffeur-mail"></span>)</p>
+      <p><strong>Passager :</strong> <span id="modal-passager"></span> (<span id="modal-passager-mail"></span>)</p>
+      <p><strong>Date départ :</strong> <span id="modal-date-depart"></span></p>
+      <p><strong>Date arrivée :</strong> <span id="modal-date-arrivee"></span></p>
+      <p><strong>Trajet :</strong> <span id="modal-trajet"></span></p>
+      <p><strong>Résumé :</strong></p>
+      <p id="modal-description"></p>
+    </div>
+  </div>
+
+</section>

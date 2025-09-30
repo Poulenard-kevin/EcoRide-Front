@@ -1,38 +1,32 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Page non trouvée</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 50px;
-            background-color: #f4f4f4;
-            color: #333;
-        }
-        h1 {
-            font-size: 3em;
-            margin-bottom: 20px;
-        }
-        p {
-            font-size: 1.2em;
-            margin-bottom: 30px;
-        }
-        a {
-            text-decoration: none;
-            color: #007BFF;
-            font-weight: bold;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
-    <h1>404 - Page non trouvée</h1>
-    <p>La page que vous recherchez n'existe pas ou a été déplacée.</p>
-    <a href="/">Retour à l'accueil</a>
-</body>
-</html>
+<div class="hero-scene">
+    <div class="hero-scene-content">
+        <h1 class="big-title-accueil">Oups, il y a une erreur.<br>
+            
+    </div>
+</div>
+
+
+<h1 class="error-title">404 - Page non trouvée</h1>
+<p class="error-message">La page que vous recherchez n'existe pas ou a été déplacée.</p>
+<p class="center-link">
+  <a href="/accueil" class="home-link">Retour à l'accueil</a>
+</p>
+
+<style>
+    .error-title {
+        text-align: center;
+    }
+    .error-message {
+        text-align: center;
+    }
+    .center-link { /* Pour centrer le lien */
+        text-align: center;
+    }
+    .home-link { /* Styles spécifiques au lien */
+        font-size: 20px;
+        cursor: pointer;
+    }
+    .home-link:hover {
+        text-decoration: underline;
+    }
+</style>

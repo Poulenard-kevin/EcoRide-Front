@@ -11,3 +11,9 @@ scss/main.css.map
 # Autres fichiers temporaires ou IDE (exemple)
 .vscode/
 *.log
+
+scss/*.bak
+
+.vscode/settings.json
+
+

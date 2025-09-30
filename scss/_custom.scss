@@ -82,11 +82,33 @@ $line-height-loose: 1.5;
 // Application des styles
 
 .big-title-accueil {
-    font-family: 'Playfair Display', sans-serif;
-    font-weight: 400; // Regular
-    font-size: 50px;
-    line-height: 1.2;
+  font-size: $font-size-big-title-accueil; /* Taille par défaut pour les écrans larges */
+  font-weight: $weight-regular;
+  color: $color-dark-green;
+  text-align: left; /* Aligne le texte à gauche */
+  margin: 0; /* Supprime les marges par défaut */
+  padding-bottom: 35px; /* Ajoute un espace en bas */
+  margin-left: 100px; /* Marge par défaut pour les écrans larges */
+  margin-right: 100px; /* Marge par défaut pour les écrans larges */
+
+  @media (max-width: 1240px) {
+    font-size: $font-size-h1; /* Réduit la taille du texte pour les écrans moyens */
   }
+
+  @media (max-width: 768px) {
+    font-size: $font-size-h2; /* Réduit encore la taille pour les écrans de tablette */
+    margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
+    margin-right: 50px;
+    margin-top: -10px; /* Monte le texte de 10px */
+  }
+
+  @media (max-width: 576px) {
+    font-size: $font-size-h3; /* Réduit encore la taille pour les écrans mobiles */
+    margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
+    margin-right: 25px;
+    margin-top: -30px; /* Conserve l'augmentation de 10px */
+  }
+}
 
 .big-title {
     font-family: 'Playfair Display', sans-serif;
@@ -97,6 +119,28 @@ $line-height-loose: 1.5;
     text-decoration: underline; // Ajoute un surlignement
     text-decoration-thickness: 2px; // Épaisseur du surlignement
     text-underline-offset: 4px; // Décalage du surlignement par rapport au texte
+    margin: 0; /* Supprime les marges par défaut */
+    padding-bottom: 35px; /* Ajoute un espace en bas */
+    margin-left: 100px; /* Marge par défaut pour les écrans larges */
+    margin-right: 100px; /* Marge par défaut pour les écrans larges */
+
+    @media (max-width: 1240px) {
+      font-size: $font-size-h1; /* Réduit la taille du texte pour les écrans moyens */
+    }
+  
+    @media (max-width: 768px) {
+      font-size: $font-size-h2; /* Réduit encore la taille pour les écrans de tablette */
+      margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
+      margin-right: 50px;
+      margin-top: -10px; /* Monte le texte de 10px */
+    }
+  
+    @media (max-width: 576px) {
+      font-size: $font-size-h3; /* Réduit encore la taille pour les écrans mobiles */
+      margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
+      margin-right: 25px;
+      margin-top: -30px; /* Conserve l'augmentation de 10px */
+    }
   }
   
   h1 {
@@ -150,7 +194,8 @@ $line-height-loose: 1.5;
   
 /* Ajoute de l'espace entre les éléments de la navbar */
 .navbar .nav-item {
-    margin-right: 5px; /* Ajoute un espace de 20px entre chaque élément */
+    margin-right: 10px; /* Ajoute un espace de 20px entre chaque élément */
+    
 }
 
 /* Style pour les liens de la navbar */
@@ -186,7 +231,7 @@ $transition-default: color 0.3s ease, transform 0.3s ease;
 
 .navbar-brand:hover {
     color: $color-medium-green; /* Couleur au survol */
-    transform: scale(1.1); /* Zoom de 10% au survol */
+    transform: scale(1.03); /* Zoom de 10% au survol */
     transition: $transition-default;
 }
 
@@ -204,7 +249,8 @@ $transition-default: color 0.3s ease, transform 0.3s ease;
     background-color: $color-light-beige; /* Utilise la variable définie pour #F1E7D1 */
     border: none; /* Supprime la bordure si nécessaire */
     z-index: 1050 !important;
-    font-size: 20px;
+    font-size: $font-size-nav;
+    padding: 5px 5px; /* Ajuste le padding pour un meilleur espacement */
 }
 
 .dropdown-menu:hover {
@@ -255,6 +301,19 @@ button.nav-link.dropdown-toggle:hover:active {
     font-size: $font-size-small;
 }
 
+.dropdown-item {
+  padding: 5px 0px; /* Ajuste le padding pour un meilleur espacement */
+}
+
+
+@media (max-width: 1100px) { // breakpoint personnalisé
+  .navbar-expand-lg .navbar-collapse {
+    display: none !important;
+  }
+  .navbar-expand-lg .navbar-toggler {
+    display: block !important;
+  }
+}
  
 
 /* === RESPONSIVES FOOTER === */

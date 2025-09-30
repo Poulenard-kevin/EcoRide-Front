@@ -1,64 +1,203 @@
 import Route from "./Route.js";
 import { allRoutes, websiteName } from "./allRoutes.js";
 
-// Création d'une route pour la page 404 (page introuvable)
+const mainPage = document.getElementById("main-page");
+const loaderOverlay = document.getElementById("loader-overlay");
+
+function showLoader() {
+  if (loaderOverlay) loaderOverlay.style.display = "flex";
+  if (mainPage) mainPage.classList.add("loading");
+}
+
+function hideLoader() {
+  if (loaderOverlay) loaderOverlay.style.display = "none";
+  if (mainPage) mainPage.classList.remove("loading");
+}
+
 const route404 = new Route("404", "Page introuvable", "/pages/404.html");
 
-// Fonction pour récupérer la route correspondant à une URL donnée
+// Fonction pour récupérer la route correspondant à une URL donnée ou un pathname
 const getRouteByUrl = (url) => {
-  let currentRoute = null;
-  // Parcours de toutes les routes pour trouver la correspondance
-  allRoutes.forEach((element) => {
-    if (element.url == url) {
-      currentRoute = element;
-    }
+  const currentRoute = allRoutes.find(element => element.url === url);
+  return currentRoute || route404;
+};
+
+const getRouteByPathname = (pathname) => {
+  if (!pathname || pathname === "") pathname = "/";
+  const exact = allRoutes.find(r => r.url === pathname);
+  if (exact) return exact;
+  for (const r of allRoutes) {
+    if (r.url !== "/" && pathname.startsWith(r.url + "/")) return r;
+  }
+  return route404;
+};
+
+// Supprime les scripts et styles précédemment ajoutés
+const removePreviousAssets = () => {
+  const scripts = document.querySelectorAll("script[data-dynamic], script[data-route-script]");
+  const styles = document.querySelectorAll("link[data-dynamic]");
+  scripts.forEach((script) => script.remove());
+  styles.forEach((style) => style.remove());
+};
+
+const attachDetailBtnListeners = () => {
+  document.querySelectorAll('a[data-link]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const href = a.getAttribute('href');
+      const u = new URL(href, window.location.origin);
+      window.history.pushState({}, "", u.pathname + u.search);
+      LoadContentPage();
+    });
   });
-  // Si aucune correspondance n'est trouvée, on retourne la route 404
-  if (currentRoute != null) {
-    return currentRoute;
+};
+
+const loadScripts = async (scripts) => {
+  if (!scripts) return;
+
+  const loadOne = (src) => {
+    return new Promise((resolve) => {
+      const scriptTag = document.createElement("script");
+      scriptTag.type = "module"; // ✅ important
+      scriptTag.src = src;
+      scriptTag.setAttribute("data-route-script", src);
+      scriptTag.onload = resolve;
+      scriptTag.onerror = () => {
+        console.warn("Impossible de charger le script:", src);
+        resolve();
+      };
+      document.body.appendChild(scriptTag);
+    });
+  };
+
+  if (Array.isArray(scripts)) {
+    for (const src of scripts) {
+      await loadOne(src);
+    }
   } else {
-    return route404;
+    await loadOne(scripts);
   }
 };
 
-// Fonction pour charger le contenu de la page
 const LoadContentPage = async () => {
-  const path = window.location.pathname;
-  // Récupération de l'URL actuelle
-  const actualRoute = getRouteByUrl(path);
-  // Récupération du contenu HTML de la route
-  const html = await fetch(actualRoute.pathHtml).then((data) => data.text());
-  // Ajout du contenu HTML à l'élément avec l'ID "main-page"
-  document.getElementById("main-page").innerHTML = html;
+  const pathname = window.location.pathname;
+  const queryParams = new URLSearchParams(window.location.search);
 
-  // Ajout du contenu JavaScript
-  if (actualRoute.pathJS != "") {
-    // Création d'une balise script
-    var scriptTag = document.createElement("script");
-    scriptTag.setAttribute("type", "text/javascript");
-    scriptTag.setAttribute("src", actualRoute.pathJS);
+  const route = (typeof getRouteByPathname === 'function')
+    ? getRouteByPathname(pathname)
+    : (typeof getRouteByUrl === 'function' ? getRouteByUrl(pathname) : null);
 
-    // Ajout de la balise script au corps du document
-    document.querySelector("body").appendChild(scriptTag);
+  if (!route) {
+    console.error("Route introuvable pour :", pathname);
+    return;
   }
 
-  // Changement du titre de la page
-  document.title = actualRoute.title + " - " + websiteName;
+  showLoader && showLoader();
+
+  try {
+    const res = await fetch(route.pathHtml);
+    if (!res.ok) throw new Error("HTML non trouvé");
+    const html = await res.text();
+
+    // mainPage fallback
+    const mainPageEl = typeof mainPage !== 'undefined' && mainPage ? mainPage : document.getElementById("main-page");
+    if (!mainPageEl) {
+      console.error("main-page introuvable");
+      return;
+    }
+
+    // Supprime les anciens scripts dynamiques et styles
+    removePreviousAssets();
+
+    // Nettoie les anciens scripts gérés par les routes
+    document.querySelectorAll('script[data-route-script]').forEach(s => s.remove());
+
+    // Parse le HTML pour extraire les scripts
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const scripts = Array.from(doc.querySelectorAll('script'));
+
+    // Injecte le HTML sans les balises <script>
+    mainPageEl.innerHTML = '';
+    Array.from(doc.body.childNodes).forEach(node => {
+      if (!(node.tagName && node.tagName.toLowerCase() === 'script')) {
+        mainPageEl.appendChild(node.cloneNode(true));
+      }
+    });
+
+    // Helpers pour exécuter les scripts
+    function runInlineScript(content, isModule) {
+      const s = document.createElement('script');
+      if (isModule) s.type = 'module';
+      s.textContent = content;
+      s.setAttribute('data-route-script', 'inline');
+      document.body.appendChild(s);
+    }
+
+    async function loadExternalScript(src, isModule) {
+      return new Promise(resolve => {
+        const s = document.createElement('script');
+        s.src = src;
+        if (isModule) s.type = 'module';
+        s.setAttribute('data-route-script', src);
+        s.onload = () => resolve();
+        s.onerror = () => {
+          console.warn("Impossible de charger le script:", src);
+          resolve();
+        };
+        document.body.appendChild(s);
+      });
+    }
+
+    // Exécute les scripts trouvés dans le HTML
+    for (const s of scripts) {
+      const isModule = s.type === 'module';
+      if (s.src) {
+        await loadExternalScript(s.src, isModule);
+      } else {
+        runInlineScript(s.textContent, isModule);
+      }
+    }
+
+    // Charge aussi les scripts définis dans la route
+    if (route.pathJS && (
+      typeof route.pathJS === 'string' ? route.pathJS.trim() !== "" 
+      : Array.isArray(route.pathJS) && route.pathJS.length > 0
+    )) {
+      await loadScripts(route.pathJS);
+    }
+
+    // Décale l’attachement des listeners et événements
+    setTimeout(() => {
+      attachDetailBtnListeners();
+      document.dispatchEvent(new CustomEvent('pageContentLoaded', { detail: { queryParams } }));
+      document.dispatchEvent(new CustomEvent('routeLoaded', { detail: { queryParams } }));
+    }, 0);
+
+    document.title = `${route.title} - ${websiteName || ''}`;
+
+  } catch (err) {
+    const mainPageEl = typeof mainPage !== 'undefined' && mainPage ? mainPage : document.getElementById("main-page");
+    if (mainPageEl) mainPageEl.innerHTML = '<p style="color:red; text-align:center;">Erreur lors du chargement de la page.</p>';
+    console.error("Erreur fetch page:", err);
+  } finally {
+    hideLoader && hideLoader();
+  }
 };
 
-// Fonction pour gérer les événements de routage (clic sur les liens)
 const routeEvent = (event) => {
-  event = event || window.event;
   event.preventDefault();
-  // Mise à jour de l'URL dans l'historique du navigateur
-  window.history.pushState({}, "", event.target.href);
-  // Chargement du contenu de la nouvelle page
+  const a = event.target.closest('a');
+  if (!a) return;
+  const url = new URL(a.getAttribute('href'), window.location.origin);
+  window.history.pushState({}, "", url.pathname + url.search);
   LoadContentPage();
 };
 
-// Gestion de l'événement de retour en arrière dans l'historique du navigateur
 window.onpopstate = LoadContentPage;
-// Assignation de la fonction routeEvent à la propriété route de la fenêtre
 window.route = routeEvent;
-// Chargement du contenu de la page au chargement initial
-LoadContentPage();
+
+// Chargement initial au DOMContentLoaded
+window.addEventListener('DOMContentLoaded', () => {
+  LoadContentPage();
+});

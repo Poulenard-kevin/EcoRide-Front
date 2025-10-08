@@ -110,10 +110,47 @@ function openRatingModal({ reservationId, onSubmit }) {
     setTimeout(() => { wrapper.remove(); }, 300);
   };
 
-  submitBtn.addEventListener('click', () => {
+  submitBtn.addEventListener('click', async () => {
     const review = reviewEl.value.trim();
+  
+    // on ferme le modal / nettoie l'UI
     cleanup();
-    if (typeof onSubmit === 'function') onSubmit({ rating: currentRating, review });
+  
+    // Si onSubmit est fourni, on l'appelle et on attend sa résolution (si async)
+    try {
+      if (typeof onSubmit === 'function') {
+        // onSubmit peut retourner une Promise : on l'attend pour s'assurer que les données
+        // sont bien persistées (ex: localStorage) avant d'envoyer l'événement.
+        await Promise.resolve(onSubmit({ rating: currentRating, review, flagged: false }));
+      }
+    } catch (err) {
+      // Si l'onSubmit échoue, on peut afficher une erreur et sortir (évite d'envoyer un avis non sauvegardé)
+      console.error('Erreur dans onSubmit:', err);
+      // Optionnel : ré-ouvrir le modal ou prévenir l'utilisateur
+      return;
+    }
+  
+    // Préparer l'objet avis à transmettre à l'espace employé
+    const avis = {
+      id: reservationId || genId(),
+      reservationId: typeof reservationId !== 'undefined' ? reservationId : null,
+      pseudo: getCurrentUserPseudo(),
+      note: currentRating,
+      texte: review,
+      date: new Date().toISOString()
+    };
+    
+    // ✅ Sauvegarde directe dans localStorage pour persistance
+    try {
+      const stored = JSON.parse(localStorage.getItem('ecoride_avis') || '[]');
+      stored.unshift(avis);
+      localStorage.setItem('ecoride_avis', JSON.stringify(stored));
+    } catch (e) {
+      console.warn("Erreur stockage avis:", e);
+    }
+    
+    // ✅ Émettre un événement global (utile si Espace Employé est déjà ouvert)
+    window.dispatchEvent(new CustomEvent('ecoride:avisSubmitted', { detail: avis }));
   });
 
   modalEl.addEventListener('hidden.bs.modal', () => {
@@ -501,6 +538,80 @@ function handleTrajetActions(e) {
     });
 
     return; // sortir du handler pour éviter autres branches
+  }
+
+  // -------------------- trajet-signaler-btn --------------------
+  if (target.classList.contains('trajet-signaler-btn')) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const reservationId = target.dataset.id;
+    const covoId = target.dataset.covoId;
+
+    if (!reservationId) return;
+
+    const trajet = trajets.find(t => t.id === reservationId);
+    if (!trajet) {
+      alert("Trajet introuvable.");
+      return;
+    }
+
+    const description = prompt("Pourquoi voulez-vous signaler ce trajet ?\n(ex: retard, comportement inapproprié, fraude...)") || "";
+
+    if (!description.trim()) {
+      alert("Signalement annulé (aucune description fournie).");
+      return;
+    }
+
+    // Récupérer infos chauffeur depuis le covoiturage
+    let chauffeurPseudo = "Chauffeur inconnu";
+    let chauffeurMail = "";
+    try {
+      const covos = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+      const covo = covos.find(c => c.id === covoId);
+      if (covo && covo.chauffeur) {
+        chauffeurPseudo = covo.chauffeur.pseudo || chauffeurPseudo;
+        chauffeurMail = covo.chauffeur.email || covo.chauffeur.mail || "";
+      }
+    } catch (err) {
+      console.warn("Erreur récupération infos chauffeur:", err);
+    }
+
+    // Récupérer pseudo passager
+    const passagerPseudo = getCurrentUserPseudo();
+
+    const signalement = {
+      id: genId(),
+      chauffeur: chauffeurPseudo,
+      chauffeurMail,
+      passager: passagerPseudo,
+      passagerMail: "", // tu peux l'ajouter si tu stockes l'email utilisateur
+      dateDepart: `${formatDateJJMMAAAA(trajet.date)} ${trajet.heureDepart || ''}`.trim(),
+      dateArrivee: trajet.heureArrivee || "",
+      trajet: `${trajet.depart} → ${trajet.arrivee}`,
+      description: description.trim(),
+      createdAt: new Date().toISOString(),
+      status: 'pending' // pour suivi côté employé
+    };
+
+    // Sauvegarder dans localStorage
+    try {
+      const stored = JSON.parse(localStorage.getItem('ecoride_trajets_signales') || '[]');
+      stored.unshift(signalement);
+      localStorage.setItem('ecoride_trajets_signales', JSON.stringify(stored));
+    } catch (err) {
+      console.error("Erreur sauvegarde signalement:", err);
+      alert("⚠️ Erreur lors de l'enregistrement du signalement.");
+      return;
+    }
+
+    // Event global → écouté par espace employé si déjà ouvert
+    window.dispatchEvent(new CustomEvent('ecoride:trajetSignale', { detail: signalement }));
+
+    alert("✅ Trajet signalé. Il sera traité par l'équipe support.");
+    console.log("🚨 Signalement créé:", signalement);
+
+    return;
   }
 
   // -------------------- trajet-delete-btn --------------------
@@ -894,12 +1005,12 @@ function renderTrajetsInProgress() {
     let bgClass = "";
     let actionHtml = "";
 
-    let dateToDisplay = formatDateForCovoiturage(trajet.date) || '';
+    let dateToDisplay = formatDateJJMMAAAA(trajet.date) || '';
     if (trajet.role === 'passager') {
       const covoId = getCovoId(trajet);
       const trajetChauffeur = trajets.find(t => t.id === covoId && t.role === 'chauffeur');
       if (trajetChauffeur) {
-        dateToDisplay = formatDateForCovoiturage(trajetChauffeur.date) || dateToDisplay;
+        dateToDisplay = formatDateJJMMAAAA(trajetChauffeur.date) || dateToDisplay;
       }
     }
 
@@ -935,12 +1046,21 @@ function renderTrajetsInProgress() {
         actionHtml = `
           <button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>
           <button class="btn-trajet trajet-cancel-btn" data-id="${trajet.id}">Annuler</button>
+          <button class="btn-trajet trajet-signaler-btn" data-id="${trajet.id}" data-covo-id="${refId}">⚠ Signaler</button>
         `;
       } else if (trajet.status === 'a_valider') {
         bgClass = "trajet-card attente";
         actionHtml = `
           <button class="btn-trajet trajet-detail-btn" data-covo-id="${getCovoId(trajet)}">Détail</button>
           <button class="btn-trajet trajet-validate-btn" data-id="${trajet.id}">Valider</button>
+          <button class="btn-trajet trajet-signaler-btn" data-id="${trajet.id}" data-covo-id="${getCovoId(trajet)}">⚠ Signaler</button>
+        `;
+      } else if (trajet.status === 'valide') {
+        // Trajet terminé et validé : on peut encore signaler (ex: problème découvert après)
+        const refId = getCovoId(trajet);
+        actionHtml = `
+          <button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>
+          <button class="btn-trajet trajet-signaler-btn" data-id="${trajet.id}" data-covo-id="${refId}">⚠ Signaler</button>
         `;
       } else {
         // statut inattendu ou autre -> afficher au minimum Détail
@@ -1052,7 +1172,7 @@ function renderHistorique() {
       <div class="${cardClass}">
         <div class="trajet-body">
           <div class="trajet-info">
-            <strong>Covoiturage (${formatDateForCovoiturage(trajet.date) || ""}) : <br>${trajet.depart} → ${trajet.arrivee}</strong>
+            <strong>Covoiturage (${formatDateJJMMAAAA(trajet.date) || ""}) : <br>${trajet.depart} → ${trajet.arrivee}</strong>
             <span class="details">
               ${trajet.heureDepart || ""} → ${trajet.heureArrivee || ""} • ${placesReservees} place${placesReservees > 1 ? 's' : ''} réservée${placesReservees > 1 ? 's' : ''}
             </span>
@@ -1129,7 +1249,7 @@ function ajouterAuCovoiturage(trajetData) {
   // Construire l'objet standardisé pour le covoiturage
   const baseTrajetCovoit = {
     id: trajetData.id,
-    date: formatDateForCovoiturage(trajetData.date),
+    date: formatDateJJMMAAAA(trajetData.date),
     chauffeur: {
       pseudo: trajetData.chauffeur?.pseudo || "Moi",
       rating: trajetData.chauffeur?.rating || 0,
@@ -1202,12 +1322,14 @@ function ajouterAuCovoiturage(trajetData) {
 }
 
 // Fonction helper pour formater la date
-function formatDateForCovoiturage(dateISO) {
-  if (!dateISO) return '';
-  const date = new Date(dateISO);
-  if (isNaN(date.getTime())) return ''; // date invalide
-  const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-  return date.toLocaleDateString('fr-FR', options);
+function formatDateJJMMAAAA(input) {
+  if (!input) return '';
+  const d = (input instanceof Date) ? input : new Date(input);
+  if (isNaN(d)) return '';
+  const jj = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const aaaa = d.getFullYear();
+  return `${jj}/${mm}/${aaaa}`;
 }
 
 // Fonction helper pour déduire le type de véhicule

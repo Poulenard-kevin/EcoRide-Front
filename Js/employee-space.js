@@ -220,6 +220,7 @@ function shortId(id) {
           if (!res.ok) throw new Error('Erreur serveur');
           // retirer du DOM + état local
           avisData = avisData.filter(a => String(a.id) !== String(id));
+          localStorage.setItem('ecoride_avis', JSON.stringify(avisData));  // <-- mise à jour localStorage
           card.remove();
           toastContainer.show(`Avis ${id} validé`);
         } else if (action === 'refuse') {
@@ -227,6 +228,7 @@ function shortId(id) {
           if (!res.ok) throw new Error('Erreur serveur');
           // on peut supprimer ou marquer "refusé"
           avisData = avisData.filter(a => String(a.id) !== String(id));
+          localStorage.setItem('ecoride_avis', JSON.stringify(avisData));  // <-- mise à jour localStorage
           card.remove();
           toastContainer.show(`Avis ${id} refusé`, 'info');
         }
@@ -256,8 +258,18 @@ function shortId(id) {
     
       localStorage.setItem('ecoride_trajets_signales', JSON.stringify(trajetsData));
     
-      e.target.classList.remove('statut-non-traite', 'statut-en-cours', 'statut-traite');
-      e.target.classList.add(`statut-${trajet.statut.replace(/\s/g, '-').toLowerCase()}`);
+      // Mise à jour des classes en conservant 'statut-select'
+      const classes = e.target.className
+        .split(' ')
+        .filter(c => !c.startsWith('statut-'));
+    
+      if (!classes.includes('statut-select')) {
+        classes.push('statut-select');
+      }
+    
+      classes.push(`statut-${trajet.statut.replace(/\s/g, '-').toLowerCase()}`);
+    
+      e.target.className = classes.join(' ');
     
       toastContainer.show(`Statut du trajet ${shortId(id)} mis à jour : ${trajet.statut}`, 'info', 3000);
     });
@@ -315,6 +327,25 @@ function shortId(id) {
     const sujet = encodeURIComponent("Réponse concernant votre trajet signalé");
     const corps = encodeURIComponent("Bonjour,\n\nJe vous contacte au sujet du trajet signalé.\n\nCordialement,\nL'équipe EcoRide");
     window.location.href = `mailto:${email}?subject=${sujet}&body=${corps}`;
+  });
+
+  document.getElementById('btn-supprimer').addEventListener('click', () => {
+    if (!currentModalTrajet) return;
+  
+    // Exemple : supprimer le trajet de la liste
+    trajetsData = trajetsData.filter(t => t.id !== currentModalTrajet.id);
+  
+    // Mettre à jour le localStorage
+    localStorage.setItem('ecoride_trajets_signales', JSON.stringify(trajetsData));
+  
+    // Re-render le tableau
+    renderTrajetsTable(trajetsData);
+  
+    // Fermer le modal
+    modal.style.display = 'none';
+  
+    // Afficher un toast de confirmation
+    toastContainer.show(`Trajet ${shortId(currentModalTrajet.id)} supprimé`, 'info', 3000);
   });
 
   // modal close handlers

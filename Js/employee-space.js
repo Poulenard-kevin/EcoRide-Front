@@ -108,6 +108,19 @@ function shortId(id) {
 
   const avisListEl = document.querySelector('.avis-list');
   const trajetsTbodyEl = document.querySelector('.trajets-table tbody');
+
+  if (trajetsTbodyEl) {
+    trajetsTbodyEl.addEventListener('click', (e) => {
+      // Si clic sur un select ou un enfant d'un select, ne rien faire
+      if (e.target.tagName.toLowerCase() === 'select' || e.target.closest('select')) {
+        return;
+      }
+      const tr = e.target.closest('tr[data-id]');
+      if (!tr) return;
+      openTrajetModal(tr.dataset.id);
+    });
+  }
+
   const modal = document.getElementById('trajet-modal');
 
   // render avis list
@@ -146,6 +159,10 @@ function shortId(id) {
       const heureArrivee = t.heureArrivee || '—';
       const idComplet = t.id || '';
       const idAffiche = shortId(idComplet);
+      const statut = t.statut || 'non traité';
+  
+      // Génère la classe CSS selon le statut
+      const statutClass = `statut-${statut.replace(/\s/g, '-').toLowerCase()}`;
   
       return `
         <tr data-id="${idComplet}" tabindex="0" role="button" aria-label="Voir détails trajet ${idComplet}">
@@ -156,6 +173,13 @@ function shortId(id) {
           <td>${escapeHtml(heureDepart)}</td>
           <td>${escapeHtml(heureArrivee)}</td>
           <td>${escapeHtml(t.trajet)}</td>
+          <td>
+            <select class="statut-select ${statutClass}" aria-label="Statut du trajet">
+              <option value="non traité" ${statut === 'non traité' ? 'selected' : ''}>Non traité</option>
+              <option value="en cours" ${statut === 'en cours' ? 'selected' : ''}>En cours</option>
+              <option value="traité" ${statut === 'traité' ? 'selected' : ''}>Traité</option>
+            </select>
+          </td>
         </tr>
       `;
     }).join('');
@@ -218,47 +242,80 @@ function shortId(id) {
 
   // ---------- Event delegation pour trajets (ouvrir modal) ----------
   if (trajetsTbodyEl) {
-    trajetsTbodyEl.addEventListener('click', (e) => {
+    trajetsTbodyEl.addEventListener('change', (e) => {
+      if (!e.target.classList.contains('statut-select')) return;
+    
       const tr = e.target.closest('tr[data-id]');
       if (!tr) return;
+    
       const id = tr.dataset.id;
-      openTrajetModal(id);
-    });
-
-    // keyboard accessibility : Enter to open modal on focused row
-    trajetsTbodyEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        const tr = document.activeElement.closest && document.activeElement.closest('tr[data-id]');
-        if (tr) openTrajetModal(tr.dataset.id);
-      }
+      const trajet = trajetsData.find(t => String(t.id) === String(id));
+      if (!trajet) return;
+    
+      trajet.statut = e.target.value;
+    
+      localStorage.setItem('ecoride_trajets_signales', JSON.stringify(trajetsData));
+    
+      e.target.classList.remove('statut-non-traite', 'statut-en-cours', 'statut-traite');
+      e.target.classList.add(`statut-${trajet.statut.replace(/\s/g, '-').toLowerCase()}`);
+    
+      toastContainer.show(`Statut du trajet ${shortId(id)} mis à jour : ${trajet.statut}`, 'info', 3000);
     });
   }
 
+  let currentModalTrajet = null;
+
   function openTrajetModal(id) {
-    const trajet = trajetsData.find(t => String(t.id) === String(id));
-    if (!trajet) return;
+    console.log('openTrajetModal called with id:', id);
+    currentModalTrajet = trajetsData.find(t => String(t.id) === String(id));
+    if (!currentModalTrajet) {
+      console.warn('Trajet non trouvé pour id:', id);
+      return;
+    }      
+      
+    document.getElementById("modal-id").innerText = currentModalTrajet.id;
+    document.getElementById("modal-chauffeur").innerText = currentModalTrajet.chauffeur;
+    document.getElementById("modal-chauffeur-mail").innerText = currentModalTrajet.chauffeurMail || '';
+    document.getElementById("modal-passager").innerText = currentModalTrajet.passager;
+    document.getElementById("modal-passager-mail").innerText = currentModalTrajet.passagerMail || '';
   
-    document.getElementById("modal-id").innerText = trajet.id;
-    document.getElementById("modal-chauffeur").innerText = trajet.chauffeur;
-    document.getElementById("modal-chauffeur-mail").innerText = trajet.chauffeurMail || '';
-    document.getElementById("modal-passager").innerText = trajet.passager;
-    document.getElementById("modal-passager-mail").innerText = trajet.passagerMail || '';
+    document.getElementById("modal-date").innerText = currentModalTrajet.date || '—';
+    document.getElementById("modal-date-depart").innerText = currentModalTrajet.heureDepart || '—';
+    document.getElementById("modal-date-arrivee").innerText = currentModalTrajet.heureArrivee || '—';
   
-    // Affiche la date seule
-    document.getElementById("modal-date").innerText = trajet.date || '—';
-  
-    // Affiche uniquement les heures dans les champs départ et arrivée
-    document.getElementById("modal-date-depart").innerText = trajet.heureDepart || '—';
-    document.getElementById("modal-date-arrivee").innerText = trajet.heureArrivee || '—';
-  
-    document.getElementById("modal-trajet").innerText = trajet.trajet;
-    document.getElementById("modal-description").innerText = trajet.description || '';
+    document.getElementById("modal-trajet").innerText = currentModalTrajet.trajet;
+    document.getElementById("modal-description").innerText = currentModalTrajet.description || '';
   
     modal.style.display = 'block';
+    console.log('Modal affiché');
   
     const closeBtn = modal.querySelector('.close-btn');
     if (closeBtn) closeBtn.focus();
   }
+
+  document.getElementById('btn-repondre-passager').addEventListener('click', () => {
+    if (!currentModalTrajet) return;
+    const email = currentModalTrajet.passagerMail;
+    if (!email) {
+      alert("Email du passager non disponible");
+      return;
+    }
+    const sujet = encodeURIComponent("Réponse concernant votre trajet signalé");
+    const corps = encodeURIComponent("Bonjour,\n\nJe vous contacte au sujet du trajet signalé.\n\nCordialement,\nL'équipe EcoRide");
+    window.location.href = `mailto:${email}?subject=${sujet}&body=${corps}`;
+  });
+  
+  document.getElementById('btn-repondre-chauffeur').addEventListener('click', () => {
+    if (!currentModalTrajet) return;
+    const email = currentModalTrajet.chauffeurMail;
+    if (!email) {
+      alert("Email du conducteur non disponible");
+      return;
+    }
+    const sujet = encodeURIComponent("Réponse concernant votre trajet signalé");
+    const corps = encodeURIComponent("Bonjour,\n\nJe vous contacte au sujet du trajet signalé.\n\nCordialement,\nL'équipe EcoRide");
+    window.location.href = `mailto:${email}?subject=${sujet}&body=${corps}`;
+  });
 
   // modal close handlers
   (function modalInit() {

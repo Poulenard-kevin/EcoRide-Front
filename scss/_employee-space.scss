@@ -1,413 +1,466 @@
 .employee-space-section.container {
-    background-color: $color-background;
-    border-radius: 30px;
-    padding: 35px 100px 60px;
-    margin: 0 100px;
-    max-width: calc(100% - 200px);
-    box-sizing: border-box;
+  background-color: $color-background;
+  border-radius: 30px;
+  padding: 35px 100px 60px;
+  margin: 0 100px;
+  max-width: calc(100% - 200px);
+  box-sizing: border-box;
 
-    @media (max-width: 768px) {
-      padding: 30px 50px 60px;
-      margin: 0 50px;
-      max-width: calc(100% - 100px);
+  @media (max-width: 768px) {
+    padding: 30px 50px 60px;
+    margin: 0 50px;
+    max-width: calc(100% - 100px);
+  }
+
+  @media (max-width: 576px) {
+    padding: 35px 20px 60px;
+    margin: 0 25px;
+    max-width: calc(100% - 50px);
+  }
+
+  h1 {
+      text-align: center;
+      margin-bottom: 35px;
+  }
+
+  h2 {
+      text-align: left;
+      margin-bottom: 0px;
+  }
+
+  form {
+      background-color: $color-light-beige;
+      padding:35px;
+      border-radius: 30px;
+      box-shadow: 0 4px 6px rgba(0,0,0,.1);
+      text-align: center;
+      margin-bottom: 35px;
+  }
+
+  .avis-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 35px;
+      margin-top: 35px;
+      margin-bottom: 35px;
+    }
+    
+    .avis-card {
+      background: $color-background;
+      padding: 15px;
+      border-radius: 20px;
+      width: 18%;
+      min-width: 250px;
+
+      text-align: center;
+    }
+    
+    .stars {
+      color: $color-medium-green;
+      font-size: 20px;
+    }
+
+    .avis-text {
+      overflow-wrap: break-word;
+      white-space: normal;
+      max-width: 100%;
+      background:$color-light-beige;
+      padding: 5px;
+      border-radius: 20px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      min-height: 75px;
+      max-height: 250px;
+    }
+    
+    .actions {
+      margin-top: 10px;
+    }
+    
+    .btn {
+      background-color: $color-medium-green;
+      color: $color-light-beige;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 12px;
+      font-family: $font-title;
+      font-size: $font-size-body;
+      font-weight: $weight-medium;
+      transition: background .3s ease, transform .3s ease;
+      box-shadow: 0 6px 8px rgba(74,122,63,.5);
+      margin: 5px;
+  
+      &:hover {
+      background-color: $color-dark-green;
+      transform: scale(1.05);
+      box-shadow: 0 6px 8px rgba(74,122,63,.5);
+      }
+    }
+    
+    .valider {
+      background: $color-medium-green;
+      color: $color-light-beige;
+    }
+    
+    .refuser {
+      background: $color-light-beige;
+      color: $color-dark-green;
+
+      &:hover {
+          background-color: $color-dark-green;
+          color: $color-light-beige;
+          transform: scale(1.05);
+          box-shadow: 0 6px 8px rgba(74,122,63,.5);
+      }
     }
 
     @media (max-width: 576px) {
-      padding: 35px 20px 60px;
-      margin: 0 25px;
-      max-width: calc(100% - 50px);
-    }
- 
-    h1 {
-        text-align: center;
-        margin-bottom: 35px;
-    }
 
-    h2 {
-        text-align: left;
-        margin-bottom: 0px;
-    }
+      h1 {
+          font-size: 22px; /* Réduit la taille des titres h1 */
+          margin-bottom: 35px;
+        }
 
-    form {
-        background-color: $color-light-beige;
-        padding:35px;
-        border-radius: 30px;
-        box-shadow: 0 4px 6px rgba(0,0,0,.1);
-        text-align: center;
-        margin-bottom: 35px;
-    }
+      h2 {
+          font-size: 20px; /* Réduit la taille des titres h2 */
+          padding-bottom: 20px;
+        }
 
-    .avis-list {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 35px;
-        margin-top: 35px;
-        margin-bottom: 35px;
-      }
-      
-      .avis-card {
-        background: $color-background;
-        padding: 15px;
-        border-radius: 20px;
-        width: 18%;
-        min-width: 250px;
+      h3 {
+          font-size: 20px; /* Réduit la taille des titres h3 */
+        }
 
-        text-align: center;
-      }
-      
-      .stars {
-        color: $color-medium-green;
-        font-size: 20px;
-      }
+      p {
+          font-size: $font-size-small; /* Réduit la taille des paragraphes */
+        }
 
-      .avis-text {
-       overflow-wrap: break-word;
-       white-space: normal;
-       max-width: 100%;
-       background:$color-light-beige;
-       padding: 5px;
-       border-radius: 20px;
-       margin-top: 10px;
-       margin-bottom: 10px;
-       min-height: 75px;
-       max-height: 250px;
-      }
-      
-      .actions {
-        margin-top: 10px;
-      }
-      
       .btn {
-        background-color: $color-medium-green;
-        color: $color-light-beige;
-        border: none;
-        border-radius: 20px;
-        padding: 8px 12px;
-        font-family: $font-title;
-        font-size: $font-size-body;
-        font-weight: $weight-medium;
-        transition: background .3s ease, transform .3s ease;
-        box-shadow: 0 6px 8px rgba(74,122,63,.5);
-        margin: 5px;
-    
-        &:hover {
-        background-color: $color-dark-green;
-        transform: scale(1.05);
-        box-shadow: 0 6px 8px rgba(74,122,63,.5);
-        }
-      }
-      
-      .valider {
-        background: $color-medium-green;
-        color: $color-light-beige;
-      }
-      
-      .refuser {
-        background: $color-light-beige;
-        color: $color-dark-green;
-
-        &:hover {
-            background-color: $color-dark-green;
-            color: $color-light-beige;
-            transform: scale(1.05);
-            box-shadow: 0 6px 8px rgba(74,122,63,.5);
-        }
+      font-size: $font-size-nav; /* Réduit la taille des boutons */
+      padding: 8px 16px; /* Ajuste le padding des boutons */
       }
 
-
-
-
-
-
-      @media (max-width: 576px) {
-
-        h1 {
-            font-size: 22px; /* Réduit la taille des titres h1 */
-            margin-bottom: 35px;
-          }
-
-        h2 {
-            font-size: 20px; /* Réduit la taille des titres h2 */
-            padding-bottom: 20px;
-          }
-
-        h3 {
-            font-size: 20px; /* Réduit la taille des titres h3 */
-          }
-
-        p {
-            font-size: $font-size-small; /* Réduit la taille des paragraphes */
-          }
-
-        .btn {
-        font-size: $font-size-nav; /* Réduit la taille des boutons */
-        padding: 8px 16px; /* Ajuste le padding des boutons */
+      .avis-list {
+          gap: 10px;
+          margin-top: 10px;
+          margin-bottom: 10px;
         }
 
-        .avis-list {
-            gap: 10px;
-            margin-top: 10px;
-            margin-bottom: 10px;
-          }
-
-        .trajet-card .btn-trajet {
-        font-size: $font-size-nav; /* Réduit la taille des boutons */
-        padding: 8px 16px; /* Ajuste le padding des boutons */
-        }
-
-        .form-avis {
-        padding-top: 30px;
-        }
-
-        .form-trajets {
-        padding-top: 30px;
-        }
-
-        .trajets-signales {
-        padding-top: 10px !important;
-        }
-
-        .form-control {
-        padding: 8px 15px;
-        font-size: 12px;
-        }
-        
-        label {
-        font-size: $font-size-nav;
-        }
-
-        .input-with-unit {
-        .unit {
-            padding: 8px 15px;
-            font-size: 12px;
-        }
-        }
-
-        .trajet-info {
-        strong {
-            font-size: $font-size-nav !important; /* Force l'application de la règle */
-        }
-        .details {
-        font-size: $font-size-small !important; /* Force l'application de la règle */
-        text-align: left !important; /* Aligne le texte à gauche */
-        margin: 0 !important; /* Supprime tout centrage horizontal */
-        }
-        }
-
-        .trajet-price {
-        font-size: $font-size-small !important; /* Force l'application de la règle */
-        }
-
-        form {
-        padding: 10px 20px 35px;
-        }
-    }
-
-    @media (max-width: 1024px) {
-        .avis-card {
-          width: 30%; /* 3 cartes max */
-        }
+      .trajet-card .btn-trajet {
+      font-size: $font-size-nav; /* Réduit la taille des boutons */
+      padding: 8px 16px; /* Ajuste le padding des boutons */
       }
-      
-      @media (max-width: 768px) {
-        .avis-card {
-          width: 45%; /* 2 cartes max */
-        }
+
+      .form-avis {
+      padding-top: 30px;
       }
-      
-      @media (max-width: 480px) {
-        .avis-card {
-          width: 100%; /* 1 carte par ligne */
-        }
+
+      .form-trajets {
+      padding-top: 30px;
       }
 
       .trajets-signales {
-        overflow-x: auto;
+      padding-top: 10px !important;
       }
 
-      /* Custom Scrollbar */
-      .trajets-signales::-webkit-scrollbar {
-          height: 8px; /* épaisseur du scroll horizontal */
+      .form-control {
+      padding: 8px 15px;
+      font-size: 12px;
+      }
+      
+      label {
+      font-size: $font-size-nav;
+      }
+
+      .input-with-unit {
+      .unit {
+          padding: 8px 15px;
+          font-size: 12px;
+      }
+      }
+
+      .trajet-info {
+      strong {
+          font-size: $font-size-nav !important; /* Force l'application de la règle */
+      }
+      .details {
+      font-size: $font-size-small !important; /* Force l'application de la règle */
+      text-align: left !important; /* Aligne le texte à gauche */
+      margin: 0 !important; /* Supprime tout centrage horizontal */
+      }
+      }
+
+      .trajet-price {
+      font-size: $font-size-small !important; /* Force l'application de la règle */
+      }
+
+      form {
+      padding: 10px 20px 35px;
+      }
+  }
+
+  @media (max-width: 1024px) {
+      .avis-card {
+        width: 30%; /* 3 cartes max */
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .avis-card {
+        width: 45%; /* 2 cartes max */
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .avis-card {
+        width: 100%; /* 1 carte par ligne */
+      }
+    }
+
+    .trajets-signales {
+      overflow-x: auto;
+    }
+
+    /* Custom Scrollbar */
+    .trajets-signales::-webkit-scrollbar {
+        height: 8px; /* épaisseur du scroll horizontal */
+    }
+
+    .trajets-signales::-webkit-scrollbar-track {
+        background: $color-very-light-beige; 
+        border-radius: 10px;
       }
   
-      .trajets-signales::-webkit-scrollbar-track {
-          background: $color-very-light-beige; 
-          border-radius: 10px;
-        }
-    
-      .trajets-signales::-webkit-scrollbar-thumb {
-          background: $color-medium-green; 
-          border-radius: 10px;
-        }
-    
-      .trajets-signales::-webkit-scrollbar-thumb:hover {
-          background: $color-dark-green; 
-        }
-    
-      /* Pour Firefox */
-      .trajets-signales {
-          scrollbar-width: thin;
-          scrollbar-color: $color-medium-green $color-very-light-beige; /* pouce / piste */
-        }
-      
-      .trajets-table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 600px; // pour éviter que tout s’écrase
+    .trajets-signales::-webkit-scrollbar-thumb {
+        background: $color-medium-green; 
+        border-radius: 10px;
       }
-      
-      .trajets-table th, 
-      .trajets-table td {
-        padding: 8px;
-        text-align: center;
-        white-space: nowrap; // évite que le texte se coupe
+  
+    .trajets-signales::-webkit-scrollbar-thumb:hover {
+        background: $color-dark-green; 
       }
+  
+    /* Pour Firefox */
+    .trajets-signales {
+        scrollbar-width: thin;
+        scrollbar-color: $color-medium-green $color-very-light-beige; /* pouce / piste */
+      }
+    
+    .trajets-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 600px; // pour éviter que tout s’écrase
+    }
+    
+    .trajets-table th, 
+    .trajets-table td {
+      padding: 8px;
+      text-align: center;
+      white-space: nowrap; // évite que le texte se coupe
+    }
 
-      .trajets-signales {
-        padding-top: 35px;
-        padding-bottom: 35px;
-        border-radius: 15px;
-        text-align: left;
-        width: 100%;
-      }
+    .trajets-signales {
+      padding-top: 35px;
+      padding-bottom: 35px;
+      border-radius: 15px;
+      text-align: left;
+      width: 100%;
+    }
+    
+    .trajets-signales h2 {
+      margin-bottom: 15px;
+      color: $color-medium-green
       
-      .trajets-signales h2 {
-        margin-bottom: 15px;
-        color: $color-medium-green
-        
-        
-      }
       
-      .trajets-signales table {
-        width: 100%;
-        border-collapse: collapse;
-        border-radius: 20px;
-        overflow: hidden;
-      }
-      
-      .trajets-signales thead {
-        background: $color-medium-green;
-        color: $color-light-beige;
-        font-family: $font-body;
-        font-size: $font-size-nav;
-        font-weight: $weight-regular;
-      }
-      
-      .trajets-signales th, 
-      .trajets-signales td {
-        padding: 12px;
-        text-align: center;
-      }
-      
-      .trajets-signales tbody tr {
-        background: $color-background;
-        border-top: 1px solid $color-dark-green;
-        font-family: $font-body;
-        font-size: $font-size-small;
-        font-weight: $weight-regular;
+    }
+    
+    .trajets-signales table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    
+    .trajets-signales thead {
+      background: $color-medium-green;
+      color: $color-light-beige;
+      font-family: $font-body;
+      font-size: $font-size-nav;
+      font-weight: $weight-regular;
+    }
+    
+    .trajets-signales th, 
+    .trajets-signales td {
+      padding: 12px;
+      text-align: center;
+    }
+    
+    .trajets-signales tbody tr {
+      background: $color-background;
+      border-top: 1px solid $color-dark-green;
+      font-family: $font-body;
+      font-size: $font-size-small;
+      font-weight: $weight-regular;
 
+    }
+    
+    .btn-container {
+      margin-top: 15px;
+      text-align: right;
+    }
+    
+    .btn-consulter {
+      background-color: $color-medium-green;
+      color: $color-light-beige;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 12px;
+      font-family: $font-title;
+      font-size: $font-size-body;
+      font-weight: $weight-medium;
+      transition: background .3s ease, transform .3s ease;
+      box-shadow: 0 6px 8px rgba(74,122,63,.5);
+      margin: 5px;
+  
+      &:hover {
+      background-color: $color-dark-green;
+      transform: scale(1.05);
+      box-shadow: 0 6px 8px rgba(74,122,63,.5);
       }
-      
-      .btn-container {
-        margin-top: 15px;
-        text-align: right;
+    }
+
+    .trajets-table tbody tr {
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .trajets-table tbody tr:hover {
+      background: $color-very-light-beige; 
+    }
+    .trajets-table tbody tr td:first-child {
+      text-decoration: underline;
+      color: $color-dark-green;
+    }
+
+    .statut-select {
+      appearance: none; /* masque la flèche native */
+      -webkit-appearance: none;
+      -moz-appearance: none;
+    
+      border-radius: 20px;
+      padding: 6px 20px 6px 12px; /* padding droit pour la flèche custom */
+      font-family: $font-body;
+      font-size: $font-size-small;
+      font-weight: $weight-regular;
+      color: $color-dark-green;
+      box-shadow: 0 2px 4px rgba(74, 122, 63, 0.3);
+      border: none;
+      cursor: pointer;
+      min-width: 80px;
+      background-color: $color-very-light-beige;
+      background-image: url("data:image/svg+xml;utf8,<svg fill='%23648a3f' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 16px 16px;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+    
+      &.statut-non-traité {
+        background-color: $color-very-light-beige;
+        color: $color-dark-green;
       }
-      
-      .btn-consulter {
+      &.statut-en-cours {
         background-color: $color-medium-green;
         color: $color-light-beige;
-        border: none;
-        border-radius: 20px;
-        padding: 8px 12px;
-        font-family: $font-title;
-        font-size: $font-size-body;
-        font-weight: $weight-medium;
-        transition: background .3s ease, transform .3s ease;
-        box-shadow: 0 6px 8px rgba(74,122,63,.5);
-        margin: 5px;
-    
-        &:hover {
+      }
+      &.statut-traité {
         background-color: $color-dark-green;
-        transform: scale(1.05);
-        box-shadow: 0 6px 8px rgba(74,122,63,.5);
-        }
+        color: $color-light-beige;
       }
+    
+      &:focus {
+        outline: none;
+        border-color: $color-dark-green;
+        box-shadow: 0 0 8px $color-dark-green;
+      }
+    }
 
-      .trajets-table tbody tr {
-        cursor: pointer;
-        transition: background 0.2s ease;
-      }
-      .trajets-table tbody tr:hover {
-        background: $color-very-light-beige; 
-      }
-      .trajets-table tbody tr td:first-child {
-        text-decoration: underline;
-        color: $color-dark-green;
-      }
+    .statut-select.statut-non-traite {
+      background-color: $color-light-beige;
+      color: $color-dark-beige;
+      background-image: url("data:image/svg+xml;utf8,<svg fill='%23d6cfc7' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    }
+
+    .statut-select.statut-en-cours {
+      background-color: $color-medium-green;
+      color: $color-light-beige;
+      background-image: url("data:image/svg+xml;utf8,<svg fill='%23f0eada' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    }
+
+    .statut-select.statut-traité {
+      background-color: $color-dark-green;
+      color: $color-light-beige;
+      background-image: url("data:image/svg+xml;utf8,<svg fill='%23f0eada' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    }
+
+    //modal//
 
 
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0,0,0,0.5);
+    }
+    
+    .modal-content {
+      background: $color-background;
+      color: $color-dark-green;
+      border-radius: 12px;
+      padding: 30px;
+      width: 500px;
+      max-width: 90%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      text-align: left;
+    
+      /* centrage absolu */
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }.modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0,0,0,0.5);
+    }
+    
+    /* Croix de fermeture */
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      color: $color-dark-green;
+      font-size: 32px;       /* grosse croix visible */
+      font-weight: bold;
+      cursor: pointer;
+    }
+    
+    .close-btn:hover {
+      color: $color-dark-green;
+      transform: scale(1.2);
+    }
+    
+    /* Titres */
+    .modal-content h2 {
+      margin-bottom: 15px;
+      font-size: 20px;
+      color:$color-dark-green;
+      border-bottom: 2px solid $color-dark-green;
+      padding-bottom: 8px;
+    }
 
-      //modal//
-
-
-      .modal {
-        display: none;
-        position: fixed;
-        inset: 0;
-        z-index: 1000;
-        background: rgba(0,0,0,0.5);
-      }
-      
-      .modal-content {
-        background: $color-background;
-        color: $color-dark-green;
-        border-radius: 12px;
-        padding: 30px;
-        width: 500px;
-        max-width: 90%;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        text-align: left;
-      
-        /* centrage absolu */
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-      }.modal {
-        display: none;
-        position: fixed;
-        inset: 0;
-        z-index: 1000;
-        background: rgba(0,0,0,0.5);
-      }
-      
-      /* Croix de fermeture */
-      .close-btn {
-        position: absolute;
-        top: 10px;
-        right: 15px;
-        color: $color-dark-green;
-        font-size: 32px;       /* grosse croix visible */
-        font-weight: bold;
-        cursor: pointer;
-      }
-      
-      .close-btn:hover {
-        color: $color-dark-green;
-        transform: scale(1.2);
-      }
-      
-      /* Titres */
-      .modal-content h2 {
-        margin-bottom: 15px;
-        font-size: 20px;
-        color:$color-dark-green;
-        border-bottom: 2px solid $color-dark-green;
-        padding-bottom: 8px;
-      }
-
-      
+    
 
 
 

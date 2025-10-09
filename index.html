@@ -19,7 +19,7 @@
    
     <title>Document</title>
 </head>
-<body>
+<body class="page-index">
 
     <header style="background-color: #F1E7D1;">
       <nav class="navbar navbar-expand-lg" data-bs-theme="light" aria-label="Main navigation">
@@ -39,18 +39,18 @@
               <a class="nav-link" href="/covoiturage">Covoiturage</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#">Espace utilisateur</a>
+              <a class="nav-link" href="/espace-utilisateur">Espace utilisateur</a>
             </li>
             <li class="nav-item dropdown">
               <button class="nav-link dropdown-toggle" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-                Connexion
+                Menu
               </button>
               <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                <li><a class="dropdown-item" href="#">S'inscrire</a></li>
-                <li><a class="dropdown-item" href="#">Se connecter</a></li>
-                <li><a class="dropdown-item" href="#">Contact</a></li>
-                <li><a class="dropdown-item" href="#">Espace employé</a></li>
+                <li><a class="dropdown-item connexion" id="dropdown-register" href="/auth?tab=register">Inscription</a></li>
+                <li><a class="dropdown-item" id="dropdown-login" href="/auth?tab=login">Connexion</a></li>
+                <li><a class="dropdown-item" href="/espace-employe">Espace employé</a></li>
                 <li><a class="dropdown-item" href="/espace-administrateur">Espace administrateur</a></li>
+                <li><a class="dropdown-item" href="/contact">Contact</a></li>
               </ul>
             </li>
           </ul>
@@ -72,19 +72,19 @@
             <a class="nav-link" href="/covoiturage">Covoiturage</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">Espace utilisateur</a>
+            <a class="nav-link" href="/espace-utilisateur">Espace utilisateur</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">S'inscrire</a>
+            <a class="dropdown-item connexion" id="dropdown-register" href="/auth?tab=register">Inscription</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">Se connecter</a>
+            <a class="dropdown-item" id="dropdown-login" href="/auth?tab=login">Connexion</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">Contact</a>
+            <a class="nav-link" href="/contact">Contact</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">Espace employé</a>
+            <a class="nav-link" href="/espace-employe">Espace employé</a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="/espace-administrateur">Espace administrateur</a>
@@ -93,11 +93,26 @@
       </div>
     </div>
 
-    <main id="main-page"></main>
+    <main id="main-page">
+      <div id="loader-overlay" style="
+        display:none; /* Caché par défaut */
+        position: fixed;
+        top:0; left:0; right:0; bottom:0;
+        background: rgba(255,255,255,0.9); /* Fond semi-transparent */
+        z-index: 9999; /* Au-dessus de tout */
+        display: flex; /* Pour centrer le contenu du loader */
+        justify-content: center;
+        align-items: center;
+        font-size: 1.5rem;
+        color: #555;
+      ">
+        Chargement...
+      </div>
+    </main>
 
     <footer class="footer-responsive">
       <div class="contact navigation-text">
-        <a href="/contact.html">contact@ecoride.fr</a>
+        <a href="/contact">contact@ecoride.fr</a>
       </div>
       <div class="social-icons">
         <a href="#" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
@@ -110,10 +125,14 @@
       </div>
     </footer>
 
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="Router/router.js"></script>
     <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="Js/search.js"></script>
+   
+    
+
     
 </body>
 </html>

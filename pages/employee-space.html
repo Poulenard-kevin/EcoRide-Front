@@ -1,0 +1,94 @@
+<div class="hero-scene">
+  <div class="hero-scene-content">
+    <h1 class="big-title">Espace employé</h1>
+  </div>
+</div>
+
+<section class="employee-space-section container">
+  <h1>Les trajets</h1>
+  
+  <!-- Formulaire Avis à valider -->
+  <form class="form-avis">
+    <div class="form-fields">
+      <div class="titre-reviews-to-validate">
+        <h2>Avis à valider</h2>
+      </div>
+    
+      <div class="avis-list-wrapper">
+        <div class="avis-list">
+          <!-- Avis générés par JS -->
+          <!-- Exemple statique : -->
+          <div class="avis-card" data-id="1">
+            <h3 class="pseudo">Pseudo passager</h3>
+            <div class="stars">★★★★☆</div>
+            <p class="avis-text">Texte de l'avis</p>
+            <div class="actions">
+              <button type="button" class="btn valider">Valider</button>
+              <button type="button" class="btn refuser">Refuser</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <!-- Formulaire Trajets signalés -->
+  <form class="form-trajets">
+    <h2>Trajets signalés</h2>
+    <div class="avis-list-wrapper">
+      <div class="trajets-signales">
+        <table class="trajets-table">
+          <thead>
+            <tr>
+              <th>Cov.</th>
+              <th>Chauffeur</th>
+              <th>Passager</th>
+              <th>Date</th>
+              <th>Heure de départ</th>
+              <th>Heure d'arrivée</th>
+              <th>Trajet</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Lignes générées par JS -->
+            <!-- Exemple statique : -->
+            <tr data-id="1234">
+              <th>1234</th>
+              <th>PseudoChauffeur1</th>
+              <th>PseudoPassager1</th>
+              <th>12-04-25</th>
+              <th>11h00</th>
+              <th>12h00</th>
+              <th>Lyon → Grenoble</th>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </form>
+
+
+<!-- Modal détails trajets -->
+<div id="trajet-modal" class="modal">
+  <div class="modal-content">
+    <span class="close-btn">&times;</span>
+    <h2>Détails du trajet signalé</h2>
+    <p><strong>ID covoiturage :</strong> <span id="modal-id"></span></p>
+    <p><strong>Chauffeur :</strong> <span id="modal-chauffeur"></span> (<span id="modal-chauffeur-mail"></span>)</p>
+    <p><strong>Passager :</strong> <span id="modal-passager"></span> (<span id="modal-passager-mail"></span>)</p>
+    <p><strong>Date :</strong> <span id="modal-date"></span></p>
+    <p><strong>Heure de départ :</strong> <span id="modal-date-depart"></span></p>
+    <p><strong>Heure d'arrivée :</strong> <span id="modal-date-arrivee"></span></p>
+    <p><strong>Trajet :</strong> <span id="modal-trajet"></span></p>
+    <p><strong>Résumé :</strong></p>
+    <p id="modal-description"></p>
+    <div class="modal-actions">
+      <button id="btn-repondre-passager" type="button" class="btn">Répondre au passager</button>
+      <button id="btn-repondre-chauffeur" type="button" class="btn">Répondre au chauffeur</button>
+      <button type="button" class="btn btn-danger" id="btn-supprimer">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+</section>

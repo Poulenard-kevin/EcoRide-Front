@@ -401,6 +401,35 @@
       background-image: url("data:image/svg+xml;utf8,<svg fill='%23f0eada' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
     }
 
+    .avis-list-wrapper {
+      max-height: 400px;      /* hauteur max souhaitée */
+      overflow-y: auto;       /* scroll vertical si dépassement */
+      padding: 8px;
+      /* Scrollbar pour WebKit (Chrome, Safari, Edge) */
+      &::-webkit-scrollbar {
+        width: 8px;   /* largeur scrollbar verticale */
+        height: 8px;  /* hauteur scrollbar horizontale */
+      }
+    
+      &::-webkit-scrollbar-track {
+        background: $color-very-light-beige;
+        border-radius: 6px;
+      }
+    
+      &::-webkit-scrollbar-thumb {
+        background: $color-medium-green;
+        border-radius: 6px;
+      }
+    
+      &::-webkit-scrollbar-thumb:hover {
+        background: darken($color-medium-green, 15%);
+      }
+    
+      /* Scrollbar pour Firefox */
+      scrollbar-width: thin;
+      scrollbar-color: $color-medium-green $color-very-light-beige;
+    }
+
     //modal//
 
 

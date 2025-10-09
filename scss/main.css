@@ -15662,6 +15662,438 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   margin-top: 0px !important;
 }
 
+.employee-space-section.container {
+  background-color: #CACFAA;
+  border-radius: 30px;
+  padding: 35px 100px 60px;
+  margin: 0 100px;
+  max-width: calc(100% - 200px);
+  box-sizing: border-box;
+  /* Custom Scrollbar */
+  /* Pour Firefox */
+  /* Croix de fermeture */
+  /* Titres */
+}
+@media (max-width: 768px) {
+  .employee-space-section.container {
+    padding: 30px 50px 60px;
+    margin: 0 50px;
+    max-width: calc(100% - 100px);
+  }
+}
+@media (max-width: 576px) {
+  .employee-space-section.container {
+    padding: 35px 20px 60px;
+    margin: 0 25px;
+    max-width: calc(100% - 50px);
+  }
+}
+.employee-space-section.container h1, .employee-space-section.container .h1 {
+  text-align: center;
+  margin-bottom: 35px;
+}
+.employee-space-section.container h2, .employee-space-section.container .h2 {
+  text-align: left;
+  margin-bottom: 0px;
+}
+.employee-space-section.container form {
+  background-color: #F1E7D1;
+  padding: 35px;
+  border-radius: 30px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  margin-bottom: 35px;
+}
+.employee-space-section.container .avis-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 35px;
+  margin-top: 35px;
+  margin-bottom: 35px;
+}
+.employee-space-section.container .avis-card {
+  background: #CACFAA;
+  padding: 15px;
+  border-radius: 20px;
+  width: 18%;
+  min-width: 250px;
+  text-align: center;
+}
+.employee-space-section.container .stars {
+  color: #4B8A47;
+  font-size: 20px;
+}
+.employee-space-section.container .avis-text {
+  overflow-wrap: break-word;
+  white-space: normal;
+  max-width: 100%;
+  background: #F1E7D1;
+  padding: 5px;
+  border-radius: 20px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  min-height: 75px;
+  max-height: 250px;
+}
+.employee-space-section.container .actions {
+  margin-top: 10px;
+}
+.employee-space-section.container .btn {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 12px;
+  font-family: "Poppins", sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  transition: background 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+  margin: 5px;
+}
+.employee-space-section.container .btn:hover {
+  background-color: #1F4924;
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+.employee-space-section.container .valider {
+  background: #4B8A47;
+  color: #F1E7D1;
+}
+.employee-space-section.container .refuser {
+  background: #F1E7D1;
+  color: #1F4924;
+}
+.employee-space-section.container .refuser:hover {
+  background-color: #1F4924;
+  color: #F1E7D1;
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+@media (max-width: 576px) {
+  .employee-space-section.container h1, .employee-space-section.container .h1 {
+    font-size: 22px; /* Réduit la taille des titres h1 */
+    margin-bottom: 35px;
+  }
+  .employee-space-section.container h2, .employee-space-section.container .h2 {
+    font-size: 20px; /* Réduit la taille des titres h2 */
+    padding-bottom: 20px;
+  }
+  .employee-space-section.container h3, .employee-space-section.container .h3 {
+    font-size: 20px; /* Réduit la taille des titres h3 */
+  }
+  .employee-space-section.container p {
+    font-size: 14px; /* Réduit la taille des paragraphes */
+  }
+  .employee-space-section.container .btn {
+    font-size: 16px; /* Réduit la taille des boutons */
+    padding: 8px 16px; /* Ajuste le padding des boutons */
+  }
+  .employee-space-section.container .avis-list {
+    gap: 10px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+  .employee-space-section.container .trajet-card .btn-trajet {
+    font-size: 16px; /* Réduit la taille des boutons */
+    padding: 8px 16px; /* Ajuste le padding des boutons */
+  }
+  .employee-space-section.container .form-avis {
+    padding-top: 30px;
+  }
+  .employee-space-section.container .form-trajets {
+    padding-top: 30px;
+  }
+  .employee-space-section.container .trajets-signales {
+    padding-top: 10px !important;
+  }
+  .employee-space-section.container .form-control {
+    padding: 8px 15px;
+    font-size: 12px;
+  }
+  .employee-space-section.container label {
+    font-size: 16px;
+  }
+  .employee-space-section.container .input-with-unit .unit {
+    padding: 8px 15px;
+    font-size: 12px;
+  }
+  .employee-space-section.container .trajet-info strong {
+    font-size: 16px !important; /* Force l'application de la règle */
+  }
+  .employee-space-section.container .trajet-info .details {
+    font-size: 14px !important; /* Force l'application de la règle */
+    text-align: left !important; /* Aligne le texte à gauche */
+    margin: 0 !important; /* Supprime tout centrage horizontal */
+  }
+  .employee-space-section.container .trajet-price {
+    font-size: 14px !important; /* Force l'application de la règle */
+  }
+  .employee-space-section.container form {
+    padding: 10px 20px 35px;
+  }
+}
+@media (max-width: 1024px) {
+  .employee-space-section.container .avis-card {
+    width: 30%; /* 3 cartes max */
+  }
+}
+@media (max-width: 768px) {
+  .employee-space-section.container .avis-card {
+    width: 45%; /* 2 cartes max */
+  }
+}
+@media (max-width: 480px) {
+  .employee-space-section.container .avis-card {
+    width: 100%; /* 1 carte par ligne */
+  }
+}
+.employee-space-section.container .trajets-signales {
+  overflow-x: auto;
+}
+.employee-space-section.container .trajets-signales::-webkit-scrollbar {
+  height: 8px; /* épaisseur du scroll horizontal */
+}
+.employee-space-section.container .trajets-signales::-webkit-scrollbar-track {
+  background: #F8F0E5;
+  border-radius: 10px;
+}
+.employee-space-section.container .trajets-signales::-webkit-scrollbar-thumb {
+  background: #4B8A47;
+  border-radius: 10px;
+}
+.employee-space-section.container .trajets-signales::-webkit-scrollbar-thumb:hover {
+  background: #1F4924;
+}
+.employee-space-section.container .trajets-signales {
+  scrollbar-width: thin;
+  scrollbar-color: #4B8A47 #F8F0E5; /* pouce / piste */
+}
+.employee-space-section.container .trajets-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+.employee-space-section.container .trajets-table th,
+.employee-space-section.container .trajets-table td {
+  padding: 8px;
+  text-align: center;
+  white-space: nowrap;
+}
+.employee-space-section.container .trajets-signales {
+  padding-top: 35px;
+  padding-bottom: 35px;
+  border-radius: 15px;
+  text-align: left;
+  width: 100%;
+}
+.employee-space-section.container .trajets-signales h2, .employee-space-section.container .trajets-signales .h2 {
+  margin-bottom: 15px;
+  color: #4B8A47;
+}
+.employee-space-section.container .trajets-signales table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 20px;
+  overflow: hidden;
+}
+.employee-space-section.container .trajets-signales thead {
+  background: #4B8A47;
+  color: #F1E7D1;
+  font-family: "Roboto", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+}
+.employee-space-section.container .trajets-signales th,
+.employee-space-section.container .trajets-signales td {
+  padding: 12px;
+  text-align: center;
+}
+.employee-space-section.container .trajets-signales tbody tr {
+  background: #CACFAA;
+  border-top: 1px solid #1F4924;
+  font-family: "Roboto", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+}
+.employee-space-section.container .btn-container {
+  margin-top: 15px;
+  text-align: right;
+}
+.employee-space-section.container .btn-consulter {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 12px;
+  font-family: "Poppins", sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  transition: background 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+  margin: 5px;
+}
+.employee-space-section.container .btn-consulter:hover {
+  background-color: #1F4924;
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+.employee-space-section.container .trajets-table tbody tr {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.employee-space-section.container .trajets-table tbody tr:hover {
+  background: #F8F0E5;
+}
+.employee-space-section.container .trajets-table tbody tr td:first-child {
+  text-decoration: underline;
+  color: #1F4924;
+}
+.employee-space-section.container .statut-select {
+  appearance: none; /* masque la flèche native */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  border-radius: 20px;
+  padding: 6px 20px 6px 12px; /* padding droit pour la flèche custom */
+  font-family: "Roboto", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: #1F4924;
+  box-shadow: 0 2px 4px rgba(74, 122, 63, 0.3);
+  border: none;
+  cursor: pointer;
+  min-width: 100px;
+  background-color: #F8F0E5;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23648a3f' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px 16px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+.employee-space-section.container .statut-select.statut-non-traité {
+  background-color: #F8F0E5;
+  color: #1F4924;
+}
+.employee-space-section.container .statut-select.statut-en-cours {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+}
+.employee-space-section.container .statut-select.statut-traité {
+  background-color: #1F4924;
+  color: #F1E7D1;
+}
+.employee-space-section.container .statut-select:focus {
+  outline: none;
+  border-color: #1F4924;
+  box-shadow: 0 0 8px #1F4924;
+}
+.employee-space-section.container .statut-select.statut-non-traite {
+  background-color: #F1E7D1;
+  color: #1F4924;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23d6cfc7' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+}
+.employee-space-section.container .statut-select.statut-en-cours {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23f0eada' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+}
+.employee-space-section.container .statut-select.statut-traité {
+  background-color: #1F4924;
+  color: #F1E7D1;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23f0eada' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+}
+.employee-space-section.container .avis-list-wrapper {
+  max-height: 400px; /* hauteur max souhaitée */
+  overflow-y: auto; /* scroll vertical si dépassement */
+  padding: 8px;
+  /* Scrollbar pour WebKit (Chrome, Safari, Edge) */
+  /* Scrollbar pour Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #4B8A47 #F8F0E5;
+}
+.employee-space-section.container .avis-list-wrapper::-webkit-scrollbar {
+  width: 8px; /* largeur scrollbar verticale */
+  height: 8px; /* hauteur scrollbar horizontale */
+}
+.employee-space-section.container .avis-list-wrapper::-webkit-scrollbar-track {
+  background: #F8F0E5;
+  border-radius: 6px;
+}
+.employee-space-section.container .avis-list-wrapper::-webkit-scrollbar-thumb {
+  background: #4B8A47;
+  border-radius: 6px;
+}
+.employee-space-section.container .avis-list-wrapper::-webkit-scrollbar-thumb:hover {
+  background: rgb(47.54784689, 87.4880382775, 45.0119617225);
+}
+.employee-space-section.container .modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.5);
+}
+.employee-space-section.container .modal-content {
+  background: #CACFAA;
+  color: #1F4924;
+  border-radius: 12px;
+  padding: 30px;
+  width: 500px;
+  max-width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  text-align: left;
+  /* centrage absolu */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.employee-space-section.container .modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.5);
+}
+.employee-space-section.container .close-btn {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  color: #1F4924;
+  font-size: 32px; /* grosse croix visible */
+  font-weight: bold;
+  cursor: pointer;
+}
+.employee-space-section.container .close-btn:hover {
+  color: #1F4924;
+  transform: scale(1.2);
+}
+.employee-space-section.container .modal-content h2, .employee-space-section.container .modal-content .h2 {
+  margin-bottom: 15px;
+  font-size: 20px;
+  color: #1F4924;
+  border-bottom: 2px solid #1F4924;
+  padding-bottom: 8px;
+}
+.employee-space-section.container .btn-danger {
+  color: #F1E7D1;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 12px;
+  font-family: "Poppins", sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  transition: background 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+  margin: 5px;
+}
+.employee-space-section.container .btn-danger:hover {
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+  color: #fff !important;
+}
+
 html {
   position: relative;
   min-height: 100%;

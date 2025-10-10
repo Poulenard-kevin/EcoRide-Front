@@ -473,7 +473,7 @@ function setupAuthValidationForRegister(formElement) {
       clearValidation(input);
       return false;
     }
-    const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+$/;
+    const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,}$/;
     if (nameRegex.test(input.value.trim())) {
       setValid(input);
       return true;
@@ -546,8 +546,8 @@ function setupAuthValidationForRegister(formElement) {
 
   function validateForm() {
     // Validation logique (sans tenir compte de touched) pour activer/désactiver le bouton
-    const validNomLogic = inputs.inputNom.value.trim() !== '' && /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+$/.test(inputs.inputNom.value.trim());
-    const validPrenomLogic = inputs.inputPrenom.value.trim() !== '' && /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+$/.test(inputs.inputPrenom.value.trim());
+    const validNomLogic = inputs.inputNom.value.trim() !== '' && /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,}$/.test(inputs.inputNom.value.trim());
+    const validPrenomLogic = inputs.inputPrenom.value.trim() !== '' && /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,}$/.test(inputs.inputPrenom.value.trim());
     const validEmailLogic = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.inputEmail.value.trim());
     const validPasswordLogic = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])[A-Za-z\d\W_]{8,}$/.test(inputs.inputPassword.value.trim());
     const validConfirmLogic = inputs.inputValidatePassword.value.trim() !== '' && inputs.inputValidatePassword.value === inputs.inputPassword.value;

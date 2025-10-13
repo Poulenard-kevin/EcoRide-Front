@@ -124,23 +124,65 @@ const utilisateurs = [
   // Gestion employés
   // ==========================
 
-  document.getElementById("employeeForm").addEventListener("submit", function(e) {
-    e.preventDefault();
-  
-    const nom = document.getElementById("employeeName").value.trim();
-    const email = document.getElementById("employeeEmail").value.trim();
-    const password = document.getElementById("employeePassword").value;
-  
-    if (!nom || !email || !password) {
-      alert("Merci de remplir tous les champs.");
+  // ==========================
+// Validation REGEX simple (logs console + blocage submit)
+// ==========================
+(function () {
+  const form = document.getElementById('employeeForm');
+  if (!form) {
+    console.error('Form #employeeForm introuvable');
+    return;
+  }
+
+  const nameInput = document.getElementById('employeeName');
+  const emailInput = document.getElementById('employeeEmail');
+  const passInput = document.getElementById('employeePassword');
+  const submitBtn = form.querySelector('button[type="submit"]');
+
+  // Regex
+  const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,}$/; // 2+ lettres, accents, espaces, tirets, apostrophes
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;  // email simple robuste
+  const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/; // 8+ chars, min, maj, chiffre, spécial
+
+  // Helpers
+  const isNameValid = v => nameRegex.test(v.trim());
+  const isEmailValid = v => emailRegex.test(v.trim());
+  const isPassValid = v => passRegex.test(v);
+
+  function validateAll() {
+    const nameOk = isNameValid(nameInput.value);
+    const emailOk = isEmailValid(emailInput.value);
+    const passOk = isPassValid(passInput.value);
+
+    console.clear();
+    console.log('— Validation REGEX —');
+    console.log('Nom      :', JSON.stringify(nameInput.value), '=>', nameOk ? 'OK' : 'NOK');
+    console.log('Email    :', JSON.stringify(emailInput.value), '=>', emailOk ? 'OK' : 'NOK');
+    console.log('Password :', passInput.value.replace(/./g, '*'), '=>', passOk ? 'OK' : 'NOK');
+
+    if (submitBtn) submitBtn.disabled = !(nameOk && emailOk && passOk);
+    return nameOk && emailOk && passOk;
+  }
+
+  [nameInput, emailInput, passInput].forEach(inp => {
+    inp.addEventListener('input', validateAll);
+    inp.addEventListener('blur', validateAll);
+  });
+
+  form.addEventListener('submit', (e) => {
+    const ok = validateAll();
+    if (!ok) {
+      e.preventDefault();
+      console.warn('Soumission bloquée: regex non validées');
       return;
     }
-  
-    // Ici tu peux ajouter la logique pour envoyer les données au backend
-    // Par exemple via fetch POST /api/employes
-  
-    alert(`Employé créé : ${nom} (${email})`);
-  
-    // Reset du formulaire
-    this.reset();
+    e.preventDefault(); // Retire cette ligne quand tu intégreras le backend
+    console.log('Soumission OK: regex validées');
+    alert(`Employé prêt à créer: ${nameInput.value.trim()} (${emailInput.value.trim()})`);
+    form.reset();
+    validateAll(); // réévalue pour re-désactiver le bouton
   });
+
+  // Etat initial
+  if (submitBtn) submitBtn.disabled = true;
+})();

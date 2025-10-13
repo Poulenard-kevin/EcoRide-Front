@@ -15359,6 +15359,14 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   font-size: 1.4rem; /* Ajuste la taille selon ton besoin */
   margin-top: 0px !important;
 }
+#auth .form-control.is-valid ~ .valid-feedback {
+  display: block;
+  color: #4B8A47;
+}
+#auth .form-control.is-invalid ~ .invalid-feedback {
+  display: block;
+  color: #D64545;
+}
 
 /* Modal content scoped to auth */
 .auth-scope .modal-content {
@@ -16092,6 +16100,368 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   background-color: #dc3545 !important;
   border-color: #dc3545 !important;
   color: #fff !important;
+}
+
+.admin-content.container {
+  background-color: #CACFAA;
+  border-radius: 30px;
+  padding: 35px 100px 60px;
+  margin: 0 100px;
+  max-width: calc(100% - 200px);
+  box-sizing: border-box;
+}
+@media (max-width: 768px) {
+  .admin-content.container {
+    padding: 30px 50px 60px;
+    margin: 0 50px;
+    max-width: calc(100% - 100px);
+  }
+}
+@media (max-width: 576px) {
+  .admin-content.container {
+    padding: 20px 20px 60px;
+    margin: 0 25px;
+    max-width: calc(100% - 50px);
+  }
+}
+.admin-content.container h1, .admin-content.container .h1 {
+  text-align: center;
+  margin-bottom: 35px;
+}
+
+.dashboard-section.container {
+  padding: 0px;
+}
+.dashboard-section.container h1, .dashboard-section.container .h1 {
+  text-align: center;
+  margin-bottom: 35px;
+}
+.dashboard-section.container h2, .dashboard-section.container .h2 {
+  text-align: left;
+  margin-bottom: 0px;
+}
+.dashboard-section.container form {
+  background-color: #F1E7D1;
+  padding: 35px;
+  border-radius: 30px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  margin-bottom: 35px;
+}
+.dashboard-section.container .form-dashboard .charts-container {
+  display: flex;
+  gap: 30px;
+  justify-content: space-around;
+  flex-wrap: wrap;
+}
+.dashboard-section.container .chart-card {
+  background: #F8F0E5;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  flex: 1;
+  min-width: 300px;
+}
+.dashboard-section.container .total-credits {
+  margin-top: 20px;
+  font-size: 1.2em;
+  text-align: center;
+  font-weight: bold;
+}
+@media (max-width: 990px) {
+  .dashboard-section.container h2, .dashboard-section.container .h2 {
+    font-size: 20px; /* Réduit la taille des titres h2 */
+    padding-bottom: 20px;
+  }
+  .dashboard-section.container .charts-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* scroll fluide iOS */
+    /* Scrollbar WebKit */
+    /* Scrollbar Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: #4B8A47 #F8F0E5;
+  }
+  .dashboard-section.container .charts-container::-webkit-scrollbar {
+    height: 8px; /* hauteur scrollbar horizontale */
+  }
+  .dashboard-section.container .charts-container::-webkit-scrollbar-track {
+    background: #F8F0E5; /* piste */
+    border-radius: 10px;
+  }
+  .dashboard-section.container .charts-container::-webkit-scrollbar-thumb {
+    background: #4B8A47; /* pouce */
+    border-radius: 10px;
+  }
+  .dashboard-section.container .charts-container::-webkit-scrollbar-thumb:hover {
+    background: #1F4924; /* hover */
+  }
+}
+@media (max-width: 576px) {
+  .dashboard-section.container .form-dashboard {
+    padding: 20px 20px;
+  }
+  .dashboard-section.container h1, .dashboard-section.container .h1 {
+    font-size: 22px; /* Réduit la taille des titres h1 */
+    margin-bottom: 35px;
+  }
+  .dashboard-section.container h2, .dashboard-section.container .h2 {
+    font-size: 20px; /* Réduit la taille des titres h2 */
+    padding-bottom: 20px;
+  }
+}
+
+.accounts-section.container {
+  padding: 0px;
+}
+.accounts-section.container h1, .accounts-section.container .h1 {
+  text-align: center;
+  margin-bottom: 35px;
+}
+.accounts-section.container .form-comptes {
+  background-color: #F1E7D1;
+  padding: 35px;
+  border-radius: 30px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  margin-bottom: 35px;
+}
+.accounts-section.container .table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* pour un scroll fluide sur iOS */
+}
+.accounts-section.container .accounts-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #CACFAA;
+  border-radius: 20px;
+  overflow: hidden;
+  min-width: 600px;
+}
+.accounts-section.container .accounts-table th,
+.accounts-section.container .accounts-table td {
+  padding: 12px 15px;
+  text-align: center;
+}
+.accounts-section.container .accounts-table td {
+  background: #CACFAA;
+  border-top: 1px solid #1F4924;
+  font-family: "Roboto", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+}
+.accounts-section.container .accounts-table thead {
+  background: #4B8A47;
+  color: #F1E7D1;
+  font-family: "Roboto", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+}
+.accounts-section.container .btn-action {
+  border: none;
+  border-radius: 20px;
+  padding: 8px 12px;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+  margin: 5px;
+}
+.accounts-section.container .btn-action:hover {
+  background-color: #1F4924;
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+.accounts-section.container .btn-action.btn-suspendre {
+  background-color: #F1E7D1;
+  color: #1F4924;
+}
+.accounts-section.container .btn-action.btn-reactiver {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  padding: 8px 15px;
+}
+.accounts-section.container .table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* scroll fluide iOS */
+  /* Scrollbar WebKit */
+  /* Scrollbar Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #4B8A47 #F8F0E5;
+}
+.accounts-section.container .table-wrapper::-webkit-scrollbar {
+  height: 8px; /* hauteur de la scrollbar horizontale */
+}
+.accounts-section.container .table-wrapper::-webkit-scrollbar-track {
+  background: #F8F0E5; /* couleur de la piste */
+  border-radius: 10px;
+}
+.accounts-section.container .table-wrapper::-webkit-scrollbar-thumb {
+  background: #4B8A47; /* couleur du pouce */
+  border-radius: 10px;
+}
+.accounts-section.container .table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #1F4924; /* couleur au survol */
+}
+@media (max-width: 576px) {
+  .accounts-section.container .form-comptes {
+    padding: 20px 20px;
+  }
+  .accounts-section.container h1, .accounts-section.container .h1 {
+    font-size: 22px; /* Réduit la taille des titres h1 */
+    margin-bottom: 35px;
+  }
+  .accounts-section.container h2, .accounts-section.container .h2 {
+    font-size: 20px; /* Réduit la taille des titres h2 */
+    padding-bottom: 20px;
+  }
+}
+
+.employee-management-section.container {
+  padding: 0px;
+}
+.employee-management-section.container h1, .employee-management-section.container .h1 {
+  text-align: center;
+  margin-bottom: 35px;
+}
+.employee-management-section.container form {
+  background-color: #F1E7D1;
+  padding: 35px;
+  border-radius: 30px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  margin-bottom: 35px;
+}
+.employee-management-section.container .form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+.employee-management-section.container .form-fields .form-field {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+.employee-management-section.container .form-fields .btn {
+  align-self: center;
+  margin-top: 20px;
+  min-width: 200px;
+}
+.employee-management-section.container .btn {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  border: none;
+  border-radius: 30px;
+  padding: 10px 20px;
+  font-family: "Poppins", sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  transition: background 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+.employee-management-section.container .btn:hover {
+  background-color: #1F4924;
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+.employee-management-section.container label {
+  font-family: "Roboto", sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: #1F4924;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.employee-management-section.container .form-control {
+  border-radius: 20px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 16px;
+  color: #1F4924;
+  background-color: #F8F0E5;
+  box-shadow: none;
+  outline: none;
+  border: none;
+}
+.employee-management-section.container .form-control::-moz-placeholder {
+  color: #7a8a6f;
+}
+.employee-management-section.container .form-control::placeholder {
+  color: #7a8a6f;
+}
+@media (max-width: 576px) {
+  .employee-management-section.container .btn {
+    font-size: 16px; /* Réduit la taille des boutons */
+    padding: 8px 16px; /* Ajuste le padding des boutons */
+  }
+  .employee-management-section.container .form-control {
+    padding: 8px 15px;
+    font-size: 12px;
+  }
+  .employee-management-section.container label {
+    font-size: 16px;
+  }
+  .employee-management-section.container form {
+    padding: 20px 20px;
+  }
+  .employee-management-section.container h1, .employee-management-section.container .h1 {
+    font-size: 22px; /* Réduit la taille des titres h1 */
+    margin-bottom: 35px;
+  }
+  .employee-management-section.container h2, .employee-management-section.container .h2 {
+    font-size: 20px; /* Réduit la taille des titres h2 */
+    padding-bottom: 20px;
+  }
+}
+
+.valid-feedback,
+.invalid-feedback {
+  font-size: 1.4rem; /* Ajuste la taille selon ton besoin */
+  margin-top: 10px !important;
+}
+
+/* États visuels: bordure légère + halo (optionnel fond doux) */
+.employee-management-section.container .form-control.is-valid {
+  border-color: #4B8A47 !important; /* vert */
+  box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25) !important; /* ombre verte */
+}
+
+.employee-management-section.container .form-control.is-invalid {
+  border-color: #dc3545 !important; /* rouge */
+  box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important; /* ombre rouge */
+}
+
+/* Affichage des messages selon l’état (exactement comme dans auth) */
+.employee-management-section.container .form-group .form-control.is-valid ~ .valid-feedback {
+  display: block;
+  color: #4B8A47;
+}
+
+.employee-management-section.container .form-group .form-control.is-invalid ~ .invalid-feedback {
+  display: block;
+  color: #D64545;
+}
+
+/* Option: pas de glow au focus “neutre”, seulement en état */
+.employee-management-section.container .form-control:focus {
+  box-shadow: none;
+  outline: none;
+}
+
+/* Base (état neutre, ni .is-valid ni .is-invalid) */
+.employee-management-section.container .form-control {
+  border: none;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1); /* ombre interne légère */
+  background-color: #F8F0E5;
+  outline: none;
+}
+
+/* Conserver l’inset au focus quand pas d’état */
+.employee-management-section.container .form-control:not(.is-valid):not(.is-invalid):focus {
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  outline: none;
 }
 
 html {

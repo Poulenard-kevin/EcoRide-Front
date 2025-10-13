@@ -1,63 +1,148 @@
 // ==========================
-// Données exemple : nb de trajets par jour
-// (= 1 seule semaine ici, mais pourrait s'étendre)
+// Dashboard dynamique relié aux trajets payés
 // ==========================
-const jours = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
-const covoituragesData = [4, 6, 5, 7, 3, 8, 9]; // nombre trajets par jour
 
-// Commission EcoRide par trajet
-const commissionParTrajet = 2;
+// Clé de persistance des trajets
+const LS_KEY_TRAJETS = 'ecoride_trajets';
+const COMMISSION_FIXE = 2; // 2 crédits commission par trajet payé
 
-// ==========================
-// Crédits EcoRide par jour
-// ==========================
-const creditsEcoRideData = covoituragesData.map(nb => nb * commissionParTrajet);
+function loadTrajets() {
+  try {
+    const raw = localStorage.getItem(LS_KEY_TRAJETS);
+    if (raw) return JSON.parse(raw);
+  } catch (_) {}
+  // Seed de démo si rien en storage (réparti sur 7 jours)
+  const today = new Date();
+  const d = (offset) => {
+    const dt = new Date(today);
+    dt.setDate(today.getDate() - offset);
+    return dt.toISOString().slice(0,10); // YYYY-MM-DD
+  };
+  const seed = [
+    { id: 1, datePaiement: d(6), prixChauffeurCredits: 18, commissionEcoRide: COMMISSION_FIXE, statutPaiement: "payé" },
+    { id: 2, datePaiement: d(5), prixChauffeurCredits: 22, commissionEcoRide: COMMISSION_FIXE, statutPaiement: "payé" },
+    { id: 3, datePaiement: d(5), prixChauffeurCredits: 20, commissionEcoRide: COMMISSION_FIXE, statutPaiement: "payé" },
+    { id: 4, datePaiement: d(3), prixChauffeurCredits: 25, commissionEcoRide: COMMISSION_FIXE, statutPaiement: "payé" },
+    { id: 5, datePaiement: d(1), prixChauffeurCredits: 20, commissionEcoRide: COMMISSION_FIXE, statutPaiement: "payé" },
+    { id: 6, datePaiement: d(0), prixChauffeurCredits: 30, commissionEcoRide: COMMISSION_FIXE, statutPaiement: "payé" },
+  ];
+  localStorage.setItem(LS_KEY_TRAJETS, JSON.stringify(seed));
+  return seed;
+}
+function saveTrajets(list) {
+  localStorage.setItem(LS_KEY_TRAJETS, JSON.stringify(list));
+}
 
-// ==========================
-// Total de la période affichée (ex: semaine)
-// ==========================
-const totalCreditsSemaine = creditsEcoRideData.reduce((a, b) => a + b, 0);
+// Source de vérité des trajets
+let trajets = loadTrajets();
 
-// ==========================
-// Total depuis le lancement
-// !!! Ici tu peux remplacer par une valeur fixe venant du back
-// Exemple : simulateur avec 10 000 crédits déjà accumulés
-// ==========================
-const creditsDepuisLancement = 10000 + totalCreditsSemaine;
+// Génère les 7 derniers jours: labels (Lun, Mar, …) et clés ISO (YYYY-MM-DD)
+function lastNDays(n=7) {
+  const labels = [];
+  const keys = [];
+  const fmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' });
+  const today = new Date();
+  for (let i=n-1; i>=0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    labels.push(fmt.format(d));             // ex: lun., mar.
+    keys.push(d.toISOString().slice(0,10)); // YYYY-MM-DD
+  }
+  return { labels, keys };
+}
 
-// On affiche dans le dashboard
-document.getElementById("totalCredits").textContent = creditsDepuisLancement;
+// Agrège le nombre de trajets payés et les commissions par jour
+function aggregateByDay(trajetsList, dayKeys) {
+  const counts = Object.fromEntries(dayKeys.map(k => [k, 0]));
+  const commissions = Object.fromEntries(dayKeys.map(k => [k, 0]));
+  trajetsList.forEach(t => {
+    if (t.statutPaiement !== "payé") return;
+    if (!counts.hasOwnProperty(t.datePaiement)) return;
+    counts[t.datePaiement] += 1;
+    // commission par trajet (fixe 2 crédits ici)
+    commissions[t.datePaiement] += Number(t.commissionEcoRide ?? COMMISSION_FIXE);
+  });
+  return { counts, commissions };
+}
 
-// ==========================
-// Graphs
-// ==========================
-new Chart(document.getElementById("covoituragesChart"), {
-  type: 'bar',
-  data: {
-    labels: jours,
-    datasets: [{
-      label: "Covoiturages",
-      data: covoituragesData,
-      backgroundColor: "#4B8A47"
-    }]
-  },
-  options: { 
-    responsive: true, 
-    }
-});
+// Instances Chart.js (pour pouvoir les détruire avant mise à jour)
+let covoituragesChartInstance = null;
+let creditsChartInstance = null;
 
-new Chart(document.getElementById("creditsChart"), {
-  type: 'bar',
-  data: {
-    labels: jours,
-    datasets: [{
-      label: "Crédits EcoRide (commission)",
-      data: creditsEcoRideData,
-      backgroundColor: "#CACFAA"
-    }]
-  },
-  options: { responsive: true }
-});
+// Met à jour les graphiques et le total
+function updateDashboard() {
+  const { labels, keys } = lastNDays(7);
+  const { counts, commissions } = aggregateByDay(trajets, keys);
+
+  const covoituragesData = keys.map(k => counts[k]);       // nb trajets payés / jour
+  const creditsEcoRideData = keys.map(k => commissions[k]); // commissions / jour
+
+  const totalCreditsDepuisLancement = trajets
+    .filter(t => t.statutPaiement === 'payé')
+    .reduce((sum, t)=> sum + Number(t.commissionEcoRide ?? COMMISSION_FIXE), 0);
+
+  // Total affiché
+  const totalCreditsNode = document.getElementById("totalCredits");
+  if (totalCreditsNode) totalCreditsNode.textContent = totalCreditsDepuisLancement;
+
+  // Graph 1: Covoiturages
+  const ctx1 = document.getElementById("covoituragesChart");
+  if (ctx1) {
+    if (covoituragesChartInstance) covoituragesChartInstance.destroy();
+    covoituragesChartInstance = new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: "Covoiturages (trajets payés)",
+          data: covoituragesData,
+          backgroundColor: "#4B8A47"
+        }]
+      },
+      options: { responsive: true }
+    });
+  }
+
+  // Graph 2: Crédits EcoRide (commission)
+  const ctx2 = document.getElementById("creditsChart");
+  if (ctx2) {
+    if (creditsChartInstance) creditsChartInstance.destroy();
+    creditsChartInstance = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: "Crédits EcoRide (commission)",
+          data: creditsEcoRideData,
+          backgroundColor: "#CACFAA"
+        }]
+      },
+      options: { responsive: true }
+    });
+  }
+}
+
+// Fonction utilitaire pour ajouter un trajet payé (à appeler quand un paiement est confirmé)
+function ajouterTrajetPaye({ dateISO, prixChauffeurCredits }) {
+  const newId = trajets.length ? Math.max(...trajets.map(t=>t.id)) + 1 : 1;
+  const t = {
+    id: newId,
+    datePaiement: dateISO || new Date().toISOString().slice(0,10),
+    prixChauffeurCredits: Number(prixChauffeurCredits),
+    commissionEcoRide: COMMISSION_FIXE, // règle actuelle: 2 crédits par trajet
+    statutPaiement: "payé"
+  };
+  trajets.push(t);
+  saveTrajets(trajets);
+  updateDashboard();
+}
+
+// Premier rendu du dashboard
+updateDashboard();
+
+/* Exemple d’usage:
+ajouterTrajetPaye({ dateISO: '2025-10-13', prixChauffeurCredits: 20 });
+*/
 
 
 

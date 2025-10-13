@@ -1,0 +1,439 @@
+.admin-content.container {
+    background-color: $color-background; // ton vert
+    border-radius: 30px;
+    padding: 35px 100px 60px;
+    margin: 0 100px;
+    max-width: calc(100% - 200px);
+    box-sizing: border-box;
+  
+    @media (max-width: 768px) {
+      padding: 30px 50px 60px;
+      margin: 0 50px;
+      max-width: calc(100% - 100px);
+    }
+  
+    @media (max-width: 576px) {
+      padding: 20px 20px 60px;
+      margin: 0 25px;
+      max-width: calc(100% - 50px);
+    }
+
+    
+  
+    // Tu peux garder ici les styles communs aux sections si besoin
+    h1 {
+      text-align: center;
+      margin-bottom: 35px;
+    }
+  }
+
+
+// Dashboard statistiques
+.dashboard-section.container {
+    padding: 0px;
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 35px;
+    }
+  
+    h2 {
+      text-align: left;
+      margin-bottom: 0px;
+    }
+  
+    form {
+      background-color: $color-light-beige;
+      padding: 35px;
+      border-radius: 30px;
+      box-shadow: 0 4px 6px rgba(0,0,0,.1);
+      text-align: center;
+      margin-bottom: 35px;
+    }
+  
+    .form-dashboard .charts-container {
+      display: flex;
+      gap: 30px;
+      justify-content: space-around;
+      flex-wrap: wrap;
+    }
+    
+    .chart-card {
+      background: $color-very-light-beige;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      flex: 1;
+      min-width: 300px;
+    }
+    
+    .total-credits {
+      margin-top: 20px;
+      font-size: 1.2em;
+      text-align: center;
+      font-weight: bold;
+    }
+  
+
+    @media (max-width: 990px) {
+
+        h2 {
+            font-size: 20px; /* Réduit la taille des titres h2 */
+            padding-bottom: 20px;
+          }
+
+        .charts-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch; /* scroll fluide iOS */
+        
+            /* Scrollbar WebKit */
+            &::-webkit-scrollbar {
+                height: 8px; /* hauteur scrollbar horizontale */
+            }
+            
+            &::-webkit-scrollbar-track {
+                background: $color-very-light-beige; /* piste */
+                border-radius: 10px;
+            }
+            
+            &::-webkit-scrollbar-thumb {
+                background: $color-medium-green; /* pouce */
+                border-radius: 10px;
+            }
+            
+            &::-webkit-scrollbar-thumb:hover {
+                background: $color-dark-green; /* hover */
+            }
+            
+            /* Scrollbar Firefox */
+            scrollbar-width: thin;
+            scrollbar-color: $color-medium-green $color-very-light-beige;
+        }
+
+    }
+
+    @media (max-width: 576px) {
+
+        .form-dashboard{
+            padding: 20px 20px;
+        }
+
+        h1 {
+            font-size: 22px; /* Réduit la taille des titres h1 */
+            margin-bottom: 35px;
+          }
+
+        h2 {
+            font-size: 20px; /* Réduit la taille des titres h2 */
+            padding-bottom: 20px;
+          }
+    }
+    
+
+}
+
+  
+  // ===============================
+  // Gestion comptes
+  // ===============================
+
+  .accounts-section.container {
+    padding: 0px;
+
+    h1 {
+        text-align: center;
+        margin-bottom: 35px;
+      }
+
+    .form-comptes {
+      background-color: $color-light-beige;
+      padding: 35px;
+      border-radius: 30px;
+      box-shadow: 0 4px 6px rgba(0,0,0,.1);
+      text-align: center;
+      margin-bottom: 35px;
+    }
+
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch; /* pour un scroll fluide sur iOS */
+      }
+  
+    .accounts-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: $color-background;
+      border-radius: 20px;
+      overflow: hidden;
+      min-width: 600px;
+    }
+    
+    .accounts-table th,
+    .accounts-table td {
+      padding: 12px 15px;
+      text-align: center;
+    }
+
+    .accounts-table td {
+        background: $color-background;
+        border-top: 1px solid $color-dark-green;
+        font-family: $font-body;
+        font-size: $font-size-small;
+        font-weight: $weight-regular;
+    }
+    
+    .accounts-table thead {
+        background: $color-medium-green;
+        color: $color-light-beige;
+        font-family: $font-body;
+        font-size: $font-size-nav;
+        font-weight: $weight-regular;
+    }
+    
+    .btn-action {
+        border: none;
+        border-radius: 20px;
+        padding: 8px 12px;
+        font-family: $font-title;
+        font-size: $font-size-small;
+        font-weight: $weight-medium;
+        transition: background .3s ease, transform .3s ease;
+        box-shadow: 0 6px 8px rgba(74,122,63,.5);
+        margin: 5px;
+    
+        &:hover {
+        background-color: $color-dark-green;
+        transform: scale(1.05);
+        box-shadow: 0 6px 8px rgba(74,122,63,.5);
+        }
+
+            // Variante "Suspendre" 
+        &.btn-suspendre {
+            background-color: $color-light-beige;
+            color: $color-dark-green;
+        }
+        
+        // Variante "Réactiver" 
+        &.btn-reactiver {
+            background-color: $color-medium-green;
+            color: $color-light-beige;
+            padding: 8px 15px;
+        }
+    }
+
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch; /* scroll fluide iOS */
+      
+        /* Scrollbar WebKit */
+        &::-webkit-scrollbar {
+          height: 8px; /* hauteur de la scrollbar horizontale */
+        }
+      
+        &::-webkit-scrollbar-track {
+          background: $color-very-light-beige; /* couleur de la piste */
+          border-radius: 10px;
+        }
+      
+        &::-webkit-scrollbar-thumb {
+          background: $color-medium-green; /* couleur du pouce */
+          border-radius: 10px;
+        }
+      
+        &::-webkit-scrollbar-thumb:hover {
+          background: $color-dark-green; /* couleur au survol */
+        }
+      
+        /* Scrollbar Firefox */
+        scrollbar-width: thin;
+        scrollbar-color: $color-medium-green $color-very-light-beige;
+    }
+
+    @media (max-width: 576px) {
+
+        .form-comptes{
+            padding: 20px 20px;
+        }
+
+        h1 {
+            font-size: 22px; /* Réduit la taille des titres h1 */
+            margin-bottom: 35px;
+          }
+
+        h2 {
+            font-size: 20px; /* Réduit la taille des titres h2 */
+            padding-bottom: 20px;
+          }
+    }
+
+}
+
+// ===============================
+// Création compte employé
+// ===============================
+
+.employee-management-section.container {
+    padding: 0px;
+  
+    h1 {
+      text-align: center;
+      margin-bottom: 35px;
+    }
+  
+    form {
+      background-color: $color-light-beige;
+      padding: 35px;
+      border-radius: 30px;
+      box-shadow: 0 4px 6px rgba(0,0,0,.1);
+      text-align: center;
+      margin-bottom: 35px;
+    }
+  
+    .form-fields {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+  
+      .form-field {
+        display: flex;
+        flex-direction: column;
+        text-align: left;
+      }
+
+      .btn { 
+        align-self: center; 
+        margin-top: 20px; 
+        min-width: 200px; 
+      }
+
+    }
+  
+    .btn {
+        background-color: $color-medium-green;
+        color: $color-light-beige;
+        border: none;
+        border-radius: 30px;
+        padding: 10px 20px;
+        font-family: $font-title;
+        font-size: $font-size-body;
+        font-weight: $weight-medium;
+        transition: background .3s ease, transform .3s ease;
+        box-shadow: 0 6px 8px rgba(74,122,63,.5);
+
+        &:hover {
+        background-color: $color-dark-green;
+        transform: scale(1.05);
+        box-shadow: 0 6px 8px rgba(74,122,63,.5);
+        }
+    }
+
+    label {
+        font-family: $font-body;
+        font-size: $font-size-body;
+        font-weight: $weight-regular;
+        color: $color-dark-green;
+        display: flex; align-items: center;
+        margin-bottom: 10px;
+      }
+
+
+
+    .form-control {
+        border-radius: 20px;
+        padding: 12px 20px;
+        font-weight: $weight-semibold;
+        font-size: $font-size-nav;
+        color: $color-dark-green;
+        background-color: $color-very-light-beige;
+        box-shadow: none;;
+        outline: none;
+        border: none;
+        
+        &::placeholder { 
+        color: #7a8a6f; 
+        }
+    }
+
+
+    @media (max-width: 576px) {
+        .btn {
+          font-size: $font-size-nav; /* Réduit la taille des boutons */
+          padding: 8px 16px; /* Ajuste le padding des boutons */
+        }
+
+        .form-control {
+            padding: 8px 15px;
+            font-size: 12px;
+        }
+
+        label {
+            font-size: $font-size-nav;
+        }
+
+        form {
+            padding: 20px 20px;
+        }
+
+        h1 {
+            font-size: 22px; /* Réduit la taille des titres h1 */
+            margin-bottom: 35px;
+          }
+
+        h2 {
+            font-size: 20px; /* Réduit la taille des titres h2 */
+            padding-bottom: 20px;
+          }
+    }
+}
+
+.valid-feedback,
+    .invalid-feedback {
+      font-size: 1.4rem; /* Ajuste la taille selon ton besoin */
+      margin-top: 10px !important;
+
+  }
+
+ /* États visuels: bordure légère + halo (optionnel fond doux) */
+ .employee-management-section.container .form-control.is-valid {
+  border-color: $color-medium-green!important; /* vert */
+  box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25) !important; /* ombre verte */
+}
+
+.employee-management-section.container .form-control.is-invalid {
+  border-color: #dc3545 !important; /* rouge */
+  box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important; /* ombre rouge */
+}
+
+/* Affichage des messages selon l’état (exactement comme dans auth) */
+.employee-management-section.container .form-group .form-control.is-valid ~ .valid-feedback {
+  display: block;
+  color: #4B8A47;
+}
+
+.employee-management-section.container .form-group .form-control.is-invalid ~ .invalid-feedback {
+  display: block;
+  color: #D64545;
+}
+
+/* Option: pas de glow au focus “neutre”, seulement en état */
+.employee-management-section.container .form-control:focus {
+  box-shadow: none;
+  outline: none;
+}
+
+/* Base (état neutre, ni .is-valid ni .is-invalid) */
+.employee-management-section.container .form-control {
+  border: none;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.10); /* ombre interne légère */
+  background-color: $color-very-light-beige;
+  outline: none;
+}
+
+/* Conserver l’inset au focus quand pas d’état */
+.employee-management-section.container
+  .form-control:not(.is-valid):not(.is-invalid):focus {
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.10);
+  outline: none;
+}
+

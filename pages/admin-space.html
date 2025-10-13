@@ -1,0 +1,96 @@
+<div class="hero-scene">
+    <div class="hero-scene-content">
+      <h1 class="big-title">Espace administrateur</h1>
+    </div>
+  </div>
+  
+  <div class="admin-content container">
+  <section class="dashboard-section container">
+    <h1>Dashboard statistiques</h1>
+    
+    <!-- Formulaire Dashboard -->
+    <form class="form-dashboard">
+      <div class="form-fields">
+        <div class="charts-container">
+          
+          <!-- Graph 1 : Nombre de covoiturage par jour -->
+          <div class="chart-card">
+            <h2>Nombre de covoiturage par jour</h2>
+            <canvas id="covoituragesChart"></canvas>
+          </div>
+          
+          <!-- Graph 2 : Crédits gagnés par jour -->
+          <div class="chart-card">
+            <h2>Crédits gagnés par jour</h2>
+            <canvas id="creditsChart"></canvas>
+          </div>
+        </div>
+  
+        <!-- Total crédits -->
+        <div class="total-credits">
+          <p><strong>Total crédits gagnés :</strong> 
+            <span id="totalCredits">XXXX</span>
+          </p>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <section class="accounts-section container">
+    <h1>Gestion comptes</h1>
+  
+    <form class="form-comptes">
+      <div class="form-fields">
+        <!-- Conteneur scrollable -->
+        <div class="table-wrapper">
+          <table class="accounts-table">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Rôle</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="accountsTableBody">
+              <!-- Le JS remplit ce tbody -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <section class="employee-management-section container">
+    <h1>Gestion employés</h1>
+  
+    <form id="employeeForm" class="validated-form">
+      <div class="form-fields">
+        <div class="form-group">
+          <input type="text" id="employeeName" class="form-control" placeholder="Nom complet" required>
+          <div class="invalid-feedback">Le nom est requis.</div>
+          <div class="valid-feedback">Nom valide.</div>
+        </div>
+    
+        <div class="form-group">
+          <input type="email" id="employeeEmail" class="form-control" placeholder="email@exemple.com" required>
+          <div class="invalid-feedback">Le mail n'est pas au bon format.</div>
+          <div class="valid-feedback">Email valide.</div>
+        </div>
+    
+        <div class="form-group">
+          <input type="password" id="employeePassword" class="form-control" placeholder="Mot de passe" required>
+          <div class="invalid-feedback">
+            8+ caractères, minuscule, majuscule, chiffre et spécial.
+          </div>
+          <div class="valid-feedback">Mot de passe valide.</div>
+        </div>
+    
+        <button type="submit" class="btn" disabled>Créer un employé</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+

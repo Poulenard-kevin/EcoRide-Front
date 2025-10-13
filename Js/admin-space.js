@@ -62,127 +62,184 @@ new Chart(document.getElementById("creditsChart"), {
 
 
 // ==========================
-// Données exemple utilisateurs
+// Utils persistance locale
 // ==========================
-const utilisateurs = [
+const LS_KEY_USERS = 'ecoride_utilisateurs';
+
+function loadUsers() {
+  try {
+    const raw = localStorage.getItem(LS_KEY_USERS);
+    if (raw) return JSON.parse(raw);
+  } catch (_) {}
+  // fallback: liste par défaut si rien en storage
+  return [
     { id: 1, nom: "Utilisateur 1", email: "user1@exemple.com", role: "Utilisateur", statut: "actif" },
-    { id: 2, nom: "Employé 1", email: "employe1@exemple.com", role: "Employé", statut: "actif" },
+    { id: 2, nom: "Employé 1",    email: "employe1@exemple.com", role: "Employé",   statut: "actif" },
     { id: 3, nom: "Utilisateur 2", email: "user2@exemple.com", role: "Utilisateur", statut: "suspendu" }
   ];
-  
-  // ==========================
-  // Rendu du tableau
-  // ==========================
-  function renderAccountsTable() {
-    const tbody = document.getElementById("accountsTableBody");
-    tbody.innerHTML = ""; // reset
-    
-    utilisateurs.forEach(user => {
-      const tr = document.createElement("tr");
-      
-      tr.innerHTML = `
-        <td>${user.nom}</td>
-        <td>${user.email}</td>
-        <td>${user.role}</td>
-        <td>${user.statut}</td>
-        <td>
-            <button class="btn-action ${user.statut === "actif" ? "btn-suspendre" : "btn-reactiver"}" data-id="${user.id}">
-            ${user.statut === "actif" ? "Suspendre" : "Réactiver"}
-            </button>
-        </td>
-        `;
-      
-      tbody.appendChild(tr);
-    });
-  
-    // Attacher event listeners
-    document.querySelectorAll(".btn-action").forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        const id = parseInt(e.target.getAttribute("data-id"));
-        toggleUserStatus(id);
-      });
-    });
-  }
-  
-  // ==========================
-  // Fonction suspendre/réactiver
-  // ==========================
-  function toggleUserStatus(id) {
-    const user = utilisateurs.find(u => u.id === id);
-    if (user) {
-      user.statut = user.statut === "actif" ? "suspendu" : "actif";
-      renderAccountsTable(); // rerender
-    }
-  }
-   
-  // ==========================
-  // Initialisation
-  // ==========================
-  renderAccountsTable();
+}
 
-  // ==========================
-  // Gestion employés
-  // ==========================
+function saveUsers(list) {
+  localStorage.setItem(LS_KEY_USERS, JSON.stringify(list));
+}
 
-  // ==========================
-// Validation REGEX simple (logs console + blocage submit)
+// Liste utilisée par l'app
+let utilisateurs = loadUsers();
+
+// ==========================
+// Rendu du tableau comptes
+// ==========================
+function renderAccountsTable() {
+  const tbody = document.getElementById("accountsTableBody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  utilisateurs.forEach(user => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${user.nom}</td>
+      <td>${user.email}</td>
+      <td>${user.role}</td>
+      <td>${user.statut}</td>
+      <td>
+        <button class="btn-action ${user.statut === "actif" ? "btn-suspendre" : "btn-reactiver"}" data-id="${user.id}">
+          ${user.statut === "actif" ? "Suspendre" : "Réactiver"}
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Attacher events
+  document.querySelectorAll(".btn-action").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const id = parseInt(e.currentTarget.getAttribute("data-id"), 10);
+      toggleUserStatus(id);
+    });
+  });
+}
+
+function toggleUserStatus(id) {
+  const user = utilisateurs.find(u => u.id === id);
+  if (user) {
+    user.statut = user.statut === "actif" ? "suspendu" : "actif";
+    saveUsers(utilisateurs);
+    renderAccountsTable();
+  }
+}
+
+// ==========================
+// Initial render
+// ==========================
+renderAccountsTable();
+
+
+// ==========================
+// Formulaire employés: validation + ajout + persistance
 // ==========================
 (function () {
   const form = document.getElementById('employeeForm');
-  if (!form) {
-    console.error('Form #employeeForm introuvable');
-    return;
-  }
+  if (!form) return;
 
-  const nameInput = document.getElementById('employeeName');
+  const nameInput  = document.getElementById('employeeName');
   const emailInput = document.getElementById('employeeEmail');
-  const passInput = document.getElementById('employeePassword');
-  const submitBtn = form.querySelector('button[type="submit"]');
+  const passInput  = document.getElementById('employeePassword');
+  const submitBtn  = form.querySelector('button[type="submit"]');
 
-  // Regex
-  const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]{2,}$/; // 2+ lettres, accents, espaces, tirets, apostrophes
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;  // email simple robuste
-  const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/; // 8+ chars, min, maj, chiffre, spécial
+  // Regex (version autorisant chiffres dans le nom)
+  const nameRegex  = /^[A-Za-zÀ-ÖØ-öø-ÿ0-9\s'-]{2,}$/; // ou version "doit commencer par lettre" si tu préfères
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const passRegex  = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
 
-  // Helpers
-  const isNameValid = v => nameRegex.test(v.trim());
-  const isEmailValid = v => emailRegex.test(v.trim());
-  const isPassValid = v => passRegex.test(v);
-
-  function validateAll() {
-    const nameOk = isNameValid(nameInput.value);
-    const emailOk = isEmailValid(emailInput.value);
-    const passOk = isPassValid(passInput.value);
-
-    console.clear();
-    console.log('— Validation REGEX —');
-    console.log('Nom      :', JSON.stringify(nameInput.value), '=>', nameOk ? 'OK' : 'NOK');
-    console.log('Email    :', JSON.stringify(emailInput.value), '=>', emailOk ? 'OK' : 'NOK');
-    console.log('Password :', passInput.value.replace(/./g, '*'), '=>', passOk ? 'OK' : 'NOK');
-
-    if (submitBtn) submitBtn.disabled = !(nameOk && emailOk && passOk);
-    return nameOk && emailOk && passOk;
+  function grp(el){ return el.closest('.form-group'); }
+  function showValid(el){
+    el.classList.remove('is-invalid'); el.classList.add('is-valid');
+    const g = grp(el);
+    g?.querySelector('.invalid-feedback') && (g.querySelector('.invalid-feedback').style.display = 'none');
+    g?.querySelector('.valid-feedback')   && (g.querySelector('.valid-feedback').style.display   = 'block');
+  }
+  function showInvalid(el, msg){
+    el.classList.remove('is-valid'); el.classList.add('is-invalid');
+    const g = grp(el);
+    if (g) {
+      const inv = g.querySelector('.invalid-feedback');
+      const val = g.querySelector('.valid-feedback');
+      if (inv) { if (msg) inv.textContent = msg; inv.style.display = 'block'; }
+      if (val) val.style.display = 'none';
+    }
+  }
+  function clearState(el){
+    el.classList.remove('is-valid','is-invalid');
+    const g = grp(el);
+    if (g) {
+      const inv = g.querySelector('.invalid-feedback');
+      const val = g.querySelector('.valid-feedback');
+      if (inv) inv.style.display = 'none';
+      if (val) val.style.display = 'none';
+    }
   }
 
-  [nameInput, emailInput, passInput].forEach(inp => {
-    inp.addEventListener('input', validateAll);
-    inp.addEventListener('blur', validateAll);
+  function validateField(el){
+    const v = el.value;
+    if (el === nameInput){
+      if (!v.trim()) return showInvalid(el,'Le nom est requis.');
+      if (!nameRegex.test(v.trim())) return showInvalid(el,'Le nom doit contenir au moins 2 caractères (lettres/chiffres).');
+      return showValid(el);
+    }
+    if (el === emailInput){
+      if (!v.trim()) return showInvalid(el,"L'email est requis.");
+      if (!emailRegex.test(v.trim())) return showInvalid(el,"Le mail n'est pas au bon format.");
+      return showValid(el);
+    }
+    if (el === passInput){
+      if (!v) return showInvalid(el,'Le mot de passe est requis.');
+      if (!passRegex.test(v)) return showInvalid(el,'8+ caractères, minuscule, majuscule, chiffre et spécial.');
+      return showValid(el);
+    }
+  }
+
+  function allValid(){
+    return [nameInput,emailInput,passInput].every(i => i.classList.contains('is-valid'));
+  }
+  function updateSubmitState(){
+    if (submitBtn) submitBtn.disabled = !allValid();
+  }
+
+  [nameInput,emailInput,passInput].forEach(el=>{
+    el.addEventListener('input', ()=>{ validateField(el); updateSubmitState(); });
+    el.addEventListener('blur',  ()=>{ validateField(el); updateSubmitState(); });
   });
 
-  form.addEventListener('submit', (e) => {
-    const ok = validateAll();
-    if (!ok) {
+  form.addEventListener('submit', (e)=>{
+    validateField(nameInput);
+    validateField(emailInput);
+    validateField(passInput);
+    if (!allValid()){
       e.preventDefault();
-      console.warn('Soumission bloquée: regex non validées');
       return;
     }
-    e.preventDefault(); // Retire cette ligne quand tu intégreras le backend
-    console.log('Soumission OK: regex validées');
-    alert(`Employé prêt à créer: ${nameInput.value.trim()} (${emailInput.value.trim()})`);
+
+    e.preventDefault(); // à enlever quand branché au backend
+
+    // Créer le nouvel employé
+    const newUser = {
+      id: (utilisateurs.length ? Math.max(...utilisateurs.map(u=>u.id)) + 1 : 1),
+      nom: nameInput.value.trim(),
+      email: emailInput.value.trim(),
+      role: "Employé",
+      statut: "actif"
+    };
+
+    // Ajouter + persister + rerender
+    utilisateurs.push(newUser);
+    saveUsers(utilisateurs);
+    renderAccountsTable();
+
+    // Reset UI
     form.reset();
-    validateAll(); // réévalue pour re-désactiver le bouton
+    [nameInput,emailInput,passInput].forEach(clearState);
+    updateSubmitState();
   });
 
-  // Etat initial
-  if (submitBtn) submitBtn.disabled = true;
+  updateSubmitState();
 })();

@@ -451,6 +451,18 @@
       font-size: 1.4rem; /* Ajuste la taille selon ton besoin */
       margin-top: 0px !important;
   }
+
+  .form-control.is-valid ~ .valid-feedback {
+    display: block;
+    color: #4B8A47;
+  }
+
+  .form-control.is-invalid ~ .invalid-feedback {
+    display: block;
+    color: #D64545;
+  }
+
+
 }
 
   /* Modal content scoped to auth */

@@ -292,7 +292,7 @@
     .form-fields {
       display: flex;
       flex-direction: column;
-      gap: 30px;
+      gap: 10px;
       margin-top: 20px;
   
       .form-field {
@@ -346,17 +346,12 @@
         font-size: $font-size-nav;
         color: $color-dark-green;
         background-color: $color-very-light-beige;
-        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        box-shadow: none;;
         outline: none;
-        transition: box-shadow 0.3s ease;
+        border: none;
         
         &::placeholder { 
         color: #7a8a6f; 
-        }
-
-        &:focus {
-        background-color: $color-very-light-beige;    /* ne change pas le fond */
-        box-shadow: 0 0 5px 2px $color-dark-green;   /* halo lumineux vert */
         }
     }
 
@@ -391,3 +386,54 @@
           }
     }
 }
+
+.valid-feedback,
+    .invalid-feedback {
+      font-size: 1.4rem; /* Ajuste la taille selon ton besoin */
+      margin-top: 10px !important;
+
+  }
+
+ /* États visuels: bordure légère + halo (optionnel fond doux) */
+ .employee-management-section.container .form-control.is-valid {
+  border-color: $color-medium-green!important; /* vert */
+  box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25) !important; /* ombre verte */
+}
+
+.employee-management-section.container .form-control.is-invalid {
+  border-color: #dc3545 !important; /* rouge */
+  box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important; /* ombre rouge */
+}
+
+/* Affichage des messages selon l’état (exactement comme dans auth) */
+.employee-management-section.container .form-group .form-control.is-valid ~ .valid-feedback {
+  display: block;
+  color: #4B8A47;
+}
+
+.employee-management-section.container .form-group .form-control.is-invalid ~ .invalid-feedback {
+  display: block;
+  color: #D64545;
+}
+
+/* Option: pas de glow au focus “neutre”, seulement en état */
+.employee-management-section.container .form-control:focus {
+  box-shadow: none;
+  outline: none;
+}
+
+/* Base (état neutre, ni .is-valid ni .is-invalid) */
+.employee-management-section.container .form-control {
+  border: none;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.10); /* ombre interne légère */
+  background-color: $color-very-light-beige;
+  outline: none;
+}
+
+/* Conserver l’inset au focus quand pas d’état */
+.employee-management-section.container
+  .form-control:not(.is-valid):not(.is-invalid):focus {
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.10);
+  outline: none;
+}
+

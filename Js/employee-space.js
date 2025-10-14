@@ -1,7 +1,8 @@
 // Ajoute ici ta fonction shortId
 function shortId(id) {
-  if (!id) return '';
-  return id.slice(0, 4);
+  if (id === null || id === undefined) return '';
+  const s = String(id); // convertit nombre → string
+  return s.slice(0, 4);
 }
 
 (function () {
@@ -47,6 +48,7 @@ function shortId(id) {
       }
       return {
         ...t,
+        id: (t.id !== undefined && t.id !== null) ? String(t.id) : crypto.randomUUID?.() || String(Date.now()),
         date,
         heureDepart,
         heureArrivee,
@@ -157,7 +159,7 @@ function shortId(id) {
       const dateFormatted = formatDateSimple(t.date || '—');
       const heureDepart = t.heureDepart || '—';
       const heureArrivee = t.heureArrivee || '—';
-      const idComplet = t.id || '';
+      const idComplet = (t.id !== undefined && t.id !== null) ? t.id : '';
       const idAffiche = shortId(idComplet);
       const statut = t.statut || 'non traité';
   

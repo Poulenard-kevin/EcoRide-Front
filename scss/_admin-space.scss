@@ -437,3 +437,75 @@
   outline: none;
 }
 
+/* =========================
+   Chart cards layout (final)
+   ========================= */
+
+/* Grille des cartes de graphes */
+.admin-content .dashboard-section .charts-container {
+  display: grid !important;
+  /* 2 colonnes tant qu'on peut caser 2 × 500px + gap, sinon 1 colonne */
+  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)) !important;
+  gap: 16px !important;
+  align-items: start;
+}
+
+/* Carte de graphique */
+.admin-content .dashboard-section .chart-card {
+  position: relative;
+  padding: 16px;
+  border-radius: 12px;
+  min-width: 500px;         /* correspond au minmax(500px, 1fr) */
+  box-sizing: border-box;
+  overflow: hidden;         /* rien ne déborde de la carte */
+}
+
+/* Titre: reste dans la carte, tronqué si trop long */
+.admin-content .dashboard-section .chart-card > h2 {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0 0 12px 0;
+}
+
+/* Wrapper qui contraint la hauteur */
+.admin-content .dashboard-section .chart-wrapper {
+  position: relative;
+  height: 320px;   /* ajuste 280–420 selon ton design */
+  min-height: 280px;
+  overflow: hidden; /* évite le “descend à l’infini” */
+}
+
+/* Canvas qui remplit le wrapper */
+.admin-content .dashboard-section .chart-wrapper canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Sécu mobile: force une colonne et permet à la carte de prendre toute la largeur */
+@media (max-width: 900px) {
+  .admin-content .dashboard-section .charts-container {
+    grid-template-columns: 1fr !important;
+  }
+  .admin-content .dashboard-section .chart-card {
+    min-width: 0;  /* autorise la carte à s’adapter à 100% en mobile */
+  }
+}
+
+/* Par défaut (desktop > 768px): pas de retour à la ligne */
+.admin-content .dashboard-section .chart-card > h2 {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0 0 12px 0;
+}
+
+/* ≤ 768px: autoriser le retour à la ligne */
+@media (max-width: 768px) {
+  .admin-content .dashboard-section .chart-card > h2 {
+    white-space: normal;     /* redevient multi-ligne */
+    overflow: visible;       /* enlève l’ellipsis si tu veux garder le texte entier */
+    text-overflow: clip;     /* pas de “…” en multi-ligne */
+  }
+}

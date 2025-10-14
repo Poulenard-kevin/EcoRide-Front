@@ -12,7 +12,7 @@ export const allRoutes = [
   new Route("/auth", "Connexion", "/pages/auth.html", "/Js/auth.js", "/scss/_auth.css"),
   new Route("/contact", "Contact", "/pages/contact.html","/JS/contact.js","/scss/contact.css"),
   new Route("/espace-employe", "Espace Employé", "/pages/employee-space.html","/Js/employee-space.js","/scss/employee-space.css"),
-  new Route("/espace-administrateur", "Espace administrateur", "/pages/admin-space.html","/jS/admin-space.js", "/scss/admin-space.css"),
+  new Route("/espace-administrateur", "Espace administrateur", "/pages/admin-space.html","/Js/admin-space.js","/scss/admin-space.css"),
 ];
 
 //Le titre s'affiche comme ceci : Route.titre - websitename

@@ -19,6 +19,30 @@ function toFRDash(d) {
   const yyyy = d.getFullYear();
   return `${dd}-${mm}-${yyyy}`; // JJ-MM-AAAA
 }
+
+const WEEKDAY_LABELS_FR = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+
+// Renvoie le lundi (00:00) de la semaine ISO du dateObj
+function getMonday(dateObj=new Date()) {
+  const d = new Date(dateObj);
+  d.setHours(0,0,0,0);
+  const day = (d.getDay() + 6) % 7; // 0 = lundi, 6 = dimanche
+  d.setDate(d.getDate() - day);
+  return d;
+}
+
+// Génère les 7 clés JJ-MM-AAAA du lundi au dimanche de la semaine de baseDate
+function weekKeysMonToSun(baseDate=new Date()) {
+  const monday = getMonday(baseDate);
+  const keys = [];
+  for (let i=0;i<7;i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    keys.push(toFRDash(d));
+  }
+  return keys;
+}
+
 window.toFRDash = toFRDash; // utile pour tester en console
 
 // Détecte si c'est un objet "course" (réservation) plutôt qu'un "trajet payé"
@@ -246,7 +270,8 @@ function updateAdminDashboard() {
     return new Date(ya,ma-1,da) - new Date(yb,mb-1,db);
   }).at(-1) : toFRDash(new Date());
 
-  const { labels, keys } = lastNDaysAround(maxDate, 7);
+  const keys = weekKeysMonToSun(new Date()); // semaine actuelle lun→dim
+  const labels = WEEKDAY_LABELS_FR.slice();  // ['lun.','mar.','mer.','jeu.','ven.','sam.','dim.']
 
   console.log('[upd] keys', keys);
   console.log('[upd] trajets', trajets.map(t => t.datePaiement));

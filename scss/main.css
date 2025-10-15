@@ -12186,6 +12186,11 @@ p {
   color: #1F4924; /* Couleur du texte au survol */
 }
 
+.nav-link:hover {
+  background-color: #F8F0E5; /* Couleur légèrement différente au survol */
+  color: #1F4924; /* Couleur du texte au survol */
+}
+
 button.nav-link.dropdown-toggle {
   color: #1F4924 !important; /* Couleur par défaut en vert foncé */
   font-family: "Poppins", sans-serif; /* Harmonisation avec le reste du site */

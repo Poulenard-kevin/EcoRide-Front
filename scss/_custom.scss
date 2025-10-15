@@ -264,6 +264,11 @@ $transition-default: color 0.3s ease, transform 0.3s ease;
     color: $color-dark-green; /* Couleur du texte au survol */
 }
 
+.nav-link:hover {
+  background-color: $color-very-light-beige; /* Couleur légèrement différente au survol */
+  color: $color-dark-green; /* Couleur du texte au survol */
+}
+
 button.nav-link.dropdown-toggle {
     color: $color-dark-green !important; /* Couleur par défaut en vert foncé */
     font-family: 'Poppins', sans-serif; /* Harmonisation avec le reste du site */

@@ -36,28 +36,47 @@ function normalizeToFRDash(anyDate) {
     return `${dd}-${mm}-${yyyy}`;
   }
   const s = String(anyDate).trim();
-  if (/^\d{2}-\d{2}-\d{4}$/.test(s)) return s;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { const [y,m,d]=s.split('-'); return `${d}-${m}-${y}`; }
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) { const [d,m,y]=s.split('/'); return `${d}-${m}-${y}`; }
-  const t = Date.parse(s);
-  if (!Number.isNaN(t)) return normalizeToFRDash(new Date(t));
+
+  if (/^\d{2}-\d{2}-\d{4}$/.test(s)) return s;                 // JJ-MM-AAAA
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { const [y,m,d]=s.split('-'); return `${d}-${m}-${y}`; } // ISO date-only
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) { const [d,m,y]=s.split('/'); return `${d}-${m}-${y}`; } // JJ/MM/AAAA
+
+  // Parser robuste en LOCAL, pas en UTC
+  const d = new Date(s);
+  if (!isNaN(d)) {
+    // neutraliser l’heure: setHours(0,0,0,0) au fuseau local
+    d.setHours(0,0,0,0);
+    return normalizeToFRDash(d);
+  }
   return null;
+}
+
+// Vrai si l’objet représente un trajet CONDUCTEUR payé (et non une réservation/passager)
+function isPaidDriverTrip(t) {
+  const statutRaw = (t?.statutPaiement ?? t?.status ?? '').toString().trim().toLowerCase();
+  const paid = ['payé','paye','payee','validé','valide','validee','terminé','termine','done','completed','confirme','confirmé','confirmée']
+    .some(s => statutRaw.includes(s));
+
+  const role = (t?.role ?? t?.type ?? '').toString().toLowerCase();
+
+  // ICI: on ajoute 'chauffeur' aux rôles reconnus comme conducteur
+  const isDriver = t?.isDriverRide === true
+    || role.includes('conducteur')
+    || role.includes('driver')
+    || role.includes('chauffeur');
+
+  return paid && isDriver;
 }
 
 // Map "course" -> "trajet payé" comptable par le dashboard
 function mapCourseToPaidTrip(course) {
-  const COMMISSION_FIXE = 2; // garde ta constante si déclarée ailleurs
-  // Choisir une date: on prend course.date si présent, sinon aujourd'hui
   const dateFR = normalizeToFRDash(course.date) || normalizeToFRDash(new Date());
-
-  // Prix chauffeur (en crédits): on prend 'prix' si numérique; sinon 0
   const prixChauffeurCredits = Number(course.prix ?? 0);
-
   return {
     id: course.id || course.detailId || crypto.randomUUID?.() || Date.now(),
-    datePaiement: dateFR,                   // JJ-MM-AAAA
+    datePaiement: dateFR,
     prixChauffeurCredits,
-    commissionEcoRide: COMMISSION_FIXE,     // ou calcule si règles spécifiques
+    commissionEcoRide: COMMISSION_FIXE,
     statutPaiement: 'payé'
   };
 }
@@ -101,12 +120,10 @@ function migrateAndNormalizeTrajets() {
   let changed = false;
 
   trajets = (Array.isArray(trajets) ? trajets : []).flatMap((t, idx) => {
-    // Si c'est une "course" (réservation), on la mappe en "trajet payé".
-    if (looksLikeCourse(t)) {
-      const mapped = mapCourseToPaidTrip(t);
-      changed = true;
-      return [mapped];
-    }
+    // Si c'est une "course" (réservation passager), on l'ignore pour ce dashboard
+  if (looksLikeCourse(t)) {
+    return []; // ne pas l’inclure dans la source des covoiturages
+  }
 
     // Sinon, on normalise un "trajet payé"
     const clone = { ...t };
@@ -153,7 +170,7 @@ function lastNDays(n = 7) {
   return { labels, keys };
 }
 
-// Agrège le nombre de trajets payés et les commissions par jour (JJ-MM-AAAA)
+// Agrège le nombre de trajets conducteurs payés et les commissions par jour (JJ-MM-AAAA)
 function aggregateByDay(trajetsList, dayKeys) {
   const setKeys = new Set(dayKeys);
   const counts = Object.fromEntries(dayKeys.map(k => [k, 0]));
@@ -165,22 +182,41 @@ function aggregateByDay(trajetsList, dayKeys) {
   trajetsList.forEach(t => {
     if (!t) return;
 
-    const statutRaw = (t.statutPaiement ?? t.status ?? '').toString().trim().toLowerCase();
-    const ok = ['payé', 'paye', 'payee', 'valide', 'validé', 'validee', 'terminé', 'termine', 'done', 'completed']
-      .some(s => statutRaw.includes(s));
+    // Calculer la date normalisée d'abord
     const d = normalizeToFRDash(t.datePaiement ?? t.date ?? t.dateReservation ?? t.dateTrajet);
 
-    // Log de diagnostic centré sur ce qu'on teste
-    console.log('[agg] test', { d, statutRaw, ok, inRange: d ? setKeys.has(d) : false });
+    // Log utile
+    const inRange = d ? setKeys.has(d) : false;
+    console.log('[agg] test', { d, statutRaw: (t?.statutPaiement ?? t?.status ?? ''), okDriverPaid: isPaidDriverTrip(t), inRange });
 
-    if (!ok) return;
-    if (!d || !setKeys.has(d)) return;
+    // Filtrer: uniquement trajets CONDUCTEUR payés, avec date dans la fenêtre
+    if (!isPaidDriverTrip(t)) return;
+    if (!d || !inRange) return;
 
     counts[d] += 1;
     commissions[d] += Number(t.commissionEcoRide ?? COMMISSION_FIXE ?? 0);
   });
 
+  const missingInRange = trajetsList
+    .map(t => normalizeToFRDash(t?.datePaiement ?? t?.date ?? t?.dateReservation ?? t?.dateTrajet))
+    .filter(d => d && !setKeys.has(d));
+  console.log('[agg] dates hors fenêtre 7j', missingInRange);
+
   return { counts, commissions };
+}
+
+function lastNDaysAround(maxDateStr, n=7) {
+  const [dd,mm,yyyy] = maxDateStr.split('-').map(Number);
+  const base = new Date(yyyy, mm-1, dd);
+  const labels = [], keys = [];
+  const fmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' });
+  for (let i=n-1;i>=0;i--) {
+    const d = new Date(base);
+    d.setDate(base.getDate() - i);
+    labels.push(fmt.format(d));
+    keys.push(toFRDash(d));
+  }
+  return { labels, keys };
 }
 
 // Instances Chart.js globales
@@ -203,8 +239,15 @@ function updateAdminDashboard() {
     console.error('[upd] Canvas introuvable (IDs)');
     return;
   }
+  const allDates = trajets.map(t => normalizeToFRDash(t.datePaiement)).filter(Boolean);
+  const maxDate = allDates.length ? allDates.sort((a,b)=>{
+    const [da,ma,ya]=a.split('-').map(Number);
+    const [db,mb,yb]=b.split('-').map(Number);
+    return new Date(ya,ma-1,da) - new Date(yb,mb-1,db);
+  }).at(-1) : toFRDash(new Date());
 
-  const { labels, keys } = lastNDays(7);
+  const { labels, keys } = lastNDaysAround(maxDate, 7);
+
   console.log('[upd] keys', keys);
   console.log('[upd] trajets', trajets.map(t => t.datePaiement));
   console.log('[upd] trajets raw', trajets);
@@ -215,24 +258,20 @@ function updateAdminDashboard() {
   const covoituragesData   = keys.map(k => counts[k]);
   const creditsEcoRideData = keys.map(k => commissions[k]);
 
+  
+
   // Totaux COVOITURAGES
   const totalCovoits7J = keys.reduce((sum, k) => sum + Number(counts[k] ?? 0), 0);
 
   const totalCovoitsAll = trajets.reduce((sum, t) => {
-    const statutRaw = (t.statutPaiement ?? t.status ?? '').toString().trim().toLowerCase();
-    const ok = ['payé','paye','payee','valide','validé','validee','terminé','termine','done','completed']
-      .some(s => statutRaw.includes(s));
-    if (!ok) return sum;
-    return sum + 1; // chaque trajet payé = 1 covoiturage
+    if (!isPaidDriverTrip(t)) return sum;
+    return sum + 1;
   }, 0);
 
   // Totaux
   const totalCredits7J = keys.reduce((sum, k) => sum + Number(commissions[k] ?? 0), 0);
   const totalCreditsAll = trajets.reduce((sum, t) => {
-    const statutRaw = (t.statutPaiement ?? t.status ?? '').toString().trim().toLowerCase();
-    const ok = ['payé','paye','payee','valide','validé','validee','terminé','termine','done','completed']
-      .some(s => statutRaw.includes(s));
-    if (!ok) return sum;
+    if (!isPaidDriverTrip(t)) return sum;
     return sum + Number(t.commissionEcoRide ?? COMMISSION_FIXE ?? 0);
   }, 0);
 
@@ -259,7 +298,7 @@ function updateAdminDashboard() {
 const commonOptions = {
   responsive: true,
   maintainAspectRatio: false,
-  layout: { padding: { top: 18, right: 6, bottom: 6, left: 6 } },
+  layout: { padding: { top: 22, right: 6, bottom: 6, left: 6 } },
   plugins: {
     legend: {
       position: 'bottom',
@@ -331,10 +370,13 @@ window.updateAdminDashboard = updateAdminDashboard;
 // Fonction utilitaire pour ajouter un trajet payé (date JJ-MM-AAAA)
 function ajouterTrajetPaye({ dateFR, prixChauffeurCredits }) {
   const newId = trajets.length ? Math.max(...trajets.map(t => t.id)) + 1 : 1;
+  const dateJJMMYYYY = normalizeToFRDash(dateFR) || toFRDash(new Date()); // normalisé sûr
   const t = {
     id: newId,
-    datePaiement: dateFR || toFRDash(new Date()), // JJ-MM-AAAA
-    prixChauffeurCredits: Number(prixChauffeurCredits),
+    isDriverRide: true,
+    statutPaiement: 'payé',
+    datePaiement: dateJJMMYYYY,
+    prixChauffeurCredits: Number(prixChauffeurCredits ?? 0),
     commissionEcoRide: COMMISSION_FIXE,
     statutPaiement: "payé"
   };

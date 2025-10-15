@@ -1,5 +1,10 @@
 console.log('admin-space.js chargé');
 
+// Enregistrer le plugin DataLabels globalement dès que Chart est dispo
+if (typeof Chart !== 'undefined' && Chart?.register && typeof ChartDataLabels !== 'undefined') {
+  Chart.register(ChartDataLabels);
+}
+
 // ==========================
 // Dashboard dynamique relié aux trajets payés (dates JJ-MM-AAAA)
 // ==========================
@@ -15,6 +20,47 @@ function toFRDash(d) {
   return `${dd}-${mm}-${yyyy}`; // JJ-MM-AAAA
 }
 window.toFRDash = toFRDash; // utile pour tester en console
+
+// Détecte si c'est un objet "course" (réservation) plutôt qu'un "trajet payé"
+function looksLikeCourse(o) {
+  return o && (o.depart || o.arrivee || o.heureDepart || o.heureArrivee || o.role || o.status);
+}
+
+// Normalise n'importe quelle date (ISO, JJ/MM/AAAA, Date) vers JJ-MM-AAAA
+function normalizeToFRDash(anyDate) {
+  if (!anyDate) return null;
+  if (anyDate instanceof Date) {
+    const dd = String(anyDate.getDate()).padStart(2,'0');
+    const mm = String(anyDate.getMonth()+1).padStart(2,'0');
+    const yyyy = anyDate.getFullYear();
+    return `${dd}-${mm}-${yyyy}`;
+  }
+  const s = String(anyDate).trim();
+  if (/^\d{2}-\d{2}-\d{4}$/.test(s)) return s;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { const [y,m,d]=s.split('-'); return `${d}-${m}-${y}`; }
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) { const [d,m,y]=s.split('/'); return `${d}-${m}-${y}`; }
+  const t = Date.parse(s);
+  if (!Number.isNaN(t)) return normalizeToFRDash(new Date(t));
+  return null;
+}
+
+// Map "course" -> "trajet payé" comptable par le dashboard
+function mapCourseToPaidTrip(course) {
+  const COMMISSION_FIXE = 2; // garde ta constante si déclarée ailleurs
+  // Choisir une date: on prend course.date si présent, sinon aujourd'hui
+  const dateFR = normalizeToFRDash(course.date) || normalizeToFRDash(new Date());
+
+  // Prix chauffeur (en crédits): on prend 'prix' si numérique; sinon 0
+  const prixChauffeurCredits = Number(course.prix ?? 0);
+
+  return {
+    id: course.id || course.detailId || crypto.randomUUID?.() || Date.now(),
+    datePaiement: dateFR,                   // JJ-MM-AAAA
+    prixChauffeurCredits,
+    commissionEcoRide: COMMISSION_FIXE,     // ou calcule si règles spécifiques
+    statutPaiement: 'payé'
+  };
+}
 
 function loadTrajets() {
   try {
@@ -38,10 +84,13 @@ function loadTrajets() {
     { id: 6, datePaiement: d(0), prixChauffeurCredits: 30, commissionEcoRide: COMMISSION_FIXE, statutPaiement: "payé" },
   ];
   localStorage.setItem(LS_KEY_TRAJETS, JSON.stringify(seed));
+  window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
   return seed;
 }
+
 function saveTrajets(list) {
   localStorage.setItem(LS_KEY_TRAJETS, JSON.stringify(list));
+  window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
 }
 
 // Source de vérité des trajets
@@ -50,45 +99,41 @@ let trajets = loadTrajets();
 // Migration/normalisation des trajets (champ datePaiement en JJ-MM-AAAA, etc.)
 function migrateAndNormalizeTrajets() {
   let changed = false;
-  trajets = (Array.isArray(trajets) ? trajets : []).map((t, idx) => {
+
+  trajets = (Array.isArray(trajets) ? trajets : []).flatMap((t, idx) => {
+    // Si c'est une "course" (réservation), on la mappe en "trajet payé".
+    if (looksLikeCourse(t)) {
+      const mapped = mapCourseToPaidTrip(t);
+      changed = true;
+      return [mapped];
+    }
+
+    // Sinon, on normalise un "trajet payé"
     const clone = { ...t };
 
-    // Id manquant
     if (clone.id == null) { clone.id = idx + 1; changed = true; }
 
-    // Statut par défaut
+    // Trouver une date candidate
+    let rawDate = clone.datePaiement ?? clone.date ?? clone.dateReservation ?? clone.dateTrajet ?? null;
+    let fr = normalizeToFRDash(rawDate) || normalizeToFRDash(new Date());
+    if (fr !== clone.datePaiement) changed = true;
+    clone.datePaiement = fr;
+
+    // Nombres
+    if (clone.prixChauffeurCredits == null && clone.prix != null) {
+      clone.prixChauffeurCredits = Number(clone.prix); changed = true;
+    }
+    clone.prixChauffeurCredits = Number(clone.prixChauffeurCredits ?? 0);
+    clone.commissionEcoRide = Number(clone.commissionEcoRide ?? COMMISSION_FIXE);
+
+    // Statut
     if (!clone.statutPaiement) { clone.statutPaiement = 'payé'; changed = true; }
 
-    // Normaliser la date
-    let v = clone.datePaiement;
-    if (!v && clone.date) v = clone.date; // fallback ancien champ
-    v = v ? String(v) : '';
-
-    if (!v) {
-      v = toFRDash(new Date());
-      changed = true;
-    } else if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
-      const [y, m, d] = v.split('-');
-      v = `${d}-${m}-${y}`;
-      changed = true;
-    } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(v)) {
-      const [d, m, y] = v.split('/');
-      v = `${d}-${m}-${y}`;
-      changed = true;
-    }
-    clone.datePaiement = v;
-
-    // Commission par défaut
-    if (clone.commissionEcoRide == null) {
-      clone.commissionEcoRide = COMMISSION_FIXE;
-      changed = true;
-    }
-
-    return clone;
+    return [clone];
   });
 
   if (changed) {
-    console.log('[migrate] trajets normalisés et sauvegardés');
+    console.log('[migrate] trajets convertis/normalisés → save');
     saveTrajets(trajets);
   }
 }
@@ -114,13 +159,27 @@ function aggregateByDay(trajetsList, dayKeys) {
   const counts = Object.fromEntries(dayKeys.map(k => [k, 0]));
   const commissions = Object.fromEntries(dayKeys.map(k => [k, 0]));
 
+  console.log('[agg] init keys', dayKeys);
+  console.log('[agg] init counts keys', Object.keys(counts));
+
   trajetsList.forEach(t => {
-    if (!t || t.statutPaiement !== 'payé') return;
-    const d = String(t.datePaiement || '');
-    if (!setKeys.has(d)) return;
+    if (!t) return;
+
+    const statutRaw = (t.statutPaiement ?? t.status ?? '').toString().trim().toLowerCase();
+    const ok = ['payé', 'paye', 'payee', 'valide', 'validé', 'validee', 'terminé', 'termine', 'done', 'completed']
+      .some(s => statutRaw.includes(s));
+    const d = normalizeToFRDash(t.datePaiement ?? t.date ?? t.dateReservation ?? t.dateTrajet);
+
+    // Log de diagnostic centré sur ce qu'on teste
+    console.log('[agg] test', { d, statutRaw, ok, inRange: d ? setKeys.has(d) : false });
+
+    if (!ok) return;
+    if (!d || !setKeys.has(d)) return;
+
     counts[d] += 1;
-    commissions[d] += Number(t.commissionEcoRide ?? COMMISSION_FIXE);
+    commissions[d] += Number(t.commissionEcoRide ?? COMMISSION_FIXE ?? 0);
   });
+
   return { counts, commissions };
 }
 
@@ -148,36 +207,120 @@ function updateAdminDashboard() {
   const { labels, keys } = lastNDays(7);
   console.log('[upd] keys', keys);
   console.log('[upd] trajets', trajets.map(t => t.datePaiement));
+  console.log('[upd] trajets raw', trajets);
+
   const { counts, commissions } = aggregateByDay(trajets, keys);
   console.log('[upd] counts', counts, 'commissions', commissions);
 
   const covoituragesData   = keys.map(k => counts[k]);
   const creditsEcoRideData = keys.map(k => commissions[k]);
 
-  const totalCreditsDepuisLancement = trajets
-    .filter(t => t.statutPaiement === 'payé')
-    .reduce((sum, t) => sum + Number(t.commissionEcoRide ?? COMMISSION_FIXE), 0);
-  const totalCreditsNode = document.getElementById('totalCredits');
-  if (totalCreditsNode) totalCreditsNode.textContent = totalCreditsDepuisLancement;
+  // Totaux COVOITURAGES
+  const totalCovoits7J = keys.reduce((sum, k) => sum + Number(counts[k] ?? 0), 0);
 
+  const totalCovoitsAll = trajets.reduce((sum, t) => {
+    const statutRaw = (t.statutPaiement ?? t.status ?? '').toString().trim().toLowerCase();
+    const ok = ['payé','paye','payee','valide','validé','validee','terminé','termine','done','completed']
+      .some(s => statutRaw.includes(s));
+    if (!ok) return sum;
+    return sum + 1; // chaque trajet payé = 1 covoiturage
+  }, 0);
+
+  // Totaux
+  const totalCredits7J = keys.reduce((sum, k) => sum + Number(commissions[k] ?? 0), 0);
+  const totalCreditsAll = trajets.reduce((sum, t) => {
+    const statutRaw = (t.statutPaiement ?? t.status ?? '').toString().trim().toLowerCase();
+    const ok = ['payé','paye','payee','valide','validé','validee','terminé','termine','done','completed']
+      .some(s => statutRaw.includes(s));
+    if (!ok) return sum;
+    return sum + Number(t.commissionEcoRide ?? COMMISSION_FIXE ?? 0);
+  }, 0);
+
+  // Injection DOM
+  const total7Node = document.getElementById('totalCredits7J');
+  if (total7Node) total7Node.textContent = totalCredits7J;
+  const totalAllNode = document.getElementById('totalCreditsAll');
+  if (totalAllNode) totalAllNode.textContent = totalCreditsAll;
+
+  // Injection DOM (covoiturages)
+  const cov7El = document.getElementById('totalCovoits7J');
+  if (cov7El) cov7El.textContent = String(totalCovoits7J);
+
+  const covAllEl = document.getElementById('totalCovoitsAll');
+  if (covAllEl) covAllEl.textContent = String(totalCovoitsAll);
+  
+  // Détruire les instances existantes
   if (covoituragesChartInstance) covoituragesChartInstance.destroy();
   if (creditsChartInstance) creditsChartInstance.destroy();
 
-  const commonOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
-  };
+  
+  const isNarrow = window.matchMedia('(max-width: 420px)').matches;
 
+const commonOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  layout: { padding: { top: 18, right: 6, bottom: 6, left: 6 } },
+  plugins: {
+    legend: {
+      position: 'bottom',
+      labels: { font: { size: isNarrow ? 11 : 12 }, padding: isNarrow ? 8 : 12, boxWidth: 10, boxHeight: 10 }
+    },
+    datalabels: {
+      anchor: 'end',
+      align: 'top',
+      offset: isNarrow ? 4 : 6,
+      font: { size: isNarrow ? 10 : 11 },
+      formatter: v => (v > 0 ? Math.round(v) : ''),
+      clamp: true
+    }
+  },
+  // Réduit la largeur des barres pour caser 7 labels
+  datasets: {
+    bar: {
+      categoryPercentage: isNarrow ? 0.8 : 0.9, // largeur de la catégorie
+      barPercentage:      isNarrow ? 0.6 : 0.7  // largeur de la barre dans la catégorie
+    }
+  },
+  scales: {
+    x: {
+      ticks: {
+        autoSkip: false,            // IMPORTANT: n’auto-skippe plus
+        maxRotation: 0,
+        minRotation: 0,
+        font: { size: isNarrow ? 10 : 12 },
+        padding: 0                 // compacter l’espace des labels
+      },
+      grid: { drawBorder: false, display: false }
+    },
+    y: {
+      beginAtZero: true,
+      ticks: { precision: 0, font: { size: isNarrow ? 10 : 12 } },
+      grid: { drawBorder: false }
+    }
+  }
+};
+
+  // Graphique covoiturages
   covoituragesChartInstance = new Chart(ctx1, {
     type: 'bar',
-    data: { labels, datasets: [{ label: 'Covoiturages (trajets payés)', data: covoituragesData, backgroundColor: '#4B8A47' }] },
+    data: {
+      labels,
+      datasets: [
+        { label: 'Covoiturages (trajets payés)', data: covoituragesData, backgroundColor: '#4B8A47' }
+      ]
+    },
     options: commonOptions
   });
 
+  // Graphique crédits
   creditsChartInstance = new Chart(ctx2, {
     type: 'bar',
-    data: { labels, datasets: [{ label: 'Crédits EcoRide (commission)', data: creditsEcoRideData, backgroundColor: '#CACFAA' }] },
+    data: {
+      labels,
+      datasets: [
+        { label: 'Crédits EcoRide (commission)', data: creditsEcoRideData, backgroundColor: '#CACFAA' }
+      ]
+    },
     options: commonOptions
   });
 
@@ -212,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateAdminDashboard();
 });
 
-// Support SPA: si la vue admin est injectée après l’exécution du script
+// Support SPA: si la vue admin est injectée après l'exécution du script
 (function ensureAdminChartsRendered() {
   const hasCanvases = () =>
     document.getElementById('covoituragesChart') &&
@@ -225,7 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // 2) Sinon, observe les mutations du DOM jusqu’à ce que les canvases apparaissent
+  // 2) Sinon, observe les mutations du DOM jusqu'à ce que les canvases apparaissent
   const obs = new MutationObserver(() => {
     if (hasCanvases()) {
       console.log('[spa] Canvases détectés via MutationObserver, rendu');
@@ -236,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   obs.observe(document.body, { childList: true, subtree: true });
 
-  // 3) Fallback: retentatives temporisées (au cas où l’observer serait bloqué)
+  // 3) Fallback: retentatives temporisées (au cas où l'observer serait bloqué)
   let attempts = 0;
   const maxAttempts = 10;
   const tick = setInterval(() => {
@@ -250,6 +393,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, 200);
 })();
+
+window.addEventListener('focus', () => {
+  console.log('[focus] refresh dashboard');
+  trajets = loadTrajets();
+  migrateAndNormalizeTrajets();
+  updateAdminDashboard();
+});
+
+window.addEventListener('ecoride:trajet-updated', () => {
+  trajets = loadTrajets();
+  migrateAndNormalizeTrajets();
+  updateAdminDashboard();
+});
+
 
 // ==========================
 // Utils persistance locale (comptes)
@@ -271,6 +428,7 @@ function loadUsers() {
 
 function saveUsers(list) {
   localStorage.setItem(LS_KEY_USERS, JSON.stringify(list));
+  window.dispatchEvent(new CustomEvent('ecoride:users-updated'));
 }
 
 // Liste utilisée par l'app

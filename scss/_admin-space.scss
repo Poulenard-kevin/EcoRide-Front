@@ -67,7 +67,7 @@
       min-width: 300px;
     }
     
-    .total-credits {
+    .totaux-credits, .totaux-covoits {
       margin-top: 20px;
       font-size: 1.2em;
       text-align: center;
@@ -77,39 +77,10 @@
 
     @media (max-width: 990px) {
 
-        h2 {
+        h3 {
             font-size: 20px; /* Réduit la taille des titres h2 */
             padding-bottom: 20px;
           }
-
-        .charts-container {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch; /* scroll fluide iOS */
-        
-            /* Scrollbar WebKit */
-            &::-webkit-scrollbar {
-                height: 8px; /* hauteur scrollbar horizontale */
-            }
-            
-            &::-webkit-scrollbar-track {
-                background: $color-very-light-beige; /* piste */
-                border-radius: 10px;
-            }
-            
-            &::-webkit-scrollbar-thumb {
-                background: $color-medium-green; /* pouce */
-                border-radius: 10px;
-            }
-            
-            &::-webkit-scrollbar-thumb:hover {
-                background: $color-dark-green; /* hover */
-            }
-            
-            /* Scrollbar Firefox */
-            scrollbar-width: thin;
-            scrollbar-color: $color-medium-green $color-very-light-beige;
-        }
-
     }
 
     @media (max-width: 576px) {
@@ -128,6 +99,49 @@
             padding-bottom: 20px;
           }
     }
+  
+    :root{
+  --card-gap: 24px;          /* écart entre cartes */
+  --card-padding: 20px;      /* padding interne de la carte */
+  --title-sp: 16px;          /* espace sous le h2 */
+  --totaux-sp: 12px;         /* espace au-dessus de la ligne des totaux */
+}
+
+.cards-grid{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--card-gap);
+}
+
+.card.chart-card{
+  background:#fff;
+  border-radius:12px;
+  padding:var(--card-padding);
+}
+
+.card.chart-card h2{
+  margin:0 0 var(--title-sp) 0;
+  white-space: nowrap;
+}
+
+.card.chart-card .chart-wrap{
+  height: 260px;             /* fixe la hauteur pour éviter les décalages */
+}
+
+.card.chart-card .totaux-row{
+  margin-top: var(--totaux-sp);
+  display:flex;
+  justify-content:center;
+  gap:16px;
+  font-size:12px;
+  opacity:.85;
+}
+
+/* Assurez-vous que les deux cartes partagent les mêmes classes */
+.card.chart-card.covoits .totaux-row,
+.card.chart-card.credits .totaux-row{
+  margin-top: var(--totaux-sp);
+}
     
 
 }
@@ -444,8 +458,8 @@
 /* Grille des cartes de graphes */
 .admin-content .dashboard-section .charts-container {
   display: grid !important;
-  /* 2 colonnes tant qu'on peut caser 2 × 500px + gap, sinon 1 colonne */
-  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)) !important;
+  /* 2 colonnes tant qu'on peut caser 2 × 400px + gap, sinon 1 colonne */
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)) !important;
   gap: 16px !important;
   align-items: start;
 }
@@ -455,18 +469,11 @@
   position: relative;
   padding: 16px;
   border-radius: 12px;
-  min-width: 500px;         /* correspond au minmax(500px, 1fr) */
+  min-width: 400px;         /* correspond au minmax(400px, 1fr) */
   box-sizing: border-box;
   overflow: hidden;         /* rien ne déborde de la carte */
 }
 
-/* Titre: reste dans la carte, tronqué si trop long */
-.admin-content .dashboard-section .chart-card > h2 {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin: 0 0 12px 0;
-}
 
 /* Wrapper qui contraint la hauteur */
 .admin-content .dashboard-section .chart-wrapper {
@@ -493,19 +500,64 @@
   }
 }
 
-/* Par défaut (desktop > 768px): pas de retour à la ligne */
-.admin-content .dashboard-section .chart-card > h2 {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin: 0 0 12px 0;
+.charts-container {
+  display: grid;
+  gap: 16px;
 }
 
-/* ≤ 768px: autoriser le retour à la ligne */
-@media (max-width: 768px) {
-  .admin-content .dashboard-section .chart-card > h2 {
-    white-space: normal;     /* redevient multi-ligne */
-    overflow: visible;       /* enlève l’ellipsis si tu veux garder le texte entier */
-    text-overflow: clip;     /* pas de “…” en multi-ligne */
+/* La carte en colonne */
+.chart-card {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Le header ne place plus les totaux à droite */
+.chart-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  justify-content: flex-start;  /* au lieu de space-between */
+}
+
+/* Important: ordre visuel des éléments */
+.chart-card-header { order: 0; }
+.chart-wrapper     { order: 1; flex: 1 1 auto; }  /* le canvas s'étire */
+.totaux-inline     { order: 2; }                  /* passe après le canvas */
+
+/* Totaux centrés */
+.totaux-inline {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  font-size: 14px;
+  color: $color-medium-green;
+  margin-top: 10px;
+  flex: 0 0 auto;
+}
+.totaux-inline strong { color: $color-dark-green; }
+
+.chart-card { display: flex; flex-direction: column; }
+.chart-wrapper { flex: 1 1 auto; }
+.totaux-inline {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+/* Sur grands écrans, passe en 1 ou 2 colonnes selon ton besoin */
+@media (min-width: 992px) {
+  .charts-container {
+    grid-template-columns: 1fr; /* mets 1fr 1fr pour deux cartes côte à côte */
   }
 }
+
+/* Chart.js */
+canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+

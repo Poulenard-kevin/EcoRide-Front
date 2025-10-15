@@ -18,6 +18,7 @@ function cancelReservationById(reservationId) {
   const beforeLen = trajets.length;
   trajets = trajets.filter(t => t.id !== reservationId);
   localStorage.setItem('ecoride_trajets', JSON.stringify(trajets));
+  window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
 
   if (trajets.length === beforeLen) {
     console.warn("Aucune réservation trouvée à supprimer (cancelReservationById)");
@@ -30,6 +31,7 @@ function cancelReservationById(reservationId) {
     if (me && me.pseudo) userPseudo = me.pseudo;
   } catch(e) {}
 
+  // 2) Mettre à jour nouveauxTrajets (retirer le passager + recalcul places)
   let nouveaux = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
   nouveaux = nouveaux.map(covo => {
     covo.passagers = (Array.isArray(covo.passagers) ? covo.passagers : [])
@@ -57,6 +59,7 @@ function cancelReservationById(reservationId) {
   });
 
   localStorage.setItem('nouveauxTrajets', JSON.stringify(nouveaux));
+  window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
 
   // 3) Notifier / events
   window.dispatchEvent(new CustomEvent('ecoride:reservationCancelled', { detail: { id: reservationId } }));
@@ -184,6 +187,7 @@ document.addEventListener("pageContentLoaded", () => {
   const trajetsSauvegardes = JSON.parse(localStorage.getItem("nouveauxTrajets") || "[]");
 
   const trajetsMock = [
+    // ... mocks identiques à ta version (inchangé pour respecter ta demande)
     {
       id: 'trajet1',
       date: 'Vendredi 16 septembre',
@@ -526,17 +530,19 @@ function reserverPlace(trajet, seats = 1) {
     placesReservees: seats
   };
 
+  // Sauvegarder dans ecoride_trajets (utilisateur)
   let trajetsUtilisateur = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
   trajetsUtilisateur.push(reservation);
   localStorage.setItem('ecoride_trajets', JSON.stringify(trajetsUtilisateur));
+  window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
+
+  // Notifier les autres vues (Admin, Espace employé, etc.)
+  window.dispatchEvent(new CustomEvent('ecoride:reservationAdded', { detail: reservation }));
+  window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
  
+  // Mettre à jour nouveauxTrajets (ajout passager + recalcul places)
   let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
   const trajetIndex = trajetsCovoiturage.findIndex(t => t.id === trajet.id);
-
-  // Dispatch d'un événement pour informer le module trajets
-  window.dispatchEvent(new CustomEvent('ecoride:reservationAdded', { detail: reservation }));
-  // Optionnel : événement générique pour forcer reload
-  window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
 
   let userPseudo = "Moi";
   try {
@@ -547,35 +553,38 @@ function reserverPlace(trajet, seats = 1) {
   if (trajetIndex !== -1) {
     const target = trajetsCovoiturage[trajetIndex];
     target.passagers = Array.isArray(target.passagers) ? target.passagers : [];
-  
+
     const alreadyIndex = target.passagers.findIndex(p => p.pseudo === userPseudo);
     if (alreadyIndex !== -1) {
       alert("⚠️ Vous avez déjà une réservation sur ce trajet.");
       return;
     }
-  
+
     target.passagers.push({ pseudo: userPseudo, places: seats });
-  
+
     const vehiclePlaces = target.vehicle?.places ?? target.vehicule?.places ?? null;
     target.capacity = (typeof target.capacity === 'number')
       ? target.capacity
       : (vehiclePlaces !== null ? Number(vehiclePlaces) : (typeof target.places === 'number' ? Number(target.places) : 4));
-  
+
     const totalOccupied = target.passagers.reduce((sum, p) => sum + (p.places || 1), 0);
-  
+
     target.places = Math.max(0, Number(target.capacity) - totalOccupied);
     trajetsCovoiturage[trajetIndex] = target;
+
     localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
-  
+    window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+
+    // refléter localement pour l'affichage en cours
     trajet.passagers = target.passagers;
     trajet.capacity = target.capacity;
     trajet.places = target.places;
   }
 
-  try { renderPlaces(); } catch(e) {}
+  try { renderPlaces(trajet); } catch(e) {}
 
   alert(`✅ Réservation confirmée : ${seats} place${seats > 1 ? 's' : ''}. Vous pouvez voir vos trajets dans votre espace utilisateur.`);
 
-  // ← Ici, redirection vers espace utilisateur avec onglet trajets ouvert
+  // Redirection vers espace utilisateur avec onglet trajets ouvert
   window.location.href = "/espace-utilisateur?tab=trajets";
 }

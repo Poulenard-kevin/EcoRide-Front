@@ -119,14 +119,10 @@ function openRatingModal({ reservationId, onSubmit }) {
     // Si onSubmit est fourni, on l'appelle et on attend sa résolution (si async)
     try {
       if (typeof onSubmit === 'function') {
-        // onSubmit peut retourner une Promise : on l'attend pour s'assurer que les données
-        // sont bien persistées (ex: localStorage) avant d'envoyer l'événement.
         await Promise.resolve(onSubmit({ rating: currentRating, review, flagged: false }));
       }
     } catch (err) {
-      // Si l'onSubmit échoue, on peut afficher une erreur et sortir (évite d'envoyer un avis non sauvegardé)
       console.error('Erreur dans onSubmit:', err);
-      // Optionnel : ré-ouvrir le modal ou prévenir l'utilisateur
       return;
     }
   
@@ -227,11 +223,9 @@ export function initTrajets() {
   });
 
   // ================== DEV ONLY: Bouton pour vider l'historique ==================
-  // Affiché uniquement en local (localhost ou 127.0.0.1)
   if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
     const histoContainer = document.querySelector('.trajets-historique');
     if (histoContainer) {
-      // Eviter les doublons si initTrajets est rappelé
       if (!document.getElementById('btn-clear-historique-dev')) {
         const clearBtn = document.createElement('button');
         clearBtn.id = 'btn-clear-historique-dev';
@@ -246,8 +240,6 @@ export function initTrajets() {
         clearBtn.style.cursor = "pointer";
 
         clearBtn.addEventListener('click', () => {
-          // On passe tous les trajets non "valide" tels quels
-          // et on supprime ceux en "valide" (historique)
           const before = trajets.length;
           trajets = trajets.filter(t => t.status !== 'valide');
           const removed = before - trajets.length;
@@ -260,7 +252,6 @@ export function initTrajets() {
           console.log(`🧹 Historique vidé (dev). Trajets supprimés: ${removed}`);
         });
 
-        // Insérer le bouton au-dessus du titre de l'historique
         histoContainer.parentNode.insertBefore(clearBtn, histoContainer);
       }
     }
@@ -269,10 +260,9 @@ export function initTrajets() {
     try {
       const reservation = e.detail;
   
-      // Vérifier si la réservation existe déjà (évite doublons)
       if (!trajets.find(r => r.id === reservation.id)) {
         trajets.push(reservation);
-        saveTrajets(); // sauve la variable globale trajets
+        saveTrajets();
         updatePlacesReservees();
         renderTrajetsInProgress();
       }
@@ -281,7 +271,6 @@ export function initTrajets() {
     }
   });
 
-  // à exécuter une fois, par ex. dans initTrajets
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('.trajet-cancel-btn, .trajet-delete-btn');
     if (!btn) return;
@@ -300,7 +289,6 @@ function handleTrajetSubmit(e) {
 
   const formData = new FormData(e.target);
 
-  // 🔹 Récupérer l'objet véhicule complet depuis localStorage
   const vehicles = JSON.parse(localStorage.getItem('ecoride_vehicles') || "[]");
   const selectedPlate = formData.get('vehicle');
 
@@ -321,21 +309,19 @@ function handleTrajetSubmit(e) {
     heureDepart: formData.get('heure-depart') || '',
     heureArrivee: formData.get('heure-arrivee') || '',
     prix: formData.get('prix') || '',
-    vehicle: selectedVehicle || null, // 👉 objet véhicule complet
+    vehicle: selectedVehicle || null,
     places: (selectedVehicle && selectedVehicle.seats !== undefined && selectedVehicle.seats !== null)
-  ? Number(selectedVehicle.seats)
-  : (formData.get('places') ? Number(formData.get('places')) : 4),
+      ? Number(selectedVehicle.seats)
+      : (formData.get('places') ? Number(formData.get('places')) : 4),
     role: "chauffeur",
     status: 'ajoute'
   };
 
-  // 🔎 Vérification champs obligatoires
   if (!trajetData.depart || !trajetData.arrivee || !trajetData.date) {
     alert('Veuillez remplir les champs obligatoires (départ, arrivée, date)');
     return;
   }
 
-  // ✏️ Mise à jour ou ajout
   if (editingIndex !== null && trajets[editingIndex]) {
     trajetData.status = trajets[editingIndex].status; 
     trajets[editingIndex] = trajetData;
@@ -346,14 +332,12 @@ function handleTrajetSubmit(e) {
     console.log("➕ Nouveau trajet ajouté:", trajetData);
   }
 
-  // 💾 Sauvegarde et mise à jour UI
   saveTrajets();
   ajouterAuCovoiturage(trajetData);
   updatePlacesReservees();
   renderTrajetsInProgress();
   renderHistorique();
 
-  // 🔄 Reset du formulaire
   e.target.reset();
   document.querySelectorAll('input, select').forEach(input => {
     if (!input.value) input.classList.add('empty'); 
@@ -363,7 +347,6 @@ function handleTrajetSubmit(e) {
 
 // -------------------- Gestion des actions --------------------
 
-// Helper : retry until fn() returns true (ou maxAttempts atteintes)
 function tryUntilExists(fn, maxAttempts = 8, intervalMs = 80) {
   let attempts = 0;
   return new Promise(resolve => {
@@ -394,7 +377,6 @@ function handleTrajetActions(e) {
       saveTrajets();
       updatePlacesReservees()
       renderTrajetsInProgress();
-      //console.log("🚀 Trajet démarré :", trajet);
     }
   }
 
@@ -419,7 +401,7 @@ function handleTrajetActions(e) {
       let updated = false;
       reservations = reservations.map(r => {
         if (getCovoId(r) === covoId && r.role === 'passager' && r.status === 'reserve') {
-          r.status = 'a_valider'; // nouveau statut : attente de validation par le passager
+          r.status = 'a_valider';
           updated = true;
         }
         return r;
@@ -430,8 +412,8 @@ function handleTrajetActions(e) {
   
       if (updated) {
         localStorage.setItem('ecoride_trajets', JSON.stringify(reservations));
+        window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
   
-        // Synchroniser la variable trajets en mémoire
         reservations.forEach(r => {
           const idx = trajets.findIndex(t => t.id === r.id);
           if (idx !== -1) {
@@ -439,7 +421,6 @@ function handleTrajetActions(e) {
           }
         });
   
-        // Re-render UI
         updatePlacesReservees();
         renderTrajetsInProgress();
         renderHistorique();
@@ -456,22 +437,19 @@ function handleTrajetActions(e) {
   // -------------------- trajet-edit-btn --------------------
 
   if (target.classList.contains('trajet-edit-btn')) {
-    e.preventDefault?.();           // empêcher comportement par défaut
-    e.stopPropagation?.();          // empêcher propagation
+    e.preventDefault?.();
+    e.stopPropagation?.();
 
     const id = target.dataset.id;
     const trajet = trajets.find(t => t.id === id);
 
-    // Seuls les trajets chauffeur peuvent être édités
     if (!trajet || trajet.role !== 'chauffeur') return;
 
-    // Forcer l'onglet "Mes trajets"
     if (typeof switchToTab === 'function') {
       switchToTab('user-trajects-form');
       console.log('switchToTab called for user-trajects-form');
     }
 
-    // Attendre que le formulaire soit présent / prêt dans le DOM
     tryUntilExists(() => {
       return document.querySelector('#trajet-form') !== null;
     }, 12, 80).then(found => {
@@ -483,7 +461,6 @@ function handleTrajetActions(e) {
       const form = document.querySelector('#trajet-form');
       if (!form) return;
 
-      // Pré-remplissage
       const setIf = (selector, value) => {
         const el = form.querySelector(selector);
         if (el) el.value = value || '';
@@ -497,11 +474,9 @@ function handleTrajetActions(e) {
       setIf('[name="prix"]', trajet.prix);
       setIf('[name="vehicle"]', trajet.vehicle ? trajet.vehicle.plate : '');
 
-      // marque l'index d'édition
       editingIndex = trajets.findIndex(t => t.id === id);
       console.log("✏️ Trajet prêt pour modification (index:", editingIndex, "):", trajet);
 
-      // Scroll robuste vers le formulaire (gère parents scrollables)
       const getScrollableParent = el => {
         let node = el.parentElement;
         while (node) {
@@ -528,16 +503,14 @@ function handleTrajetActions(e) {
         }
       };
 
-      // Laisser un petit délai si nécessaire (après injection du contenu)
       setTimeout(() => {
         robustScrollTo(form);
-        // focus premier champ pour montrer visuellement que c'est prêt
         const first = form.querySelector('input, textarea, select, button');
         if (first) first.focus({ preventScroll: true });
       }, 40);
     });
 
-    return; // sortir du handler pour éviter autres branches
+    return;
   }
 
   // -------------------- trajet-signaler-btn --------------------
@@ -563,7 +536,6 @@ function handleTrajetActions(e) {
       return;
     }
 
-    // Récupérer infos chauffeur depuis le covoiturage
     let chauffeurPseudo = "Chauffeur inconnu";
     let chauffeurMail = "";
     try {
@@ -577,7 +549,6 @@ function handleTrajetActions(e) {
       console.warn("Erreur récupération infos chauffeur:", err);
     }
 
-    // Récupérer pseudo passager
     const passagerPseudo = getCurrentUserPseudo();
 
     const signalement = {
@@ -585,16 +556,15 @@ function handleTrajetActions(e) {
       chauffeur: chauffeurPseudo,
       chauffeurMail,
       passager: passagerPseudo,
-      passagerMail: "", // tu peux l'ajouter si tu stockes l'email utilisateur
+      passagerMail: "",
       dateDepart: `${formatDateJJMMAAAA(trajet.date)} ${trajet.heureDepart || ''}`.trim(),
       dateArrivee: trajet.heureArrivee || "",
       trajet: `${trajet.depart} → ${trajet.arrivee}`,
       description: description.trim(),
       createdAt: new Date().toISOString(),
-      status: 'pending' // pour suivi côté employé
+      status: 'pending'
     };
 
-    // Sauvegarder dans localStorage
     try {
       const stored = JSON.parse(localStorage.getItem('ecoride_trajets_signales') || '[]');
       stored.unshift(signalement);
@@ -605,7 +575,6 @@ function handleTrajetActions(e) {
       return;
     }
 
-    // Event global → écouté par espace employé si déjà ouvert
     window.dispatchEvent(new CustomEvent('ecoride:trajetSignale', { detail: signalement }));
 
     alert("✅ Trajet signalé. Il sera traité par l'équipe support.");
@@ -630,12 +599,13 @@ function handleTrajetActions(e) {
     saveTrajets();
   
     // 2) Supprimer le covoiturage (nouveauxTrajets)
-    let trajetsCovoit = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
-    const covoIndex = trajetsCovoit.findIndex(t => t.id === id);
+    let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+    const covoIndex = trajetsCovoiturage.findIndex(t => t.id === id);
     let removedCovo = null;
     if (covoIndex !== -1) {
-      removedCovo = trajetsCovoit.splice(covoIndex, 1)[0];
-      localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoit));
+      removedCovo = trajetsCovoiturage.splice(covoIndex, 1)[0];
+      localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
+      window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
       console.log("🚮 Covoiturage supprimé depuis nouveauxTrajets (ID:", id, ")");
     } else {
       console.log("ℹ️ Aucun covoiturage trouvé dans nouveauxTrajets pour l'ID:", id);
@@ -648,7 +618,6 @@ function handleTrajetActions(e) {
     const beforeCount = userTrajets.length;
     let affected = 0;
   
-    // helper pour récupérer un identifiant utilisateur depuis une réservation (si présent)
     const getPassengerIdentifier = (res) => {
       return res.userId || res.passagerId || res.pseudo || (res.user && res.user.id) || (res.passager && res.passager.id) || null;
     };
@@ -658,17 +627,15 @@ function handleTrajetActions(e) {
       if (ref === id) {
         affected++;
   
-        // Marquer la réservation comme annulée par le chauffeur
         res.status = 'annule_par_chauffeur';
         res.cancellationReason = res.cancellationReason || "Trajet annulé par le chauffeur";
         res.cancellationAt = new Date().toISOString();
-        res.notified = false; // on pourra utiliser ce flag pour afficher une notif non lue
+        res.notified = false;
   
-        // Créer une notification destinée au passager
         const passengerId = getPassengerIdentifier(res);
         const notification = {
           id: genId ? genId() : ('notif_' + Date.now() + Math.random().toString(36).slice(2)),
-          to: passengerId, // peut être null si pas d'identifiant lié
+          to: passengerId,
           message: `Le trajet ${removedCovo ? (removedCovo.depart + ' → ' + removedCovo.arrivee) : ''} du ${removedCovo ? removedCovo.date : ''} a été annulé par le chauffeur.`,
           relatedCovoiturageId: id,
           type: 'trajet_annule',
@@ -682,22 +649,21 @@ function handleTrajetActions(e) {
   
     if (affected > 0) {
       localStorage.setItem('ecoride_trajets', JSON.stringify(userTrajets));
+      window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
       localStorage.setItem('ecoride_notifications', JSON.stringify(notifications));
+      window.dispatchEvent(new CustomEvent('ecoride:notificationsUpdated'));
       console.log(`🔔 ${affected} réservation(s) marquée(s) 'annule_par_chauffeur' et notifications créées.`);
     } else {
       console.log("ℹ️ Aucune réservation utilisateur liée trouvée.");
     }
   
-    // 4) Mettre à jour places réservées avant rendu
     updatePlacesReservees();
   
-    // 5) Re-render + event global pour que l'UI se mette à jour
     if (typeof renderTrajetsInProgress === 'function') renderTrajetsInProgress();
     if (typeof renderHistorique === 'function') renderHistorique();
     window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
     window.dispatchEvent(new CustomEvent('ecoride:notificationsUpdated'));
   
-    // 6) Message au chauffeur
     alert(`Trajet supprimé. ${affected} réservation(s) ont été marquée(s) comme annulée(s) et les passagers ont été notifiés.`);
   }
 
@@ -707,14 +673,14 @@ function handleTrajetActions(e) {
     const id = target.dataset.id;
     const trajet = trajets.find(t => t.id === id);
     if (trajet && trajet.role === 'chauffeur') {
-      trajet.status = 'valide'; // ✅ on bascule en historique
+      trajet.status = 'valide';
       saveTrajets();
       updatePlacesReservees();
 
-      // 🚀 Supprimer aussi de la liste covoiturage
-      let trajetsCovoit = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
-      trajetsCovoit = trajetsCovoit.filter(t => t.id !== id);
-      localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoit));
+      let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+      trajetsCovoiturage = trajetsCovoiturage.filter(t => t.id !== id);
+      localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
+      window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
 
       renderTrajetsInProgress();
       renderHistorique();
@@ -734,20 +700,17 @@ function handleTrajetActions(e) {
 
     if (!confirm("Voulez-vous vraiment annuler cette réservation ?")) return;
 
-    // --- 1) Supprimer la réservation locale (trajets global / ecoride_trajets) ---
     const removed = trajets.splice(index, 1)[0];
-    saveTrajets(); // écrit dans localStorage 'ecoride_trajets'
+    saveTrajets();
     console.log("🗑 Réservation supprimée de trajets (local) :", removed);
 
-    // --- 2) Mettre à jour ecoride_trajets (source de vérité pour réservations utilisateur) ---
-    // (saveTrajets() a déjà mis à jour localStorage mais on s'assure)
     let userReservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
     userReservations = userReservations.filter(r => r.id !== id);
     localStorage.setItem('ecoride_trajets', JSON.stringify(userReservations));
+    window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
     console.log("🔁 ecoride_trajets mis à jour, count:", userReservations.length);
 
-    // --- 3) Mettre à jour le covoiturage dans nouveauxTrajets ---
-    let trajetsCovoit = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+    let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
     const refId = getCovoId(trajet);
 
     if (!refId) {
@@ -755,14 +718,13 @@ function handleTrajetActions(e) {
       return;
     }
 
-    const covoIndex = trajetsCovoit.findIndex(t => t.id === refId);
+    const covoIndex = trajetsCovoiturage.findIndex(t => t.id === refId);
 
     if (covoIndex === -1) {
       console.log("ℹ️ Aucun covoiturage trouvé pour la référence:", refId);
     } else {
-      const covo = trajetsCovoit[covoIndex];
+      const covo = trajetsCovoiturage[covoIndex];
 
-      // récupérer pseudo courant (fallback "Moi")
       let userPseudo = "Moi";
       try {
         const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
@@ -771,14 +733,11 @@ function handleTrajetActions(e) {
 
       console.log("🔎 Annulation pour pseudo:", userPseudo, "avant passagers:", covo.passagers);
 
-      // 1) Retirer toutes les entrées correspondant au pseudo courant (objets ou chaînes)
-      //    et normaliser le reste en { pseudo, places }
       covo.passagers = (Array.isArray(covo.passagers) ? covo.passagers : [])
         .filter(p => {
           if (!p) return false;
           if (typeof p === 'object' && p.pseudo) return p.pseudo !== userPseudo;
           if (typeof p === 'string') {
-            // accepter différentes variantes "Moi", "Moi x3", "Pseudo x2"
             return !p.startsWith(userPseudo) && !p.startsWith("Moi");
           }
           return true;
@@ -795,45 +754,37 @@ function handleTrajetActions(e) {
         })
         .filter(Boolean);
 
-      // 2) Recalculer occupants depuis covo.passagers normalisés
       const totalOccupiedFromPassagers = (Array.isArray(covo.passagers) ? covo.passagers : [])
         .reduce((sum, p) => sum + (Number(p.places) || 1), 0);
 
-      // 3) Déterminer/mettre à jour la capacité
       const vehiclePlaces = covo.vehicle?.places ?? covo.vehicule?.places ?? null;
       covo.capacity = (typeof covo.capacity === 'number')
         ? covo.capacity
         : (vehiclePlaces !== null ? Number(vehiclePlaces) : (typeof covo.places === 'number' ? Number(covo.places) : 4));
 
-      // 4) Mettre à jour places en fonction des passagers normalisés
       covo.places = Math.max(0, covo.capacity - totalOccupiedFromPassagers);
 
-      // 5) Sauvegarder le covoiturage mis à jour
-      trajetsCovoit[covoIndex] = covo;
-      localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoit));
+      trajetsCovoiturage[covoIndex] = covo;
+      localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
+      window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
 
       console.log("🔄 Covoiturage mis à jour après annulation :", covo);
     }
 
-    // --- 4) Forcer mise à jour UI / events ---
     updatePlacesReservees();
     renderTrajetsInProgress();
     renderHistorique();
     window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
     window.dispatchEvent(new CustomEvent('ecoride:reservationCancelled', { detail: { id } }));
 
-    // Forcer l'onglet "Mes trajets" actif
     const ongletMesTrajets = document.getElementById('tab-mes-trajets') || document.querySelector('.tab-mes-trajets');
     if (ongletMesTrajets) {
-      // Ajouter la classe active
       ongletMesTrajets.classList.add('active');
-      // Retirer la classe active des autres onglets
       document.querySelectorAll('.tab').forEach(tab => {
         if (tab !== ongletMesTrajets) tab.classList.remove('active');
       });
     }
 
-    // Optionnel : scroller vers la section "Mes trajets"
     const sectionMesTrajets = document.querySelector('#mes-trajets-section');
     if (sectionMesTrajets) {
       sectionMesTrajets.scrollIntoView({ behavior: 'smooth' });
@@ -879,6 +830,7 @@ function handleTrajetActions(e) {
           };
   
           localStorage.setItem('ecoride_trajets', JSON.stringify(reservations));
+          window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
   
           const localIdx = trajets.findIndex(t => t.id === reservationId);
           if (localIdx !== -1) {
@@ -887,13 +839,12 @@ function handleTrajetActions(e) {
             trajets = getTrajets();
           }
   
-          // Mise à jour covoiturage : retirer le passager
-          let nouveaux = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+          let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
           const reservation = reservations[idx];
           const covoId = getCovoId(reservation);
-          const covoIndex = nouveaux.findIndex(t => t.id === covoId);
+          const covoIndex = trajetsCovoiturage.findIndex(t => t.id === covoId);
           if (covoIndex !== -1) {
-            const covo = nouveaux[covoIndex];
+            const covo = trajetsCovoiturage[covoIndex];
             const userPseudo = (() => {
               try {
                 const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
@@ -912,7 +863,7 @@ function handleTrajetActions(e) {
                 if (typeof p === 'object' && p.pseudo) return { pseudo: p.pseudo, places: Number(p.places || 1) };
                 if (typeof p === 'string') {
                   const m = p.match(/^(.+?)\s*x(\d+)$/i);
-                  return m ? { pseudo: m[1].trim(), places: Number(m[2]) } : { pseudo: p.trim(), places: 1 };
+                  return m ? { pseudo: p[1].trim(), places: Number(p[2]) } : { pseudo: p.trim(), places: 1 };
                 }
                 return null;
               }).filter(Boolean);
@@ -921,19 +872,20 @@ function handleTrajetActions(e) {
             const capacity = typeof covo.capacity === 'number' ? covo.capacity : (covo.vehicle?.places ?? covo.places ?? 4);
             covo.places = Math.max(0, capacity - totalOccupied);
   
-            nouveaux[covoIndex] = covo;
-            localStorage.setItem('nouveauxTrajets', JSON.stringify(nouveaux));
+            trajetsCovoiturage[covoIndex] = covo;
+            localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
+            window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
           }
   
-          // Passer le trajet chauffeur en historique et le retirer de nouveauxTrajets
           const trajetChauffeurIndex = trajets.findIndex(t => t.id === covoId && t.role === 'chauffeur');
           if (trajetChauffeurIndex !== -1) {
             trajets[trajetChauffeurIndex].status = 'valide';
           }
   
-          let trajetsCovoit = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
-          trajetsCovoit = trajetsCovoit.filter(t => t.id !== covoId);
-          localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoit));
+          let trajetsCovoiturage2 = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+          trajetsCovoiturage2 = trajetsCovoiturage2.filter(t => t.id !== covoId);
+          localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage2));
+          window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
   
           saveTrajets();
           updatePlacesReservees();
@@ -988,9 +940,8 @@ function renderTrajetsInProgress() {
   const container = document.querySelector('#trajets-en-cours .trajets-list');
   if (!container) return;
 
-  container.innerHTML = ''; // On vide uniquement la liste, pas le titre 😉
+  container.innerHTML = '';
 
-  // Filtrer les trajets en cours (exclure ceux en 'valide')
   const enCours = trajets.filter(t => t.status !== "valide");
 
   if (enCours.length === 0) {
@@ -1001,7 +952,7 @@ function renderTrajetsInProgress() {
   updatePlacesReservees();
   console.log("DEBUG — enCours après updatePlacesReservees:", enCours);
 
-  enCours.forEach((trajet, index) => {
+  enCours.forEach((trajet) => {
     let bgClass = "";
     let actionHtml = "";
 
@@ -1015,7 +966,6 @@ function renderTrajetsInProgress() {
     }
 
     if (trajet.role === "chauffeur") {
-     
       if (trajet.status === "valide") {
         return; 
       }
@@ -1036,7 +986,6 @@ function renderTrajetsInProgress() {
         bgClass = "trajet-card attente";
         actionHtml = `
           <span class="trajet-status">En attente de validation des passagers...</span>
-          <!-- bouton clôturer supprimé -->
         `;
       }
     } else if (trajet.role === 'passager') {
@@ -1056,14 +1005,12 @@ function renderTrajetsInProgress() {
           <button class="btn-trajet trajet-signaler-btn" data-id="${trajet.id}" data-covo-id="${getCovoId(trajet)}">⚠ Signaler</button>
         `;
       } else if (trajet.status === 'valide') {
-        // Trajet terminé et validé : on peut encore signaler (ex: problème découvert après)
         const refId = getCovoId(trajet);
         actionHtml = `
           <button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>
           <button class="btn-trajet trajet-signaler-btn" data-id="${trajet.id}" data-covo-id="${refId}">⚠ Signaler</button>
         `;
       } else {
-        // statut inattendu ou autre -> afficher au minimum Détail
         const refId = getCovoId(trajet);
         actionHtml = `<button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>`;
       }
@@ -1085,7 +1032,6 @@ function renderTrajetsInProgress() {
     `;
   });
 
-  // 🔥 Ajout bouton reset en DEV
   if (window.location.hostname === "localhost") {
     container.innerHTML += `
       <button class="btn-dev-reset" id="reset-trajets-en-cours">
@@ -1107,7 +1053,6 @@ function renderTrajetsInProgress() {
     }
   }
 
-  // Attacher les listeners "Détail" (à ré-attacher à chaque rendu)
   container.querySelectorAll('.trajet-detail-btn').forEach(btn => {
     if (btn._detailHandler) btn.removeEventListener('click', btn._detailHandler);
 
@@ -1123,13 +1068,12 @@ function renderTrajetsInProgress() {
       const newPath = `/detail/${encodeURIComponent(covoId)}`;
 
       try {
-        // Format attendu par ton router : { id }
         history.pushState({ id: covoId }, '', newPath);
         const pop = new PopStateEvent('popstate', { state: { id: covoId } });
         window.dispatchEvent(pop);
       } catch (err) {
         console.error('Erreur navigation détail:', err);
-        window.location.href = newPath; // fallback
+        window.location.href = newPath;
       }
     };
 
@@ -1160,11 +1104,10 @@ function renderHistorique() {
     if (trajet.role === 'passager') {
       cardClass = 'trajet-card reserve';
   
-      // Récupérer la date du trajet chauffeur lié
       const covoId = getCovoId(trajet);
       const trajetChauffeur = trajets.find(t => t.id === covoId && t.role === 'chauffeur');
       if (trajetChauffeur && trajetChauffeur.date) {
-        trajet.date = trajetChauffeur.date; // injecter la date pour affichage
+        trajet.date = trajetChauffeur.date;
       }
     }
   
@@ -1199,6 +1142,9 @@ function saveTrajets() {
   try {
     localStorage.setItem('ecoride_trajets', JSON.stringify(trajets));
     console.log("💾 Trajets sauvegardés:", trajets.length);
+
+    window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
+    window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
   } catch (err) {
     console.error("❌ Erreur sauvegarde trajets:", err);
   }
@@ -1212,7 +1158,7 @@ function populateVehiclesDatalist() {
     const stored = localStorage.getItem('ecoride_vehicles');
     const vehicles = stored ? JSON.parse(stored) : [];
 
-    const select = document.querySelector('#vehicle'); // ⚠️ bien "#vehicle"
+    const select = document.querySelector('#vehicle');
     if (!select) return;
 
     select.innerHTML = '<option value="" selected hidden>-- Sélectionner un véhicule --</option>';
@@ -1223,7 +1169,6 @@ function populateVehiclesDatalist() {
       option.textContent = getVehicleLabel(v); 
       select.appendChild(option);
 
-      // normalisation minimale
       v.seats = Number(v.seats ?? v.places ?? 4);
       v.plate = v.plate || v.licencePlate || v.immatriculation || '';
     });
@@ -1238,15 +1183,12 @@ function populateVehiclesDatalist() {
 function ajouterAuCovoiturage(trajetData) {
   console.log("🚗 ajout/update covoiturage pour:", trajetData.id);
 
-  // Charger la liste existante
   let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
 
-  // Déterminer la capacity (priorité : vehicle.places, puis trajetData.places, sinon 4)
   const capacity = (trajetData.vehicle && trajetData.vehicle.seats !== undefined)
     ? Number(trajetData.vehicle.seats)
     : (trajetData.places !== undefined ? Number(trajetData.places) : 4);
 
-  // Construire l'objet standardisé pour le covoiturage
   const baseTrajetCovoit = {
     id: trajetData.id,
     date: formatDateJJMMAAAA(trajetData.date),
@@ -1257,7 +1199,7 @@ function ajouterAuCovoiturage(trajetData) {
     },
     type: getVehicleType(trajetData.vehicle),
     capacity,
-    places: capacity, // valeur par défaut, sera réajustée ensuite
+    places: capacity,
     depart: trajetData.depart,
     arrivee: trajetData.arrivee,
     heureDepart: trajetData.heureDepart ? trajetData.heureDepart.replace(':', 'h') : '',
@@ -1270,21 +1212,16 @@ function ajouterAuCovoiturage(trajetData) {
 
   baseTrajetCovoit.passagers = normalizePassagers(baseTrajetCovoit.passagers);
 
-  // Chercher si le covoiturage existe déjà
   const idx = trajetsCovoiturage.findIndex(t => t.id === baseTrajetCovoit.id);
 
   if (idx !== -1) {
-    // Mise à jour : ne pas écraser passagers ni places sans recalcul
     const existing = trajetsCovoiturage[idx];
 
-    
-    // Normaliser les passagers existants (s'ils existent) et les utiliser si présents
     const existingPassagers = normalizePassagers(Array.isArray(existing.passagers) ? existing.passagers : []);
     baseTrajetCovoit.passagers = existingPassagers.length > 0
       ? existingPassagers.slice()
       : baseTrajetCovoit.passagers;
 
-    // Si la capacité a changé (p.ex. véhicule modifié), recalculer places restantes
     const totalOccupied = baseTrajetCovoit.passagers.reduce((sum, p) => {
       return sum + (Number(p.places) || 1);
     }, 0);
@@ -1292,20 +1229,15 @@ function ajouterAuCovoiturage(trajetData) {
     const newCapacity = baseTrajetCovoit.capacity;
     baseTrajetCovoit.capacity = (typeof existing.capacity === 'number') ? existing.capacity : newCapacity;
 
-    // Si on détecte que vehicle a changé => mettre à jour capacity puis places
     if (newCapacity !== baseTrajetCovoit.capacity) {
-      // si capacity réduit en dessous de occupants, places=0 sinon capacity - occupied
       baseTrajetCovoit.places = Math.max(0, newCapacity - totalOccupied);
     } else {
-      // sinon préserver places si existant sinon calculer
       baseTrajetCovoit.places = (typeof existing.places === 'number') ? existing.places : Math.max(0, newCapacity - totalOccupied);
     }
 
-    // Merge non destructif (préserver champs existants si présents)
     trajetsCovoiturage[idx] = Object.assign({}, existing, baseTrajetCovoit);
     console.log("🔁 Trajet covoiturage mis à jour :", trajetsCovoiturage[idx]);
   } else {
-    // Nouveau covoiturage : recalculer places en fonction des passagers actuels
     const occupied = baseTrajetCovoit.passagers.reduce((sum, p) => {
       return sum + (Number(p.places) || 1);
     }, 0);
@@ -1315,9 +1247,7 @@ function ajouterAuCovoiturage(trajetData) {
     console.log("➕ Nouveau trajet covoiturage ajouté :", baseTrajetCovoit);
   }
 
-  // Sauvegarde
   localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
-  // Notifier si tu utilises l'événement global
   window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
 }
 
@@ -1336,7 +1266,6 @@ function formatDateJJMMAAAA(input) {
 function getVehicleType(vehicle) {
   if (!vehicle) return "Economique";
 
-  // 🔹 Si c'est déjà une chaîne
   if (typeof vehicle === "string") {
     const vehicleLower = vehicle.toLowerCase();
     if (vehicleLower.includes("tesla") || vehicleLower.includes("électrique")) {
@@ -1348,10 +1277,8 @@ function getVehicleType(vehicle) {
     }
   }
 
-  // 🔹 Si c'est un objet
   if (typeof vehicle === "object") {
     if (vehicle.type) {
-      // Capitaliser la première lettre
       const type = vehicle.type.toLowerCase();
       return type.charAt(0).toUpperCase() + type.slice(1);
     }

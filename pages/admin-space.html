@@ -5,40 +5,49 @@
   </div>
   
   <div class="admin-content container">
-  <section class="dashboard-section container">
-    <h1>Dashboard statistiques</h1>
+    <section class="dashboard-section container">
+      <h1>Dashboard statistiques</h1>
     
-    <!-- Formulaire Dashboard -->
-    <form class="form-dashboard">
-      <div class="form-fields">
-        <div class="charts-container">
-          
-          <!-- Graph 1 : Nombre de covoiturage par jour -->
-          <div class="chart-card">
-            <h2>Nombre de covoiturage par jour</h2>
-            <div class="chart-wrapper">
-              <canvas id="covoituragesChart"></canvas>
+      <form class="form-dashboard">
+        <div class="form-fields">
+    
+          <div class="charts-container">
+            <!-- Graph 1 : Nombre de covoiturage par jour -->
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <h3>Nombre de covoiturage par jour</h3>
+              </div>
+            
+              <div class="chart-wrapper">
+                <canvas id="covoituragesChart"></canvas>
+              </div>
+            
+              <div class="totaux-inline">
+                7 jours: <strong id="totalCovoits7J">0</strong>
+                Total: <strong id="totalCovoitsAll">0</strong>
+              </div>
+            </div>
+    
+            <!-- Graph 2 : Crédits gagnés par jour -->
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <h3>Crédits gagnés par jour</h3>
+              </div>
+            
+              <div class="chart-wrapper">
+                <canvas id="creditsChart"></canvas>
+              </div>
+            
+              <div class="totaux-inline">
+                7 jours: <strong id="totalCredits7J">0</strong>
+                Total: <strong id="totalCreditsAll">0</strong>
+              </div>
             </div>
           </div>
-
-          <!-- Graph 2 : Crédits gagnés par jour -->
-          <div class="chart-card">
-            <h2>Crédits gagnés par jour</h2>
-            <div class="chart-wrapper">
-              <canvas id="creditsChart"></canvas>
-            </div>
-          </div>
+    
         </div>
-  
-        <!-- Total crédits -->
-        <div class="total-credits">
-          <p><strong>Total crédits gagnés :</strong> 
-            <span id="totalCredits">XXXX</span>
-          </p>
-        </div>
-      </div>
-    </form>
-  </section>
+      </form>
+    </section>
 
   <section class="accounts-section container">
     <h1>Gestion comptes</h1>

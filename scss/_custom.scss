@@ -264,7 +264,7 @@ $transition-default: color 0.3s ease, transform 0.3s ease;
     color: $color-dark-green; /* Couleur du texte au survol */
 }
 
-.nav-link:hover {
+.offcanvas .nav-link:hover {
   background-color: $color-very-light-beige; /* Couleur légèrement différente au survol */
   color: $color-dark-green; /* Couleur du texte au survol */
 }

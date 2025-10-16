@@ -134,6 +134,40 @@ document.addEventListener('pageContentLoaded', () => {
     trajets.forEach(trajet => {
       trajet.duree = calculerDureeEnHeures(trajet.heureDepart, trajet.heureArrivee);
     });
+
+    // Formate une date "souple" en "lundi 19 septembre"
+function formatFullFrDay(anyDate) {
+  if (!anyDate) return '';
+  let d = anyDate instanceof Date ? new Date(anyDate) : null;
+
+  if (!d) {
+    const s = String(anyDate).trim();
+
+    if (/^\d{2}-\d{2}-\d{4}$/.test(s)) { // JJ-MM-AAAA
+      const [dd,mm,yyyy] = s.split('-').map(Number);
+      d = new Date(yyyy, mm-1, dd);
+    } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) { // JJ/MM/AAAA
+      const [dd,mm,yyyy] = s.split('/').map(Number);
+      d = new Date(yyyy, mm-1, dd);
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { // AAAA-MM-JJ
+      const [yyyy,mm,dd] = s.split('-').map(Number);
+      d = new Date(yyyy, mm-1, dd);
+    } else {
+      const tmp = new Date(s);
+      if (!isNaN(tmp)) d = tmp;
+    }
+  }
+  if (!d || isNaN(d)) return String(anyDate); // si non parsable, on affiche tel quel
+
+  const dayName = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' }).format(d);
+  const month   = new Intl.DateTimeFormat('fr-FR', { month: 'long' }).format(d);
+  const dayNum  = d.getDate();
+
+  // sortie en minuscules pour cohérence visuelle
+  return `${dayName} ${dayNum} ${month}`.toLowerCase();
+}
+
+function capFirst(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
   
     // Crée la carte HTML d’un trajet
     function createTrajetCard(trajet) {
@@ -159,7 +193,7 @@ document.addEventListener('pageContentLoaded', () => {
 
       card.innerHTML = `
         <div class="result-header">
-          <p class="date">${trajet.date}</p>
+          <p class="date">${capFirst(formatFullFrDay(trajet.date))}</p>
         </div>
         <div class="result-body">
           <div class="profile-column">

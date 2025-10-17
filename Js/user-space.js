@@ -1,43 +1,34 @@
+// ===========================================================
+// Espace Utilisateur - Véhicules (version stable)
+// ===========================================================
+
 // -------------------- Variables globales --------------------
 let editingVehicleIndex = null;
 let vehicleToDeleteIndex = null;
 const vehicles = [];
 
-// Bloque les clics d'onglets pendant un submit véhicules (en mode capture)
-document.addEventListener('click', (e) => {
-  if (document.body.dataset.lockTab === '1') {
-    const link = e.target.closest('a, button');
-    // Cible onglets desktop/offcanvas ou tout lien avec href commençant par #
-    if (link && (
-      link.closest('.nav-pills.user-tabs') ||
-      link.closest('.nav-pills.user-tabs-offcanvas') ||
-      (link.hasAttribute('href') && link.getAttribute('href')?.startsWith('#'))
-    )) {
-      e.preventDefault();
-      e.stopPropagation();
-      console.warn('⚠️ Tab click bloqué pendant submit', link);
-    }
-  }
-}, true); // mode capture
-
-// -------------------- Sauvegarde les vehicules --------------------
-
-function loadVehicles() {
-  try {
-    const stored = localStorage.getItem('ecoride_vehicles');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
-        vehicles.length = 0; // vide le tableau
-        vehicles.push(...parsed); // remplit avec les données existantes
-      }
-    }
-  } catch (e) {
-    console.error("Erreur chargement véhicules depuis localStorage", e);
-  }
+// -------------------- Utils --------------------
+function normalizePlate(p) {
+  return (p || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
-// -------------------- Helpers --------------------
+// Conversion jj/mm/aaaa → yyyy-mm-dd
+function convertFRtoISO(dateStr) {
+  if (!dateStr) return "";
+  const parts = dateStr.split("/");
+  if (parts.length !== 3) return "";
+  const [day, month, year] = parts;
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
+
+// Pour pré-remplir input[type="date"]
+function formatDateForInput(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d)) return "";
+  return d.toISOString().split("T")[0]; // YYYY-MM-DD
+}
+
 function getVehicleLabel(v) {
   const brand = v.brand || v.marque || '';
   const model = v.model || v.vehicleModel || v.modele || '';
@@ -45,22 +36,50 @@ function getVehicleLabel(v) {
   return `${brand} ${model} ${color}`.trim();
 }
 
+// -------------------- Persistance véhicules --------------------
+function loadVehicles() {
+  try {
+    const stored = localStorage.getItem('ecoride_vehicles');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        vehicles.length = 0;
+        vehicles.push(...parsed);
+      }
+    }
+  } catch (e) {
+    console.error("Erreur chargement véhicules depuis localStorage", e);
+  }
+}
+
+function saveVehicles() {
+  try {
+    localStorage.setItem('ecoride_vehicles', JSON.stringify(vehicles));
+    if (typeof populateVehiclesSelect === 'function') {
+      populateVehiclesSelect();
+    }
+  } catch (err) {
+    console.error("❌ Erreur sauvegarde véhicules:", err);
+  }
+
+  window.dispatchEvent(new CustomEvent('ecoride:vehiclesUpdated', {
+    detail: { vehicles: JSON.parse(localStorage.getItem('ecoride_vehicles') || '[]') }
+  }));
+}
+
 // -------------------- Import --------------------
 import { initTrajets } from '../Js/trajets.js';
 
-// -------------------- Initialisation principale --------------------
+// -------------------- Initialisation --------------------
 export async function initUserSpace() {
-  console.log("🚀 Initialisation de l'espace utilisateur...");
-
-  loadVehicles();
-
-  // 🔄 Migration des anciennes clés localStorage
+  // Migration éventuelle
   const oldVehicules = localStorage.getItem('ecoride_vehicules');
   if (oldVehicules) {
     localStorage.setItem('ecoride_vehicles', oldVehicules);
     localStorage.removeItem('ecoride_vehicules');
-    console.log("🔄 Migration effectuée : ecoride_vehicules ➝ ecoride_vehicles");
   }
+
+  loadVehicles();
 
   const userSpaceSection = document.querySelector(".user-space-section");
   if (!userSpaceSection) {
@@ -68,116 +87,26 @@ export async function initUserSpace() {
     return;
   }
 
-  const desktopTabs = userSpaceSection.querySelectorAll(".nav-pills.user-tabs .nav-link");
-  const offcanvasTabs = userSpaceSection.querySelectorAll(".nav-pills.user-tabs-offcanvas .nav-link");
-  const forms = userSpaceSection.querySelectorAll(".user-space-form");
-  const offcanvas = document.getElementById("userSpaceOffcanvas");
-
-  // Synchroniser onglets et affichage
-  const syncActiveClass = (index) => {
-    console.warn('🎯 syncActiveClass index=', index);
-    desktopTabs.forEach((tab) => tab.classList.remove("active"));
-    offcanvasTabs.forEach((tab) => tab.classList.remove("active"));
-    forms.forEach((form) => (form.style.display = "none"));
-
-    if (desktopTabs[index]) desktopTabs[index].classList.add("active");
-    if (offcanvasTabs[index]) offcanvasTabs[index].classList.add("active");
-    if (forms[index]) forms[index].style.display = "block";
-
-    if (offcanvas && offcanvas.classList.contains("show")) {
-      const bootstrapOffcanvas = bootstrap.Offcanvas.getInstance(offcanvas);
-      if (bootstrapOffcanvas) bootstrapOffcanvas.hide();
-    }
-  };
-
-  desktopTabs.forEach((tab, index) => {
-    tab.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      if (document.body.dataset.lockTab === '1') return;
-      syncActiveClass(index);
-    }, true); // capture + stopImmediate
-  });
-  
-  offcanvasTabs.forEach((tab, index) => {
-    tab.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      if (document.body.dataset.lockTab === '1') return;
-      syncActiveClass(index);
-    }, true);
-  });
-
   await loadHTMLContent();
 
-  // Neutraliser les toggles Bootstrap sur les onglets (pour gérer nous-mêmes)
-  document.querySelectorAll('.nav-pills.user-tabs .nav-link, .nav-pills.user-tabs-offcanvas .nav-link')
-  .forEach(tab => {
-    if (tab.getAttribute('data-bs-toggle')) {
-      tab.removeAttribute('data-bs-toggle');
-    }
-    if (tab.hasAttribute('href') && tab.getAttribute('href')?.startsWith('#')) {
-      // On garde l’href pour activateTab, mais on empêchera la navigation par click
-      tab.addEventListener('click', (e) => {
-        if (document.body.dataset.lockTab === '1') {
-          e.preventDefault();
-          e.stopPropagation();
-          return;
-        }
-        e.preventDefault();
-        e.stopPropagation();
-      }, true);
-    }
-  });
+  // Tabs: comportement simple et prévisible
+  setupTabs(userSpaceSection);
 
-  // Trace toute activation d'onglet (classes actives)
-  {
-    const tabContainers = document.querySelectorAll('.nav-pills.user-tabs, .nav-pills.user-tabs-offcanvas');
-    tabContainers.forEach(container => {
-      container.addEventListener('click', (e) => {
-        const link = e.target.closest('.nav-link');
-        if (link) {
-          console.log('🔎 Click sur tab', {
-            text: link.textContent?.trim(),
-            href: link.getAttribute('href'),
-            dataset: { ...link.dataset },
-            lock: document.body.dataset.lockTab
-          });
-        }
-      }, true);
-    });
-  }
-
-  setTimeout(() => initRoleForm(), 500);
-
+  // Init sections
+  initRoleForm();
   initVehicleManagement();
-
   injectDeleteModal();
 
-  // =================== ⚡ Gestion placeholder Date / Time ===================
+  // Placeholders pour date/time
   document.querySelectorAll('input[type="date"], input[type="time"]').forEach(input => {
-    const toggleClass = () => {
-      if (!input.value) {
-        input.classList.add('empty');
-      } else {
-        input.classList.remove('empty');
-      }
-    };
-    toggleClass(); // au chargement
+    const toggleClass = () => input.classList.toggle('empty', !input.value);
+    toggleClass();
     input.addEventListener('input', toggleClass);
     input.addEventListener('change', toggleClass);
   });
 
-  // Initialiser les trajets
-  console.log("initUserSpace start");
-  setTimeout(() => {
-    initTrajets();
-  }, 100); // petit délai pour laisser le DOM s'injecter
-  console.log("initUserSpace end");
-
-  console.log("✅ Espace utilisateur initialisé");
+  // Trajets
+  setTimeout(() => { try { initTrajets(); } catch(e){ console.error(e); } }, 100);
 }
 
 // -------------------- Chargement HTML dynamique --------------------
@@ -196,19 +125,104 @@ async function loadHTML(id, filePath) {
 
   try {
     const response = await fetch(filePath);
-    if (response.ok) {
-      const html = await response.text();
-      container.innerHTML = html;
-      console.log(`✅ Contenu chargé pour ${id}`);
-    } else {
+    if (!response.ok) {
       console.error(`❌ Erreur de statut pour ${filePath}:`, response.status);
+      return;
     }
+    const html = await response.text();
+    container.innerHTML = html;
   } catch (err) {
     console.error(`❌ Erreur de chargement de ${filePath}:`, err);
   }
 }
 
-// -------------------- Gestion du formulaire rôle --------------------
+// -------------------- Tabs (simple et stable) --------------------
+function setupTabs(userSpaceSection) {
+  const desktopTabs = userSpaceSection.querySelectorAll(".nav-pills.user-tabs .nav-link");
+  const offcanvasTabs = userSpaceSection.querySelectorAll(".nav-pills.user-tabs-offcanvas .nav-link");
+  const forms = userSpaceSection.querySelectorAll(".user-space-form");
+  const offcanvas = document.getElementById("userSpaceOffcanvas");
+
+  // Retire data-bs-toggle pour garder un contrôle JS simple
+  [...desktopTabs, ...offcanvasTabs].forEach(tab => tab.removeAttribute('data-bs-toggle'));
+
+  const syncActiveClass = (index) => {
+    desktopTabs.forEach((tab) => tab.classList.remove("active"));
+    offcanvasTabs.forEach((tab) => tab.classList.remove("active"));
+    forms.forEach((form) => (form.style.display = "none"));
+
+    if (desktopTabs[index]) desktopTabs[index].classList.add("active");
+    if (offcanvasTabs[index]) offcanvasTabs[index].classList.add("active");
+    if (forms[index]) forms[index].style.display = "block";
+
+    if (offcanvas && offcanvas.classList.contains("show")) {
+      const oc = bootstrap.Offcanvas.getInstance(offcanvas);
+      if (oc) oc.hide();
+    }
+  };
+
+  function onTabClickFactory(index) {
+    return (e) => {
+      // Si un submit véhicules est en cours, on bloque juste ce clic
+      if (document.body.dataset.lockTab === '1') {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      e.preventDefault();
+      syncActiveClass(index);
+    };
+  }
+
+  desktopTabs.forEach((tab, index) => {
+    tab.addEventListener('click', onTabClickFactory(index), true);
+  });
+
+  offcanvasTabs.forEach((tab, index) => {
+    tab.addEventListener('click', onTabClickFactory(index), true);
+  });
+}
+
+// API publique pour changer d’onglet par code si besoin
+function switchToTab(tabId) {
+  const userSpaceSection = document.querySelector('.user-space-section');
+  if (!userSpaceSection) return;
+
+  const desktopTabs = [...userSpaceSection.querySelectorAll('.nav-pills.user-tabs .nav-link')];
+  const offcanvasTabs = [...userSpaceSection.querySelectorAll('.nav-pills.user-tabs-offcanvas .nav-link')];
+  const forms = userSpaceSection.querySelectorAll('.user-space-form');
+
+  // Cacher tous les formulaires
+  forms.forEach(form => form.style.display = 'none');
+
+  // Désactiver tous les onglets
+  desktopTabs.forEach(tab => tab.classList.remove('active'));
+  offcanvasTabs.forEach(tab => tab.classList.remove('active'));
+
+  // Afficher le formulaire ciblé
+  const targetForm = document.getElementById(tabId);
+  if (targetForm) targetForm.style.display = 'block';
+
+  // Activer le bon onglet
+  const match = (tab) => {
+    const href = tab.getAttribute('href') || tab.dataset.target || '';
+    return href === `#${tabId}`;
+  };
+  desktopTabs.find(match)?.classList.add('active');
+  offcanvasTabs.find(match)?.classList.add('active');
+
+  // Si on passe vers trajets, rafraîchir la liste véhicules côté trajets si utile
+  if (tabId === 'user-trajects-form') {
+    loadVehicles();
+    renderVehicleList();
+    if (typeof populateVehiclesSelect === 'function') {
+      populateVehiclesSelect();
+    }
+  }
+}
+window.switchToTab = switchToTab;
+
+// -------------------- Formulaire Rôle --------------------
 function initRoleForm() {
   const roleRadios = document.querySelectorAll('input[name="role"]');
   if (!roleRadios.length) return;
@@ -242,21 +256,10 @@ function initRoleForm() {
   toggleVehicleFields();
 }
 
-// -------------------- Fonctions utilitaires --------------------
-
-// ⚡ Conversion jj/mm/aaaa → yyyy-mm-dd
-function convertFRtoISO(dateStr) {
-  if (!dateStr) return "";
-  const parts = dateStr.split("/");
-  if (parts.length !== 3) return "";
-  const [day, month, year] = parts;
-  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-}
-
 // -------------------- Gestion des véhicules --------------------
 function initVehicleManagement() {
-  renderVehicleList();       // 1er rendu
-  bindVehiclesFormHandlers(); // attache les handlers sur le form rendu
+  renderVehicleList();
+  bindVehiclesFormHandlers();
 }
 
 function bindVehiclesFormHandlers() {
@@ -269,16 +272,16 @@ function bindVehiclesFormHandlers() {
 
   const saveBtn = document.querySelector('#vehicle-save-btn');
 
-  // 1) Bloquer le Enter “parasite” au niveau du formulaire
+  // Enter dans le form → clique sur Enregistrer
   form.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
-      if (saveBtn) saveBtn.click(); // on force le flux via notre bouton
+      if (saveBtn) saveBtn.click();
     }
   }, true);
 
-  // 2) Formatter plaque
+  // Format plaque en saisie
   plateInput.addEventListener('input', (e) => {
     let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
     value = value.slice(0, 7);
@@ -294,36 +297,25 @@ function bindVehiclesFormHandlers() {
     e.target.value = formatted;
   });
 
-  // 3) Handler submit (ton code existant)
+  // Submit
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    // Enlève le focus de tout nav-link avant submit
-    document.querySelectorAll('.nav-pills.user-tabs .nav-link, .nav-pills.user-tabs-offcanvas .nav-link')
-    .forEach(a => a.blur());
-
+    // Bloquer les onglets pendant le traitement
     document.body.dataset.lockTab = '1';
 
-    // Désactive clics onglets
-  const tabContainers = document.querySelectorAll('.nav-pills.user-tabs, .nav-pills.user-tabs-offcanvas');
-  tabContainers.forEach(el => el.style.pointerEvents = 'none');
-
-  try {
-      // ========== DÉBUT DU TRY ==========
-      
+    try {
       loadVehicles();
 
       const editIdxAttr = form.dataset.editIndex;
       const editIdx = editIdxAttr !== undefined ? parseInt(editIdxAttr, 10) : null;
 
-      console.log('[VEHICLES] Submit start', { dataset: { ...form.dataset }, editingVehicleIndex });
-
       const plate = form.querySelector('#plate').value.trim();
       const regex = /^[A-Z]{2} - \d{3} - [A-Z]{2}$/;
       if (!regex.test(plate)) {
         alert("⚠️ La plaque doit être au format : AB - 123 - CD");
-        return; // le finally va déverrouiller
+        return;
       }
 
       let registrationDate = form.querySelector('#registration-date').value.trim();
@@ -342,13 +334,16 @@ function bindVehiclesFormHandlers() {
         other: form.querySelector('#other').value.trim(),
       };
 
-      console.log('[VEHICLES] Apply', {
-        mode: (editIdx !== null && !Number.isNaN(editIdx)) ? 'edit-dataset'
-             : (editingVehicleIndex !== null) ? 'edit-global'
-             : 'create',
-        editIdx,
-        editingVehicleIndex
-      });
+      const existsIdx = vehicles.findIndex(v =>
+        normalizePlate(v.id || v.plate) === normalizePlate(plate)
+      );
+
+      const isEditing = (editIdx !== null && !Number.isNaN(editIdx)) || (editingVehicleIndex !== null);
+
+      if (!isEditing && existsIdx !== -1) {
+        alert("Un véhicule avec cette plaque existe déjà.");
+        return;
+      }
 
       if (editIdx !== null && !Number.isNaN(editIdx)) {
         vehicles[editIdx] = vehicleData;
@@ -358,26 +353,22 @@ function bindVehiclesFormHandlers() {
         vehicles[editingVehicleIndex] = vehicleData;
         editingVehicleIndex = null;
       } else {
-        const existsIdx = vehicles.findIndex(v => (v.id || v.plate) === plate);
-        if (existsIdx !== -1) vehicles[existsIdx] = vehicleData;
-        else vehicles.push(vehicleData);
+        vehicles.push(vehicleData);
       }
 
       saveVehicles();
       form.reset();
-
       updateVehicleListOnly();
 
-      console.log('[VEHICLES] After save', JSON.parse(localStorage.getItem('ecoride_vehicles') || '[]'));
+      // >>> Scroll vers "Mes véhicules enregistrés"
+    const usedForm = document.querySelector('#used-vehicles-form');
+    const usedTitle = usedForm?.querySelector('.title-my-used-vehicles h2'); // "Mes véhicules enregistrés"
+    (usedTitle || usedForm)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-      // ========== FIN DU TRY ==========
-      
     } catch (err) {
       console.error('❌ Erreur submit véhicules', err);
     } finally {
       delete document.body.dataset.lockTab;
-      // Réactive clics onglets dans le finally
-      tabContainers.forEach(el => el.style.pointerEvents = '');
     }
   });
 }
@@ -396,7 +387,7 @@ function renderVehicleList() {
 
         <div class="form-field-1">
           <label for="plate">Plaque d'immatriculation</label>
-          <input type="text" id="plate" class="form-control" placeholder="AB - 123 - CD">
+          <input type="text" id="plate" class="form-control" placeholder="AB - 123 - CD" autocomplete="off">
         </div>
 
         <div class="form-field-1">
@@ -463,7 +454,6 @@ function renderVehicleList() {
     </form>
   `;
 
-  // … le reste inchangé pour lister vehiclesLocal dans #vehicleList
   const listDiv = container.querySelector('#vehicleList');
   listDiv.innerHTML = "";
 
@@ -511,16 +501,13 @@ function renderVehicleList() {
     });
   }
 
-  // Hardening anti-nav sur le bouton submit (au cas où Bootstrap/HTML ajoute qlq chose)
+  // Bouton submit: hardening
   const saveBtn = container.querySelector('#vehicle-save-btn');
   if (saveBtn) {
     saveBtn.removeAttribute('data-bs-toggle');
     saveBtn.removeAttribute('data-bs-target');
     saveBtn.removeAttribute('href');
-    saveBtn.addEventListener('click', (ev) => {
-      // si pour une raison obscure un click tenterait de propager
-      ev.stopPropagation();
-    });
+    saveBtn.addEventListener('click', (ev) => ev.stopPropagation());
   }
 }
 
@@ -639,16 +626,7 @@ function injectDeleteModal() {
   document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
-// -------------------- Gestion des événements globaux --------------------
-
-// ⚡ Fonction utilitaire pour formater les dates dans input[type="date"]
-function formatDateForInput(dateStr) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  if (isNaN(d)) return "";
-  return d.toISOString().split("T")[0]; // 👉 retourne YYYY-MM-DD
-}
-
+// -------------------- Events globaux actions (Modifier/Supprimer) --------------------
 document.body.addEventListener('click', (event) => {
   const target = event.target;
 
@@ -680,6 +658,13 @@ function handleModifyClick(index) {
 
   switchToTab('user-vehicles-form');
 
+  // >>> Scroll vers "Ajouter un véhicule"
+  const formContainer = document.querySelector('#user-vehicles-form');
+  const createForm = document.querySelector('#user-vehicles-form #create-vehicle-form');
+  // On cible le titre si tu veux être précis:
+  const addTitle = createForm?.querySelector('h2'); // "Ajouter un véhicule"
+  (addTitle || createForm || formContainer)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
   setTimeout(() => {
     const form = document.querySelector('#user-vehicles-form #create-vehicle-form');
     if (!form) {
@@ -688,7 +673,6 @@ function handleModifyClick(index) {
     }
 
     form.dataset.editIndex = String(index);
-    console.log('▶️ Mode édition: index', index);
 
     form.querySelector('#plate').value = vehicle.plate || '';
     form.querySelector('#registration-date').value = formatDateForInput(vehicle.registrationDate);
@@ -734,7 +718,7 @@ function handleConfirmDelete() {
     vehicles.splice(vehicleToDeleteIndex, 1);
     saveVehicles();
     vehicleToDeleteIndex = null;
-    
+
     updateVehicleListOnly();
 
     const deleteModalEl = document.getElementById('deleteModal');
@@ -758,62 +742,7 @@ function handleConfirmDelete() {
   }
 }
 
-// -------------------- Changement d'onglet + actualisation --------------------
-function switchToTab(tabId) {
-  const userSpaceSection = document.querySelector('.user-space-section');
-  if (!userSpaceSection) return;
-
-  const desktopTabs = userSpaceSection.querySelectorAll('.nav-pills.user-tabs .nav-link');
-  const offcanvasTabs = userSpaceSection.querySelectorAll('.nav-pills.user-tabs-offcanvas .nav-link');
-  const forms = userSpaceSection.querySelectorAll('.user-space-form');
-
-  // Cacher tous les formulaires
-  forms.forEach(form => form.style.display = 'none');
-
-  // Désactiver tous les onglets
-  desktopTabs.forEach(tab => tab.classList.remove('active'));
-  offcanvasTabs.forEach(tab => tab.classList.remove('active'));
-
-  // Afficher le formulaire ciblé
-  const targetForm = document.getElementById(tabId);
-  if (targetForm) targetForm.style.display = 'block';
-
-  // Fonction pour activer l'onglet correspondant
-  function activateTab(tabs) {
-    tabs.forEach(tab => {
-      const href = tab.getAttribute('href') || tab.dataset.target || '';
-      if (href === `#${tabId}`) {
-        tab.classList.add('active');
-      }
-    });
-  }
-
-  activateTab(desktopTabs);
-  activateTab(offcanvasTabs);
-
-  if (tabId === 'user-trajects-form') {  // ou l’id de l’onglet création trajet
-    loadVehicles();       // recharge les véhicules depuis localStorage
-    renderVehicleList();  // rafraîchit la liste affichée
-    if (typeof populateVehiclesSelect === 'function') {
-      populateVehiclesSelect();
-    }
-  }
-}
-
-// Place ce bloc ICI (après la définition)
-if (!window.__wrappedSwitchToTab) {
-  const __origSwitchToTab = switchToTab;
-  window.switchToTab = function(tabId) {
-    console.warn('📌 switchToTab CALLED', {
-      tabId,
-      stack: new Error().stack.split('\n').slice(0, 6).join('\n')
-    });
-    return __origSwitchToTab.call(this, tabId);
-  };
-  window.__wrappedSwitchToTab = true;
-}
-
-// Fonction globale pour remplir le datalist/select des véhicules
+// -------------------- Datalist/select véhicules (global) --------------------
 function populateVehiclesSelect() {
   const datalist = document.getElementById('vehiclesDatalist');
   if (!datalist) return;
@@ -826,61 +755,23 @@ function populateVehiclesSelect() {
   });
 }
 
-// -------------------- Persistance véhicules --------------------
-function saveVehicles() {
-  try {
-    localStorage.setItem('ecoride_vehicles', JSON.stringify(vehicles));
-    console.log("💾 Véhicules sauvegardés:", vehicles.length);
-
-    // ⚡ Mise à jour immédiate du datalist côté trajets
-    if (typeof populateVehiclesSelect === 'function') {
-      populateVehiclesSelect();
-    }
-
-  } catch (err) {
-    console.error("❌ Erreur sauvegarde véhicules:", err);
-  }
-
-  // après avoir écrit dans localStorage
-  window.dispatchEvent(new CustomEvent('ecoride:vehiclesUpdated', {
-    detail: { vehicles: JSON.parse(localStorage.getItem('ecoride_vehicles') || '[]') }
-  }));
-}
-
 // -------------------- Lancement --------------------
 document.addEventListener('pageContentLoaded', () => {
-  const pathname = window.location.pathname;
-  const cleanPathname = pathname.replace(/\/$/, "");
-
-  if (cleanPathname === "/espace-utilisateur") {
+  const pathname = window.location.pathname.replace(/\/$/, "");
+  if (pathname === "/espace-utilisateur") {
     initUserSpace();
 
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab");
-
     if (tab === "trajets") {
-      // On attend que le DOM soit prêt avec les onglets
       setTimeout(() => {
-        // 👉 Clique sur l’onglet desktop
         const desktopTab = document.querySelector('.user-tabs .nav-link[data-tab="trajets"]');
-        if (desktopTab) {
-          desktopTab.click();
-        }
-      
-        // 👉 Clique aussi sur l’onglet offcanvas (si jamais affiché)
+        if (desktopTab) desktopTab.click();
         const offcanvasTab = document.querySelector('.user-tabs-offcanvas .nav-link[data-tab="trajets"]');
-        if (offcanvasTab) {
-          offcanvasTab.click();
-        }
-      
-        // 👉 Ensuite scroll sur la section "Mes trajets en cours"
+        if (offcanvasTab) offcanvasTab.click();
         const target = document.getElementById("trajets-en-cours");
-        if (target) {
-          console.log("🟢 Scroll vers 'Mes trajets en cours'");
-          target.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      }, 500); // mets 500ms si 300 était trop court
+        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 500);
     }
   }
 });
-

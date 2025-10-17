@@ -1,48 +1,89 @@
 <!-- Onglet Mes véhicules -->
 <div id="user-vehicles-form">
   <h1>Mes véhicules</h1>
-  
-  <form>
+
+  <!-- Formulaire 1 : Créer un véhicule -->
+  <form id="create-vehicle-form" class="card-like" autocomplete="off">
+    <h2>Ajouter un véhicule</h2>
+
+    <div class="form-field">
+      <label for="plate">Plaque d'immatriculation</label>
+      <input type="text" id="plate" class="form-control" placeholder="AB - 123 - CD">
+    </div>
+
+    <div class="form-field">
+      <label for="registration-date">Date de première immatriculation</label>
+      <input type="date" id="registration-date" class="form-control">
+    </div>
+
+    <div class="form-field">
+      <label for="vehicle-marque">Marque</label>
+      <input type="text" id="vehicle-marque" class="form-control" placeholder="Tesla">
+    </div>
+
+    <div class="form-field">
+      <label for="vehicle-model">Modèle</label>
+      <input type="text" id="vehicle-model" class="form-control" placeholder="Model 3">
+    </div>
+
+    <div class="form-field">
+      <label for="vehicle-color">Couleur</label>
+      <input type="text" id="vehicle-color" class="form-control" placeholder="Noir">
+    </div>
+
+    <div class="form-field">
+      <label for="vehicleType">Type de véhicule</label>
+      <select id="vehicleType" name="vehicleType" class="form-input">
+        <option value="" selected hidden>-- Sélectionner un type--</option>
+        <option value="Électrique">Électrique</option>
+        <option value="Hybride">Hybride</option>
+        <option value="Thermique">Thermique</option>
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label for="seats">Nombre de places disponibles</label>
+      <input type="number" id="seats" class="form-control" placeholder="3" min="1" max="8">
+    </div>
+
+    <div class="form-field">
+      <label>Préférences chauffeur</label>
+      <div class="checkbox-group">
+        <label><input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="fumeur"> Fumeur</label>
+        <label><input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="animal"> Animal</label>
+        <label><input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="musique"> Musique</label>
+      </div>
+    </div>
+
+    <div class="form-field">
+      <label for="other">Autre</label>
+      <input type="text" id="other" class="form-control" placeholder="Discussion...">
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-success">Enregistrer</button>
+    </div>
+  </form>
+
+  <!-- Formulaire 2 : Mes véhicules utilisés (ton bloc existant) -->
+  <form id="used-vehicles-form">
     <div class="form-fields">
       <div class="title-my-used-vehicles">
-        <h2>Mes véhicules utilisées</h2>
-      </div>
-  
-      <div class="form-field vehicle-line">
-        <div class="vehicle-brand">Tesla</div>
-        <div class="vehicle-model">Model 3</div>
-        <div class="vehicle-color">Noir</div>
+        <h2>Mes véhicules enregistrés</h2>
       </div>
 
-      <div class="form-field-modify-delete">
-        <a href="javascript:void(0);" class="link-modify" onclick="redirectToProfileRole()">Modifier</a>
-        <a href="#" class="link-delete" data-bs-toggle="modal" data-bs-target="#deleteModal">Supprimer</a>
-      </div>
-         
-      <div class="form-field vehicle-line">
-        <div class="vehicle-brand">Tesla</div>
-        <div class="vehicle-model">Model 3</div>
-        <div class="vehicle-color">Noir</div>
-      </div>
-      
-      <div class="form-field-modify-delete">
-        <a href="javascript:void(0);" class="link-modify" onclick="redirectToProfileRole()">Modifier</a>
-        <a href="#" class="link-delete" data-bs-toggle="modal" data-bs-target="#deleteModal">Supprimer</a>
-      </div>
-
-      <div class="form-field vehicle-line">
-        <div class="vehicle-brand">Tesla</div>
-        <div class="vehicle-model">Model 3</div>
-        <div class="vehicle-color">Noir</div>
-      </div>
-    
-      <div class="form-field-modify-delete">
-        <a href="javascript:void(0);" class="link-modify" onclick="redirectToProfileRole()">Modifier</a>
-        <a href="#" class="link-delete" data-bs-toggle="modal" data-bs-target="#deleteModal">Supprimer</a>
-      </div>
-
-      <div class="btn-add-vehicle">
-        <button type="submit" class="btn" id="addVehicleBtn">Ajouter un véhicule</button>
+      <!-- Liste rendue dynamiquement depuis localStorage -->
+      <div id="vehiclesList">
+        <!-- Exemples statiques initiaux (peuvent être supprimés si tu rends en JS) -->
+        <div class="form-field vehicle-line">
+          <div class="vehicle-brand">Tesla</div>
+          <div class="vehicle-model">Model 3</div>
+          <div class="vehicle-color">Noir</div>
+        </div>
+        <div class="form-field-modify-delete">
+          <a class="link-modify">Modifier</a>
+          <a href="#" class="link-delete" data-bs-toggle="modal" data-bs-target="#deleteModal">Supprimer</a>
+        </div>
       </div>
     </div>
   </form>

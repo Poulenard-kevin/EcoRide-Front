@@ -6,7 +6,7 @@
 
   h2 {
     text-align: left;
-    margin-bottom: 30px;
+    margin-bottom: 5px;
   }
 
 
@@ -26,28 +26,15 @@
     margin-top: 20px;
   }
 
-  .form-field {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background-color: $color-background;
-    padding: 12px 20px;
-    border-radius: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,.1);
-    font-size: $font-size-body;
-    font-weight: $weight-regular;
-    font-family: $font-body;
-    text-align: left;
-    
-  }
 
   .form-field-modify-delete {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 15px;
-    padding: 0px 20px;
-    margin-bottom: 10px;
+    padding: 5px 20px 0 20px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
 
     .link-modify {
       color: $color-medium-green;
@@ -146,13 +133,6 @@
     color: #2f4f2f;
   }
   
-  .form-field-modify-delete {
-    display: flex;
-    justify-content: space-between;
-    padding: 5px 20px 0 20px;
-    font-size: 0.9rem;
-  }
-  
   .form-field-modify-delete a {
     color: #2f4f2f;
     text-decoration: underline;
@@ -207,6 +187,156 @@
     text-align: right;
   }
 
+  input[type="checkbox"] {
+    width: 16px; height: 16px;
+    appearance: none;
+    background: $color-very-light-beige;
+    border: 2px solid $color-medium-green;
+    border-radius: 4px; cursor: pointer; margin-right: 10px;
+    position: relative;
   
+    &:checked {
+      background: $color-medium-green;
+      &::after {
+        content: '✔';
+        color: $color-light-beige;
+        font-size: 10px;
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+      }
+    }
+  }
+
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    background-color: #e9ecef; /* gris clair */
+    color: #6c757d; /* texte gris */
+    cursor: not-allowed;
+    opacity: 1; /* pour garder le texte lisible */
+    box-shadow: none;
+  }
+
+  .form-control {
+    border-radius: 20px;
+    padding: 12px 20px;
+    font-weight: $weight-semibold;
+    font-size: $font-size-nav;
+    color: $color-dark-green;
+    background-color: $color-very-light-beige;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    outline: none;
+    transition: box-shadow 0.3s ease;
+    
+    &::placeholder { 
+      color: #7a8a6f; 
+    }
+
+    &:focus {
+      background-color: $color-very-light-beige;    /* ne change pas le fond */
+      box-shadow: 0 0 5px 2px $color-dark-green;   /* halo lumineux vert */
+    }
+  }
+
+  select.form-input {
+    border-radius: 20px;
+    padding: 12px 20px;
+    font-weight: $weight-semibold;
+    font-size: $font-size-nav;
+    color: $color-dark-green;
+    background-color: $color-very-light-beige;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    outline: none;
+    transition: box-shadow 0.3s ease;
+    border: none;
+    width: 100%;
+    
+    /* On supprime la flèche native */
+    appearance: none;
+    -moz-appearance: none;
+    -webkit-appearance: none;
+  
+    /* 🔥 Flèche custom */
+    background-image: url("data:image/svg+xml;utf8,<svg fill='%237a8a6f' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 20px center; /* 👈 décale la flèche vers la gauche */
+    background-size: 25px;
+  
+    &:focus {
+      background-color: $color-very-light-beige;
+      box-shadow: 0 0 5px 2px $color-dark-green;
+    }
+  
+    /* Placeholder (option sélectionnée vide) */
+    &:has(option[value=""]:checked) {
+      color: #7a8a6f;
+    }
+  }
+  
+  label {
+    font-family: $font-body;
+    font-size: $font-size-body;
+    font-weight: $weight-regular;
+    color: $color-dark-green;
+    display: flex; align-items: center;
+    margin-bottom: 10px;
+  }
+  
+  // layout champs
+  .form-fields {
+    display: flex; flex-direction: column; gap: 30px; margin-top: 20px;
+  
+    .role-group { display: flex; gap: 30px; flex-wrap: wrap; }
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 15px; }
+  
+    .btn { align-self: center; margin-top: 20px; min-width: 200px; }
+  }
+
+
+  @media (max-width: 576px) {
+    .btn {
+      font-size: $font-size-nav; /* Réduit la taille des boutons */
+      padding: 8px 16px; /* Ajuste le padding des boutons */
+    }
+
+    .form-control {
+      padding: 8px 15px;
+      font-size: 12px;
+    }
+    
+    label {
+      font-size: $font-size-nav;
+    }
+
+    form {
+      padding: 10px 20px 35px;
+    }
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
+  }
+
+  /* Style de base (placeholder visuel gris) */
+  input[type="date"].empty::-webkit-datetime-edit,
+  input[type="time"].empty::-webkit-datetime-edit,
+  input[type="date"].empty::-webkit-datetime-edit-text,
+  input[type="time"].empty::-webkit-datetime-edit-text,
+  input[type="date"].empty::-webkit-datetime-edit-fields-wrapper,
+  input[type="time"].empty::-webkit-datetime-edit-fields-wrapper {
+    color: #7a8a6f;
+  }
+
+  /* En vert quand rempli (pas empty) */
+  input[type="date"]:not(.empty)::-webkit-datetime-edit,
+  input[type="time"]:not(.empty)::-webkit-datetime-edit,
+  input[type="date"]:not(.empty)::-webkit-datetime-edit-text,
+  input[type="time"]:not(.empty)::-webkit-datetime-edit-text,
+  input[type="date"]:not(.empty)::-webkit-datetime-edit-fields-wrapper,
+  input[type="time"]:not(.empty)::-webkit-datetime-edit-fields-wrapper {
+    color: $color-dark-green;
+  }
 
 }

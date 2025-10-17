@@ -3,6 +3,23 @@ let editingVehicleIndex = null;
 let vehicleToDeleteIndex = null;
 const vehicles = [];
 
+// Bloque les clics d'onglets pendant un submit véhicules (en mode capture)
+document.addEventListener('click', (e) => {
+  if (document.body.dataset.lockTab === '1') {
+    const link = e.target.closest('a, button');
+    // Cible onglets desktop/offcanvas ou tout lien avec href commençant par #
+    if (link && (
+      link.closest('.nav-pills.user-tabs') ||
+      link.closest('.nav-pills.user-tabs-offcanvas') ||
+      (link.hasAttribute('href') && link.getAttribute('href')?.startsWith('#'))
+    )) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.warn('⚠️ Tab click bloqué pendant submit', link);
+    }
+  }
+}, true); // mode capture
+
 // -------------------- Sauvegarde les vehicules --------------------
 
 function loadVehicles() {
@@ -58,6 +75,7 @@ export async function initUserSpace() {
 
   // Synchroniser onglets et affichage
   const syncActiveClass = (index) => {
+    console.warn('🎯 syncActiveClass index=', index);
     desktopTabs.forEach((tab) => tab.classList.remove("active"));
     offcanvasTabs.forEach((tab) => tab.classList.remove("active"));
     forms.forEach((form) => (form.style.display = "none"));
@@ -73,20 +91,64 @@ export async function initUserSpace() {
   };
 
   desktopTabs.forEach((tab, index) => {
-    tab.onclick = (e) => {
+    tab.addEventListener('click', (e) => {
       e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      if (document.body.dataset.lockTab === '1') return;
       syncActiveClass(index);
-    };
+    }, true); // capture + stopImmediate
   });
-
+  
   offcanvasTabs.forEach((tab, index) => {
-    tab.onclick = (e) => {
+    tab.addEventListener('click', (e) => {
       e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      if (document.body.dataset.lockTab === '1') return;
       syncActiveClass(index);
-    };
+    }, true);
   });
 
   await loadHTMLContent();
+
+  // Neutraliser les toggles Bootstrap sur les onglets (pour gérer nous-mêmes)
+  document.querySelectorAll('.nav-pills.user-tabs .nav-link, .nav-pills.user-tabs-offcanvas .nav-link')
+  .forEach(tab => {
+    if (tab.getAttribute('data-bs-toggle')) {
+      tab.removeAttribute('data-bs-toggle');
+    }
+    if (tab.hasAttribute('href') && tab.getAttribute('href')?.startsWith('#')) {
+      // On garde l’href pour activateTab, mais on empêchera la navigation par click
+      tab.addEventListener('click', (e) => {
+        if (document.body.dataset.lockTab === '1') {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+      }, true);
+    }
+  });
+
+  // Trace toute activation d'onglet (classes actives)
+  {
+    const tabContainers = document.querySelectorAll('.nav-pills.user-tabs, .nav-pills.user-tabs-offcanvas');
+    tabContainers.forEach(container => {
+      container.addEventListener('click', (e) => {
+        const link = e.target.closest('.nav-link');
+        if (link) {
+          console.log('🔎 Click sur tab', {
+            text: link.textContent?.trim(),
+            href: link.getAttribute('href'),
+            dataset: { ...link.dataset },
+            lock: document.body.dataset.lockTab
+          });
+        }
+      }, true);
+    });
+  }
 
   setTimeout(() => initRoleForm(), 500);
 
@@ -116,8 +178,6 @@ export async function initUserSpace() {
   console.log("initUserSpace end");
 
   console.log("✅ Espace utilisateur initialisé");
-
-  renderVehicleList();
 }
 
 // -------------------- Chargement HTML dynamique --------------------
@@ -195,104 +255,131 @@ function convertFRtoISO(dateStr) {
 
 // -------------------- Gestion des véhicules --------------------
 function initVehicleManagement() {
-  const profileForm = document.querySelector('#user-profile-form form');
-  const vehicleListContainer = document.getElementById('user-vehicles-form');
-  const plateInput = document.getElementById("plate");
+  renderVehicleList();       // 1er rendu
+  bindVehiclesFormHandlers(); // attache les handlers sur le form rendu
+}
 
-  if (!profileForm || !vehicleListContainer || !plateInput) {
-    console.warn('Formulaire profil ou conteneur véhicules introuvable');
+function bindVehiclesFormHandlers() {
+  const form = document.querySelector('#user-vehicles-form #create-vehicle-form');
+  const plateInput = form?.querySelector('#plate');
+  if (!form || !plateInput) {
+    console.warn('Formulaire véhicules introuvable (bind)');
     return;
   }
 
-  // ⚡ Formatage automatique de la plaque
-  plateInput.addEventListener("input", (e) => {
+  const saveBtn = document.querySelector('#vehicle-save-btn');
+
+  // 1) Bloquer le Enter “parasite” au niveau du formulaire
+  form.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (saveBtn) saveBtn.click(); // on force le flux via notre bouton
+    }
+  }, true);
+
+  // 2) Formatter plaque
+  plateInput.addEventListener('input', (e) => {
     let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-
-    // Limiter à 7 caractères utiles (AB123CD)
     value = value.slice(0, 7);
-
-    // Ajouter format AB - 123 - CD
     let cleaned = "";
-      for (let i = 0; i < value.length; i++) {
-        if ((i < 2 || i > 4) && /[A-Z]/.test(value[i])) {
-          cleaned += value[i]; // Lettres aux positions 0-1 et 5-6
-        } else if (i >= 2 && i <= 4 && /[0-9]/.test(value[i])) {
-          cleaned += value[i]; // Chiffres aux positions 2-4
-        }
-      }
+    for (let i = 0; i < value.length; i++) {
+      if ((i < 2 || i > 4) && /[A-Z]/.test(value[i])) cleaned += value[i];
+      else if (i >= 2 && i <= 4 && /[0-9]/.test(value[i])) cleaned += value[i];
+    }
     let formatted = "";
     if (cleaned.length > 0) formatted += cleaned.slice(0, 2);
     if (cleaned.length > 2) formatted += " - " + cleaned.slice(2, 5);
     if (cleaned.length > 5) formatted += " - " + cleaned.slice(5, 7);
-
     e.target.value = formatted;
   });
 
-  renderVehicleList()
-
-  // ⚡ Validation + sauvegarde
-  profileForm.addEventListener('submit', (e) => {
+  // 3) Handler submit (ton code existant)
+  form.addEventListener('submit', (e) => {
     e.preventDefault();
-  
-    console.log('editingVehicleIndex au submit:', editingVehicleIndex);
-  
-    const plate = profileForm.querySelector('#plate').value.trim();
-    
-    // ⚡ Validation format de plaque
-    const regex = /^[A-Z]{2} - \d{3} - [A-Z]{2}$/;
-    if (!regex.test(plate)) {
-      alert("⚠️ La plaque doit être au format : AB - 123 - CD");
-      return;
-    }
-  
-    // ⚡ Récupération de la date
-    let registrationDate = profileForm.querySelector('#registration-date').value.trim();
-  
-    // Si l’utilisateur saisit en jj/mm/aaaa → on convertit en YYYY-MM-DD
-    if (registrationDate.includes("/")) {
-      registrationDate = convertFRtoISO(registrationDate);
-    }
-  
-    const marque = profileForm.querySelector('#vehicle-marque').value.trim();
-    const model = profileForm.querySelector('#vehicle-model').value.trim();
-    const color = profileForm.querySelector('#vehicle-color').value.trim();
-    const type = profileForm.querySelector('#vehicleType').value.trim();
-    const seats = profileForm.querySelector('#seats').value.trim();
-    const preferences = Array.from(profileForm.querySelectorAll('input[name="preferences"]:checked')).map(el => el.value);
-    const other = profileForm.querySelector('#other').value.trim();
-  
-    if (!model) {
-      alert('Le modèle est obligatoire');
-      return;
-    }
-  
-    const vehicleData = {
-      id: plate,       // 🔑 La plaque comme ID unique
-      plate,
-      registrationDate,   // ✅ toujours en YYYY-MM-DD
-      marque,
-      model,
-      color,
-      type,
-      seats,
-      preferences,
-      other
-    };
-  
-    if (editingVehicleIndex !== null) {
-      vehicles[editingVehicleIndex] = vehicleData;
-      editingVehicleIndex = null;
-    } else {
-      vehicles.push(vehicleData);
-    }
-  
-    saveVehicles();
-    profileForm.reset();
-    renderVehicleList();
-    switchToTab('user-vehicles-form');
-  });
+    e.stopPropagation();
 
-  renderVehicleList();
+    // Enlève le focus de tout nav-link avant submit
+    document.querySelectorAll('.nav-pills.user-tabs .nav-link, .nav-pills.user-tabs-offcanvas .nav-link')
+    .forEach(a => a.blur());
+
+    document.body.dataset.lockTab = '1';
+
+    // Désactive clics onglets
+  const tabContainers = document.querySelectorAll('.nav-pills.user-tabs, .nav-pills.user-tabs-offcanvas');
+  tabContainers.forEach(el => el.style.pointerEvents = 'none');
+
+  try {
+      // ========== DÉBUT DU TRY ==========
+      
+      loadVehicles();
+
+      const editIdxAttr = form.dataset.editIndex;
+      const editIdx = editIdxAttr !== undefined ? parseInt(editIdxAttr, 10) : null;
+
+      console.log('[VEHICLES] Submit start', { dataset: { ...form.dataset }, editingVehicleIndex });
+
+      const plate = form.querySelector('#plate').value.trim();
+      const regex = /^[A-Z]{2} - \d{3} - [A-Z]{2}$/;
+      if (!regex.test(plate)) {
+        alert("⚠️ La plaque doit être au format : AB - 123 - CD");
+        return; // le finally va déverrouiller
+      }
+
+      let registrationDate = form.querySelector('#registration-date').value.trim();
+      if (registrationDate.includes('/')) registrationDate = convertFRtoISO(registrationDate);
+
+      const vehicleData = {
+        id: plate,
+        plate,
+        registrationDate,
+        marque: form.querySelector('#vehicle-marque').value.trim(),
+        model: form.querySelector('#vehicle-model').value.trim(),
+        color: form.querySelector('#vehicle-color').value.trim(),
+        type: form.querySelector('#vehicleType').value.trim(),
+        seats: form.querySelector('#seats').value.trim(),
+        preferences: Array.from(form.querySelectorAll('input[name="preferences"]:checked')).map(el => el.value),
+        other: form.querySelector('#other').value.trim(),
+      };
+
+      console.log('[VEHICLES] Apply', {
+        mode: (editIdx !== null && !Number.isNaN(editIdx)) ? 'edit-dataset'
+             : (editingVehicleIndex !== null) ? 'edit-global'
+             : 'create',
+        editIdx,
+        editingVehicleIndex
+      });
+
+      if (editIdx !== null && !Number.isNaN(editIdx)) {
+        vehicles[editIdx] = vehicleData;
+        delete form.dataset.editIndex;
+        editingVehicleIndex = null;
+      } else if (editingVehicleIndex !== null) {
+        vehicles[editingVehicleIndex] = vehicleData;
+        editingVehicleIndex = null;
+      } else {
+        const existsIdx = vehicles.findIndex(v => (v.id || v.plate) === plate);
+        if (existsIdx !== -1) vehicles[existsIdx] = vehicleData;
+        else vehicles.push(vehicleData);
+      }
+
+      saveVehicles();
+      form.reset();
+
+      updateVehicleListOnly();
+
+      console.log('[VEHICLES] After save', JSON.parse(localStorage.getItem('ecoride_vehicles') || '[]'));
+
+      // ========== FIN DU TRY ==========
+      
+    } catch (err) {
+      console.error('❌ Erreur submit véhicules', err);
+    } finally {
+      delete document.body.dataset.lockTab;
+      // Réactive clics onglets dans le finally
+      tabContainers.forEach(el => el.style.pointerEvents = '');
+    }
+  });
 }
 
 function renderVehicleList() {
@@ -301,75 +388,191 @@ function renderVehicleList() {
 
   container.innerHTML = `
     <h1>Mes véhicules</h1>
-    <form>
+
+    <!-- Formulaire 1 : Créer un véhicule -->
+    <form id="create-vehicle-form">
+      <div class="form-fields">
+        <h2>Ajouter un véhicule</h2>
+
+        <div class="form-field-1">
+          <label for="plate">Plaque d'immatriculation</label>
+          <input type="text" id="plate" class="form-control" placeholder="AB - 123 - CD">
+        </div>
+
+        <div class="form-field-1">
+          <label for="registration-date">Date de première immatriculation</label>
+          <input type="date" id="registration-date" class="form-control">
+        </div>
+
+        <div class="form-field-1">
+          <label for="vehicle-marque">Marque</label>
+          <input type="text" id="vehicle-marque" class="form-control" placeholder="Tesla">
+        </div>
+
+        <div class="form-field-1">
+          <label for="vehicle-model">Modèle</label>
+          <input type="text" id="vehicle-model" class="form-control" placeholder="Model 3">
+        </div>
+
+        <div class="form-field-1">
+          <label for="vehicle-color">Couleur</label>
+          <input type="text" id="vehicle-color" class="form-control" placeholder="Noir">
+        </div>
+
+        <div class="form-field-1">
+          <label for="vehicleType">Type de véhicule</label>
+          <select id="vehicleType" name="vehicleType" class="form-input">
+            <option value="" selected hidden>-- Sélectionner un type--</option>
+            <option value="Électrique">Électrique</option>
+            <option value="Hybride">Hybride</option>
+            <option value="Thermique">Thermique</option>
+          </select>
+        </div>
+
+        <div class="form-field-1">
+          <label for="seats">Nombre de places disponibles</label>
+          <input type="number" id="seats" class="form-control" placeholder="3" min="1" max="8">
+        </div>
+
+        <div class="form-field-1">
+          <label>Préférences chauffeur</label>
+          <div class="checkbox-group">
+            <label><input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="fumeur"> Fumeur</label>
+            <label><input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="animal"> Animal</label>
+            <label><input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="musique"> Musique</label>
+          </div>
+        </div>
+
+        <div class="form-field-1">
+          <label for="other">Autre</label>
+          <input type="text" id="other" class="form-control" placeholder="Discussion...">
+        </div>
+
+        <button type="submit" id="vehicle-save-btn" class="btn btn-success">Enregistrer</button>
+      </div>
+    </form>
+
+    <!-- Formulaire 2 : Mes véhicules enregistrés -->
+    <form id="used-vehicles-form">
       <div class="form-fields">
         <div class="title-my-used-vehicles">
-          <h2>Mes véhicules utilisés</h2>
+          <h2>Mes véhicules enregistrés</h2>
         </div>
         <div id="vehicleList"></div>
-        <div class="btn-add-vehicle">
-          <button type="button" class="btn" id="addVehicleBtn">Ajouter un véhicule</button>
-        </div>
       </div>
     </form>
   `;
 
+  // … le reste inchangé pour lister vehiclesLocal dans #vehicleList
   const listDiv = container.querySelector('#vehicleList');
   listDiv.innerHTML = "";
 
-  // 🔥 On recharge direct depuis localStorage (fiable)
   const stored = localStorage.getItem('ecoride_vehicles');
   const vehiclesLocal = stored ? JSON.parse(stored) : [];
 
-  console.log("📋 Véhicules trouvés pour l'affichage :", vehiclesLocal);
+  if (vehiclesLocal.length === 0) {
+    listDiv.innerHTML = "<p>Aucun véhicule enregistré.</p>";
+  } else {
+    vehiclesLocal.forEach((v, index) => {
+      const vehicleContainer = document.createElement('div');
+      vehicleContainer.className = 'vehicle-container';
+
+      const vehicleLine = document.createElement('div');
+      vehicleLine.className = 'form-field vehicle-label vehicle-line';
+      vehicleLine.style.cursor = 'pointer';
+
+      const brandDiv = document.createElement('div');
+      brandDiv.className = 'vehicle-brand';
+      brandDiv.textContent = v.marque || v.brand || '';
+
+      const modelDiv = document.createElement('div');
+      modelDiv.className = 'vehicle-model';
+      modelDiv.textContent = v.model || v.modele || '';
+
+      const colorDiv = document.createElement('div');
+      colorDiv.className = 'vehicle-color';
+      colorDiv.textContent = v.color || v.couleur || '';
+
+      vehicleLine.appendChild(brandDiv);
+      vehicleLine.appendChild(modelDiv);
+      vehicleLine.appendChild(colorDiv);
+      vehicleLine.addEventListener('click', () => showVehicleModal(v));
+
+      const actionDiv = document.createElement('div');
+      actionDiv.className = 'form-field-modify-delete';
+      actionDiv.innerHTML = `
+        <a href="javascript:void(0);" class="link-modify" data-index="${index}">Modifier</a>
+        <a href="javascript:void(0);" class="link-delete" data-index="${index}" data-bs-toggle="modal" data-bs-target="#deleteModal">Supprimer</a>
+      `;
+
+      vehicleContainer.appendChild(vehicleLine);
+      vehicleContainer.appendChild(actionDiv);
+      listDiv.appendChild(vehicleContainer);
+    });
+  }
+
+  // Hardening anti-nav sur le bouton submit (au cas où Bootstrap/HTML ajoute qlq chose)
+  const saveBtn = container.querySelector('#vehicle-save-btn');
+  if (saveBtn) {
+    saveBtn.removeAttribute('data-bs-toggle');
+    saveBtn.removeAttribute('data-bs-target');
+    saveBtn.removeAttribute('href');
+    saveBtn.addEventListener('click', (ev) => {
+      // si pour une raison obscure un click tenterait de propager
+      ev.stopPropagation();
+    });
+  }
+}
+
+function updateVehicleListOnly() {
+  const listDiv = document.querySelector('#vehicleList');
+  if (!listDiv) return;
+
+  listDiv.innerHTML = "";
+
+  const stored = localStorage.getItem('ecoride_vehicles');
+  const vehiclesLocal = stored ? JSON.parse(stored) : [];
 
   if (vehiclesLocal.length === 0) {
     listDiv.innerHTML = "<p>Aucun véhicule enregistré.</p>";
-    return;
-  }
+  } else {
+    vehiclesLocal.forEach((v, index) => {
+      const vehicleContainer = document.createElement('div');
+      vehicleContainer.className = 'vehicle-container';
 
-  vehiclesLocal.forEach((v, index) => {
-    const vehicleContainer = document.createElement('div');
-    vehicleContainer.className = 'vehicle-container';
-  
-    // Création du conteneur flex pour la ligne véhicule
-    const vehicleLine = document.createElement('div');
-    vehicleLine.className = 'form-field vehicle-label vehicle-line';
-    vehicleLine.style.cursor = 'pointer';
-  
-    // Création des divs pour marque, modèle et couleur
-    const brandDiv = document.createElement('div');
-    brandDiv.className = 'vehicle-brand';
-    brandDiv.textContent = v.marque || v.brand || '';
-  
-    const modelDiv = document.createElement('div');
-    modelDiv.className = 'vehicle-model';
-    modelDiv.textContent = v.model || '';
-  
-    const colorDiv = document.createElement('div');
-    colorDiv.className = 'vehicle-color';
-    colorDiv.textContent = v.color || '';
-  
-    // Ajout des divs dans vehicleLine
-    vehicleLine.appendChild(brandDiv);
-    vehicleLine.appendChild(modelDiv);
-    vehicleLine.appendChild(colorDiv);
-  
-    vehicleLine.addEventListener('click', () => {
-      showVehicleModal(v);
+      const vehicleLine = document.createElement('div');
+      vehicleLine.className = 'form-field vehicle-label vehicle-line';
+      vehicleLine.style.cursor = 'pointer';
+
+      const brandDiv = document.createElement('div');
+      brandDiv.className = 'vehicle-brand';
+      brandDiv.textContent = v.marque || v.brand || '';
+
+      const modelDiv = document.createElement('div');
+      modelDiv.className = 'vehicle-model';
+      modelDiv.textContent = v.model || v.modele || '';
+
+      const colorDiv = document.createElement('div');
+      colorDiv.className = 'vehicle-color';
+      colorDiv.textContent = v.color || v.couleur || '';
+
+      vehicleLine.appendChild(brandDiv);
+      vehicleLine.appendChild(modelDiv);
+      vehicleLine.appendChild(colorDiv);
+      vehicleLine.addEventListener('click', () => showVehicleModal(v));
+
+      const actionDiv = document.createElement('div');
+      actionDiv.className = 'form-field-modify-delete';
+      actionDiv.innerHTML = `
+        <a href="javascript:void(0);" class="link-modify" data-index="${index}">Modifier</a>
+        <a href="javascript:void(0);" class="link-delete" data-index="${index}" data-bs-toggle="modal" data-bs-target="#deleteModal">Supprimer</a>
+      `;
+
+      vehicleContainer.appendChild(vehicleLine);
+      vehicleContainer.appendChild(actionDiv);
+      listDiv.appendChild(vehicleContainer);
     });
-  
-    const actionDiv = document.createElement('div');
-    actionDiv.className = 'form-field-modify-delete';
-    actionDiv.innerHTML = `
-      <a href="javascript:void(0);" class="link-modify" data-index="${index}">Modifier</a>
-      <a href="#" class="link-delete" data-bs-toggle="modal" data-bs-target="#deleteModal">Supprimer</a>
-    `;
-  
-    vehicleContainer.appendChild(vehicleLine);
-    vehicleContainer.appendChild(actionDiv);
-    listDiv.appendChild(vehicleContainer);
-  });
+  }
 }
 
 function showVehicleModal(vehicle) {
@@ -466,47 +669,50 @@ document.body.addEventListener('click', (event) => {
 });
 
 function handleModifyClick(index) {
+  loadVehicles();
   if (isNaN(index) || !vehicles[index]) {
-    console.error('Véhicule à modifier introuvable');
+    console.error('Véhicule à modifier introuvable', { index, vehiclesLen: vehicles.length });
     return;
   }
 
   editingVehicleIndex = index;
   const vehicle = vehicles[index];
 
-  switchToTab('user-profile-form');
+  switchToTab('user-vehicles-form');
 
-  const profileForm = document.querySelector('#user-profile-form form');
-  if (!profileForm) {
-    console.error('Formulaire Profil / Rôle introuvable');
-    return;
-  }
+  setTimeout(() => {
+    const form = document.querySelector('#user-vehicles-form #create-vehicle-form');
+    if (!form) {
+      console.error('Formulaire véhicules introuvable');
+      return;
+    }
 
-  profileForm.querySelector('#plate').value = vehicle.plate || '';
-  profileForm.querySelector('#registration-date').value = formatDateForInput(vehicle.registrationDate);
-  profileForm.querySelector('#vehicle-marque').value = vehicle.marque || '';
-  profileForm.querySelector('#vehicle-model').value = vehicle.model || '';
-  profileForm.querySelector('#vehicle-color').value = vehicle.color || '';
-  profileForm.querySelector('#vehicleType').value = vehicle.type || '';  
-  profileForm.querySelector('#seats').value = vehicle.seats || '';
-  profileForm.querySelector('#other').value = vehicle.other || '';
+    form.dataset.editIndex = String(index);
+    console.log('▶️ Mode édition: index', index);
 
-  const preferencesInputs = profileForm.querySelectorAll('input[name="preferences"]');
-  preferencesInputs.forEach(input => {
-    input.checked = vehicle.preferences && vehicle.preferences.includes(input.value);
-  });
+    form.querySelector('#plate').value = vehicle.plate || '';
+    form.querySelector('#registration-date').value = formatDateForInput(vehicle.registrationDate);
+    form.querySelector('#vehicle-marque').value = vehicle.marque || '';
+    form.querySelector('#vehicle-model').value = vehicle.model || '';
+    form.querySelector('#vehicle-color').value = vehicle.color || '';
+    form.querySelector('#vehicleType').value = vehicle.type || '';
+    form.querySelector('#seats').value = vehicle.seats || '';
+    form.querySelector('#other').value = vehicle.other || '';
 
-  const roleConducteur = profileForm.querySelector('input[name="role"][value="conducteur"]');
-  if (roleConducteur) roleConducteur.checked = true;
-
-  initRoleForm();
+    form.querySelectorAll('input[name="preferences"]').forEach(input => {
+      input.checked = !!(vehicle.preferences && vehicle.preferences.includes(input.value));
+    });
+  }, 50);
 }
 
 function handleAddClick() {
   editingVehicleIndex = null;
-  const profileForm = document.querySelector('#user-profile-form form');
-  if (profileForm) profileForm.reset();
-  switchToTab('user-profile-form');
+  const form = document.querySelector('#user-vehicles-form #create-vehicle-form');
+  if (form) {
+    form.reset();
+    delete form.dataset.editIndex;
+  }
+  switchToTab('user-vehicles-form');
 }
 
 function handleDeleteClick(target) {
@@ -526,12 +732,10 @@ function handleDeleteClick(target) {
 function handleConfirmDelete() {
   if (vehicleToDeleteIndex !== null && vehicleToDeleteIndex >= 0) {
     vehicles.splice(vehicleToDeleteIndex, 1);
-
-    // ✅ Sauvegarde persistante
     saveVehicles();
-    
     vehicleToDeleteIndex = null;
-    renderVehicleList();
+    
+    updateVehicleListOnly();
 
     const deleteModalEl = document.getElementById('deleteModal');
     if (!deleteModalEl) {
@@ -594,6 +798,19 @@ function switchToTab(tabId) {
       populateVehiclesSelect();
     }
   }
+}
+
+// Place ce bloc ICI (après la définition)
+if (!window.__wrappedSwitchToTab) {
+  const __origSwitchToTab = switchToTab;
+  window.switchToTab = function(tabId) {
+    console.warn('📌 switchToTab CALLED', {
+      tabId,
+      stack: new Error().stack.split('\n').slice(0, 6).join('\n')
+    });
+    return __origSwitchToTab.call(this, tabId);
+  };
+  window.__wrappedSwitchToTab = true;
 }
 
 // Fonction globale pour remplir le datalist/select des véhicules

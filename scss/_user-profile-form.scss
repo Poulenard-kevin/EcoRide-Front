@@ -212,4 +212,12 @@
   input[type="time"]:not(.empty)::-webkit-datetime-edit-fields-wrapper {
     color: $color-dark-green;
   }
+
+  .card-like { background:#f3ebd9; border-radius:12px; padding:16px; }
+  .section-title { font-size:1.1rem; margin-bottom:12px; color:#2e5d3b; }
+  .profile-photo-row { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  .avatar-preview {
+    width:120px; height:120px; border-radius:50%;
+    object-fit:cover; border:3px solid #2e5d3b1a; background:#fff;
+  }
 }

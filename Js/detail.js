@@ -13,7 +13,7 @@ function getUserReservationForCovoiturage(covoiturageId) {
 function cancelReservationById(reservationId) {
   if (!reservationId) return false;
 
-  // 1) Retirer la réservation de trajets globaux
+  // 1️⃣ Retirer la réservation de trajets globaux
   let trajets = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
   const beforeLen = trajets.length;
   trajets = trajets.filter(t => t.id !== reservationId);
@@ -25,13 +25,13 @@ function cancelReservationById(reservationId) {
     return false;
   }
 
+  // 2️⃣ Retirer le passager du covoiturage dans nouveauxTrajets
   let userPseudo = "Moi";
   try {
     const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
     if (me && me.pseudo) userPseudo = me.pseudo;
-  } catch(e) {}
+  } catch (e) {}
 
-  // 2) Mettre à jour nouveauxTrajets (retirer le passager + recalcul places)
   let nouveaux = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
   nouveaux = nouveaux.map(covo => {
     covo.passagers = (Array.isArray(covo.passagers) ? covo.passagers : [])
@@ -50,9 +50,11 @@ function cancelReservationById(reservationId) {
       })
       .filter(Boolean);
 
-    // Recalcul places
+    // Recalcul places disponibles
     const totalOccupied = covo.passagers.reduce((sum, p) => sum + (Number(p.places) || 1), 0);
-    const capacity = typeof covo.capacity === 'number' ? covo.capacity : (covo.vehicle?.places ?? covo.places ?? 4);
+    const capacity = typeof covo.capacity === 'number'
+      ? covo.capacity
+      : (covo.vehicle?.places ?? covo.places ?? 4);
     covo.places = Math.max(0, capacity - totalOccupied);
 
     return covo;
@@ -61,9 +63,17 @@ function cancelReservationById(reservationId) {
   localStorage.setItem('nouveauxTrajets', JSON.stringify(nouveaux));
   window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
 
-  // 3) Notifier / events
+  // 3️⃣ Notifier l'annulation
   window.dispatchEvent(new CustomEvent('ecoride:reservationCancelled', { detail: { id: reservationId } }));
-  window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+
+  // ✅ BONUS : notifier clairement la suppression pour l’espace utilisateur
+  window.dispatchEvent(new CustomEvent('ecoride:reservationRemoved', { detail: { id: reservationId } }));
+
+  // 👉 cet event peut être capté dans user-space.js :
+  // window.addEventListener('ecoride:reservationRemoved', () => { renderHistorique(); });
+
+  // ✅ Redirection vers "Espace utilisateur" directement sur l'onglet Mes trajets
+  window.location.href = "/espace-utilisateur?tab=trajets";
 
   return true;
 }

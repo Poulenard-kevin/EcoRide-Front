@@ -296,6 +296,42 @@ function switchToTab(tabId) {
 }
 window.switchToTab = switchToTab;
 
+// 🟢 Quand une réservation est ajoutée → aller sur "Mes trajets"
+window.addEventListener('ecoride:reservationAdded', () => {
+  console.log("🟢 Réservation ajoutée → ouvrir l’onglet Mes trajets");
+  if (typeof switchToTab === 'function') {
+    switchToTab('user-trajects-form'); // ou le bon id
+  }
+
+  const sectionMesTrajets = document.querySelector('#trajets-en-cours');
+  if (sectionMesTrajets) {
+    sectionMesTrajets.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+});
+
+// 🔵 Quand une réservation est annulée → rafraîchir les trajets et l'historique
+window.addEventListener('ecoride:reservationRemoved', () => {
+  console.log("🔵 Réservation supprimée → mise à jour de l'espace utilisateur");
+
+  // Rafraîchir la section ‘Mes trajets en cours’ s’il y a une fonction pour ça
+  if (typeof renderTrajetsInProgress === 'function') {
+    try {
+      renderTrajetsInProgress();
+    } catch (err) {
+      console.warn('⚠️ Erreur lors du rafraîchissement de Mes trajets:', err);
+    }
+  }
+
+  // Rafraîchir l’historique aussi pour éviter les anciens trajets obsolètes
+  if (typeof renderHistorique === 'function') {
+    try {
+      renderHistorique();
+    } catch (err) {
+      console.warn('⚠️ Erreur lors du rafraîchissement de l’historique:', err);
+    }
+  }
+});
+
 // -------------------- Formulaire Rôle --------------------
 function initRoleForm() {
   const roleRadios = document.querySelectorAll('input[name="role"]');
@@ -840,31 +876,54 @@ document.addEventListener('pageContentLoaded', () => {
     const tab = params.get("tab");
 
     setTimeout(() => {
-      if (tab === "trajets" || tab === "historique") {
-        console.log("💡 Activation directe de l'onglet Historique (index 3)");
+      const allTabs = document.querySelectorAll('.nav-pills.user-tabs .nav-link');
+      const allPanels = document.querySelectorAll('.user-space-form');
+    
+      // ⚙️ si l'URL dit tab=trajets → ouvrir “Mes trajets”
+      if (tab === "trajets") {
+        console.log("🚗 Ouverture automatique de l'onglet Mes trajets");
+    
+        // 🟢 Correction : l’onglet "Mes trajets" = index 1
+          const mesTrajetsIndex = 1;
 
-        // 🔹 On cible le 4e onglet (index 3)
-        const allTabs = document.querySelectorAll('.nav-pills.user-tabs .nav-link');
-        const allPanels = document.querySelectorAll('.user-space-form');
+          if (allTabs.length && allTabs[mesTrajetsIndex] && allPanels[mesTrajetsIndex]) {
+            allTabs.forEach(t => t.classList.remove('active'));
+            allPanels.forEach(p => (p.style.display = 'none'));
 
+            allTabs[mesTrajetsIndex].classList.add('active');
+            allPanels[mesTrajetsIndex].style.display = 'block';
+            allPanels[mesTrajetsIndex].classList.add('active');
+
+            // 🔽 scroll après affichage (on laisse un petit délai pour stabilité)
+            setTimeout(() => {
+              const sectionEnCours = document.querySelector('#trajets-en-cours');
+              if (sectionEnCours) {
+                console.log("📍 Scroll vers #trajets-en-cours");
+                sectionEnCours.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              } else {
+                console.warn("⚠️ Section #trajets-en-cours introuvable");
+              }
+            }, 100);
+          } else {
+            console.warn("⚠️ Impossible de trouver l'onglet Mes trajets (index 1)");
+          }
+        }
+    
+      // ⚙️ si l'URL dit tab=historique → ouvrir Historique
+      else if (tab === "historique") {
+        console.log("📜 Ouverture de l'onglet Historique");
+    
         if (allTabs.length && allTabs[3] && allPanels[3]) {
-          // Retire les actifs existants
-          allTabs.forEach(tab => tab.classList.remove('active'));
+          allTabs.forEach(t => t.classList.remove('active'));
           allPanels.forEach(p => (p.style.display = 'none'));
-
-          // Active l’historique
+    
           allTabs[3].classList.add('active');
           allPanels[3].style.display = 'block';
           allPanels[3].classList.add('active');
-
-          console.log("🟢 Onglet Historique (index 3) activé automatiquement");
-
-          // Lancer le rendu si non déjà affiché
-          if (typeof renderHistorique === "function") {
-             ;
-          }
+    
+          if (typeof renderHistorique === "function") renderHistorique();
         } else {
-          console.warn("⚠️ Imposssible de trouver l’onglet Historique (index 3). Vérifie l’ordre des tabs.");
+          console.warn("⚠️ Onglet Historique introuvable (index 3)");
         }
       }
     }, 800);

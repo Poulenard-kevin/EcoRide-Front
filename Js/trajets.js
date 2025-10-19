@@ -909,6 +909,17 @@ function handleTrajetActions(e) {
           updatePlacesReservees();
           renderTrajetsInProgress();
           renderHistorique();
+
+          // ✅ Ouvre automatiquement l'onglet "Mes trajets" après réservation
+          if (typeof switchToTab === 'function') {
+            switchToTab('tab-mes-trajets'); // adapte si ton id diffère
+          }
+
+          // ✅ Scroll jusqu’à la section “Mes trajets en cours”
+          const sectionMesTrajets = document.querySelector('#trajets-en-cours');
+          if (sectionMesTrajets) {
+            sectionMesTrajets.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
   
           alert('✅ Merci ! Votre validation et avis ont bien été enregistrés (en attente de modération).');
         } catch (err) {
@@ -1102,63 +1113,52 @@ function renderTrajetsInProgress() {
 
 // -------------------- Historique --------------------
 export function renderHistorique() {
-  console.log("[renderHistorique] Début de la fonction");
-  
+  console.log("[renderHistorique] Démarrage");
+
   const container = document.querySelector('.trajets-historique');
-  
   if (!container) {
-    console.error("❌ Conteneur '.trajets-historique' introuvable !");
+    console.warn("⚠️ Conteneur .trajets-historique introuvable");
     return;
   }
 
-  console.log("✅ Conteneur trouvé :", container);
-
+  // Réinitialise le contenu du conteneur
   container.innerHTML = `<h2>Mes trajets passés</h2>`;
 
-  // 🔹 Recharger les trajets directement depuis localStorage
+  // ✅ Recharge toujours depuis le localStorage
   let allTrajets = [];
   try {
     allTrajets = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
   } catch (e) {
-    console.error('❌ Impossible de parser les trajets :', e);
+    console.error('❌ Impossible de parser les trajets', e);
   }
 
-  console.log("[renderHistorique] trajets chargés =", allTrajets);
-
   const passe = allTrajets.filter(t => t.status === "valide");
-
-  console.log("[renderHistorique] trajets validés =", passe);
+  console.log(`[renderHistorique] Trajets valides : ${passe.length}`);
 
   if (passe.length === 0) {
     container.innerHTML += `<p>Aucun trajet terminé</p>`;
     return;
   }
 
-  let htmlContent = '<h2>Mes trajets passés</h2>';
-
+  // 🧱 Construction du HTML directement dans container
   passe.forEach(trajet => {
     const placesReservees = trajet.placesReservees || 0;
     let cardClass = 'trajet-card valide';
 
-    // 🔹 Récupérer la date du trajet chauffeur si passager
-    let dateToDisplay = trajet.date || '';
     if (trajet.role === 'passager') {
       cardClass = 'trajet-card reserve';
       const covoId = getCovoId(trajet);
       const trajetChauffeur = allTrajets.find(t => t.id === covoId && t.role === 'chauffeur');
       if (trajetChauffeur && trajetChauffeur.date) {
-        dateToDisplay = trajetChauffeur.date;
+        trajet.date = trajetChauffeur.date;
       }
     }
 
-    // ✅ Utiliser formatDateJJMMAAAA pour uniformiser l'affichage
-    const dateAffichee = formatDateJJMMAAAA(dateToDisplay) || dateToDisplay || 'Date inconnue';
-
-    htmlContent += `
+    container.innerHTML += `
       <div class="${cardClass}">
         <div class="trajet-body">
           <div class="trajet-info">
-            <strong>Covoiturage (${dateAffichee}) : <br>${trajet.depart} → ${trajet.arrivee}</strong>
+            <strong>Covoiturage (${formatDateJJMMAAAA(trajet.date) || ""}) : <br>${trajet.depart} → ${trajet.arrivee}</strong>
             <span class="details">
               ${trajet.heureDepart || ""} → ${trajet.heureArrivee || ""} • 
               ${placesReservees} place${placesReservees > 1 ? 's' : ''} réservée${placesReservees > 1 ? 's' : ''}
@@ -1170,26 +1170,38 @@ export function renderHistorique() {
     `;
   });
 
-  container.innerHTML = htmlContent;
+  // ✅ Ne pas forcer le display : il est géré par les onglets
+  console.log(`✅ Historique rendu (${passe.length} trajets affichés)`);
 
-  // --- Forcer affichage du panneau Historique ---
+  // --- Gérer la visibilité du panneau Historique uniquement si l'onglet est actif ---
   const histContainer = document.querySelector('.trajets-historique');
   if (histContainer) {
     const parentPanel = histContainer.closest('.user-space-form');
-    if (parentPanel) {
-      console.log('🟢 Forçage affichage du panneau Historique');
-      parentPanel.style.display = 'block';         // rends-le visible
-      parentPanel.style.visibility = 'visible';
-      parentPanel.style.opacity = '1';
-      parentPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else {
-      console.warn('⚠️ Aucun parent .user-space-form trouvé pour le conteneur Historique');
-    }
-  } else {
-    console.warn('⚠️ Conteneur .trajets-historique introuvable');
-  }
 
-  console.log(`✅ ${passe.length} trajets affichés dans l'historique.`);
+    // détecte l’onglet actuellement actif
+    const activeTab = document.querySelector('.tab.active, .nav-link.active');
+    const isHistoriqueTabActive =
+      activeTab &&
+      (
+        activeTab.id?.includes('historique') ||
+        activeTab.dataset?.target === '#user-history-form' ||
+        activeTab.href?.includes('#user-history-form')
+      );
+
+    if (parentPanel) {
+      if (isHistoriqueTabActive) {
+        console.log('🟢 Onglet Historique actif → on rend visible');
+        parentPanel.style.display = 'block';
+        parentPanel.style.visibility = 'visible';
+        parentPanel.style.opacity = '1';
+      } else {
+        console.log('⚪ Onglet Historique inactif → on ne le rend pas visible');
+        parentPanel.style.display = '';
+        parentPanel.style.visibility = '';
+        parentPanel.style.opacity = '';
+      }
+    }
+  }
 }
 
 // -------------------- Persistance --------------------

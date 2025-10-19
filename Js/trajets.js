@@ -6,6 +6,21 @@ function getVehicleLabel(v) {
   return `${brand} ${model} ${color}`.trim();
 }
 
+function onDomReady(selector, callback) {
+  const el = document.querySelector(selector);
+  if (el) return callback(el);
+
+  // 🔁 Observe le DOM jusqu'à ce que le sélecteur existe
+  const observer = new MutationObserver(() => {
+    const node = document.querySelector(selector);
+    if (node) {
+      observer.disconnect();
+      callback(node);
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
 // Helper pour obtenir l'ID du covoiturage à partir d'un objet trajet/réservation
 function getCovoId(item) {
   if (!item) return null;
@@ -204,9 +219,12 @@ export function initTrajets() {
   // Event listeners pour les boutons dynamiques
   document.addEventListener('click', handleTrajetActions);
 
-  renderTrajetsInProgress();
-  renderHistorique();
-  populateVehiclesDatalist();
+  onDomReady('.trajets-historique', (container) => {
+    console.log('🟢 Container historique apparu dans le DOM');
+    renderHistorique();
+    renderTrajetsInProgress();
+    populateVehiclesDatalist();
+  });
 
   // =================== ⚡ Gestion placeholder Date / Time ===================
   document.querySelectorAll('input[type="date"], input[type="time"]').forEach(input => {
@@ -1083,41 +1101,67 @@ function renderTrajetsInProgress() {
 }
 
 // -------------------- Historique --------------------
-
-function renderHistorique() {
+export function renderHistorique() {
+  console.log("[renderHistorique] Début de la fonction");
+  
   const container = document.querySelector('.trajets-historique');
-  if (!container) return;
+  
+  if (!container) {
+    console.error("❌ Conteneur '.trajets-historique' introuvable !");
+    return;
+  }
+
+  console.log("✅ Conteneur trouvé :", container);
 
   container.innerHTML = `<h2>Mes trajets passés</h2>`;
 
-  const passe = trajets.filter(t => t.status === "valide");
+  // 🔹 Recharger les trajets directement depuis localStorage
+  let allTrajets = [];
+  try {
+    allTrajets = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+  } catch (e) {
+    console.error('❌ Impossible de parser les trajets :', e);
+  }
+
+  console.log("[renderHistorique] trajets chargés =", allTrajets);
+
+  const passe = allTrajets.filter(t => t.status === "valide");
+
+  console.log("[renderHistorique] trajets validés =", passe);
 
   if (passe.length === 0) {
     container.innerHTML += `<p>Aucun trajet terminé</p>`;
     return;
   }
 
+  let htmlContent = '<h2>Mes trajets passés</h2>';
+
   passe.forEach(trajet => {
     const placesReservees = trajet.placesReservees || 0;
     let cardClass = 'trajet-card valide';
-  
+
+    // 🔹 Récupérer la date du trajet chauffeur si passager
+    let dateToDisplay = trajet.date || '';
     if (trajet.role === 'passager') {
       cardClass = 'trajet-card reserve';
-  
       const covoId = getCovoId(trajet);
-      const trajetChauffeur = trajets.find(t => t.id === covoId && t.role === 'chauffeur');
+      const trajetChauffeur = allTrajets.find(t => t.id === covoId && t.role === 'chauffeur');
       if (trajetChauffeur && trajetChauffeur.date) {
-        trajet.date = trajetChauffeur.date;
+        dateToDisplay = trajetChauffeur.date;
       }
     }
-  
-    container.innerHTML += `
+
+    // ✅ Utiliser formatDateJJMMAAAA pour uniformiser l'affichage
+    const dateAffichee = formatDateJJMMAAAA(dateToDisplay) || dateToDisplay || 'Date inconnue';
+
+    htmlContent += `
       <div class="${cardClass}">
         <div class="trajet-body">
           <div class="trajet-info">
-            <strong>Covoiturage (${formatDateJJMMAAAA(trajet.date) || ""}) : <br>${trajet.depart} → ${trajet.arrivee}</strong>
+            <strong>Covoiturage (${dateAffichee}) : <br>${trajet.depart} → ${trajet.arrivee}</strong>
             <span class="details">
-              ${trajet.heureDepart || ""} → ${trajet.heureArrivee || ""} • ${placesReservees} place${placesReservees > 1 ? 's' : ''} réservée${placesReservees > 1 ? 's' : ''}
+              ${trajet.heureDepart || ""} → ${trajet.heureArrivee || ""} • 
+              ${placesReservees} place${placesReservees > 1 ? 's' : ''} réservée${placesReservees > 1 ? 's' : ''}
             </span>
           </div>
           <div class="trajet-price">${trajet.prix} crédits</div>
@@ -1125,6 +1169,27 @@ function renderHistorique() {
       </div>
     `;
   });
+
+  container.innerHTML = htmlContent;
+
+  // --- Forcer affichage du panneau Historique ---
+  const histContainer = document.querySelector('.trajets-historique');
+  if (histContainer) {
+    const parentPanel = histContainer.closest('.user-space-form');
+    if (parentPanel) {
+      console.log('🟢 Forçage affichage du panneau Historique');
+      parentPanel.style.display = 'block';         // rends-le visible
+      parentPanel.style.visibility = 'visible';
+      parentPanel.style.opacity = '1';
+      parentPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      console.warn('⚠️ Aucun parent .user-space-form trouvé pour le conteneur Historique');
+    }
+  } else {
+    console.warn('⚠️ Conteneur .trajets-historique introuvable');
+  }
+
+  console.log(`✅ ${passe.length} trajets affichés dans l'historique.`);
 }
 
 // -------------------- Persistance --------------------

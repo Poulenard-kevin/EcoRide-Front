@@ -36,6 +36,41 @@ function getVehicleLabel(v) {
   return `${brand} ${model} ${color}`.trim();
 }
 
+// -------------------- Normalisation dates trajets --------------------
+function normalizeRideDates() {
+  let trajets = JSON.parse(localStorage.getItem('trajets')) || [];
+  let changed = false;
+
+  trajets = trajets.map(t => {
+    if (!t.date) return t;
+
+    // 🔹 Cas 1 : format FR -> convertir en ISO
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(t.date)) {
+      const [d, m, y] = t.date.split('/');
+      t.date = `${y}-${m}-${d}`; // devient YYYY-MM-DD
+      changed = true;
+    }
+
+    // 🔹 Cas 2 : format ISO tronqué (YYYY-MM-DD) → OK
+    // 🔹 Cas 3 : autre format -> parse to ISO
+    else if (isNaN(new Date(t.date).getTime())) {
+      const parsed = new Date(t.date);
+      if (!isNaN(parsed)) {
+        t.date = parsed.toISOString().split('T')[0];
+        changed = true;
+      }
+    }
+    return t;
+  });
+
+  if (changed) {
+    localStorage.setItem('trajets', JSON.stringify(trajets));
+    console.log("✅ Dates normalisées dans localStorage");
+  } else {
+    console.log("✔️ Dates déjà au bon format");
+  }
+}
+
 // -------------------- Persistance véhicules --------------------
 function loadVehicles() {
   try {
@@ -68,7 +103,7 @@ function saveVehicles() {
 }
 
 // -------------------- Import --------------------
-import { initTrajets } from '../Js/trajets.js';
+import { initTrajets, renderHistorique, getTrajets, debugTrajets } from '../Js/trajets.js';
 
 // -------------------- Initialisation --------------------
 export async function initUserSpace() {
@@ -106,7 +141,23 @@ export async function initUserSpace() {
   });
 
   // Trajets
-  setTimeout(() => { try { initTrajets(); } catch(e){ console.error(e); } }, 100);
+setTimeout(() => {
+  try {
+    initTrajets();
+
+    // 🟢 On attend que initTrajets() écrive dans localStorage
+    setTimeout(() => {
+      console.log("🟢 Relance renderHistorique après initTrajets");
+
+      // ✅ Normalisation avant d'afficher
+      normalizeRideDates();
+
+      renderHistorique();
+    }, 200);
+  } catch (e) {
+    console.error(e);
+  }
+}, 100);
 }
 
 // -------------------- Chargement HTML dynamique --------------------
@@ -150,12 +201,35 @@ function setupTabs(userSpaceSection) {
     desktopTabs.forEach((tab) => tab.classList.remove("active"));
     offcanvasTabs.forEach((tab) => tab.classList.remove("active"));
     forms.forEach((form) => (form.style.display = "none"));
-
+  
     if (desktopTabs[index]) desktopTabs[index].classList.add("active");
     if (offcanvasTabs[index]) offcanvasTabs[index].classList.add("active");
-    if (forms[index]) forms[index].style.display = "block";
-
-    if (offcanvas && offcanvas.classList.contains("show")) {
+  
+    if (forms[index]) {
+      forms[index].style.display = "block";
+  
+      // Hook Historique + logs
+      const panel = forms[index];
+      const isHistoryTab = panel && panel.id === "user-history-form";
+      console.log("[Historique] tab visible ?", { index, isHistoryTab, panel });
+  
+      if (isHistoryTab) {
+        const target = panel.querySelector(".trajets-historique");
+        console.log("[Historique] conteneur trouvé ?", target);
+        if (typeof renderHistorique === "function") {
+          console.log("[Historique] Appel renderHistorique()");
+          try {
+            renderHistorique();
+          } catch (e) {
+            console.error("[Historique] renderHistorique a crashé:", e);
+          }
+        } else {
+          console.warn("[Historique] renderHistorique n'est pas une fonction");
+        }
+      }
+    }
+  
+    if (offcanvas && offcanvas.classList.contains("show") && window.bootstrap && bootstrap.Offcanvas) {
       const oc = bootstrap.Offcanvas.getInstance(offcanvas);
       if (oc) oc.hide();
     }
@@ -758,20 +832,41 @@ function populateVehiclesSelect() {
 // -------------------- Lancement --------------------
 document.addEventListener('pageContentLoaded', () => {
   const pathname = window.location.pathname.replace(/\/$/, "");
+
   if (pathname === "/espace-utilisateur") {
     initUserSpace();
 
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab");
-    if (tab === "trajets") {
-      setTimeout(() => {
-        const desktopTab = document.querySelector('.user-tabs .nav-link[data-tab="trajets"]');
-        if (desktopTab) desktopTab.click();
-        const offcanvasTab = document.querySelector('.user-tabs-offcanvas .nav-link[data-tab="trajets"]');
-        if (offcanvasTab) offcanvasTab.click();
-        const target = document.getElementById("trajets-en-cours");
-        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 500);
-    }
+
+    setTimeout(() => {
+      if (tab === "trajets" || tab === "historique") {
+        console.log("💡 Activation directe de l'onglet Historique (index 3)");
+
+        // 🔹 On cible le 4e onglet (index 3)
+        const allTabs = document.querySelectorAll('.nav-pills.user-tabs .nav-link');
+        const allPanels = document.querySelectorAll('.user-space-form');
+
+        if (allTabs.length && allTabs[3] && allPanels[3]) {
+          // Retire les actifs existants
+          allTabs.forEach(tab => tab.classList.remove('active'));
+          allPanels.forEach(p => (p.style.display = 'none'));
+
+          // Active l’historique
+          allTabs[3].classList.add('active');
+          allPanels[3].style.display = 'block';
+          allPanels[3].classList.add('active');
+
+          console.log("🟢 Onglet Historique (index 3) activé automatiquement");
+
+          // Lancer le rendu si non déjà affiché
+          if (typeof renderHistorique === "function") {
+             ;
+          }
+        } else {
+          console.warn("⚠️ Imposssible de trouver l’onglet Historique (index 3). Vérifie l’ordre des tabs.");
+        }
+      }
+    }, 800);
   }
 });

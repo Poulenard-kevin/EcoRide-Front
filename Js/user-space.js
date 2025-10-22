@@ -91,7 +91,7 @@ function saveVehicles() {
   try {
     localStorage.setItem('ecoride_vehicles', JSON.stringify(vehicles));
     if (typeof populateVehiclesSelect === 'function') {
-      populateVehiclesSelect();
+      populateVehiclesSelect();  // ✅ OK
     }
   } catch (err) {
     console.error("❌ Erreur sauvegarde véhicules:", err);
@@ -105,8 +105,30 @@ function saveVehicles() {
 // -------------------- Import --------------------
 import { initTrajets, renderHistorique, getTrajets, debugTrajets } from '../Js/trajets.js';
 
+// ✅ Sentinelle d'initialisation
+let userSpaceInitialized = false;
+
 // -------------------- Initialisation --------------------
 export async function initUserSpace() {
+
+  // 🧹 Nettoie les doublons de panels
+  ['user-profile-form', 'user-trajects-form', 'user-vehicles-form', 'user-history-form'].forEach(id => {
+    const all = document.querySelectorAll(`#${id}`);
+    if (all.length > 1) {
+      console.warn(`⚠️ ${all.length} éléments #${id} détectés, suppression des doublons`);
+      all.forEach((el, i) => {
+        if (i > 0) el.remove(); // garde le premier, supprime les autres
+      });
+    }
+  });
+
+  // ✅ Empêcher double initialisation
+  if (userSpaceInitialized) {
+    console.log('⚪ initUserSpace déjà appelé, skip');
+    return;
+  }
+  userSpaceInitialized = true;
+
   // Migration éventuelle
   const oldVehicules = localStorage.getItem('ecoride_vehicules');
   if (oldVehicules) {
@@ -123,6 +145,37 @@ export async function initUserSpace() {
   }
 
   await loadHTMLContent();
+
+  // 🔍 DIAGNOSTICS : surveiller les écritures dans #user-vehicles-form
+  (function watchVehiclesPanelWrites(){
+    const container = document.getElementById('user-vehicles-form');
+    if (!container) return;
+    const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+    if (!desc) return;
+    const originalSet = desc.set;
+    Object.defineProperty(container, 'innerHTML', {
+      set(value) {
+        // 🔒 Bloque les écritures pendant la fermeture de la modale
+        if (document.body.dataset.lockVehiclesWrite === '1') {
+          console.warn('🔒 WRITE innerHTML BLOCKED on #user-vehicles-form (lockVehiclesWrite active)');
+          return; // ne fait rien
+        }
+        console.trace('WRITE innerHTML on #user-vehicles-form', { snippet: String(value).slice(0,120) });
+        originalSet.call(this, value);
+      },
+      get: desc.get,
+      configurable: true
+    });
+  })();
+
+  (function observeVehiclesPanel(){
+    const el = document.getElementById('user-vehicles-form');
+    if (!el) return;
+    const mo = new MutationObserver((mutations) => {
+      console.trace('MUTATION in #user-vehicles-form', mutations.map(m => m.type));
+    });
+    mo.observe(el, { childList: true, subtree: true });
+  })();
 
   // Tabs: comportement simple et prévisible
   setupTabs(userSpaceSection);
@@ -145,14 +198,11 @@ setTimeout(() => {
   try {
     initTrajets();
 
-    // 🟢 On attend que initTrajets() écrive dans localStorage
+    // ✅ Normalisation des dates (sans re-render)
     setTimeout(() => {
-      console.log("🟢 Relance renderHistorique après initTrajets");
-
-      // ✅ Normalisation avant d'afficher
+      console.log("🟢 Normalisation des dates après initTrajets");
       normalizeRideDates();
-
-      renderHistorique();
+      // renderHistorique() sera appelé par onDomReady dans trajets.js
     }, 200);
   } catch (e) {
     console.error(e);
@@ -161,18 +211,41 @@ setTimeout(() => {
 }
 
 // -------------------- Chargement HTML dynamique --------------------
+
+let userHtmlLoaded = false;
+
 async function loadHTMLContent() {
+  if (userHtmlLoaded) {
+    console.log('⚪ HTML user-space déjà chargé, skip global');
+    return;
+  }
   await Promise.all([
     loadHTML("user-profile-form", "pages/user-profile-form.html"),
     loadHTML("user-trajects-form", "pages/user-trajects-form.html"),
     loadHTML("user-vehicles-form", "pages/user-vehicles-form.html"),
     loadHTML("user-history-form", "pages/user-history-form.html")
   ]);
+  userHtmlLoaded = true;
 }
 
 async function loadHTML(id, filePath) {
   const container = document.getElementById(id);
   if (!container) return;
+
+  // ✅ Éviter rechargement si déjà fait
+  if (container.dataset.loaded === '1') {
+    console.log(`⚪ ${id} déjà chargé, skip`);
+    return;
+  }
+
+  // ✅ NOUVEAU : Si plusieurs conteneurs avec cet ID existent, on nettoie
+  const allWithId = document.querySelectorAll(`#${id}`);
+  if (allWithId.length > 1) {
+    console.warn(`⚠️ ${allWithId.length} conteneurs #${id} détectés, nettoyage...`);
+    allWithId.forEach((el, i) => {
+      if (i > 0) el.remove(); // garde le premier, supprime les autres
+    });
+  }
 
   try {
     const response = await fetch(filePath);
@@ -182,53 +255,70 @@ async function loadHTML(id, filePath) {
     }
     const html = await response.text();
     container.innerHTML = html;
+    container.dataset.loaded = '1';  // ✅ marque comme chargé
+    console.log(`✅ ${id} chargé depuis ${filePath}`);
   } catch (err) {
     console.error(`❌ Erreur de chargement de ${filePath}:`, err);
   }
 }
 
+
 // -------------------- Tabs (simple et stable) --------------------
 function setupTabs(userSpaceSection) {
+  // ✅ Empêcher double initialisation des tabs
+  if (userSpaceSection.dataset.tabsInitialized === '1') {
+    console.log('⚪ setupTabs déjà appelé, skip');
+    return;
+  }
+
   const desktopTabs = userSpaceSection.querySelectorAll(".nav-pills.user-tabs .nav-link");
   const offcanvasTabs = userSpaceSection.querySelectorAll(".nav-pills.user-tabs-offcanvas .nav-link");
-  const forms = userSpaceSection.querySelectorAll(".user-space-form");
+  const forms = [
+    document.getElementById('user-profile-form'),
+    document.getElementById('user-trajects-form'),
+    document.getElementById('user-vehicles-form'),
+    document.getElementById('user-history-form')
+  ].filter(Boolean); // retire les null si un panel n'existe pas
   const offcanvas = document.getElementById("userSpaceOffcanvas");
 
   // Retire data-bs-toggle pour garder un contrôle JS simple
   [...desktopTabs, ...offcanvasTabs].forEach(tab => tab.removeAttribute('data-bs-toggle'));
 
   const syncActiveClass = (index) => {
-    desktopTabs.forEach((tab) => tab.classList.remove("active"));
-    offcanvasTabs.forEach((tab) => tab.classList.remove("active"));
-    forms.forEach((form) => (form.style.display = "none"));
+    if (document.body.dataset.lockTab === '1') {
+      console.warn('TAB sync blocked by lockTab. index=', index);
+      return;
+    }
+    console.trace('TAB -> syncActiveClass called with index =', index);
   
+    desktopTabs.forEach(tab => tab.classList.remove("active"));
+    offcanvasTabs.forEach(tab => tab.classList.remove("active"));
+  
+    // Cacher tous les panels
+    forms.forEach(form => form.style.display = "none");
+  
+    // Activer onglet desktop et offcanvas
     if (desktopTabs[index]) desktopTabs[index].classList.add("active");
     if (offcanvasTabs[index]) offcanvasTabs[index].classList.add("active");
   
-    if (forms[index]) {
-      forms[index].style.display = "block";
-  
-      // Hook Historique + logs
-      const panel = forms[index];
-      const isHistoryTab = panel && panel.id === "user-history-form";
-      console.log("[Historique] tab visible ?", { index, isHistoryTab, panel });
-  
-      if (isHistoryTab) {
-        const target = panel.querySelector(".trajets-historique");
-        console.log("[Historique] conteneur trouvé ?", target);
-        if (typeof renderHistorique === "function") {
-          console.log("[Historique] Appel renderHistorique()");
-          try {
-            renderHistorique();
-          } catch (e) {
-            console.error("[Historique] renderHistorique a crashé:", e);
-          }
-        } else {
-          console.warn("[Historique] renderHistorique n'est pas une fonction");
-        }
+    // Trouver le panel correspondant au href de l’onglet desktop
+    const href = desktopTabs[index]?.getAttribute('href') || desktopTabs[index]?.dataset.target;
+    if (href) {
+      const panel = document.querySelector(href);
+      if (panel) {
+        panel.style.display = "block";
+        console.log(`📍 Affichage panel ${href}`);
       }
     }
   
+    // Gestion historique (comme avant)
+    forms.forEach(form => form.classList.remove('active'));
+    const panel = document.querySelector(href);
+    if (panel && panel.id === "user-history-form" && typeof renderHistorique === "function") {
+      renderHistorique();
+    }
+  
+    // Fermer offcanvas si ouvert
     if (offcanvas && offcanvas.classList.contains("show") && window.bootstrap && bootstrap.Offcanvas) {
       const oc = bootstrap.Offcanvas.getInstance(offcanvas);
       if (oc) oc.hide();
@@ -255,10 +345,19 @@ function setupTabs(userSpaceSection) {
   offcanvasTabs.forEach((tab, index) => {
     tab.addEventListener('click', onTabClickFactory(index), true);
   });
+
+  // ✅ Marquer comme initialisé
+  userSpaceSection.dataset.tabsInitialized = '1';
+  console.log('✅ setupTabs initialisé');
 }
 
 // API publique pour changer d’onglet par code si besoin
 function switchToTab(tabId) {
+  if (document.body.dataset.lockTab === '1') {
+    console.warn('TAB switch blocked by lockTab during modal close. tabId=', tabId);
+    return;
+  }
+  console.trace('TAB -> switchToTab called with tabId =', tabId);
   const userSpaceSection = document.querySelector('.user-space-section');
   if (!userSpaceSection) return;
 
@@ -277,22 +376,13 @@ function switchToTab(tabId) {
   const targetForm = document.getElementById(tabId);
   if (targetForm) targetForm.style.display = 'block';
 
-  // Activer le bon onglet
+  // Activer le bon onglet en fonction du href ou data-target
   const match = (tab) => {
     const href = tab.getAttribute('href') || tab.dataset.target || '';
     return href === `#${tabId}`;
   };
   desktopTabs.find(match)?.classList.add('active');
   offcanvasTabs.find(match)?.classList.add('active');
-
-  // Si on passe vers trajets, rafraîchir la liste véhicules côté trajets si utile
-  if (tabId === 'user-trajects-form') {
-    loadVehicles();
-    renderVehicleList();
-    if (typeof populateVehiclesSelect === 'function') {
-      populateVehiclesSelect();
-    }
-  }
 }
 window.switchToTab = switchToTab;
 
@@ -382,28 +472,42 @@ function bindVehiclesFormHandlers() {
 
   const saveBtn = document.querySelector('#vehicle-save-btn');
 
-  // Enter dans le form → clique sur Enregistrer
-  form.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
+  // 🚫 Neutralise le comportement natif du bouton et du formulaire
+  if (saveBtn) {
+    saveBtn.type = 'button'; // évite submit automatique
+  }
+  form.addEventListener('submit', e => e.preventDefault()); // stop toute soumission par Enter
+
+  // 🟢 Le bouton "Enregistrer" déclenche manuellement le submit du form
+  if (saveBtn) {
+    saveBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (saveBtn) saveBtn.click();
-    }
-  }, true);
+      // Appelle le gestionnaire de submit du formulaire
+      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    });
+  }
 
-  // Format plaque en saisie
+  // --- Format intelligent de plaque : AB - 123 - CD ---
   plateInput.addEventListener('input', (e) => {
-    let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    value = value.slice(0, 7);
-    let cleaned = "";
-    for (let i = 0; i < value.length; i++) {
-      if ((i < 2 || i > 4) && /[A-Z]/.test(value[i])) cleaned += value[i];
-      else if (i >= 2 && i <= 4 && /[0-9]/.test(value[i])) cleaned += value[i];
+    let raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    // Tronque à 7 caractères max
+    raw = raw.slice(0, 7);
+
+    // Décompose selon progression
+    let formatted = '';
+    if (raw.length <= 2) {
+      // lettres
+      formatted = raw;
+    } else if (raw.length <= 5) {
+      // 2 lettres + 3 chiffres
+      formatted = raw.slice(0, 2) + ' - ' + raw.slice(2);
+    } else {
+      // complet : 2 lettres, 3 chiffres, 2 lettres
+      formatted = raw.slice(0, 2) + ' - ' + raw.slice(2, 5) + ' - ' + raw.slice(5);
     }
-    let formatted = "";
-    if (cleaned.length > 0) formatted += cleaned.slice(0, 2);
-    if (cleaned.length > 2) formatted += " - " + cleaned.slice(2, 5);
-    if (cleaned.length > 5) formatted += " - " + cleaned.slice(5, 7);
+
     e.target.value = formatted;
   });
 
@@ -481,9 +585,46 @@ function bindVehiclesFormHandlers() {
       delete document.body.dataset.lockTab;
     }
   });
+
+ // ✅ Gestion propre d'Enter : navigation + envoi uniquement au dernier champ
+  const fields = Array.from(form.querySelectorAll('input, select, textarea'));
+  const lastField = fields[fields.length - 1];
+
+  // empêcher toute soumission automatique
+  form.addEventListener('submit', e => e.preventDefault());
+
+  form.addEventListener('keydown', (e) => {
+    // on réagit uniquement à Enter
+    if (e.key !== 'Enter') return;
+
+    // toujours empêcher la soumission HTML native
+    e.preventDefault();
+    e.stopPropagation();
+
+    const currentIndex = fields.indexOf(document.activeElement);
+    const next = fields[currentIndex + 1];
+
+    // 🔹 Si pas dernier → focus suivant
+    if (next && document.activeElement !== lastField) {
+      next.focus({ preventScroll: true });
+      next.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    // 🔹 Si dernier champ → on valide (manuellement)
+    if (document.activeElement === lastField) {
+      if (saveBtn) saveBtn.click();
+    }
+  });
 }
 
 function renderVehicleList() {
+  if (document.body.dataset.lockVehiclesWrite === '1') {
+    console.warn('🔒 renderVehicleList() blocked by lockVehiclesWrite');
+    return;
+  }
+  console.log('🔄 renderVehicleList() appelé');
+  
   const container = document.getElementById('user-vehicles-form');
   if (!container) return;
 
@@ -564,52 +705,8 @@ function renderVehicleList() {
     </form>
   `;
 
-  const listDiv = container.querySelector('#vehicleList');
-  listDiv.innerHTML = "";
-
-  const stored = localStorage.getItem('ecoride_vehicles');
-  const vehiclesLocal = stored ? JSON.parse(stored) : [];
-
-  if (vehiclesLocal.length === 0) {
-    listDiv.innerHTML = "<p>Aucun véhicule enregistré.</p>";
-  } else {
-    vehiclesLocal.forEach((v, index) => {
-      const vehicleContainer = document.createElement('div');
-      vehicleContainer.className = 'vehicle-container';
-
-      const vehicleLine = document.createElement('div');
-      vehicleLine.className = 'form-field vehicle-label vehicle-line';
-      vehicleLine.style.cursor = 'pointer';
-
-      const brandDiv = document.createElement('div');
-      brandDiv.className = 'vehicle-brand';
-      brandDiv.textContent = v.marque || v.brand || '';
-
-      const modelDiv = document.createElement('div');
-      modelDiv.className = 'vehicle-model';
-      modelDiv.textContent = v.model || v.modele || '';
-
-      const colorDiv = document.createElement('div');
-      colorDiv.className = 'vehicle-color';
-      colorDiv.textContent = v.color || v.couleur || '';
-
-      vehicleLine.appendChild(brandDiv);
-      vehicleLine.appendChild(modelDiv);
-      vehicleLine.appendChild(colorDiv);
-      vehicleLine.addEventListener('click', () => showVehicleModal(v));
-
-      const actionDiv = document.createElement('div');
-      actionDiv.className = 'form-field-modify-delete';
-      actionDiv.innerHTML = `
-        <a href="javascript:void(0);" class="link-modify" data-index="${index}">Modifier</a>
-        <a href="javascript:void(0);" class="link-delete" data-index="${index}" data-bs-toggle="modal" data-bs-target="#deleteModal">Supprimer</a>
-      `;
-
-      vehicleContainer.appendChild(vehicleLine);
-      vehicleContainer.appendChild(actionDiv);
-      listDiv.appendChild(vehicleContainer);
-    });
-  }
+  // ✅ Utilise la fonction utilitaire pour remplir la liste
+  updateVehicleListOnly();
 
   // Bouton submit: hardening
   const saveBtn = container.querySelector('#vehicle-save-btn');
@@ -621,9 +718,67 @@ function renderVehicleList() {
   }
 }
 
+// ✅ Fonction utilitaire pour générer UN véhicule
+function createVehicleElement(v, index) {
+  const vehicleContainer = document.createElement('div');
+  vehicleContainer.className = 'vehicle-container';
+
+  const vehicleLine = document.createElement('div');
+  vehicleLine.className = 'form-field vehicle-label vehicle-line';
+  vehicleLine.style.cursor = 'pointer';
+
+  const brandDiv = document.createElement('div');
+  brandDiv.className = 'vehicle-brand';
+  brandDiv.textContent = v.marque || v.brand || '';
+
+  const modelDiv = document.createElement('div');
+  modelDiv.className = 'vehicle-model';
+  modelDiv.textContent = v.model || v.modele || '';
+
+  const colorDiv = document.createElement('div');
+  colorDiv.className = 'vehicle-color';
+  colorDiv.textContent = v.color || v.couleur || '';
+
+  vehicleLine.appendChild(brandDiv);
+  vehicleLine.appendChild(modelDiv);
+  vehicleLine.appendChild(colorDiv);
+  vehicleLine.addEventListener('click', () => showVehicleModal(v));
+
+  const actionDiv = document.createElement('div');
+  actionDiv.className = 'form-field-modify-delete';
+  actionDiv.innerHTML = `
+    <a href="javascript:void(0);" class="link-modify" data-index="${index}">Modifier</a>
+    <a href="javascript:void(0);" class="link-delete" data-index="${index}" data-bs-toggle="modal" data-bs-target="#deleteModal">Supprimer</a>
+  `;
+
+  vehicleContainer.appendChild(vehicleLine);
+  vehicleContainer.appendChild(actionDiv);
+  
+  return vehicleContainer;
+}
+
+function ensureVehiclesPanelMarkup() {
+  const container = document.getElementById('user-vehicles-form');
+  if (!container) return;
+
+  const hasCreate = container.querySelector('#create-vehicle-form');
+  const hasList = container.querySelector('#vehicleList');
+
+  if (!hasCreate || !hasList) {
+    console.warn('⚠️ Panel véhicules corrompu, reconstruction du markup');
+    renderVehicleList();
+    bindVehiclesFormHandlers(); // réattache les événements
+  } else {
+    console.log('✅ Panel véhicules intact');
+  }
+}
+
 function updateVehicleListOnly() {
   const listDiv = document.querySelector('#vehicleList');
-  if (!listDiv) return;
+  if (!listDiv) {
+    console.warn('⚠️ #vehicleList introuvable');
+    return;
+  }
 
   listDiv.innerHTML = "";
 
@@ -634,42 +789,11 @@ function updateVehicleListOnly() {
     listDiv.innerHTML = "<p>Aucun véhicule enregistré.</p>";
   } else {
     vehiclesLocal.forEach((v, index) => {
-      const vehicleContainer = document.createElement('div');
-      vehicleContainer.className = 'vehicle-container';
-
-      const vehicleLine = document.createElement('div');
-      vehicleLine.className = 'form-field vehicle-label vehicle-line';
-      vehicleLine.style.cursor = 'pointer';
-
-      const brandDiv = document.createElement('div');
-      brandDiv.className = 'vehicle-brand';
-      brandDiv.textContent = v.marque || v.brand || '';
-
-      const modelDiv = document.createElement('div');
-      modelDiv.className = 'vehicle-model';
-      modelDiv.textContent = v.model || v.modele || '';
-
-      const colorDiv = document.createElement('div');
-      colorDiv.className = 'vehicle-color';
-      colorDiv.textContent = v.color || v.couleur || '';
-
-      vehicleLine.appendChild(brandDiv);
-      vehicleLine.appendChild(modelDiv);
-      vehicleLine.appendChild(colorDiv);
-      vehicleLine.addEventListener('click', () => showVehicleModal(v));
-
-      const actionDiv = document.createElement('div');
-      actionDiv.className = 'form-field-modify-delete';
-      actionDiv.innerHTML = `
-        <a href="javascript:void(0);" class="link-modify" data-index="${index}">Modifier</a>
-        <a href="javascript:void(0);" class="link-delete" data-index="${index}" data-bs-toggle="modal" data-bs-target="#deleteModal">Supprimer</a>
-      `;
-
-      vehicleContainer.appendChild(vehicleLine);
-      vehicleContainer.appendChild(actionDiv);
-      listDiv.appendChild(vehicleContainer);
+      listDiv.appendChild(createVehicleElement(v, index));
     });
   }
+  
+  console.log('✅ Liste véhicules mise à jour:', vehiclesLocal.length, 'véhicules');
 }
 
 function showVehicleModal(vehicle) {
@@ -732,8 +856,11 @@ function injectDeleteModal() {
       </div>
     </div>
   `;
-
   document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+  // Rendez le conteneur modale focusable (utile pour déplacer le focus)
+  const el = document.getElementById('deleteModal');
+  if (el) el.setAttribute('tabindex', '-1');
 }
 
 // -------------------- Events globaux actions (Modifier/Supprimer) --------------------
@@ -812,44 +939,101 @@ function handleAddClick() {
 function handleDeleteClick(target) {
   const vehicleElements = Array.from(document.querySelectorAll('#vehicleList .vehicle-container'));
   vehicleToDeleteIndex = vehicleElements.findIndex(vc => vc.contains(target));
-
   if (vehicleToDeleteIndex === -1) {
     console.error("Véhicule à supprimer non trouvé");
     return;
   }
-
+  // Déplace le focus sur la modale après son affichage (optionnel)
   const deleteModalEl = document.getElementById('deleteModal');
-  const deleteModal = new bootstrap.Modal(deleteModalEl);
+  const deleteModal = new bootstrap.Modal(deleteModalEl, { backdrop: true, focus: true });
   deleteModal.show();
 }
 
 function handleConfirmDelete() {
-  if (vehicleToDeleteIndex !== null && vehicleToDeleteIndex >= 0) {
-    vehicles.splice(vehicleToDeleteIndex, 1);
-    saveVehicles();
-    vehicleToDeleteIndex = null;
-
-    updateVehicleListOnly();
-
-    const deleteModalEl = document.getElementById('deleteModal');
-    if (!deleteModalEl) {
-      console.error('Modal deleteModal introuvable');
-      return;
-    }
-
-    let bsModal = bootstrap.Modal.getInstance(deleteModalEl);
-    if (!bsModal) {
-      bsModal = new bootstrap.Modal(deleteModalEl);
-    }
-
-    bsModal.hide();
-
-    deleteModalEl.addEventListener('hidden.bs.modal', () => {
-      document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-      document.body.classList.remove('modal-open');
-      document.body.style.overflow = '';
-    }, { once: true });
+  if (vehicleToDeleteIndex === null || vehicleToDeleteIndex < 0) {
+    console.error('❌ Index invalide', vehicleToDeleteIndex);
+    return;
   }
+
+  console.log('🗑️ Suppression du véhicule à l\'index', vehicleToDeleteIndex);
+
+  vehicles.splice(vehicleToDeleteIndex, 1);
+  saveVehicles();
+  vehicleToDeleteIndex = null;
+
+  // ✅ Met à jour UNIQUEMENT la liste (pas tout le panel)
+  updateVehicleListOnly();
+
+  const deleteModalEl = document.getElementById('deleteModal');
+  if (!deleteModalEl) {
+    console.error('❌ Modal deleteModal introuvable');
+    return;
+  }
+
+  // 🔒 Verrouille navigation + réécritures
+  document.body.dataset.lockTab = '1';
+  document.body.dataset.lockVehiclesWrite = '1'; // nouveau verrou
+
+  deleteModalEl.removeAttribute('aria-hidden');
+  if (deleteModalEl.contains(document.activeElement)) {
+    try { (document.activeElement instanceof HTMLElement) && document.activeElement.blur(); } catch {}
+  }
+
+  const vehTabLink = document.querySelector('.nav-pills.user-tabs .nav-link[href="#user-vehicles-form"]');
+  if (vehTabLink && typeof vehTabLink.focus === 'function') {
+    vehTabLink.focus({ preventScroll: true });
+  }
+
+  let bsModal = bootstrap.Modal.getInstance(deleteModalEl);
+  if (!bsModal) bsModal = new bootstrap.Modal(deleteModalEl);
+  
+  console.log('Modal about to hide; active tab =',
+    document.querySelector('.nav-pills.user-tabs .nav-link.active')?.textContent?.trim()
+  );
+  
+  bsModal.hide();
+
+  deleteModalEl.addEventListener('hidden.bs.modal', () => {
+    console.log('🔓 Modal hidden event triggered');
+  
+    // Nettoyage backdrops
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('modal-open');
+  
+    // Remise à zéro des styles pour permettre le scroll
+    document.body.style.overflow = 'auto';  
+    document.body.style.paddingRight = '';
+  
+    // Vérifie et restaure le markup si corrompu
+    ensureVehiclesPanelMarkup();
+  
+    // Désactive tous les onglets et active "Mes véhicules"
+    const allTabs = document.querySelectorAll('.nav-pills .nav-link');
+    let vehTabActivated = false;
+  
+    allTabs.forEach(tab => {
+      tab.classList.remove('active');
+      const text = tab.textContent.trim().toLowerCase();
+      if (text.includes('véhicule') || text.includes('vehicule')) {
+        tab.classList.add('active');
+        vehTabActivated = true;
+        console.log(`✅ Onglet activé: "${tab.textContent.trim()}"`);
+      } else {
+        console.log(`🔹 Onglet "${tab.textContent.trim()}" désactivé`);
+      }
+    });
+  
+    if (!vehTabActivated) {
+      console.error('❌ Impossible d\'activer l\'onglet "Mes véhicules"');
+    }
+  
+    // Déverrouille
+    delete document.body.dataset.lockTab;
+    delete document.body.dataset.lockVehiclesWrite;
+  
+    const activeTab = document.querySelector('.nav-pills .nav-link.active');
+    console.log('✅ Modal closed. Active tab =', activeTab?.textContent?.trim() || 'NONE');
+  }, { once: true });
 }
 
 // -------------------- Datalist/select véhicules (global) --------------------

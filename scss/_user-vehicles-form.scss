@@ -339,4 +339,17 @@
     color: $color-dark-green;
   }
 
+  /* Fallback léger pour inert */
+  [inert] {
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .user-space-form {
+    display: none !important;
+  }
+  .user-space-form.active {
+    display: block !important;
+  }
+
 }

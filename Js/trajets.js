@@ -169,6 +169,14 @@ function openRatingModal({ reservationId, onSubmit }) {
   });
 }
 
+document.addEventListener('hidden.bs.modal', () => {
+  // si un paneau “user-space-form” a été caché, on le réaffiche
+  const active = document.querySelector('.user-space-form.active');
+  if (active && active.style.display === 'none') {
+    active.style.display = 'block';
+  }
+});
+
 function getCurrentUserPseudo() {
   try {
     const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
@@ -216,11 +224,64 @@ export function initTrajets() {
     console.log("✅ Event listener formulaire ajouté");
   }
 
+  // 🚀 Auto-scroll & focus suivant dans les formulaires
+  ['#trajet-form', '#vehicule-form'].forEach(selector => {
+    const formEl = document.querySelector(selector);
+    if (!formEl) return;
+
+    const inputs = formEl.querySelectorAll('input, select, textarea');
+    inputs.forEach((input, i) => {
+
+      // appui sur Entrée → focus champ suivant
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const next = inputs[i + 1];
+          if (next) {
+            next.focus({ preventScroll: true });
+            next.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } else {
+            formEl.requestSubmit?.();
+          }
+        }
+      });
+
+      // changement de valeur → focus champ suivant + scroll
+      input.addEventListener('change', () => {
+        const next = inputs[i + 1];
+        if (next) {
+          next.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          next.focus({ preventScroll: true });
+        }
+      });
+
+      // saisie complète (utile si maxlength)
+      input.addEventListener('input', () => {
+        if (input.maxLength && input.value.length >= input.maxLength) {
+          const next = inputs[i + 1];
+          if (next) {
+            next.focus({ preventScroll: true });
+            next.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      });
+    });
+  });
+
   // Event listeners pour les boutons dynamiques
   document.addEventListener('click', handleTrajetActions);
 
+  // ✅ Appel unique et sécurisé de renderHistorique
   onDomReady('.trajets-historique', (container) => {
     console.log('🟢 Container historique apparu dans le DOM');
+    
+    // ✅ Éviter double rendu
+    if (container.dataset.rendered === '1') {
+      console.log('⚪ Historique déjà rendu, skip');
+      return;
+    }
+    container.dataset.rendered = '1';
+  
     renderHistorique();
     renderTrajetsInProgress();
     populateVehiclesDatalist();
@@ -816,10 +877,6 @@ function handleTrajetActions(e) {
     e.preventDefault();
     e.stopPropagation();
   
-    if (typeof switchToTab === 'function') {
-      switchToTab('user-trajects-form');
-    }
-  
     const reservationId = target.dataset.id;
     if (!reservationId) return;
   
@@ -912,7 +969,7 @@ function handleTrajetActions(e) {
 
           // ✅ Ouvre automatiquement l'onglet "Mes trajets" après réservation
           if (typeof switchToTab === 'function') {
-            switchToTab('tab-mes-trajets'); // adapte si ton id diffère
+            switchToTab('user-trajects-form'); // adapte si ton id diffère
           }
 
           // ✅ Scroll jusqu’à la section “Mes trajets en cours”
@@ -1115,11 +1172,27 @@ function renderTrajetsInProgress() {
 export function renderHistorique() {
   console.log("[renderHistorique] Démarrage");
 
+  // ✅ Vérifier qu'il n'y a qu'un seul conteneur
+  const allContainers = document.querySelectorAll('.trajets-historique');
+  if (allContainers.length > 1) {
+    console.warn(`⚠️ ${allContainers.length} conteneurs .trajets-historique détectés, nettoyage...`);
+    allContainers.forEach((el, i) => {
+      if (i > 0) el.remove();
+    });
+  }
+
   const container = document.querySelector('.trajets-historique');
   if (!container) {
     console.warn("⚠️ Conteneur .trajets-historique introuvable");
     return;
   }
+
+  // ✅ Éviter double rendu simultané
+  if (container.dataset.rendering === '1') {
+    console.log('⚪ renderHistorique déjà en cours, skip');
+    return;
+  }
+  container.dataset.rendering = '1';
 
   // Réinitialise le contenu du conteneur
   container.innerHTML = `<h2>Mes trajets passés</h2>`;
@@ -1134,6 +1207,13 @@ export function renderHistorique() {
 
   const passe = allTrajets.filter(t => t.status === "valide");
   console.log(`[renderHistorique] Trajets valides : ${passe.length}`);
+
+  // 🧮 Trier les trajets du plus récent au plus ancien
+  passe.sort((a, b) => {
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    return dateB - dateA; // tri décroissant : plus récent d'abord
+  });
 
   if (passe.length === 0) {
     container.innerHTML += `<p>Aucun trajet terminé</p>`;
@@ -1202,6 +1282,8 @@ export function renderHistorique() {
       }
     }
   }
+  // ✅ À la toute fin de la fonction
+  delete container.dataset.rendering;
 }
 
 // -------------------- Persistance --------------------

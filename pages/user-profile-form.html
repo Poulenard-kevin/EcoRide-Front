@@ -1,62 +1,117 @@
-   <!-- Onglet Profile / Rôle -->
-    <h1>Profil / Rôle</h1>
-    <form>
-      <div class="form-fields">
-        <!-- 1. Rôle -->
-        <div class="form-group role-group">
-          <label><input type="radio" name="role" value="chauffeur"> Chauffeur</label>
-          <label><input type="radio" name="role" value="passager"> Passager</label>
-          <label><input type="radio" name="role" value="les-deux"> Les deux</label>
+<!-- Onglet Profil / Rôle (extrait) -->
+<h1>Profil / Rôle</h1>
+
+<!-- FORM : Rôle -->
+<form id="role-form" class="card-like">
+  <div class="form-fields-role">
+    <h2>Rôle</h2>
+
+    <fieldset class="form-group role-group" id="role-fieldset" aria-labelledby="role-legend">
+      <legend id="role-legend" class="visually-hidden">Choisir votre rôle</legend>
+
+      <label><input type="radio" name="role" value="chauffeur"> Chauffeur</label>
+      <label><input type="radio" name="role" value="passager"> Passager</label>
+      <label><input type="radio" name="role" value="les-deux"> Les deux</label>
+    </fieldset>
+
+  </div>
+</form>
+
+<!-- FORM 1 : Photo de profil -->
+<form id="profile-photo-form" class="card-like">
+  <div class="form-fields">
+    <h2>Photo de profil</h2>
+
+    <div class="profile-photo-row">
+      <img id="profileAvatarPreview" class="avatar-preview" src="images/default-avatar.png" alt="Avatar">
+      <div class="avatar-actions">
+        <input type="file" id="profileAvatarInput" accept="image/*" class="form-control">
+        <small class="text-muted">PNG/JPG jusqu’à 2 Mo. Carré recommandé.</small>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button type="button" id="confirmAvatarBtn" class="btn">Valider l'avatar</button>
+      <button type="button" id="removeAvatarBtn" class="btn btn-delete">Supprimer</button>
+    </div>
+  </div>
+</form>
+
+<!-- FORM 2 : Crédits -->
+<form id="credit-form" class="card-like">
+  <div class="form-fields">
+    <h2>Crédits</h2>
+
+      <div class="credit-row">
+        <!-- Cercle avec le montant (sans photo) -->
+        <div id="ecoCircle" class="eco-circle" role="status">
+          <div class="eco-circle-value" id="ecoCircleValue">0</div>
+          <div class="eco-circle-unit">crédits</div>
         </div>
+      </div>
 
-        <!-- 0. Photo de profil -->
-        <section class="card-like mb-4" id="profile-photo-section">
-          <h2 class="section-title">Photo de profil</h2>
-          <div class="profile-photo-row">
-            <img id="profileAvatarPreview" class="avatar-preview" src="images/default-avatar.png" alt="Avatar">
-            <div class="avatar-actions">
-              <input type="file" id="profileAvatarInput" accept="image/*" class="form-control">
-              <small class="text-muted d-block mt-1">PNG/JPG jusqu’à 2 Mo. Carré recommandé.</small>
-              <button type="button" class="btn btn-outline-danger mt-2" id="removeAvatarBtn">Supprimer</button>
-            </div>
-          </div>
-        </section>
+      <!-- contrôle d'ajout -->
+      <div class="credit-control">
+        <label for="creditAdd">Ajouter des crédits</label>
+        <div class="credit-input-row">
+          <input type="number" id="creditAdd" min="1" step="1" value="5" class="form-control small">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button type="button" id="creditAddBtn" class="btn">Ajouter</button>
+      </div>   
+  </div>
+</form>
 
-        <!-- 0bis. Infos du compte -->
-        <section class="card-like mb-4" id="account-info-section">
-          <h2 class="section-title">Informations du compte</h2>
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label" for="profileEmail">Adresse email</label>
-              <input type="email" class="form-control" id="profileEmail" placeholder="vous@exemple.com" autocomplete="email">
-            </div>
-          </div>
-          <hr>
-          <h3 class="h6">Changer le mot de passe</h3>
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label class="form-label" for="currentPassword">Mot de passe actuel</label>
-              <input type="password" class="form-control" id="currentPassword" autocomplete="current-password">
-            </div>
-            <div class="col-md-4">
-              <label class="form-label" for="newPassword">Nouveau mot de passe</label>
-              <input type="password" class="form-control" id="newPassword" autocomplete="new-password">
-            </div>
-            <div class="col-md-4">
-              <label class="form-label" for="confirmPassword">Confirmer</label>
-              <input type="password" class="form-control" id="confirmPassword" autocomplete="new-password">
-            </div>
-          </div>
-          <button type="button" class="btn btn-success mt-3" id="saveAccountBtn">Enregistrer</button>
-        </section>
 
-        <!-- 0ter. À propos -->
-        <section class="card-like mb-4" id="about-section">
-          <h2 class="section-title">À propos de moi</h2>
-          <textarea class="form-control" id="profileBio" rows="3" maxlength="500" placeholder="Quelques mots sur vous..."></textarea>
-          <div class="d-flex justify-content-between mt-2">
-            <small class="text-muted"><span id="bioCount">0</span>/500</small>
-            <button type="button" class="btn btn-success" id="saveBioBtn">Enregistrer</button>
-          </div>
-        </section>
-    </form>
+<!-- FORM 3 : À propos -->
+<form id="about-me-form" class="card-like">
+  <div class="form-fields">
+    <h2>À propos de moi</h2>
+
+    <textarea class="form-control" id="profileBio" placeholder="Quelques mots sur vous..."></textarea>
+    <div class="meta-row">
+      <button type="submit" class="btn" id="saveBioBtn">Enregistrer</button>
+    </div>
+  </div>
+</form>
+
+<!-- FORM 4 : Informations du compte -->
+<form id="account-info-form" class="card-like">
+  <div class="form-fields">
+    <h2>Informations du compte</h2>
+
+    <div class="form-row">
+      <div>
+        <label for="profileEmail">Adresse email</label>
+        <input type="email" class="form-control" id="profileEmail" placeholder="vous@exemple.com" autocomplete="email">
+        <div class="email-actions">
+          <button type="button" id="editEmailBtn" class="btn">Modifier</button>
+          <button type="button" id="saveEmailBtn" class="btn btn-success hidden">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="form-fields">
+      <div>
+        <label for="currentPassword">Mot de passe actuel</label>
+        <input type="password" class="form-control" id="currentPassword" autocomplete="current-password">
+      </div>
+
+      <div>
+        <label for="newPassword">Nouveau mot de passe</label>
+        <input type="password" class="form-control" id="newPassword" autocomplete="new-password">
+      </div>
+
+      <div>
+        <label for="confirmPassword">Confirmer</label>
+        <input type="password" class="form-control" id="confirmPassword" autocomplete="new-password">
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn" id="saveAccountBtn">Valider</button>
+    </div>
+  </div>
+</form>

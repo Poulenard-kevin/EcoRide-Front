@@ -42,7 +42,7 @@
       box-shadow: 0 4px 6px rgba(0,0,0,.1);
 
       .nav-link {
-        width: 230px;
+        width: 240px;
         font-family: $font-title;
         font-size: $font-size-h3;
         font-weight: $weight-medium;
@@ -87,13 +87,13 @@
     // Responsive tab nav
     .user-space-section .nav-pills.user-tabs {
       display: flex;
-      @media (max-width: 1335px) { display: none; }
+      @media (max-width: 1375px) { display: none; }
     }
 
     .user-space-section .user-space-toggle {
       display: none;
       margin: 0 auto;
-      @media (max-width: 1335px) { display: block; }
+      @media (max-width: 1374px) { display: block; }
     }
 
     // Offcanvas

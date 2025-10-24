@@ -331,7 +331,7 @@ export function initTrajets() {
           console.log(`🧹 Historique vidé (dev). Trajets supprimés: ${removed}`);
         });
 
-        histoContainer.parentNode.insertBefore(clearBtn, histoContainer);
+        histoContainer.parentNode.insertBefore(clearBtn, histoContainer.nextSibling);
       }
     }
   }

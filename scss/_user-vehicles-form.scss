@@ -304,6 +304,15 @@
       padding: 8px 15px;
       font-size: 12px;
     }
+
+    .form-fields {
+      gap: 10px;
+    }
+
+    .form-input {
+      padding: 8px 15px !important;
+      font-size: 12px !important;
+    }
     
     label {
       font-size: $font-size-nav;
@@ -311,6 +320,11 @@
 
     form {
       padding: 10px 20px 35px;
+    }
+
+    .vehicle-line {
+      font-size: 16px;
+      padding: 8px 15px;
     }
   }
 

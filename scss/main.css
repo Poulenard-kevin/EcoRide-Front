@@ -13818,7 +13818,7 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 .user-tabs .nav-link {
-  width: 230px;
+  width: 240px;
   font-family: "Poppins", sans-serif;
   font-size: 24px;
   font-weight: 500;
@@ -13859,7 +13859,7 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 .user-space-section .nav-pills.user-tabs {
   display: flex;
 }
-@media (max-width: 1335px) {
+@media (max-width: 1375px) {
   .user-space-section .nav-pills.user-tabs {
     display: none;
   }
@@ -13869,7 +13869,7 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   display: none;
   margin: 0 auto;
 }
-@media (max-width: 1335px) {
+@media (max-width: 1374px) {
   .user-space-section .user-space-toggle {
     display: block;
   }
@@ -13912,6 +13912,13 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-profile-form {
   /* Style de base (placeholder visuel gris) */
   /* En vert quand rempli (pas empty) */
+  /* Aligner les radios horizontalement */
+  /* Cercle contenant le montant */
+  /* Montant (grand, centré) */
+  /* Unité (petit sous-texte) */
+  /* Optionnel : animation légère quand on met à jour */
+  /* classe si tu veux cibler juste cette textarea */
+  /* sur mobile, agrandir la zone */
 }
 #user-profile-form h1, #user-profile-form .h1 {
   text-align: center;
@@ -14063,6 +14070,7 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   display: flex;
   align-items: center;
   margin-bottom: 10px;
+  font-style: italic;
 }
 #user-profile-form .form-fields {
   display: flex;
@@ -14127,9 +14135,8 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   color: #1F4924;
 }
 #user-profile-form .card-like {
-  background: #f3ebd9;
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 30px;
+  padding: 10px 35px 35px;
 }
 #user-profile-form .section-title {
   font-size: 1.1rem;
@@ -14145,11 +14152,141 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-profile-form .avatar-preview {
   width: 120px;
   height: 120px;
-  border-radius: 50%;
   -o-object-fit: cover;
-     object-fit: cover;
-  border: 3px solid rgba(46, 93, 59, 0.1019607843);
-  background: #fff;
+  object-fit: cover;
+  -o-object-position: center;
+  object-position: center;
+  border-radius: 50%;
+  border: 4px solid #4B8A47;
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+  margin-left: 10px;
+  flex-shrink: 0;
+}
+#user-profile-form .profile-photo-row {
+  display: flex; /* déjà en flex dans ton code précédent */
+  justify-content: center; /* centre horizontalement les éléments enfants */
+  align-items: center;
+  gap: 30px;
+  flex-wrap: wrap; /* permet le retour à la ligne sur petit écran */
+}
+#user-profile-form #role-form .role-group {
+  display: flex;
+  gap: 20px; /* espace entre chaque option */
+  align-items: center; /* aligne verticalement le radio et le texte */
+  flex-wrap: wrap; /* passe à la ligne si l'espace manque */
+}
+#user-profile-form #role-form .role-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+#user-profile-form .btn-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+}
+#user-profile-form .btn-delete:hover {
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+  color: #fff !important;
+  cursor: pointer;
+}
+#user-profile-form .email-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+}
+#user-profile-form .form-fields-role {
+  margin-top: 20px;
+}
+#user-profile-form .eco-circle {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: #F8F0E5;
+  border: 4px solid #4B8A47;
+  color: #1F4924;
+  padding: 8px;
+  text-align: center;
+  min-width: 84px;
+  min-height: 84px;
+  font-family: inherit;
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+}
+#user-profile-form .eco-circle-value {
+  font-weight: 800;
+  font-size: 20px;
+  line-height: 1;
+}
+#user-profile-form .eco-circle-unit {
+  font-size: 20px;
+  color: #1F4924;
+  margin-top: 4px;
+}
+#user-profile-form .eco-circle.pop {
+  animation: eco-pop 360ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes eco-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@media (max-width: 576px) {
+  #user-profile-form form {
+    padding: 10px 20px 35px !important;
+  }
+  #user-profile-form .eco-circle {
+    width: 68px;
+    height: 80px;
+    min-width: 80px;
+    min-height: 80px;
+  }
+  #user-profile-form .eco-circle-value {
+    font-size: 12px;
+  }
+  #user-profile-form .eco-circle-unit {
+    font-size: 12px;
+  }
+  #user-profile-form .form-fields {
+    gap: 10px;
+  }
+  #user-profile-form .btn-row {
+    gap: 0px;
+  }
+  #user-profile-form .email-actions {
+    gap: 0px;
+  }
+  #user-profile-form .profile-photo-row {
+    gap: 10px;
+  }
+}
+#user-profile-form #profileBio {
+  min-height: 120px; /* desktop par défaut */
+  box-sizing: border-box;
+}
+@media (max-width: 576px) {
+  #user-profile-form #profileBio {
+    min-height: 220px;
+    font-size: 12px;
+  }
 }
 
 #user-trajects-form {
@@ -14330,30 +14467,66 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-trajects-form input[type=time]:not(.empty)::-webkit-datetime-edit-fields-wrapper {
   color: #1F4924;
 }
-#user-trajects-form #trajets-en-cours .trajets-list {
+@media (max-width: 576px) {
+  #user-trajects-form form {
+    padding: 10px 20px 35px;
+  }
+  #user-trajects-form .trajet-card .trajet-body .btn-trajet {
+    font-size: 16px;
+    padding: 8px 16px;
+  }
+  #user-trajects-form .form-control {
+    padding: 8px 15px;
+    font-size: 12px;
+  }
+  #user-trajects-form label {
+    font-size: 16px;
+  }
+  #user-trajects-form .search-input {
+    padding: 8px 15px !important;
+    font-size: 12px !important;
+  }
+  #user-trajects-form .form-select {
+    padding: 8px 15px !important;
+    font-size: 12px !important;
+  }
+  #user-trajects-form .form-fields {
+    gap: 10px;
+  }
+  #user-trajects-form .unit {
+    padding: 8px 15px !important;
+    font-size: 12px !important;
+  }
+  #user-trajects-form .btn {
+    font-size: 16px;
+    padding: 8px 16px;
+  }
+}
+
+#trajets-en-cours .trajets-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
-#user-trajects-form #trajets-en-cours .trajet-card {
+#trajets-en-cours .trajet-card {
   background: #F1E7D1;
   border-radius: 20px;
   padding: 15px 20px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-#user-trajects-form #trajets-en-cours .trajet-card .trajet-body {
+#trajets-en-cours .trajet-card .trajet-body {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   flex-wrap: wrap;
   gap: 20px;
 }
-#user-trajects-form #trajets-en-cours .trajet-card .trajet-body .trajet-info {
+#trajets-en-cours .trajet-card .trajet-body .trajet-info {
   text-align: left;
   display: inline-block;
   line-height: 1.5;
 }
-#user-trajects-form #trajets-en-cours .trajet-card .trajet-body .trajet-info strong {
+#trajets-en-cours .trajet-card .trajet-body .trajet-info strong {
   display: block;
   font-family: "Roboto", sans-serif;
   font-size: 20px;
@@ -14361,19 +14534,19 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   color: #1F4924;
   margin-bottom: 4px;
 }
-#user-trajects-form #trajets-en-cours .trajet-card .trajet-body .trajet-info .details {
+#trajets-en-cours .trajet-card .trajet-body .trajet-info .details {
   font-family: "Roboto", sans-serif;
   font-size: 16px;
   font-weight: 400;
   opacity: 0.8;
 }
-#user-trajects-form #trajets-en-cours .trajet-card .trajet-body .trajet-price {
+#trajets-en-cours .trajet-card .trajet-body .trajet-price {
   font-family: "Roboto", sans-serif;
   font-size: 16px;
   font-weight: 400;
   margin-left: 20px;
 }
-#user-trajects-form #trajets-en-cours .trajet-card .trajet-body .btn-trajet {
+#trajets-en-cours .trajet-card .trajet-body .btn-trajet {
   margin-left: auto;
   background-color: #4B8A47;
   color: #F1E7D1;
@@ -14386,88 +14559,88 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   transition: background 0.3s ease, transform 0.3s ease;
   box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
 }
-#user-trajects-form #trajets-en-cours .trajet-card .trajet-body .btn-trajet:hover {
+#trajets-en-cours .trajet-card .trajet-body .btn-trajet:hover {
   background-color: #1F4924;
   transform: scale(1.05);
   box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
 }
-#user-trajects-form #trajets-en-cours .trajet-card .trajet-body .trajet-status {
+#trajets-en-cours .trajet-card .trajet-body .trajet-status {
   margin-left: auto;
   font-style: italic;
   font-size: 16px;
 }
-#user-trajects-form #trajets-en-cours .trajet-card.actif {
+#trajets-en-cours .trajet-card.actif {
   background: #4B8A47;
   color: #F1E7D1;
 }
-#user-trajects-form #trajets-en-cours .trajet-card.actif .trajet-info strong,
-#user-trajects-form #trajets-en-cours .trajet-card.actif .trajet-price,
-#user-trajects-form #trajets-en-cours .trajet-card.actif .details,
-#user-trajects-form #trajets-en-cours .trajet-card.actif .trajet-status {
+#trajets-en-cours .trajet-card.actif .trajet-info strong,
+#trajets-en-cours .trajet-card.actif .trajet-price,
+#trajets-en-cours .trajet-card.actif .details,
+#trajets-en-cours .trajet-card.actif .trajet-status {
   color: #F1E7D1;
 }
-#user-trajects-form #trajets-en-cours .trajet-card.actif .btn-trajet {
+#trajets-en-cours .trajet-card.actif .btn-trajet {
   background: #F1E7D1;
   color: #1F4924;
   transition: background 0.3s ease, transform 0.3s ease;
   box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
 }
-#user-trajects-form #trajets-en-cours .trajet-card.actif .btn-trajet:hover {
+#trajets-en-cours .trajet-card.actif .btn-trajet:hover {
   background-color: #1F4924;
   color: #F1E7D1;
   transform: scale(1.05);
   box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
 }
-#user-trajects-form #trajets-en-cours .trajet-card.termine {
+#trajets-en-cours .trajet-card.termine {
   background: #CACFAA;
 }
-#user-trajects-form #trajets-en-cours .trajet-card.attente {
+#trajets-en-cours .trajet-card.attente {
   background: #F8F0E5;
 }
-#user-trajects-form #trajets-en-cours .trajet-card.reserve {
+#trajets-en-cours .trajet-card.reserve {
   background: #F8F0E5;
   border: 1px solid #4B8A47;
 }
 @media (max-width: 1415px) {
-  #user-trajects-form #trajets-en-cours .trajet-card .trajet-body {
+  #trajets-en-cours .trajet-card .trajet-body {
     flex-direction: column;
     align-items: center;
     gap: 15px;
   }
-  #user-trajects-form #trajets-en-cours .trajet-card .trajet-body .btn-trajet,
-  #user-trajects-form #trajets-en-cours .trajet-card .trajet-body .trajet-status,
-  #user-trajects-form #trajets-en-cours .trajet-card .trajet-body .trajet-price,
-  #user-trajects-form #trajets-en-cours .trajet-card .trajet-body .details {
+  #trajets-en-cours .trajet-card .trajet-body .btn-trajet,
+  #trajets-en-cours .trajet-card .trajet-body .trajet-status,
+  #trajets-en-cours .trajet-card .trajet-body .trajet-price,
+  #trajets-en-cours .trajet-card .trajet-body .details {
     text-align: center;
     margin: 0 auto;
   }
 }
 @media (max-width: 576px) {
-  #user-trajects-form #trajets-en-cours form {
+  #trajets-en-cours form {
     padding: 10px 20px 35px;
   }
-  #user-trajects-form #trajets-en-cours .trajet-card .trajet-body .btn-trajet {
+  #trajets-en-cours .trajet-card .trajet-body .btn-trajet {
     font-size: 16px;
     padding: 8px 16px;
   }
-  #user-trajects-form #trajets-en-cours .form-control {
+  #trajets-en-cours .form-control {
     padding: 8px 15px;
     font-size: 12px;
   }
-  #user-trajects-form #trajets-en-cours label {
+  #trajets-en-cours label {
     font-size: 16px;
   }
-  #user-trajects-form #trajets-en-cours .input-with-unit .unit {
+  #trajets-en-cours .input-with-unit .unit {
     padding: 8px 15px;
     font-size: 12px;
   }
-  #user-trajects-form #trajets-en-cours .trajet-info strong {
+  #trajets-en-cours .trajet-info strong {
     font-size: 16px !important;
   }
-  #user-trajects-form #trajets-en-cours .trajet-info .details {
+  #trajets-en-cours .trajet-info .details {
     font-size: 14px !important;
   }
-  #user-trajects-form #trajets-en-cours .trajet-price {
+  #trajets-en-cours .trajet-price {
     font-size: 14px !important;
   }
 }
@@ -14516,6 +14689,7 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-vehicles-form {
   /* Style de base (placeholder visuel gris) */
   /* En vert quand rempli (pas empty) */
+  /* Fallback léger pour inert */
 }
 #user-vehicles-form h1, #user-vehicles-form .h1 {
   text-align: center;
@@ -14796,11 +14970,22 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
     padding: 8px 15px;
     font-size: 12px;
   }
+  #user-vehicles-form .form-fields {
+    gap: 10px;
+  }
+  #user-vehicles-form .form-input {
+    padding: 8px 15px !important;
+    font-size: 12px !important;
+  }
   #user-vehicles-form label {
     font-size: 16px;
   }
   #user-vehicles-form form {
     padding: 10px 20px 35px;
+  }
+  #user-vehicles-form .vehicle-line {
+    font-size: 16px;
+    padding: 8px 15px;
   }
 }
 #user-vehicles-form input[type=date]::-webkit-calendar-picker-indicator,
@@ -14822,6 +15007,18 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-vehicles-form input[type=date]:not(.empty)::-webkit-datetime-edit-fields-wrapper,
 #user-vehicles-form input[type=time]:not(.empty)::-webkit-datetime-edit-fields-wrapper {
   color: #1F4924;
+}
+#user-vehicles-form [inert] {
+  pointer-events: none;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
+}
+#user-vehicles-form .user-space-form {
+  display: none !important;
+}
+#user-vehicles-form .user-space-form.active {
+  display: block !important;
 }
 
 #user-history-form h1, #user-history-form .h1 {
@@ -14892,7 +15089,6 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   flex-direction: column;
   gap: 30px;
   margin-top: 20px;
-  color: #F1E7D1;
 }
 #user-history-form .form-fields .form-field,
 #user-history-form .trajets-historique .form-field {
@@ -14939,7 +15135,7 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 }
 #user-history-form .trajets-en-cours,
 #user-history-form .trajets-historique {
-  gap: 10px;
+  gap: 30px;
 }
 #user-history-form .trajets-en-cours label,
 #user-history-form .trajets-historique label {
@@ -14951,6 +15147,7 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   border-radius: 20px;
   padding: 15px 20px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  color: #F1E7D1;
 }
 #user-history-form .trajets-en-cours .trajet-card .trajet-header,
 #user-history-form .trajets-historique .trajet-card .trajet-header {
@@ -15094,6 +15291,30 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   border: 1px solid #4B8A47;
   color: #1F4924 !important;
 }
+#user-history-form .trajets-historique {
+  max-height: 800px; /* hauteur max souhaitée */
+  overflow-y: auto; /* scroll vertical si dépassement */
+  padding-right: 10px;
+  /* Scrollbar pour WebKit (Chrome, Safari, Edge) */
+  /* Scrollbar pour Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #4B8A47 #F8F0E5;
+}
+#user-history-form .trajets-historique::-webkit-scrollbar {
+  width: 8px; /* largeur scrollbar verticale */
+  height: 8px; /* hauteur scrollbar horizontale */
+}
+#user-history-form .trajets-historique::-webkit-scrollbar-track {
+  background: #F8F0E5;
+  border-radius: 6px;
+}
+#user-history-form .trajets-historique::-webkit-scrollbar-thumb {
+  background: #4B8A47;
+  border-radius: 6px;
+}
+#user-history-form .trajets-historique::-webkit-scrollbar-thumb:hover {
+  background: rgb(47.54784689, 87.4880382775, 45.0119617225);
+}
 @media (max-width: 576px) {
   #user-history-form .btn {
     font-size: 16px; /* Réduit la taille des boutons */
@@ -15102,6 +15323,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   #user-history-form .trajet-card .btn-trajet {
     font-size: 16px; /* Réduit la taille des boutons */
     padding: 8px 16px; /* Ajuste le padding des boutons */
+  }
+  #user-history-form .trajets-historique {
+    gap: 10px;
   }
   #user-history-form .form-control {
     padding: 8px 15px;

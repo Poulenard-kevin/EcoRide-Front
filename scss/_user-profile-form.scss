@@ -154,6 +154,7 @@
       color: $color-dark-green;
       display: flex; align-items: center;
       margin-bottom: 10px;
+      font-style: italic;
     }
     
     // layout champs
@@ -213,11 +214,144 @@
     color: $color-dark-green;
   }
 
-  .card-like { background:#f3ebd9; border-radius:12px; padding:16px; }
+  .card-like { border-radius:30px; padding:10px 35px 35px; }
   .section-title { font-size:1.1rem; margin-bottom:12px; color:#2e5d3b; }
   .profile-photo-row { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+
   .avatar-preview {
-    width:120px; height:120px; border-radius:50%;
-    object-fit:cover; border:3px solid #2e5d3b1a; background:#fff;
+    width: 120px;
+    height: 120px;
+    -o-object-fit: cover;
+    object-fit: cover;
+    -o-object-position: center;
+    object-position: center;
+    border-radius: 50%;
+    border: 4px solid #4B8A47;
+    box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+    margin-left: 10px;
+    flex-shrink: 0;
+  }
+
+  .profile-photo-row {
+    display: flex;             /* déjà en flex dans ton code précédent */
+    justify-content: center;   /* centre horizontalement les éléments enfants */
+    align-items: center;
+    gap: 30px;
+    flex-wrap: wrap;           /* permet le retour à la ligne sur petit écran */
+  }
+
+  /* Aligner les radios horizontalement */
+  #role-form .role-group {
+    display: flex;
+    gap: 20px;           /* espace entre chaque option */
+    align-items: center; /* aligne verticalement le radio et le texte */
+    flex-wrap: wrap;     /* passe à la ligne si l'espace manque */
+  }
+
+  #role-form .role-group label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px 6px;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-delete:hover {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: #fff !important;
+    cursor: pointer;
+  }
+
+  .email-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .form-fields-role {
+    margin-top: 20px;
+  }
+
+  /* Cercle contenant le montant */
+  .eco-circle {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background:$color-very-light-beige;
+    border: 4px solid $color-medium-green;
+    color: $color-dark-green;
+    padding: 8px;
+    text-align: center;
+    min-width: 84px;
+    min-height: 84px;
+    font-family: inherit;
+    box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+  }
+  
+  
+  /* Montant (grand, centré) */
+  .eco-circle-value {
+    font-weight: 800;
+    font-size: 20px;
+    line-height: 1;
+  }
+  
+  /* Unité (petit sous-texte) */
+  .eco-circle-unit {
+    font-size: 20px;
+    color: $color-dark-green;
+    margin-top: 4px;
+  }
+  
+  /* Optionnel : animation légère quand on met à jour */
+  .eco-circle.pop {
+    animation: eco-pop 360ms cubic-bezier(.2,.9,.3,1);
+  }
+  @keyframes eco-pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.06); }
+    100% { transform: scale(1); }
+  }
+  
+  @media (max-width: 576px) {
+    form { padding: 10px 20px 35px !important; }
+    .eco-circle { width: 68px; height: 80px; min-width:80px; min-height:80px; }
+    .eco-circle-value { font-size: 12px; }
+    .eco-circle-unit { font-size: 12px; }
+    .form-fields { gap: 10px; }
+    .btn-row { gap: 0px; }
+    .email-actions { gap: 0px; }
+    .profile-photo-row { gap: 10px; }
+  }
+
+  /* classe si tu veux cibler juste cette textarea */
+  #profileBio {
+    min-height: 120px; /* desktop par défaut */
+    box-sizing: border-box;
+  }
+
+  /* sur mobile, agrandir la zone */
+  @media (max-width: 576px) {
+    #profileBio {
+      min-height: 220px;
+      font-size: 12px;
+    }
   }
 }

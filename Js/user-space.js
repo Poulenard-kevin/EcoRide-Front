@@ -194,20 +194,20 @@ export async function initUserSpace() {
   });
 
   // Trajets
-setTimeout(() => {
-  try {
-    initTrajets();
+  setTimeout(() => {
+    try {
+      initTrajets();
 
-    // ✅ Normalisation des dates (sans re-render)
-    setTimeout(() => {
-      console.log("🟢 Normalisation des dates après initTrajets");
-      normalizeRideDates();
-      // renderHistorique() sera appelé par onDomReady dans trajets.js
-    }, 200);
-  } catch (e) {
-    console.error(e);
-  }
-}, 100);
+      // ✅ Normalisation des dates (sans re-render)
+      setTimeout(() => {
+        console.log("🟢 Normalisation des dates après initTrajets");
+        normalizeRideDates();
+        // renderHistorique() sera appelé par onDomReady dans trajets.js
+      }, 200);
+    } catch (e) {
+      console.error(e);
+    }
+  }, 100);
 }
 
 // -------------------- Chargement HTML dynamique --------------------
@@ -422,40 +422,6 @@ window.addEventListener('ecoride:reservationRemoved', () => {
   }
 });
 
-// -------------------- Formulaire Rôle --------------------
-function initRoleForm() {
-  const roleRadios = document.querySelectorAll('input[name="role"]');
-  if (!roleRadios.length) return;
-
-  const plate = document.getElementById("plate");
-  const registrationDate = document.getElementById("registration-date");
-  const vehicleModel = document.getElementById("vehicle-model");
-  const seats = document.getElementById("seats");
-  const preferences = document.querySelectorAll('input[name="preferences"]');
-  const other = document.getElementById("other");
-
-  function toggleVehicleFields() {
-    const selected = document.querySelector('input[name="role"]:checked');
-    if (!selected) return;
-
-    const isPassager = selected.value === "passager";
-
-    [plate, registrationDate, vehicleModel, seats, other].forEach((field) => {
-      if (field) field.disabled = isPassager;
-    });
-
-    preferences.forEach((chk) => {
-      chk.disabled = isPassager;
-    });
-  }
-
-  roleRadios.forEach((radio) => {
-    radio.addEventListener("change", toggleVehicleFields);
-  });
-
-  toggleVehicleFields();
-}
-
 // -------------------- Gestion des véhicules --------------------
 function initVehicleManagement() {
   renderVehicleList();
@@ -662,8 +628,8 @@ function renderVehicleList() {
         </div>
 
         <div class="form-field-1">
-          <label for="vehicleType">Type de véhicule</label>
-          <select id="vehicleType" name="vehicleType" class="form-input">
+          <label for="vehicle-type">Type de véhicule</label>
+          <select id="vehicle-type" name="vehicleType" class="form-input">
             <option value="" selected hidden>-- Sélectionner un type--</option>
             <option value="Électrique">Électrique</option>
             <option value="Hybride">Hybride</option>

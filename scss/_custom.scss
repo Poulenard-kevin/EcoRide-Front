@@ -473,3 +473,12 @@ button.nav-link.dropdown-toggle:hover:active {
   position: relative;
 }
 
+input:disabled,
+  select:disabled,
+  textarea:disabled {
+    background-color: #e9ecef !important; /* gris clair */
+    color: #6c757d !important; /* texte gris */
+    cursor: not-allowed !important;
+    opacity: 1 !important; /* pour garder le texte lisible */
+  }
+

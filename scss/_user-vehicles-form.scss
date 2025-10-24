@@ -208,16 +208,6 @@
     }
   }
 
-  input:disabled,
-  select:disabled,
-  textarea:disabled {
-    background-color: #e9ecef; /* gris clair */
-    color: #6c757d; /* texte gris */
-    cursor: not-allowed;
-    opacity: 1; /* pour garder le texte lisible */
-    box-shadow: none;
-  }
-
   .form-control {
     border-radius: 20px;
     padding: 12px 20px;

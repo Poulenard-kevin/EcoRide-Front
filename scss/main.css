@@ -12369,6 +12369,15 @@ button.nav-link.dropdown-toggle:hover:active {
   position: relative;
 }
 
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background-color: #e9ecef !important; /* gris clair */
+  color: #6c757d !important; /* texte gris */
+  cursor: not-allowed !important;
+  opacity: 1 !important; /* pour garder le texte lisible */
+}
+
 /* === SECTION BARRE DE RECHERCHE === */
 /* === SECTION BARRE DE RECHERCHE === */
 /* === SECTION BARRE DE RECHERCHE === */
@@ -14432,10 +14441,6 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-trajects-form input[type=date],
 #user-trajects-form input[type=time] {
   flex: 1;
-  -webkit-appearance: none;
-     -moz-appearance: none;
-          appearance: none;
-  border-left: none;
   font-size: 16px;
   background-color: #F8F0E5;
   transition: border-color 0.3s ease;
@@ -14644,28 +14649,25 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
     font-size: 14px !important;
   }
 }
-
 @media (max-width: 1240px) {
-  #user-trajects-form .search-input {
+  #trajets-en-cours #user-trajects-form .search-input {
     width: 100% !important;
   }
 }
-.vehicle-label {
+#trajets-en-cours .vehicle-label {
   display: inline-block; /* évite que ça prenne toute la ligne */
   font-weight: 500; /* un peu plus visible */
   white-space: nowrap; /* empêche les retours à la ligne */
 }
-
-.btn-trajet.trajet-cancel-btn:hover,
-.btn-trajet.trajet-delete-btn:hover {
+#trajets-en-cours .btn-trajet.trajet-cancel-btn:hover,
+#trajets-en-cours .btn-trajet.trajet-delete-btn:hover {
   background-color: #dc3545 !important;
   border-color: #dc3545 !important;
   color: #fff !important;
   cursor: pointer;
 }
-
-.btn-trajet.trajet-cancel-btn,
-.btn-trajet.trajet-delete-btn {
+#trajets-en-cours .btn-trajet.trajet-cancel-btn,
+#trajets-en-cours .btn-trajet.trajet-delete-btn {
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
@@ -14870,15 +14872,6 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-}
-#user-vehicles-form input:disabled,
-#user-vehicles-form select:disabled,
-#user-vehicles-form textarea:disabled {
-  background-color: #e9ecef; /* gris clair */
-  color: #6c757d; /* texte gris */
-  cursor: not-allowed;
-  opacity: 1; /* pour garder le texte lisible */
-  box-shadow: none;
 }
 #user-vehicles-form .form-control {
   border-radius: 20px;

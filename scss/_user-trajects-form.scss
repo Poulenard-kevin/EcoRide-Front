@@ -140,8 +140,6 @@
   input[type="date"],
   input[type="time"] {
     flex: 1;
-    appearance: none;
-    border-left: none;
     font-size: 16px;
     background-color: $color-very-light-beige;
     transition: border-color 0.3s ease;
@@ -368,32 +366,31 @@
     .trajet-price { font-size: $font-size-small !important; }
 
   }
-}
 
-
-@media (max-width: 1240px) {
-  #user-trajects-form .search-input {
-   width: 100% !important;
+  @media (max-width: 1240px) {
+    #user-trajects-form .search-input {
+     width: 100% !important;
+    }
   }
-}
-
-.vehicle-label {
-  display: inline-block;   /* évite que ça prenne toute la ligne */
-  font-weight: 500;        /* un peu plus visible */
-  white-space: nowrap;     /* empêche les retours à la ligne */
-}
-
-.btn-trajet.trajet-cancel-btn:hover,
-.btn-trajet.trajet-delete-btn:hover {
-  background-color: #dc3545 !important;
-  border-color: #dc3545 !important;
-  color: #fff !important;
-  cursor: pointer;
-}
-
-.btn-trajet.trajet-cancel-btn,
-.btn-trajet.trajet-delete-btn {
-  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  
+  .vehicle-label {
+    display: inline-block;   /* évite que ça prenne toute la ligne */
+    font-weight: 500;        /* un peu plus visible */
+    white-space: nowrap;     /* empêche les retours à la ligne */
+  }
+  
+  .btn-trajet.trajet-cancel-btn:hover,
+  .btn-trajet.trajet-delete-btn:hover {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: #fff !important;
+    cursor: pointer;
+  }
+  
+  .btn-trajet.trajet-cancel-btn,
+  .btn-trajet.trajet-delete-btn {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  }
 }
 
 #ratingModal {
@@ -413,3 +410,5 @@
     }
   }
 }
+
+

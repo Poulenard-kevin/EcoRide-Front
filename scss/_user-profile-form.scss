@@ -303,21 +303,7 @@
     min-height: 84px;
     font-family: inherit;
     box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
-  }
-  
-  
-  /* Montant (grand, centré) */
-  .eco-circle-value {
-    font-weight: 800;
     font-size: 20px;
-    line-height: 1;
-  }
-  
-  /* Unité (petit sous-texte) */
-  .eco-circle-unit {
-    font-size: 20px;
-    color: $color-dark-green;
-    margin-top: 4px;
   }
   
   /* Optionnel : animation légère quand on met à jour */
@@ -353,5 +339,51 @@
       min-height: 220px;
       font-size: 12px;
     }
+  }
+
+  /* ecoride-credits-modal.css
+   Styles légers pour les packs et états actifs (Bootstrap gère le reste).
+  */
+  .ecoride-credit-packs {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin-bottom: .75rem;
+  }
+
+  .ecoride-pack {
+    min-width: 80px;
+    padding: .45rem .7rem;
+    border-radius: .5rem;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition: transform .08s ease, box-shadow .12s ease;
+    border: 1px solid rgba(0,0,0,0.08);
+    background: #f8f9fa; /* light */
+    color: #212529;
+  }
+
+  /* léger effet tactile */
+  .ecoride-pack:active { transform: translateY(1px); }
+
+  /* état "sélectionné" — harmonisé avec la palette verte */
+  .ecoride-pack.active,
+  .ecoride-pack.active.btn-outline-secondary {
+    background-color: #2f7a39 !important;
+    color: #fff !important;
+    border-color: #2f7a39 !important;
+    box-shadow: 0 6px 18px rgba(47,122,57,0.12);
+  }
+
+  /* input personnalisé */
+  .ecoride-custom-input {
+    max-width: 160px;
+  }
+
+  /* si tu veux réduire la largeur des boutons dans les petits écrans */
+  @media (max-width: 420px) {
+    .ecoride-pack { min-width: 60px; padding: .4rem .5rem; font-size: .95rem; }
+    .ecoride-custom-input { max-width: 100%; }
   }
 }

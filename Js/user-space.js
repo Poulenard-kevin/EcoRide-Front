@@ -110,7 +110,6 @@ let userSpaceInitialized = false;
 
 // -------------------- Initialisation --------------------
 export async function initUserSpace() {
-
   // 🧹 Nettoie les doublons de panels
   ['user-profile-form', 'user-trajects-form', 'user-vehicles-form', 'user-history-form'].forEach(id => {
     const all = document.querySelectorAll(`#${id}`);
@@ -146,6 +145,18 @@ export async function initUserSpace() {
 
   await loadHTMLContent();
 
+  // -- Important : setupTabs avant d'éventuelles injections qui modifient le DOM
+  try {
+    if (typeof setupTabs === 'function') {
+      setupTabs(userSpaceSection);
+      console.log('setupTabs exécuté');
+    } else {
+      console.warn('setupTabs non défini');
+    }
+  } catch (e) {
+    console.warn('setupTabs error', e);
+  }
+
   // 🔍 DIAGNOSTICS : surveiller les écritures dans #user-vehicles-form
   (function watchVehiclesPanelWrites(){
     const container = document.getElementById('user-vehicles-form');
@@ -155,10 +166,9 @@ export async function initUserSpace() {
     const originalSet = desc.set;
     Object.defineProperty(container, 'innerHTML', {
       set(value) {
-        // 🔒 Bloque les écritures pendant la fermeture de la modale
         if (document.body.dataset.lockVehiclesWrite === '1') {
           console.warn('🔒 WRITE innerHTML BLOCKED on #user-vehicles-form (lockVehiclesWrite active)');
-          return; // ne fait rien
+          return;
         }
         console.trace('WRITE innerHTML on #user-vehicles-form', { snippet: String(value).slice(0,120) });
         originalSet.call(this, value);
@@ -177,15 +187,56 @@ export async function initUserSpace() {
     mo.observe(el, { childList: true, subtree: true });
   })();
 
-  // Tabs: comportement simple et prévisible
-  setupTabs(userSpaceSection);
+  // Init sections (scopées au container) — robustes (try/catch)
+  try { initRoleForm(userSpaceSection); } catch (e) { console.warn('initRoleForm failed', e); }
 
-  // Init sections
-  initRoleForm();
-  initVehicleManagement();
-  injectDeleteModal();
+  if (typeof initProfilePhotoForm === 'function') {
+    try { initProfilePhotoForm(userSpaceSection); } catch (e) { console.warn('initProfilePhotoForm failed', e); }
+  }
 
-  // Placeholders pour date/time
+  try {
+    // si initVehicleManagement supporte un container, passe-le ; sinon fallback
+    if (typeof initVehicleManagement === 'function') {
+      if (initVehicleManagement.length > 0) initVehicleManagement(userSpaceSection);
+      else initVehicleManagement();
+    } else {
+      console.warn('initVehicleManagement non défini');
+    }
+  } catch (e) {
+    console.warn('initVehicleManagement error', e);
+  }
+
+  try { injectDeleteModal(); } catch (e) { console.warn('injectDeleteModal failed', e); }
+
+  // --- INIT CREDITS (après rendu / initialisation des controls) ---
+  try {
+    const hasCreditsUI = !!userSpaceSection.querySelector('#creditsValue, #creditsForm, #creditsAddInput');
+    if (hasCreditsUI) {
+      if (window.ecorideCredits && typeof window.ecorideCredits.init === 'function') {
+        window.ecorideCredits.init(userSpaceSection);
+        console.log('ecorideCredits initialisé pour user space — credits:', window.ecorideCredits.get());
+      } else {
+        console.warn('ecorideCredits non défini au moment de l\'init user space. Attente courte avant retry.');
+        // fallback léger si le script arrive juste après (optionnel)
+        setTimeout(() => {
+          if (window.ecorideCredits && typeof window.ecorideCredits.init === 'function') {
+            try {
+              window.ecorideCredits.init(userSpaceSection);
+              console.log('ecorideCredits init (retry) success — credits:', window.ecorideCredits.get());
+            } catch (err) {
+              console.warn('ecorideCredits.init retry erreur', err);
+            }
+          }
+        }, 50);
+      }
+    } else {
+      console.log('Pas d\'UI crédits détectée dans userSpaceSection — skip credits init');
+    }
+  } catch (e) {
+    console.warn('ecorideCredits.init erreur', e);
+  }
+
+  // Placeholders pour date/time (tu peux garder/adapter)
   document.querySelectorAll('input[type="date"], input[type="time"]').forEach(input => {
     const toggleClass = () => input.classList.toggle('empty', !input.value);
     toggleClass();
@@ -1014,6 +1065,56 @@ function populateVehiclesSelect() {
     datalist.appendChild(option);
   });
 }
+
+// === Apply stored avatar globally (applique l'avatar sauvegardé au chargement et sur injection SPA) ===
+(function applyStoredAvatarGlobal() {
+  const KEY = 'ecoride.profileAvatar';
+  let parsed;
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return;
+    parsed = JSON.parse(raw);
+    if (!parsed || !parsed.dataURL) return;
+  } catch (e) {
+    console.warn('applyStoredAvatarGlobal parse error', e);
+    return;
+  }
+  const dataURL = parsed.dataURL;
+
+  // Appliquer immédiatement aux emplacements connus
+  document.querySelectorAll('[data-ecoride-avatar], #headerAvatar, .header-avatar').forEach(img => {
+    if (img && img.tagName === 'IMG') img.src = dataURL;
+  });
+
+  // Appliquer au preview du profil si déjà présent
+  const preview = document.querySelector('#profileAvatarPreview');
+  if (preview && preview.tagName === 'IMG') preview.src = dataURL;
+
+  // Si le module expose une API pour recharger l'UI du profile, l'appeler
+  try {
+    if (window.__ecoride_profilePhoto && typeof window.__ecoride_profilePhoto.load === 'function') {
+      window.__ecoride_profilePhoto.load();
+    } else if (typeof window.initProfilePhotoForm === 'function') {
+      // initProfilePhotoForm peut être appelé de manière sûre (idempotent)
+      try { window.initProfilePhotoForm(document); } catch (err) { /* ignore */ }
+    }
+  } catch (e) { /* ignore */ }
+
+  // Observer le DOM pour appliquer l'avatar si la form est injectée plus tard (SPA)
+  const mo = new MutationObserver((mutations, obs) => {
+    const p = document.querySelector('#profileAvatarPreview');
+    if (p) {
+      p.src = dataURL;
+      try {
+        if (window.__ecoride_profilePhoto && typeof window.__ecoride_profilePhoto.load === 'function') {
+          window.__ecoride_profilePhoto.load();
+        }
+      } catch (e) {}
+      obs.disconnect();
+    }
+  });
+  mo.observe(document.body, { childList: true, subtree: true });
+})();
 
 // -------------------- Lancement --------------------
 document.addEventListener('pageContentLoaded', () => {

@@ -13923,11 +13923,16 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   /* En vert quand rempli (pas empty) */
   /* Aligner les radios horizontalement */
   /* Cercle contenant le montant */
-  /* Montant (grand, centré) */
-  /* Unité (petit sous-texte) */
   /* Optionnel : animation légère quand on met à jour */
   /* classe si tu veux cibler juste cette textarea */
   /* sur mobile, agrandir la zone */
+  /* ecoride-credits-modal.css
+   Styles légers pour les packs et états actifs (Bootstrap gère le reste).
+  */
+  /* léger effet tactile */
+  /* état "sélectionné" — harmonisé avec la palette verte */
+  /* input personnalisé */
+  /* si tu veux réduire la largeur des boutons dans les petits écrans */
 }
 #user-profile-form h1, #user-profile-form .h1 {
   text-align: center;
@@ -14233,16 +14238,7 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   min-height: 84px;
   font-family: inherit;
   box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
-}
-#user-profile-form .eco-circle-value {
-  font-weight: 800;
   font-size: 20px;
-  line-height: 1;
-}
-#user-profile-form .eco-circle-unit {
-  font-size: 20px;
-  color: #1F4924;
-  margin-top: 4px;
 }
 #user-profile-form .eco-circle.pop {
   animation: eco-pop 360ms cubic-bezier(0.2, 0.9, 0.3, 1);
@@ -14295,6 +14291,49 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   #user-profile-form #profileBio {
     min-height: 220px;
     font-size: 12px;
+  }
+}
+#user-profile-form .ecoride-credit-packs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+#user-profile-form .ecoride-pack {
+  min-width: 80px;
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.5rem;
+  text-align: center;
+  cursor: pointer;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
+  transition: transform 0.08s ease, box-shadow 0.12s ease;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #f8f9fa; /* light */
+  color: #212529;
+}
+#user-profile-form .ecoride-pack:active {
+  transform: translateY(1px);
+}
+#user-profile-form .ecoride-pack.active,
+#user-profile-form .ecoride-pack.active.btn-outline-secondary {
+  background-color: #2f7a39 !important;
+  color: #fff !important;
+  border-color: #2f7a39 !important;
+  box-shadow: 0 6px 18px rgba(47, 122, 57, 0.12);
+}
+#user-profile-form .ecoride-custom-input {
+  max-width: 160px;
+}
+@media (max-width: 420px) {
+  #user-profile-form .ecoride-pack {
+    min-width: 60px;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.95rem;
+  }
+  #user-profile-form .ecoride-custom-input {
+    max-width: 100%;
   }
 }
 

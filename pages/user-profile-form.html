@@ -30,7 +30,7 @@
       </div>
     </div>
     <div class="btn-row">
-      <button type="button" id="confirmAvatarBtn" class="btn">Valider l'avatar</button>
+      <button type="button" id="confirmAvatarBtn" class="btn">Valider</button>
       <button type="button" id="removeAvatarBtn" class="btn btn-delete">Supprimer</button>
     </div>
   </div>
@@ -42,20 +42,13 @@
     <h2>Crédits</h2>
 
       <div class="credit-row">
-        <!-- Cercle avec le montant (sans photo) -->
-        <div id="ecoCircle" class="eco-circle" role="status">
-          <div class="eco-circle-value" id="ecoCircleValue">0</div>
-          <div class="eco-circle-unit">crédits</div>
+        <div id="ecoCircle" class="eco-circle" role="status" data-ecoride-credits>
+          <span class="ecoride-credit-number">0</span>
+          <span class="ecoride-credit-label">crédits</span>
         </div>
       </div>
 
       <!-- contrôle d'ajout -->
-      <div class="credit-control">
-        <label for="creditAdd">Ajouter des crédits</label>
-        <div class="credit-input-row">
-          <input type="number" id="creditAdd" min="1" step="1" value="5" class="form-control small">
-        </div>
-      </div>
       <div class="btn-row">
         <button type="button" id="creditAddBtn" class="btn">Ajouter</button>
       </div>   

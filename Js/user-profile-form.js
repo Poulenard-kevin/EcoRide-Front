@@ -400,13 +400,36 @@ const MESSAGES = {
             setStatus('Impossible d’enregistrer la photo de profil, (localStorage plein ?).', true);
             return;
           }
+        
+          // mise à jour UI locale
           currentDataURL = dataURL;
           currentFileMeta = meta || currentFileMeta || {};
           updateUIForLoadedAvatar(dataURL, currentFileMeta);
           setStatus('Photo de profil enregistrée.');
-          dispatchAvatarEvent('ecoride:avatarChanged', { dataURL, meta: currentFileMeta });
           try { fileInput.value = ''; } catch {}
-          btnConfirm.disabled = true;
+        
+          // --- PATCH : copier la photo dans ecoride_user (si présent) ---
+          try {
+            const raw = localStorage.getItem('ecoride_user');
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (parsed && typeof parsed === 'object') {
+                parsed.photo = dataURL; // stocke la dataURL (persistante)
+                localStorage.setItem('ecoride_user', JSON.stringify(parsed));
+                console.log('ecoride_user mis à jour avec la photo (patch automatique)');
+              }
+            }
+          } catch (err) {
+            console.warn('Erreur lors du patch de ecoride_user', err);
+          }
+        
+          // dispatch global (notifie les autres modules)
+          window.dispatchEvent(new Event('userUpdated'));
+        
+          // event local / backward-compat (tu as déjà ce dispatch dans le code existant)
+          dispatchAvatarEvent('ecoride:avatarChanged', { dataURL, meta: currentFileMeta });
+        
+          if (btnConfirm) btnConfirm.disabled = true;
         }
 
         if (currentDataURL) {
@@ -1177,28 +1200,26 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
 //<!-- FORM 3 : À propos -->
 //<!-- FORM 3 : À propos -->
 
-
-// Paste this in user-profile-form.js (or in a script loaded with defer)
 (function () {
   const STORAGE_KEY = 'ecoride.profileAbout';
-  const MIN_CHARS = 20;
-  const MAX_CHARS = 600;
+  const MIN = 20;
+  const MAX = 350;
 
-  function normalize(s){
-    return (String(s || '')).replace(/<\/?[^>]+(>|$)/g,'').replace(/\s{2,}/g,' ').trim();
+  function normalize(s) {
+    return String(s || '').replace(/<\/?[^>]+(>|$)/g, '').replace(/\s{2,}/g, ' ').trim();
   }
 
-  function validate(text){
-    const t = normalize(text);
-    const len = t.length;
+  function validate(s) {
+    const cleaned = normalize(s);
+    const len = cleaned.length;
     const errors = [];
     if (len === 0) errors.push('Le texte ne peut pas être vide.');
-    if (len < MIN_CHARS) errors.push(`Minimum ${MIN_CHARS} caractères requis (${len}).`);
-    if (len > MAX_CHARS) errors.push(`Maximum ${MAX_CHARS} caractères autorisés (${len}).`);
-    return { ok: errors.length === 0, errors, cleaned: t, length: len };
+    if (len < MIN) errors.push(`Minimum ${MIN} caractères requis (${len}).`);
+    if (len > MAX) errors.push(`Maximum ${MAX} caractères autorisés (${len}).`);
+    return { ok: errors.length === 0, cleaned, len, errors };
   }
 
-  function saveLocal(cleaned){
+  function saveLocal(cleaned) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ text: cleaned, updatedAt: Date.now() }));
       return true;
@@ -1208,135 +1229,23 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
     }
   }
 
-  function loadLocal(){
+  function loadLocalText() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
       const p = JSON.parse(raw);
       return p && p.text ? p.text : null;
-    } catch (e) { return null; }
+    } catch (e) {
+      return null;
+    }
   }
 
-  function renderCard(text){
+  function renderCard(text) {
     const card = document.querySelector('#profileAboutCard') || document.querySelector('[data-ecoride-about]');
     if (!card) return;
-    card.innerHTML = text ? `<p class="mb-0">${String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</p>` :
-                            `<p class="text-muted mb-0">Aucune description fournie.</p>`;
-  }
-
-  function attachHandlers() {
-    const form = document.querySelector('#about-me-form');
-    const textarea = document.querySelector('#profileBio');
-    const saveBtn = document.querySelector('#saveBioBtn');
-    if (!form || !textarea || !saveBtn) {
-      console.warn('ecoride: about init - éléments manquants', { form: !!form, textarea: !!textarea, saveBtn: !!saveBtn });
-      return;
-    }
-
-    console.log('ecoride: about init - handlers attachés');
-
-    // prevent real form submission (safety)
-    form.addEventListener('submit', (ev) => { ev.preventDefault(); });
-
-    // load stored
-    const stored = loadLocal();
-    if (stored) {
-      textarea.value = stored;
-      renderCard(stored);
-    } else {
-      renderCard('');
-    }
-
-    // live counter (simple)
-    let counter = form.querySelector('.about-counter');
-    if (!counter) {
-      counter = document.createElement('small');
-      counter.className = 'about-counter text-muted';
-      counter.style.display = 'block';
-      counter.style.marginTop = '6px';
-      textarea.insertAdjacentElement('afterend', counter);
-    }
-
-    function refreshUI() {
-      const val = textarea.value || '';
-      const { ok, errors, cleaned, length } = validate(val);
-      counter.textContent = `${length}/${MAX_CHARS}`;
-      const errorEl = form.querySelector('.about-error') || (function(){
-        const e = document.createElement('small'); e.className = 'about-error text-danger'; e.style.display = 'none';
-        counter.insertAdjacentElement('afterend', e); return e;
-      })();
-      if (!ok) { errorEl.textContent = errors.join(' '); errorEl.style.display = 'block'; }
-      else { errorEl.textContent = ''; errorEl.style.display = 'none'; }
-      saveBtn.disabled = !ok;
-    }
-
-    // initial UI
-    refreshUI();
-
-    textarea.addEventListener('input', () => {
-      refreshUI();
-    });
-
-    btn.addEventListener('click', (ev) => {
-      ev.preventDefault();
-    
-      // validate and normalize
-      const { ok, cleaned } = validateText(textarea.value);
-      if (!ok) {
-        textarea.focus();
-        refreshUI();
-        return;
-      }
-    
-      // ensure final length <= MAX (extra guard)
-      let final = cleaned;
-      if (final.length > MAX) {
-        final = final.slice(0, MAX);
-        // reflect cut in textarea for clarity
-        textarea.value = final;
-      }
-    
-      // save to localStorage
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ text: final, updatedAt: Date.now() }));
-      } catch (e) {
-        console.error('save failed', e);
-        alert('Impossible d\'enregistrer localement.');
-      }
-    
-      // render card if present
-      const card = document.querySelector('#profileAboutCard') || document.querySelector('[data-ecoride-about]');
-      if (card) card.innerHTML = `<p class="mb-0">${String(final).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</p>`;
-    
-      window.dispatchEvent(new CustomEvent('ecoride:profileAboutChanged', { detail: { about: final } }));
-    
-      // UX feedback
-      const prev = btn.textContent;
-      btn.textContent = 'Enregistré ✓';
-      btn.disabled = true;
-      setTimeout(()=> { btn.textContent = prev; refreshUI(); }, 900);
-    }, { passive: false });
-  }
-
-  // Ensure we attach handlers after DOM loaded (works even if script loaded early)
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', attachHandlers);
-  } else {
-    attachHandlers();
-  }
-})();
-
-// attendre que les nodes existent puis attacher les handlers (robuste)
-(function () {
-  const STORAGE_KEY = 'ecoride.profileAbout';
-  const MIN = 20, MAX = 600;
-
-  function normalize(s) {
-    return String(s || '').replace(/<\/?[^>]+(>|$)/g, '').replace(/\s{2,}/g, ' ').trim();
-  }
-  function validateText(s) {
-    const t = normalize(s);
-    return { ok: t.length >= MIN && t.length <= MAX, cleaned: t, len: t.length };
+    card.innerHTML = text
+      ? `<p class="mb-0">${String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</p>`
+      : `<p class="text-muted mb-0">Aucune description fournie.</p>`;
   }
 
   function waitFor(selector, timeout = 6000) {
@@ -1352,33 +1261,25 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
     });
   }
 
-  (async function attach() {
+  async function getElement(selector) {
+    const el = document.querySelector(selector);
+    if (el) return el;
+    return await waitFor(selector);
+  }
+
+  (async function init() {
     try {
-      const form = await waitFor('#about-me-form');
-      const textarea = await waitFor('#profileBio');
+      const form = await getElement('#about-me-form');
+      const textarea = await getElement('#profileBio');
+      const saveBtn = await getElement('#saveBioBtn');
 
-      // enforce maxlength attribute so browser prevents typing beyond MAX
-      textarea.setAttribute('maxlength', String(MAX));
-
-      // guard against paste / programmatic inputs: truncate and keep caret at end
-      textarea.addEventListener('input', () => {
-        if (textarea.value.length > MAX) {
-          textarea.value = textarea.value.slice(0, MAX);
-          textarea.setSelectionRange(MAX, MAX);
-        }
-        // call refreshUI to update counter/errors (refreshUI exists in your code)
-        if (typeof refreshUI === 'function') refreshUI();
-      }, { passive: true });
-
-      const btn = await waitFor('#saveBioBtn');
-
-      // sécurité: empêcher submit par défaut
+      // Sécurité : empêcher le submit natif
       form.addEventListener('submit', e => e.preventDefault());
 
-      // si bouton a été laissé enabled dans HTML, forcer disabled au départ
-      btn.disabled = true;
+      // Attribuer maxlength pour limiter côté navigateur
+      textarea.setAttribute('maxlength', String(MAX));
 
-      // créer compteur/error s'il n'existe pas
+      // Créer / récupérer UI helper (counter + error)
       let counter = form.querySelector('.about-counter');
       if (!counter) {
         counter = document.createElement('small');
@@ -1387,6 +1288,7 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
         counter.style.marginTop = '6px';
         textarea.insertAdjacentElement('afterend', counter);
       }
+
       let errorEl = form.querySelector('.about-error');
       if (!errorEl) {
         errorEl = document.createElement('small');
@@ -1396,54 +1298,66 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
       }
 
       function refreshUI() {
-        const { ok, len, cleaned } = validateText(textarea.value);
+        const { ok, cleaned, len, errors } = validate(textarea.value);
         counter.textContent = `${len}/${MAX}`;
         if (!ok) {
-          errorEl.textContent = (len === 0) ? 'Le texte ne peut pas être vide.' :
-                                (len < MIN) ? `Minimum ${MIN} caractères requis (${len}).` :
-                                `Maximum ${MAX} caractères autorisés (${len}).`;
+          errorEl.textContent = errors.join(' ');
           errorEl.style.display = 'block';
         } else {
           errorEl.textContent = '';
           errorEl.style.display = 'none';
         }
-        btn.disabled = !ok;
+        saveBtn.disabled = !ok;
       }
 
-      // restore if stored
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed && parsed.text) textarea.value = parsed.text;
+      // Protection contre paste / programmatic input > MAX
+      textarea.addEventListener('input', () => {
+        if (textarea.value.length > MAX) {
+          textarea.value = textarea.value.slice(0, MAX);
+          try { textarea.setSelectionRange(MAX, MAX); } catch (e){/* ignore */ }
         }
-      } catch(e){/* ignore */ }
+        refreshUI();
+      }, { passive: true });
 
-      // initial UI
+      // restore from storage
+      const stored = loadLocalText();
+      if (stored) {
+        textarea.value = stored;
+        renderCard(stored);
+      } else {
+        renderCard('');
+      }
+
+      // initial UI state
       refreshUI();
 
-      textarea.addEventListener('input', refreshUI, { passive: true });
-
-      btn.addEventListener('click', (ev) => {
+      saveBtn.addEventListener('click', (ev) => {
         ev.preventDefault();
-        const { ok, cleaned } = validateText(textarea.value);
+        const { ok, cleaned } = validate(textarea.value);
         if (!ok) { textarea.focus(); refreshUI(); return; }
-        // save local
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({ text: cleaned, updatedAt: Date.now() }));
-        } catch (e) { console.error('save failed', e); alert('Impossible d\'enregistrer localement.'); }
-        // render card if present
-        const card = document.querySelector('#profileAboutCard') || document.querySelector('[data-ecoride-about]');
-        if (card) card.innerHTML = `<p class="mb-0">${cleaned.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</p>`;
-        window.dispatchEvent(new CustomEvent('ecoride:profileAboutChanged', { detail: { about: cleaned } }));
-        // feedback
-        const prev = btn.textContent;
-        btn.textContent = 'Enregistré ✓';
-        btn.disabled = true;
-        setTimeout(()=> { btn.textContent = prev; refreshUI(); }, 900);
+
+        // final guard (truncate)
+        let final = cleaned;
+        if (final.length > MAX) final = final.slice(0, MAX);
+
+        const saved = saveLocal(final);
+        if (!saved) {
+          alert('Impossible d\'enregistrer localement.');
+          return;
+        }
+
+        // mise à jour du card et dispatch
+        renderCard(final);
+        window.dispatchEvent(new CustomEvent('ecoride:profileAboutChanged', { detail: { about: final } }));
+
+        // feedback UX
+        const prev = saveBtn.textContent;
+        saveBtn.textContent = 'Enregistré ✓';
+        saveBtn.disabled = true;
+        setTimeout(() => { saveBtn.textContent = prev; refreshUI(); }, 900);
       }, { passive: false });
 
-      console.log('ecoride: about handlers attachés (waitFor)');
+      console.log('ecoride: about handlers attachés (unifié)');
     } catch (err) {
       console.warn('ecoride: about - éléments introuvables dans le temps imparti', err);
     }

@@ -32,6 +32,48 @@ function getCovoId(item) {
     || null;
 }
 
+// ---------- helpers/avatar / user ----------
+export function resolveAvatarSrc(src) {
+  if (!src) return '/images/default-avatar.png';
+  src = String(src).trim();
+  if (/^https?:\/\//i.test(src)) return src;
+  if (src.startsWith('/')) return src;
+  return '/' + src.replace(/^\/+/, '');
+}
+
+export function getCurrentUser() {
+  try {
+    return JSON.parse(localStorage.getItem('ecoride_user') || 'null');
+  } catch (e) {
+    console.warn('getCurrentUser parse error', e);
+    return null;
+  }
+}
+
+export function getCurrentUserPseudo() {
+  const me = getCurrentUser();
+  return me?.pseudo ?? 'Moi';
+}
+
+export function enrichTrajetWithCurrentUser(trajet = {}) {
+  try {
+    const me = getCurrentUser();
+    if (!me) return trajet;
+
+    if (!trajet.chauffeur || typeof trajet.chauffeur !== 'object') {
+      trajet.chauffeur = {};
+    }
+
+    trajet.chauffeur.pseudo = trajet.chauffeur.pseudo ?? me.pseudo ?? 'Moi';
+    const rawPhoto = trajet.chauffeur.photo ?? me.photo ?? 'images/default-avatar.png';
+    trajet.chauffeur.photo = resolveAvatarSrc(rawPhoto);
+    trajet.chauffeur.rating = (trajet.chauffeur.rating ?? me.rating ?? 0);
+  } catch (e) {
+    console.warn('enrichTrajetWithCurrentUser error', e);
+  }
+  return trajet;
+}
+
 function normalizePassagers(list = []) {
   return list.map(p => {
     if (!p) return null;
@@ -177,14 +219,7 @@ document.addEventListener('hidden.bs.modal', () => {
   }
 });
 
-function getCurrentUserPseudo() {
-  try {
-    const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
-    return me && me.pseudo ? me.pseudo : 'Moi';
-  } catch (e) { return 'Moi'; }
-}
-
-function genId() {
+export function genId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return 'id_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
@@ -395,6 +430,9 @@ function handleTrajetSubmit(e) {
     role: "chauffeur",
     status: 'ajoute'
   };
+
+  // enrichir avec profil courant (pseudo/photo/rating) avant d'ajouter
+  enrichTrajetWithCurrentUser(trajetData);
 
   if (!trajetData.depart || !trajetData.arrivee || !trajetData.date) {
     alert('Veuillez remplir les champs obligatoires (départ, arrivée, date)');
@@ -1411,7 +1449,7 @@ function ajouterAuCovoiturage(trajetData) {
 }
 
 // Fonction helper pour formater la date
-function formatDateJJMMAAAA(input) {
+export function formatDateJJMMAAAA(input) {
   if (!input) return '';
   const d = (input instanceof Date) ? input : new Date(input);
   if (isNaN(d)) return '';

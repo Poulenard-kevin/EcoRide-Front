@@ -849,11 +849,24 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
         }
 
         btnConfirm.textContent = 'Crédits ajoutés ✓';
+
         setTimeout(() => {
           btnConfirm.disabled = false;
           btnConfirm.textContent = prevText;
-          if (bsModal) bsModal.hide();
+          if (bsModal) {
+            bsModal.hide();
+          } else if (typeof accessibleHide === 'function') {
+            accessibleHide(modalEl);
+          } else if (window.__ecorideAccessibleHideCreditsModal) {
+            window.__ecorideAccessibleHideCreditsModal();
+          } else {
+            // dernier recours
+            modalEl.classList.remove('show');
+            modalEl.style.display = 'none';
+            modalEl.setAttribute('aria-hidden', 'true');
+          }
         }, 350);
+        
       } catch (err) {
         console.error('Paiement simulé échoué', err);
         alert('Erreur paiement (simulation).');
@@ -870,12 +883,141 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
       setSelectedPack(initialValue);
       if (bsModal) {
         bsModal.show();
-      } else {
-        // fallback simple: toggle inline styles (rare si bootstrap absent)
-        modalEl.classList.add('show');
-        modalEl.style.display = 'block';
-        modalEl.setAttribute('aria-modal', 'true');
-      }
+      } 
+      // Accessible fallback si bootstrap.Modal absent
+      (function() {
+        let prevFocused = null;
+      
+        function accessibleShow(modalEl) {
+          // ensure focusable
+          if (!modalEl.hasAttribute('tabindex')) modalEl.setAttribute('tabindex', '-1');
+      
+          // save previously focused element to restore later
+          prevFocused = document.activeElement;
+      
+          // show visually
+          modalEl.classList.add('show');
+          modalEl.style.display = 'block';
+          modalEl.setAttribute('aria-modal', 'true');
+          modalEl.removeAttribute('aria-hidden');
+      
+          // inert background (optional): add inert to main content container if you have one
+          const main = document.querySelector('main') || document.querySelector('#app') || document.body;
+          try { if (main && main !== modalEl) main.inert = true; } catch(e){ /* some browsers need polyfill */ }
+      
+          // focus modal
+          try { modalEl.focus(); } catch(e) { /* ignore */ }
+        }
+      
+        function accessibleHide(modalEl) {
+          if (!modalEl) return;
+        
+          // 1) blur l'élément encore focusé dans la modal (si présent)
+          try {
+            const activeInside = modalEl.contains(document.activeElement) ? document.activeElement : null;
+            if (activeInside && typeof activeInside.blur === 'function') {
+              activeInside.blur();
+            }
+          } catch (e) { /* ignore */ }
+        
+          // 2) restaurer le focus précédent (si connu) ou donner le focus au body comme fallback
+          try {
+            if (prevFocused && typeof prevFocused.focus === 'function') {
+              prevFocused.focus();
+            } else if (document.body && typeof document.body.focus === 'function') {
+              document.body.focus();
+            }
+          } catch (e) { /* ignore */ }
+        
+          // 3) maintenant on peut cacher la modal visuellement
+          try {
+            modalEl.classList.remove('show');
+            modalEl.style.display = 'none';
+          } catch(e){ /* ignore */ }
+        
+          // 4) remettre les attributs ARIA (après restauration du focus)
+          try { modalEl.removeAttribute('aria-modal'); } catch(e){}
+          try { modalEl.setAttribute('aria-hidden', 'true'); } catch(e){}
+        
+          // 5) restaurer l'interaction du contenu principal (inert)
+          const main = document.querySelector('main') || document.querySelector('#app') || document.body;
+          try { if (main && main !== modalEl) main.inert = false; } catch(e){ /* ignore */ }
+        
+          // 6) cleanup
+          prevFocused = null;
+        }
+      
+        // override __ecorideOpenCreditsModal to use accessible fallback when bsModal absent
+        const modalEl = document.getElementById('ecorideCreditsModal');
+        if (modalEl && !window.__ecorideOpenCreditsModalAccessiblePatched) {
+          window.__ecorideOpenCreditsModalAccessiblePatched = true;
+          const originalOpener = window.__ecorideOpenCreditsModal || function(v){ /* noop */ };
+      
+          window.__ecorideOpenCreditsModal = function(initialValue = 5) {
+            // update input & packs first (existing logic)
+            const input = modalEl.querySelector('.ecoride-custom-input');
+            const packs = Array.from(modalEl.querySelectorAll('.ecoride-pack'));
+            if (input) input.value = initialValue || 5;
+            packs.forEach(p => p.classList.toggle('active', Number(p.dataset.value) === Number(initialValue)));
+      
+            if (window.bootstrap && typeof window.bootstrap.Modal === 'function') {
+              // use bootstrap if available
+              try {
+                const bs = new window.bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+                bs.show();
+              } catch(e) {
+                // fallback accessible
+                accessibleShow(modalEl);
+              }
+            } else {
+              // accessible fallback show
+              accessibleShow(modalEl);
+            }
+          };
+      
+          // patcher l'événement de fermeture si tu utilises ton btnCancel / close
+          const cancelBtns = modalEl.querySelectorAll('[data-bs-dismiss], .btn-cancel, .btn-close');
+          cancelBtns.forEach(btn => btn.addEventListener('click', () => accessibleHide(modalEl)));
+          // si tu caches la modal côté code (ex: après paiement), appelle accessibleHide(modalEl) à la place de modalEl.classList.remove(...)
+        }
+
+        // bootstrap accessibility fixes
+        (function ensureBootstrapModalA11y(modalEl) {
+          if (!modalEl || !window.bootstrap) return;
+
+          let prevFocused = null;
+
+          modalEl.addEventListener('show.bs.modal', () => {
+            // avant d'afficher, sauvegarde le focus (Bootstrap va afficher)
+            prevFocused = document.activeElement;
+          });
+
+          modalEl.addEventListener('shown.bs.modal', () => {
+            // Bootstrap a montré la modal -> retirer aria-hidden et focus
+            try { modalEl.removeAttribute('aria-hidden'); } catch(e){}
+            try { modalEl.setAttribute('aria-modal', 'true'); } catch(e){}
+            try { modalEl.focus(); } catch(e){}
+          });
+
+          modalEl.addEventListener('hide.bs.modal', () => {
+            // avant la fermeture visuelle : blur le bouton si nécessaire pour éviter qu'il reste focusé
+            try {
+              const active = modalEl.querySelector(':focus');
+              if (active && typeof active.blur === 'function') active.blur();
+            } catch(e){}
+          });
+
+          modalEl.addEventListener('hidden.bs.modal', () => {
+            // Bootstrap a caché la modal -> restaurer focus et marquer aria-hidden
+            try {
+              if (prevFocused && typeof prevFocused.focus === 'function') prevFocused.focus();
+            } catch(e){}
+            try { modalEl.setAttribute('aria-hidden', 'true'); } catch(e){}
+            try { modalEl.removeAttribute('aria-modal'); } catch(e){}
+            prevFocused = null;
+          });
+        })(document.getElementById('ecorideCreditsModal'));
+      })();
     };
   })();
 
@@ -1027,5 +1169,283 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
     window.ecorideCredits.get = window.ecorideCredits.get || getCredits;
     window.ecorideCredits.add = window.ecorideCredits.add || addCredits;
     window.ecorideCredits.set = window.ecorideCredits.set || setCredits;
+  })();
+})();
+
+
+//<!-- FORM 3 : À propos -->
+//<!-- FORM 3 : À propos -->
+//<!-- FORM 3 : À propos -->
+
+
+// Paste this in user-profile-form.js (or in a script loaded with defer)
+(function () {
+  const STORAGE_KEY = 'ecoride.profileAbout';
+  const MIN_CHARS = 20;
+  const MAX_CHARS = 600;
+
+  function normalize(s){
+    return (String(s || '')).replace(/<\/?[^>]+(>|$)/g,'').replace(/\s{2,}/g,' ').trim();
+  }
+
+  function validate(text){
+    const t = normalize(text);
+    const len = t.length;
+    const errors = [];
+    if (len === 0) errors.push('Le texte ne peut pas être vide.');
+    if (len < MIN_CHARS) errors.push(`Minimum ${MIN_CHARS} caractères requis (${len}).`);
+    if (len > MAX_CHARS) errors.push(`Maximum ${MAX_CHARS} caractères autorisés (${len}).`);
+    return { ok: errors.length === 0, errors, cleaned: t, length: len };
+  }
+
+  function saveLocal(cleaned){
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ text: cleaned, updatedAt: Date.now() }));
+      return true;
+    } catch (e) {
+      console.error('saveLocal error', e);
+      return false;
+    }
+  }
+
+  function loadLocal(){
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const p = JSON.parse(raw);
+      return p && p.text ? p.text : null;
+    } catch (e) { return null; }
+  }
+
+  function renderCard(text){
+    const card = document.querySelector('#profileAboutCard') || document.querySelector('[data-ecoride-about]');
+    if (!card) return;
+    card.innerHTML = text ? `<p class="mb-0">${String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</p>` :
+                            `<p class="text-muted mb-0">Aucune description fournie.</p>`;
+  }
+
+  function attachHandlers() {
+    const form = document.querySelector('#about-me-form');
+    const textarea = document.querySelector('#profileBio');
+    const saveBtn = document.querySelector('#saveBioBtn');
+    if (!form || !textarea || !saveBtn) {
+      console.warn('ecoride: about init - éléments manquants', { form: !!form, textarea: !!textarea, saveBtn: !!saveBtn });
+      return;
+    }
+
+    console.log('ecoride: about init - handlers attachés');
+
+    // prevent real form submission (safety)
+    form.addEventListener('submit', (ev) => { ev.preventDefault(); });
+
+    // load stored
+    const stored = loadLocal();
+    if (stored) {
+      textarea.value = stored;
+      renderCard(stored);
+    } else {
+      renderCard('');
+    }
+
+    // live counter (simple)
+    let counter = form.querySelector('.about-counter');
+    if (!counter) {
+      counter = document.createElement('small');
+      counter.className = 'about-counter text-muted';
+      counter.style.display = 'block';
+      counter.style.marginTop = '6px';
+      textarea.insertAdjacentElement('afterend', counter);
+    }
+
+    function refreshUI() {
+      const val = textarea.value || '';
+      const { ok, errors, cleaned, length } = validate(val);
+      counter.textContent = `${length}/${MAX_CHARS}`;
+      const errorEl = form.querySelector('.about-error') || (function(){
+        const e = document.createElement('small'); e.className = 'about-error text-danger'; e.style.display = 'none';
+        counter.insertAdjacentElement('afterend', e); return e;
+      })();
+      if (!ok) { errorEl.textContent = errors.join(' '); errorEl.style.display = 'block'; }
+      else { errorEl.textContent = ''; errorEl.style.display = 'none'; }
+      saveBtn.disabled = !ok;
+    }
+
+    // initial UI
+    refreshUI();
+
+    textarea.addEventListener('input', () => {
+      refreshUI();
+    });
+
+    btn.addEventListener('click', (ev) => {
+      ev.preventDefault();
+    
+      // validate and normalize
+      const { ok, cleaned } = validateText(textarea.value);
+      if (!ok) {
+        textarea.focus();
+        refreshUI();
+        return;
+      }
+    
+      // ensure final length <= MAX (extra guard)
+      let final = cleaned;
+      if (final.length > MAX) {
+        final = final.slice(0, MAX);
+        // reflect cut in textarea for clarity
+        textarea.value = final;
+      }
+    
+      // save to localStorage
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ text: final, updatedAt: Date.now() }));
+      } catch (e) {
+        console.error('save failed', e);
+        alert('Impossible d\'enregistrer localement.');
+      }
+    
+      // render card if present
+      const card = document.querySelector('#profileAboutCard') || document.querySelector('[data-ecoride-about]');
+      if (card) card.innerHTML = `<p class="mb-0">${String(final).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</p>`;
+    
+      window.dispatchEvent(new CustomEvent('ecoride:profileAboutChanged', { detail: { about: final } }));
+    
+      // UX feedback
+      const prev = btn.textContent;
+      btn.textContent = 'Enregistré ✓';
+      btn.disabled = true;
+      setTimeout(()=> { btn.textContent = prev; refreshUI(); }, 900);
+    }, { passive: false });
+  }
+
+  // Ensure we attach handlers after DOM loaded (works even if script loaded early)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attachHandlers);
+  } else {
+    attachHandlers();
+  }
+})();
+
+// attendre que les nodes existent puis attacher les handlers (robuste)
+(function () {
+  const STORAGE_KEY = 'ecoride.profileAbout';
+  const MIN = 20, MAX = 600;
+
+  function normalize(s) {
+    return String(s || '').replace(/<\/?[^>]+(>|$)/g, '').replace(/\s{2,}/g, ' ').trim();
+  }
+  function validateText(s) {
+    const t = normalize(s);
+    return { ok: t.length >= MIN && t.length <= MAX, cleaned: t, len: t.length };
+  }
+
+  function waitFor(selector, timeout = 6000) {
+    return new Promise((resolve, reject) => {
+      const el = document.querySelector(selector);
+      if (el) return resolve(el);
+      const obs = new MutationObserver(() => {
+        const found = document.querySelector(selector);
+        if (found) { obs.disconnect(); resolve(found); }
+      });
+      obs.observe(document.documentElement, { childList: true, subtree: true });
+      setTimeout(() => { obs.disconnect(); reject(new Error('timeout waiting for ' + selector)); }, timeout);
+    });
+  }
+
+  (async function attach() {
+    try {
+      const form = await waitFor('#about-me-form');
+      const textarea = await waitFor('#profileBio');
+
+      // enforce maxlength attribute so browser prevents typing beyond MAX
+      textarea.setAttribute('maxlength', String(MAX));
+
+      // guard against paste / programmatic inputs: truncate and keep caret at end
+      textarea.addEventListener('input', () => {
+        if (textarea.value.length > MAX) {
+          textarea.value = textarea.value.slice(0, MAX);
+          textarea.setSelectionRange(MAX, MAX);
+        }
+        // call refreshUI to update counter/errors (refreshUI exists in your code)
+        if (typeof refreshUI === 'function') refreshUI();
+      }, { passive: true });
+
+      const btn = await waitFor('#saveBioBtn');
+
+      // sécurité: empêcher submit par défaut
+      form.addEventListener('submit', e => e.preventDefault());
+
+      // si bouton a été laissé enabled dans HTML, forcer disabled au départ
+      btn.disabled = true;
+
+      // créer compteur/error s'il n'existe pas
+      let counter = form.querySelector('.about-counter');
+      if (!counter) {
+        counter = document.createElement('small');
+        counter.className = 'about-counter text-muted';
+        counter.style.display = 'block';
+        counter.style.marginTop = '6px';
+        textarea.insertAdjacentElement('afterend', counter);
+      }
+      let errorEl = form.querySelector('.about-error');
+      if (!errorEl) {
+        errorEl = document.createElement('small');
+        errorEl.className = 'about-error text-danger';
+        errorEl.style.display = 'none';
+        counter.insertAdjacentElement('afterend', errorEl);
+      }
+
+      function refreshUI() {
+        const { ok, len, cleaned } = validateText(textarea.value);
+        counter.textContent = `${len}/${MAX}`;
+        if (!ok) {
+          errorEl.textContent = (len === 0) ? 'Le texte ne peut pas être vide.' :
+                                (len < MIN) ? `Minimum ${MIN} caractères requis (${len}).` :
+                                `Maximum ${MAX} caractères autorisés (${len}).`;
+          errorEl.style.display = 'block';
+        } else {
+          errorEl.textContent = '';
+          errorEl.style.display = 'none';
+        }
+        btn.disabled = !ok;
+      }
+
+      // restore if stored
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.text) textarea.value = parsed.text;
+        }
+      } catch(e){/* ignore */ }
+
+      // initial UI
+      refreshUI();
+
+      textarea.addEventListener('input', refreshUI, { passive: true });
+
+      btn.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        const { ok, cleaned } = validateText(textarea.value);
+        if (!ok) { textarea.focus(); refreshUI(); return; }
+        // save local
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ text: cleaned, updatedAt: Date.now() }));
+        } catch (e) { console.error('save failed', e); alert('Impossible d\'enregistrer localement.'); }
+        // render card if present
+        const card = document.querySelector('#profileAboutCard') || document.querySelector('[data-ecoride-about]');
+        if (card) card.innerHTML = `<p class="mb-0">${cleaned.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</p>`;
+        window.dispatchEvent(new CustomEvent('ecoride:profileAboutChanged', { detail: { about: cleaned } }));
+        // feedback
+        const prev = btn.textContent;
+        btn.textContent = 'Enregistré ✓';
+        btn.disabled = true;
+        setTimeout(()=> { btn.textContent = prev; refreshUI(); }, 900);
+      }, { passive: false });
+
+      console.log('ecoride: about handlers attachés (waitFor)');
+    } catch (err) {
+      console.warn('ecoride: about - éléments introuvables dans le temps imparti', err);
+    }
   })();
 })();

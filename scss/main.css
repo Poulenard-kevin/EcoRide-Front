@@ -14336,6 +14336,11 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
     max-width: 100%;
   }
 }
+#user-profile-form .text-muted {
+  color: #1F4924 !important;
+  font-size: 14px;
+  margin-top: 0px !important;
+}
 
 #user-trajects-form {
   /* Style de base (placeholder visuel gris) */

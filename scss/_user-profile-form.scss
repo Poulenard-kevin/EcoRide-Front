@@ -386,4 +386,10 @@
     .ecoride-pack { min-width: 60px; padding: .4rem .5rem; font-size: .95rem; }
     .ecoride-custom-input { max-width: 100%; }
   }
+
+  .text-muted {
+    color: $color-dark-green !important;
+    font-size: 14px;
+    margin-top: 0px !important;
+  }
 }

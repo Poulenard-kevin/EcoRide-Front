@@ -90,21 +90,29 @@
       <div>
         <label for="currentPassword">Mot de passe actuel</label>
         <input type="password" class="form-control" id="currentPassword" autocomplete="current-password">
+        <div class="invalid-feedback">Veuillez saisir votre mot de passe actuel. Il doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial. </div>
+        <div class="valid-feedback">Mot de passe correct.</div>
       </div>
 
       <div>
         <label for="newPassword">Nouveau mot de passe</label>
         <input type="password" class="form-control" id="newPassword" autocomplete="new-password">
+        <div class="invalid-feedback">
+          Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.
+        </div>
+        <div class="valid-feedback">Mot de passe valide.</div>
       </div>
 
       <div>
         <label for="confirmPassword">Confirmer</label>
         <input type="password" class="form-control" id="confirmPassword" autocomplete="new-password">
+        <div class="invalid-feedback">Les mots de passe ne correspondent pas.</div>
+        <div class="valid-feedback">Mot de passe confirmé.</div>
       </div>
     </div>
 
     <div class="form-actions">
-      <button type="submit" class="btn" id="saveAccountBtn">Valider</button>
+      <button type="button" class="btn" id="saveAccountBtn">Valider</button>
     </div>
   </div>
 </form>

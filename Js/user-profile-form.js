@@ -1700,7 +1700,7 @@ function initAccountInfoForm(root = document) {
     function isValidEmail(v) {
       if (!v) return false;
       const email = String(v).trim();
-      const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       return emailRegex.test(email);
     }
 
@@ -1709,15 +1709,25 @@ function initAccountInfoForm(root = document) {
       const canonical = getCanonicalUser && getCanonicalUser();
       const matchesCanonical = canonical && canonical.email && canonical.email === current;
       const valid = isValidEmail(current);
-
-      if (saveBtn) {
-        if (valid && !matchesCanonical) {
-          saveBtn.classList.remove('hidden');
-          saveBtn.setAttribute('aria-hidden', 'false');
-        } else {
-          saveBtn.classList.add('hidden');
-          saveBtn.setAttribute('aria-hidden', 'true');
+    
+      if (!saveBtn) return;
+    
+      if (valid && !matchesCanonical) {
+        // show
+        saveBtn.classList.remove('hidden');
+        saveBtn.removeAttribute('aria-hidden');
+        saveBtn.disabled = false;
+        saveBtn.tabIndex = 0;
+      } else {
+        // if the button (or a descendant) has focus, move focus back to the input
+        if (saveBtn.contains(document.activeElement)) {
+          try { input.focus(); } catch(e) { try { document.activeElement.blur(); } catch(_){} }
         }
+        // hide
+        saveBtn.classList.add('hidden');
+        saveBtn.setAttribute('aria-hidden', 'true');
+        saveBtn.disabled = true;     // retire aussi du flux clavier
+        saveBtn.tabIndex = -1;       // sécurité supplémentaire pour ne pas laisser en tab-order
       }
     }
 
@@ -1863,3 +1873,284 @@ if (!window.__ecoride_save_delegate_installed) {
   window.__ecoride_save_delegate_installed = true;
   console.info('Delegated save handler installed.');
 }
+
+
+// === Password change: nouveau module (ne modifie PAS la partie mail) ===
+/*
+  Module mot de passe:
+  - idempotent, SPA-friendly
+  - expose window.handleSavePassword pour debug / invocation
+  - par défaut écrit en clair dans localStorage pour le DEV ; désactiver avant PR/production :
+      window.ECORIDE_DEV_LOCAL_SAVE = false;
+*/
+(function EcoridePasswordModule() {
+  // DEV flag override
+  const DEV_LOCAL_SAVE = (typeof window.ECORIDE_DEV_LOCAL_SAVE === 'boolean') ? window.ECORIDE_DEV_LOCAL_SAVE : true;
+
+  // Prevent multiple installs
+  if (window.__ecoride_password_feature_installed) return;
+  window.__ecoride_password_feature_installed = true;
+
+  // ---------- Helpers ----------
+  function isStrongPassword(v) {
+    if (!v) return false;
+    const pw = String(v).trim();
+    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])[A-Za-z\d\W_]{8,}$/.test(pw);
+  }
+
+  function readStoredUser() {
+    try {
+      const raw = localStorage.getItem('ecoride_user');
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      console.warn('readStoredUser parse error', e);
+      return {};
+    }
+  }
+
+  // Dev helper to remove test password
+  window.__ecoride_remove_test_password = function() {
+    try {
+      const obj = readStoredUser();
+      if (!obj.password) return console.log('no test password found');
+      delete obj.password;
+      localStorage.setItem('ecoride_user', JSON.stringify(obj));
+      console.log('ecoride_user.password removed');
+    } catch (e) { console.error(e); }
+  };
+
+  // ---------- Main setup ----------
+  // Remplace ta fonction setupPasswordChange par celle-ci (robuste + logs)
+function setupPasswordChange(containerEl) {
+  if (!containerEl) return;
+  if (containerEl.dataset.pwValidationInit === '1') return;
+  containerEl.dataset.pwValidationInit = '1';
+
+  // try canonical selectors first
+  let inputCurrent = containerEl.querySelector('#currentPassword') || document.querySelector('#currentPassword') || null;
+  let inputNew     = containerEl.querySelector('#newPassword')     || document.querySelector('#newPassword')     || null;
+  let inputConfirm = containerEl.querySelector('#confirmPassword') || document.querySelector('#confirmPassword') || null;
+  let saveBtn      = containerEl.querySelector('#saveAccountBtn')  || document.querySelector('#saveAccountBtn')  || null;
+
+  // Fallback #1: if inputs are rendered as <input type="password"> and have no ids,
+  // try to map the first 3 password inputs found inside container (or globally)
+  function tryMapByPasswordInputs(root) {
+    const list = (root || document).querySelectorAll('input[type="password"]');
+    if (list && list.length >= 3) {
+      return { current: list[0], neu: list[1], confirm: list[2] };
+    }
+    return null;
+  }
+
+  if (!inputCurrent || !inputNew || !inputConfirm) {
+    const mapped = tryMapByPasswordInputs(containerEl) || tryMapByPasswordInputs(document);
+    if (mapped) {
+      inputCurrent = inputCurrent || mapped.current;
+      inputNew     = inputNew     || mapped.neu;
+      inputConfirm = inputConfirm || mapped.confirm;
+      console.info('setupPasswordChange: fields mapped via password inputs fallback', { inputCurrent, inputNew, inputConfirm });
+    }
+  }
+
+  // Fallback #2: try to find a submit button if saveBtn missing
+  if (!saveBtn) {
+    // prefer button[type=submit] inside container
+    saveBtn = containerEl.querySelector('button[type="submit"], input[type="submit"]') ||
+              containerEl.querySelector('button') ||
+              document.querySelector('button[type="submit"], input[type="submit"]') ||
+              null;
+
+    // try to find by visible text "Valider" (case-insensitive)
+    if (!saveBtn) {
+      const buttons = Array.from((containerEl || document).querySelectorAll('button, input[type="button"], input[type="submit"]'));
+      saveBtn = buttons.find(b => {
+        try {
+          const txt = (b.textContent || b.value || '').trim().toLowerCase();
+          return txt && txt.includes('valider');
+        } catch(e) { return false; }
+      }) || null;
+    }
+    console.info('setupPasswordChange: saveBtn fallback result', saveBtn);
+  }
+
+  // If still missing, log the container's inputs for inspection and abort (so we don't silently fail)
+  if (!inputCurrent || !inputNew || !inputConfirm || !saveBtn) {
+    console.warn('setupPasswordChange: éléments manquants après fallback', {
+      inputCurrent, inputNew, inputConfirm, saveBtn,
+      containerQuery: containerEl ? containerEl.outerHTML.slice(0,1000) : null,
+      allInputsInContainer: containerEl ? Array.from(containerEl.querySelectorAll('input,button')).map(n => ({ tag: n.tagName, id: n.id, name: n.name, type: n.type, text: (n.textContent||n.value||'').trim().slice(0,40) })) : null
+    });
+    return;
+  }
+
+  // If we get here, we have the elements — keep the rest of the behaviour as before
+  const setValid = i => { i.classList.remove('is-invalid'); i.classList.add('is-valid'); };
+  const setInvalid = i => { i.classList.remove('is-valid'); i.classList.add('is-invalid'); };
+  const clearValidation = i => { i.classList.remove('is-valid','is-invalid'); };
+
+  // touched flags + listeners
+  [inputCurrent, inputNew, inputConfirm].forEach(i => {
+    if (typeof i.touched === 'undefined') i.touched = false;
+    i.addEventListener('input', (ev) => { if (ev && !ev.isTrusted) return; i.touched = true; runValidation(); });
+    i.addEventListener('blur', (ev) => { if (ev && ev.isTrusted) i.touched = true; i.value = (i.value||'').trim(); runValidation(); });
+  });
+
+  function isStrongPassword(v) {
+    if (!v) return false;
+    return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])[A-Za-z\d\W_]{8,}$/.test(String(v).trim());
+  }
+  function getStoredPassword(){
+    try {
+      const raw = localStorage.getItem('ecoride_user');
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      return obj && obj.password ? String(obj.password) : null;
+    } catch(e){ return null; }
+  }
+  function saveNewPasswordLocally(newPw){
+    try {
+      const raw = localStorage.getItem('ecoride_user');
+      const obj = raw ? JSON.parse(raw) : {};
+      obj.password = newPw;
+      localStorage.setItem('ecoride_user', JSON.stringify(obj));
+      return true;
+    } catch(e){ console.error(e); return false; }
+  }
+
+  function runValidation(){
+    const cur = (inputCurrent.value||'').trim();
+    const nw = (inputNew.value||'').trim();
+    const cf = (inputConfirm.value||'').trim();
+    const stored = getStoredPassword();
+
+    const enableLogic = cur.length >= 1 &&
+                        (stored ? cur === stored : true) &&
+                        isStrongPassword(nw) &&
+                        nw !== cur &&
+                        cf === nw;
+
+    saveBtn.disabled = !enableLogic;
+
+    if (!inputCurrent.touched) clearValidation(inputCurrent);
+    else if (stored && cur === stored) setValid(inputCurrent);
+    else if (!stored && cur.length>0) setValid(inputCurrent);
+    else setInvalid(inputCurrent);
+
+    if (!inputNew.touched) clearValidation(inputNew);
+    else if (isStrongPassword(nw) && nw !== cur) setValid(inputNew);
+    else setInvalid(inputNew);
+
+    if (!inputConfirm.touched) clearValidation(inputConfirm);
+    else if (cf === nw && cf !== '') setValid(inputConfirm);
+    else setInvalid(inputConfirm);
+  }
+
+  // central action (remplacer l'actuelle par ce bloc)
+  window.handleSavePassword = window.handleSavePassword || function(btnElement) {
+    const cur = (inputCurrent.value||'').trim();
+    const nw  = (inputNew.value||'').trim();
+    const cf  = (inputConfirm.value||'').trim();
+
+    // checks
+    if (!isStrongPassword(nw)) {
+      inputNew.classList.add('is-invalid');
+      setTimeout(()=>inputNew.classList.remove('is-invalid'), 1200);
+      return;
+    }
+    if (nw !== cf) {
+      inputConfirm.classList.add('is-invalid');
+      setTimeout(()=>inputConfirm.classList.remove('is-invalid'), 1200);
+      return;
+    }
+
+    const stored = getStoredPassword();
+    if (stored && stored !== cur) {
+      inputCurrent.classList.add('is-invalid');
+      setTimeout(()=>inputCurrent.classList.remove('is-invalid'), 1200);
+      return;
+    }
+
+    // persist (DEV only)
+    const ok = saveNewPasswordLocally(nw);
+    if (!ok) return console.error('handleSavePassword: save failed');
+
+    // feedback
+    const prevText = btnElement.textContent;
+    btnElement.textContent = 'Enregistré ✓';
+    btnElement.disabled = true;
+
+    // clear inputs and reset validation state so current doesn't stay red
+    try {
+      // clear values
+      inputCurrent.value = '';
+      inputNew.value = '';
+      inputConfirm.value = '';
+
+      // reset touched flags
+      [inputCurrent, inputNew, inputConfirm].forEach(i => { i.touched = false; });
+
+      // clear visual validation classes
+      [inputCurrent, inputNew, inputConfirm].forEach(i => {
+        i.classList.remove('is-valid', 'is-invalid');
+      });
+
+      // re-run validation to set proper button state (will disable since empty)
+      runValidation();
+    } catch (e) {
+      console.warn('handleSavePassword: clearing inputs failed', e);
+    }
+
+    // restore button text after a short delay
+    setTimeout(()=> {
+      btnElement.textContent = prevText;
+      // keep it disabled until user enters something meaningful again
+      btnElement.disabled = true;
+    }, 900);
+
+    // broadcast event
+    window.dispatchEvent(new CustomEvent('ecoride:passwordChanged', { detail: {} }));
+  };
+
+  // Ensure delegated click installed once
+  if (!window.__ecoride_password_delegate_installed) {
+    document.addEventListener('click', (e) => {
+      const b = e.target && e.target.closest && e.target.closest('#saveAccountBtn');
+      if (b) {
+        e.preventDefault();
+        window.handleSavePassword(b);
+      }
+    });
+    window.__ecoride_password_delegate_installed = true;
+  }
+
+  // initial validation
+  [100,300,700].forEach(d => setTimeout(runValidation, d));
+  runValidation();
+}
+
+  // Auto-init (SPA friendly)
+  function ensurePasswordInit() {
+    const container = document.querySelector('.form-fields')?.closest('form') || document.querySelector('.form-fields');
+    if (container) {
+      setupPasswordChange(container);
+      return true;
+    }
+    return false;
+  }
+
+  if (!ensurePasswordInit()) {
+    const mo = new MutationObserver((_, obs) => {
+      if (ensurePasswordInit()) obs.disconnect();
+    });
+    mo.observe(document.documentElement || document.body, { childList: true, subtree: true });
+    // safety timeout
+    setTimeout(()=> mo.disconnect(), 7000);
+  }
+
+  // Public API
+  window.EcoridePassword = {
+    init: (el) => setupPasswordChange(el || (document.querySelector('.form-fields')?.closest('form') || document.querySelector('.form-fields'))),
+    removeTestPassword: window.__ecoride_remove_test_password,
+    setDevLocalSave: (v) => { window.ECORIDE_DEV_LOCAL_SAVE = !!v; console.log('ECORIDE_DEV_LOCAL_SAVE set to', !!v); }
+  };
+})(); // end password module

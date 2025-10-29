@@ -385,4 +385,62 @@
     font-size: 14px;
     margin-top: 0px !important;
   }
+
+  /* Validation Bootstrap personnalisée */
+  .form-control.is-valid {
+    border-color: $color-medium-green!important; /* vert */
+    box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25) !important; /* ombre verte */
+    /* background-image est géré par Bootstrap, donc icône visible */
+  }
+  .form-control.is-invalid {
+    border-color: #dc3545 !important; /* rouge */
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important; /* ombre rouge */
+    /* background-image est géré par Bootstrap, donc icône visible */
+  }
+
+  /* Enlever uniquement la bordure colorée de Bootstrap quand .is-invalid / .is-valid est active,
+   mais garder le halo (box-shadow) pour l'indication visuelle. */
+
+  .form-control.is-invalid,
+  .was-validated .form-control:invalid,
+  .form-select.is-invalid,
+  textarea.is-invalid {
+    border-color: transparent !important; /* cache la bordure rouge */
+  }
+
+  /* même chose pour l'état valide */
+  .form-control.is-valid,
+  .was-validated .form-control:valid,
+  .form-select.is-valid,
+  textarea.is-valid {
+    border-color: transparent !important; /* cache la bordure verte/noire */
+  }
+
+  /* cas des inputs dans des input-groups */
+  .input-group .form-control.is-invalid,
+  .input-group .form-control.is-valid {
+    border-color: transparent !important;
+  }
+
+  /* si tu utilises des inputs personnalisés ou d'autres variantes, cible-les aussi */
+  input[type="password"].is-invalid,
+  input[type="password"].is-valid {
+    border-color: transparent !important;
+  }
+
+  .valid-feedback,
+    .invalid-feedback {
+      font-size: 1.4rem; /* Ajuste la taille selon ton besoin */
+      margin-top: 10px !important;
+  }
+
+  .form-control.is-valid ~ .valid-feedback {
+    display: block;
+    color: #4B8A47;
+  }
+
+  .form-control.is-invalid ~ .invalid-feedback {
+    display: block;
+    color: #D64545;
+  }
 }

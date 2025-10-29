@@ -13944,6 +13944,12 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   /* état "sélectionné" — harmonisé avec la palette verte */
   /* input personnalisé */
   /* si tu veux réduire la largeur des boutons dans les petits écrans */
+  /* Validation Bootstrap personnalisée */
+  /* Enlever uniquement la bordure colorée de Bootstrap quand .is-invalid / .is-valid est active,
+   mais garder le halo (box-shadow) pour l'indication visuelle. */
+  /* même chose pour l'état valide */
+  /* cas des inputs dans des input-groups */
+  /* si tu utilises des inputs personnalisés ou d'autres variantes, cible-les aussi */
 }
 #user-profile-form h1, #user-profile-form .h1 {
   text-align: center;
@@ -14343,6 +14349,49 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   color: #1F4924 !important;
   font-size: 14px;
   margin-top: 0px !important;
+}
+#user-profile-form .form-control.is-valid {
+  border-color: #4B8A47 !important; /* vert */
+  box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25) !important; /* ombre verte */
+  /* background-image est géré par Bootstrap, donc icône visible */
+}
+#user-profile-form .form-control.is-invalid {
+  border-color: #dc3545 !important; /* rouge */
+  box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important; /* ombre rouge */
+  /* background-image est géré par Bootstrap, donc icône visible */
+}
+#user-profile-form .form-control.is-invalid,
+#user-profile-form .was-validated .form-control:invalid,
+#user-profile-form .form-select.is-invalid,
+#user-profile-form textarea.is-invalid {
+  border-color: transparent !important; /* cache la bordure rouge */
+}
+#user-profile-form .form-control.is-valid,
+#user-profile-form .was-validated .form-control:valid,
+#user-profile-form .form-select.is-valid,
+#user-profile-form textarea.is-valid {
+  border-color: transparent !important; /* cache la bordure verte/noire */
+}
+#user-profile-form .input-group .form-control.is-invalid,
+#user-profile-form .input-group .form-control.is-valid {
+  border-color: transparent !important;
+}
+#user-profile-form input[type=password].is-invalid,
+#user-profile-form input[type=password].is-valid {
+  border-color: transparent !important;
+}
+#user-profile-form .valid-feedback,
+#user-profile-form .invalid-feedback {
+  font-size: 1.4rem; /* Ajuste la taille selon ton besoin */
+  margin-top: 10px !important;
+}
+#user-profile-form .form-control.is-valid ~ .valid-feedback {
+  display: block;
+  color: #4B8A47;
+}
+#user-profile-form .form-control.is-invalid ~ .invalid-feedback {
+  display: block;
+  color: #D64545;
 }
 
 #user-trajects-form {

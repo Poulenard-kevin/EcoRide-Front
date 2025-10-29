@@ -1712,6 +1712,21 @@ function initAccountInfoForm(root = document) {
     
       if (!saveBtn) return;
     
+      // VISUEL: classes is-valid / is-invalid
+      if (current === '') {
+        // vide -> retirer les classes
+        input.classList.remove('is-valid','is-invalid');
+      } else if (valid && !matchesCanonical) {
+        input.classList.remove('is-invalid');
+        input.classList.add('is-valid');
+      } else if (!valid) {
+        input.classList.remove('is-valid');
+        input.classList.add('is-invalid');
+      } else {
+        // cas matchesCanonical (même email) : neutre
+        input.classList.remove('is-valid','is-invalid');
+      }
+    
       if (valid && !matchesCanonical) {
         // show
         saveBtn.classList.remove('hidden');
@@ -1719,15 +1734,14 @@ function initAccountInfoForm(root = document) {
         saveBtn.disabled = false;
         saveBtn.tabIndex = 0;
       } else {
-        // if the button (or a descendant) has focus, move focus back to the input
         if (saveBtn.contains(document.activeElement)) {
           try { input.focus(); } catch(e) { try { document.activeElement.blur(); } catch(_){} }
         }
         // hide
         saveBtn.classList.add('hidden');
         saveBtn.setAttribute('aria-hidden', 'true');
-        saveBtn.disabled = true;     // retire aussi du flux clavier
-        saveBtn.tabIndex = -1;       // sécurité supplémentaire pour ne pas laisser en tab-order
+        saveBtn.disabled = true;
+        saveBtn.tabIndex = -1;
       }
     }
 
@@ -1831,6 +1845,7 @@ window.handleSaveEmail = async function(btn) {
   } catch(e) { existing = {}; }
   existing.email = val;
 
+  // après avoir stocké existing.email = val; et persistance OK:
   try {
     if (typeof setCanonicalUser === 'function') {
       setCanonicalUser(existing);
@@ -1843,7 +1858,11 @@ window.handleSaveEmail = async function(btn) {
     return;
   }
 
-  // visual feedback
+  // visuel amélioré : set valid state briefly
+  input.classList.remove('is-invalid');
+  input.classList.add('is-valid');
+
+  // visual feedback on button
   if (typeof window.showTemporarySavedText === 'function') {
     try { await window.showTemporarySavedText(btn, 'Enregistré ✓', 900); } catch(e){}
   } else {
@@ -1853,6 +1872,8 @@ window.handleSaveEmail = async function(btn) {
     setTimeout(() => {
       btn.textContent = prev;
       btn.removeAttribute('aria-disabled');
+      // optionally remove 'is-valid' after a short delay so the green halo doesn't persist forever
+      setTimeout(() => { input.classList.remove('is-valid'); }, 1200);
     }, 900);
   }
 

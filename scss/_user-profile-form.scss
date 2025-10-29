@@ -256,14 +256,7 @@
     padding: 4px 6px;
   }
 
-  .btn-row {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-  }
+  
 
   .btn-delete:hover {
     background-color: #dc3545 !important;
@@ -272,7 +265,7 @@
     cursor: pointer;
   }
 
-  .email-actions {
+  .email-actions, .btn-row, .meta-row {
     display: flex;
     gap: 12px;
     justify-content: center;

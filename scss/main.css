@@ -13666,6 +13666,17 @@ textarea:disabled {
   max-width: 600px; /* La div ne dépassera pas 300px */
   width: 100%; /* Elle occupe toute la largeur disponible jusqu'à max-width */
 }
+.detail-container .about {
+  background-color: #F1E7D1;
+  border-radius: 30px;
+  padding: 2rem;
+  margin-bottom: 3.5rem;
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-size: 24px;
+  text-align: center;
+  width: 100%;
+}
 .detail-container .driver-reviews {
   font-family: "Poppins", sans-serif;
   font-weight: 600;
@@ -14196,21 +14207,13 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   cursor: pointer;
   padding: 4px 6px;
 }
-#user-profile-form .btn-row {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-}
 #user-profile-form .btn-delete:hover {
   background-color: #dc3545 !important;
   border-color: #dc3545 !important;
   color: #fff !important;
   cursor: pointer;
 }
-#user-profile-form .email-actions {
+#user-profile-form .email-actions, #user-profile-form .btn-row, #user-profile-form .meta-row {
   display: flex;
   gap: 12px;
   justify-content: center;

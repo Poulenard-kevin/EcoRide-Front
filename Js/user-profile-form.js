@@ -1204,29 +1204,188 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
   const STORAGE_KEY = 'ecoride.profileAbout';
   const MIN = 20;
   const MAX = 350;
+  const NO_DESCRIPTION_MSG = 'Aucune description fournie.';
 
   function normalize(s) {
     return String(s || '').replace(/<\/?[^>]+(>|$)/g, '').replace(/\s{2,}/g, ' ').trim();
   }
 
+  /**
+   * Validation :
+   * - si vide => autorisé (ok=true)
+   * - si non vide => longueur must be between MIN and MAX
+   */
   function validate(s) {
     const cleaned = normalize(s);
     const len = cleaned.length;
     const errors = [];
-    if (len === 0) errors.push('Le texte ne peut pas être vide.');
-    if (len < MIN) errors.push(`Minimum ${MIN} caractères requis (${len}).`);
+
+    if (len > 0 && len < MIN) errors.push(`Minimum ${MIN} caractères requis (${len}).`);
     if (len > MAX) errors.push(`Maximum ${MAX} caractères autorisés (${len}).`);
-    return { ok: errors.length === 0, cleaned, len, errors };
+
+    const ok = errors.length === 0; // empty string => ok true
+    return { ok, cleaned, len, errors };
   }
 
   function saveLocal(cleaned) {
     try {
+      // if cleaned is empty => remove storage key (treat as "no description")
+      if (!cleaned || !String(cleaned).trim()) {
+        localStorage.removeItem(STORAGE_KEY);
+        return true;
+      }
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ text: cleaned, updatedAt: Date.now() }));
       return true;
     } catch (e) {
       console.error('saveLocal error', e);
       return false;
     }
+  }
+
+  // Supprimer uniquement la description exacte de l'utilisateur (safe)
+  function deleteAboutSafely() {
+    const STORAGE_KEY = 'ecoride.profileAbout';
+    const knownProfileKeys = ['profil', 'profile', 'ecoride_user', 'ecorideUser', 'user'];
+    const needleCandidates = ['about','bio','text','description','role','driver','chauffeur'];
+  
+    // 1) déterminer targetText (textarea ou canonical)
+    let targetText = '';
+    const ta = document.getElementById('profileBio');
+    if (ta && String(ta.value).trim()) {
+      targetText = String(ta.value).trim();
+    } else {
+      try {
+        const rawCanon = localStorage.getItem(STORAGE_KEY);
+        if (rawCanon) {
+          const parsed = JSON.parse(rawCanon);
+          if (parsed && parsed.text && String(parsed.text).trim()) {
+            targetText = String(parsed.text).trim();
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+  
+    // supprime la clé canonique (toujours)
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) { console.error('Erreur suppression clé canonique', e); }
+  
+    // helper : remplace toute chaîne égale (trim) à targetText par '' dans un objet (récursif)
+    function recursiveBlankMatches(obj, target) {
+      let changed = false;
+      if (obj == null) return changed;
+      if (Array.isArray(obj)) {
+        for (let i = 0; i < obj.length; i++) {
+          const v = obj[i];
+          if (typeof v === 'string') {
+            if (v.trim() === target) { obj[i] = ''; changed = true; }
+          } else if (typeof v === 'object' && v !== null) {
+            if (recursiveBlankMatches(v, target)) changed = true;
+          }
+        }
+        return changed;
+      }
+      if (typeof obj === 'object') {
+        for (const k of Object.keys(obj)) {
+          const v = obj[k];
+          if (typeof v === 'string') {
+            if (v.trim() === target) { obj[k] = ''; changed = true; }
+          } else if (typeof v === 'object' && v !== null) {
+            if (recursiveBlankMatches(v, target)) changed = true;
+          }
+        }
+      }
+      return changed;
+    }
+  
+    // Si on n'a pas de targetText (déjà vide), on met à jour l'UI et on quitte
+    if (!targetText) {
+      renderCard('');
+      if (ta) ta.value = '';
+      window.dispatchEvent(new CustomEvent('ecoride:profileAboutChanged', { detail: { about: '' } }));
+      try { localStorage.setItem('__ecoride_sync__', JSON.stringify({ t: Date.now(), action: 'profileAboutDeleted' })); setTimeout(() => localStorage.removeItem('__ecoride_sync__'), 500); } catch(e){}
+      return true;
+    }
+  
+    // 2) nettoyer clés connues en ne remplaçant que les chaînes égales à targetText
+    for (const k of knownProfileKeys) {
+      try {
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        let obj;
+        try { obj = JSON.parse(raw); } catch (e) { continue; }
+        if (!obj || typeof obj !== 'object') continue;
+        const changed = recursiveBlankMatches(obj, targetText);
+        if (changed) {
+          localStorage.setItem(k, JSON.stringify(obj));
+          console.info(`ecoride: cleaned exact matches in localStorage key "${k}"`);
+        }
+      } catch (e) {
+        console.warn('ecoride: error sanitizing key', k, e);
+      }
+    }
+  
+    // 3) parcourir toutes les clés JSON et nettoyer uniquement les chaînes EXACTES (safe)
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (key === STORAGE_KEY || key === '__ecoride_sync__') continue;
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      let parsed = null;
+      try { parsed = JSON.parse(raw); } catch (e) { parsed = null; }
+      if (parsed && typeof parsed === 'object') {
+        try {
+          const changed = recursiveBlankMatches(parsed, targetText);
+          if (changed) {
+            localStorage.setItem(key, JSON.stringify(parsed));
+            console.info(`ecoride: cleaned exact matches in JSON key "${key}"`);
+          }
+        } catch (e) {
+          console.warn('ecoride: error recursive cleaning key', key, e);
+        }
+      } else {
+        // non-JSON string, si EXACT match => supprimer la clé (conservateur)
+        try {
+          if (raw.trim() === targetText) {
+            localStorage.removeItem(key);
+            console.info(`ecoride: removed non-JSON key "${key}" with exact match`);
+            // adjust loop because length changed
+            i--;
+          }
+        } catch (e) { /* ignore */ }
+      }
+    }
+  
+    // 4) Tentative de mise à jour in-memory des trajets (si utilisés)
+    try {
+      // exemples de noms possibles pour la variable en mémoire ; on la nettoie si présente
+      const candidateGlobals = ['trajets', 'rides', 'trips', 'window.trajets', 'window.rides', 'window.trips'];
+      for (const g of candidateGlobals) {
+        // accède prudemment
+        const name = g.replace(/^window\./,'');
+        const val = window[name];
+        if (!val) continue;
+        // si tableau, on nettoie récursivement et on tente d'appeler un render associé
+        if (Array.isArray(val)) {
+          let changed = false;
+          for (const item of val) {
+            if (recursiveBlankMatches(item, targetText)) changed = true;
+          }
+          if (changed) {
+            console.info(`ecoride: cleaned exact matches in global ${name}`);
+            // dispatch event pour que le code de rendu réagisse
+            window.dispatchEvent(new CustomEvent('ecoride:ridesDataChanged', { detail: { source: 'deleteAboutSafely' } }));
+          }
+        }
+      }
+    } catch (e) { console.warn('ecoride: error cleaning in-memory trips', e); }
+  
+    // 5) Update UI and broadcast
+    renderCard('');
+    if (ta) ta.value = '';
+    window.dispatchEvent(new CustomEvent('ecoride:profileAboutChanged', { detail: { about: '' } }));
+    try { localStorage.setItem('__ecoride_sync__', JSON.stringify({ t: Date.now(), action: 'profileAboutDeleted' })); setTimeout(() => localStorage.removeItem('__ecoride_sync__'), 500); } catch(e){}
+  
+    return true;
   }
 
   function loadLocalText() {
@@ -1243,9 +1402,9 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
   function renderCard(text) {
     const card = document.querySelector('#profileAboutCard') || document.querySelector('[data-ecoride-about]');
     if (!card) return;
-    card.innerHTML = text
+    card.innerHTML = text && String(text).trim()
       ? `<p class="mb-0">${String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</p>`
-      : `<p class="text-muted mb-0">Aucune description fournie.</p>`;
+      : `<p class="text-muted mb-0">${NO_DESCRIPTION_MSG}</p>`;
   }
 
   function waitFor(selector, timeout = 6000) {
@@ -1272,6 +1431,18 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
       const form = await getElement('#about-me-form');
       const textarea = await getElement('#profileBio');
       const saveBtn = await getElement('#saveBioBtn');
+
+      // create delete button next to saveBtn if not present
+      let deleteBtn = form.querySelector('#deleteBioBtn');
+      if (!deleteBtn) {
+        deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.id = 'deleteBioBtn';
+        deleteBtn.className = 'btn btn-outline-secondary ms-2'; // adapte classes si besoin
+        deleteBtn.textContent = 'Supprimer';
+        // insert after saveBtn
+        saveBtn.insertAdjacentElement('afterend', deleteBtn);
+      }
 
       // Sécurité : empêcher le submit natif
       form.addEventListener('submit', e => e.preventDefault());
@@ -1307,7 +1478,10 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
           errorEl.textContent = '';
           errorEl.style.display = 'none';
         }
+        // allow save when ok (including empty)
         saveBtn.disabled = !ok;
+        // if textarea is empty, change Save button label optionally
+        // saveBtn.textContent = cleaned.length === 0 ? 'Enregistrer (vide)' : 'Enregistrer';
       }
 
       // Protection contre paste / programmatic input > MAX
@@ -1325,6 +1499,7 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
         textarea.value = stored;
         renderCard(stored);
       } else {
+        textarea.value = ''; // ensure empty
         renderCard('');
       }
 
@@ -1336,7 +1511,25 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
         const { ok, cleaned } = validate(textarea.value);
         if (!ok) { textarea.focus(); refreshUI(); return; }
 
-        // final guard (truncate)
+        // if cleaned empty => treat as deletion
+        if (!cleaned || !String(cleaned).trim()) {
+          const deleted = deleteAboutSafely();
+          if (!deleted) {
+            alert('Impossible de supprimer la description localement.');
+            return;
+          }
+          renderCard('');
+          // dispatch event with empty about (already done in deleteAboutSafely but safe to keep)
+          window.dispatchEvent(new CustomEvent('ecoride:profileAboutChanged', { detail: { about: '' } }));
+          // feedback UX
+          const prev = saveBtn.textContent;
+          saveBtn.textContent = 'Supprimé ✓';
+          saveBtn.disabled = true;
+          setTimeout(() => { saveBtn.textContent = prev; refreshUI(); }, 900);
+          return;
+        }
+
+        // final guard (truncate if necessary)
         let final = cleaned;
         if (final.length > MAX) final = final.slice(0, MAX);
 
@@ -1357,9 +1550,316 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
         setTimeout(() => { saveBtn.textContent = prev; refreshUI(); }, 900);
       }, { passive: false });
 
-      console.log('ecoride: about handlers attachés (unifié)');
+      // delete button behavior (explicit delete)
+      deleteBtn.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        const okConfirm = confirm('Supprimer la description du profil ?');
+        if (!okConfirm) return;
+      
+        const deleted = deleteAboutSafely();
+        if (!deleted) {
+          alert('Impossible de supprimer localement.');
+          return;
+        }
+      
+        textarea.value = '';
+        renderCard('');
+        refreshUI();
+      
+      }, { passive: false });
+
+      console.log('ecoride: about handlers attachés (unifié) + delete button');
     } catch (err) {
       console.warn('ecoride: about - éléments introuvables dans le temps imparti', err);
     }
   })();
 })();
+
+//<!-- FORM 4 : Informations du compte -->
+//<!-- FORM 4 : Informations du compte -->
+//<!-- FORM 4 : Informations du compte -->
+
+// ===== helpers email / user canonical =====
+function getCanonicalUser() {
+  try {
+    const raw = localStorage.getItem('ecoride_user');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (err) {
+    console.warn('getCanonicalUser: parse error', err, localStorage.getItem('ecoride_user'));
+    return null;
+  }
+}
+
+function setCanonicalUser(obj) {
+  try {
+    if (!obj || typeof obj !== 'object') {
+      console.warn('setCanonicalUser: invalid obj', obj);
+      return false;
+    }
+    localStorage.setItem('ecoride_user', JSON.stringify(obj));
+    console.log('setCanonicalUser: stored OK', obj);
+    window.dispatchEvent(new CustomEvent('ecoride:userUpdated', { detail: { user: obj } }));
+    return true;
+  } catch (err) {
+    console.error('setCanonicalUser error', err);
+    return false;
+  }
+}
+
+// <-- après la définition des fonctions
+if (typeof window.getCanonicalUser !== 'function') window.getCanonicalUser = getCanonicalUser;
+if (typeof window.setCanonicalUser !== 'function') window.setCanonicalUser = setCanonicalUser;
+
+// === fallback visuel si showTemporarySavedText absent ===
+function fallbackShowSaved(btn, text = 'Enregistré ✓', duration = 900) {
+  if (!btn) return Promise.resolve();
+  if (btn.dataset.__ecoride_saving === '1') return Promise.resolve();
+  btn.dataset.__ecoride_saving = '1';
+  const prev = btn.textContent;
+  btn.textContent = text;
+  btn.setAttribute('aria-disabled', 'true');
+  return new Promise(res => setTimeout(() => {
+    btn.textContent = prev;
+    btn.removeAttribute('aria-disabled');
+    delete btn.dataset.__ecoride_saving;
+    res();
+  }, duration));
+}
+
+function setupSyncHandlers(input, saveBtn) {
+  if (!input) return;
+
+  // si déjà installé, applique immédiatement au nouvel input et retourne
+  if (setupSyncHandlers._installed) {
+    try { applyCanonicalToInput(input); } catch(e){ console.warn(e); }
+    return;
+  }
+  setupSyncHandlers._installed = true;
+
+  function updateNow() {
+    document.querySelectorAll('#account-info-form #profileEmail').forEach(el => {
+      try { applyCanonicalToInput(el); } catch(e){ console.warn('applyCanonicalToInput single error', e); }
+    });
+  }
+
+  window.addEventListener('ecoride:userUpdated', updateNow, { passive: true });
+  window.addEventListener('ecoride:profileEmailChanged', updateNow, { passive: true });
+  window.addEventListener('storage', function(e){ if (e.key === 'ecoride_user') updateNow(); }, { passive: true });
+
+  [60,150,400,900].forEach(delay => setTimeout(updateNow, delay));
+
+  let prev = localStorage.getItem('ecoride_user');
+  const id = setInterval(() => {
+    const now = localStorage.getItem('ecoride_user');
+    if (now !== prev) { prev = now; try { updateNow(); } catch(e){} }
+  }, 200);
+  setTimeout(() => clearInterval(id), 2200);
+}
+
+// === initAccountInfoForm (sans deleteBtn) ===
+function initAccountInfoForm(root = document) {
+  try {
+    // idempotence SPA-friendly : si déja inité, on refait juste le prefill/update
+    const scope = (root instanceof Element ? root : document);
+    const form = scope.querySelector('#account-info-form');
+    if (!form) {
+      console.log('initAccountInfoForm: form introuvable');
+      return false;
+    }
+
+    const input = form.querySelector('#profileEmail');
+    const saveBtn = form.querySelector('#saveEmailBtn');
+
+    if (!input) {
+      console.log('initAccountInfoForm: #profileEmail introuvable');
+      return false;
+    }
+
+    // robust prefill à intégrer dans initAccountInfoForm
+    (function prefill() {
+      let canonical = (typeof getCanonicalUser === 'function') ? getCanonicalUser() : null;
+      // fallback to raw localStorage if helper absent / no email
+      if ((!canonical || !canonical.email) && localStorage.getItem('ecoride_user')) {
+        try {
+          const raw = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
+          if (raw && raw.email) canonical = raw;
+        } catch(e){
+          console.warn('prefill: impossible de parser localStorage.ecoride_user', e);
+        }
+      }
+      const rememberMe = localStorage.getItem('rememberMe') === 'true';
+      const rememberedEmail = localStorage.getItem('rememberedEmail');
+
+      if (canonical && canonical.email) input.value = canonical.email;
+      else if (rememberMe && rememberedEmail) input.value = rememberedEmail;
+      else if (rememberedEmail) input.value = rememberedEmail;
+      else input.value = '';
+    })();
+
+    function isValidEmail(v) {
+      if (!v) return false;
+      const email = String(v).trim();
+      const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+      return emailRegex.test(email);
+    }
+
+    function updateButtonsVisibility() {
+      const current = (input.value||'').trim();
+      const canonical = getCanonicalUser && getCanonicalUser();
+      const matchesCanonical = canonical && canonical.email && canonical.email === current;
+      const valid = isValidEmail(current);
+
+      if (saveBtn) {
+        if (valid && !matchesCanonical) {
+          saveBtn.classList.remove('hidden');
+          saveBtn.setAttribute('aria-hidden', 'false');
+        } else {
+          saveBtn.classList.add('hidden');
+          saveBtn.setAttribute('aria-hidden', 'true');
+        }
+      }
+    }
+
+    // Initial visibility
+    updateButtonsVisibility();
+
+    // Attach input listener (only once per form node)
+    if (!form.__accountInfoHandlersAttached) {
+      input.addEventListener('input', () => {
+        input.classList.remove('is-invalid');
+        updateButtonsVisibility();
+      });
+
+      // flag pour ne pas rattacher plusieurs fois si re-inserté
+      form.__accountInfoHandlersAttached = true;
+    } else {
+      // si déjà attaché, on met à jour la visibilité au cas où
+      updateButtonsVisibility();
+    }
+
+    // appeler la configuration de sync pour le form courant
+    try { setupSyncHandlers(input, saveBtn); } catch(e){ console.warn('setupSyncHandlers failed', e); }
+
+    return true;
+  } catch (err) {
+    console.error('initAccountInfoForm failed', err);
+    return false;
+  }
+}
+
+// expose globally so it can be called from other modules / console
+if (typeof window.initAccountInfoForm !== 'function') {
+  window.initAccountInfoForm = initAccountInfoForm;
+}
+
+// Watcher SPA-friendly : initialise le formulaire dès qu'il est inséré dans le DOM
+(function watchForAccountForm() {
+  // déjà présent ?
+  if (document.querySelector('#account-info-form')) {
+    initAccountInfoForm(document);
+    return;
+  }
+
+  const mo = new MutationObserver((_, obs) => {
+    if (document.querySelector('#account-info-form')) {
+      console.info('account form detected by MutationObserver — initAccountInfoForm');
+      try { initAccountInfoForm(document); } catch(e){ console.warn('initAccountInfoForm failed', e); }
+      obs.disconnect();
+    }
+  });
+
+  mo.observe(document.documentElement || document.body, { childList: true, subtree: true });
+
+  // safety: stop after 5s
+  setTimeout(() => mo.disconnect(), 5000);
+})();
+
+// auto-init on DOMContentLoaded and SPA routeLoaded
+document.addEventListener('DOMContentLoaded', () => initAccountInfoForm(document));
+document.addEventListener('routeLoaded', (ev) => { try { initAccountInfoForm(document); } catch(e){} });
+
+// --- Robustification : lire / ré-appliquer le canonical si un autre script écrase la clé ---
+function applyCanonicalToInput(input) {
+  try {
+    const canonical = (typeof getCanonicalUser === 'function') ? getCanonicalUser() : null;
+    if (canonical && canonical.email && input) {
+      input.value = canonical.email;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    } else {
+      // fallback to direct localStorage read (safe)
+      try {
+        const raw = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
+        if (raw && raw.email && input) {
+          input.value = raw.email;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      } catch(e){}
+    }
+  } catch(e){ console.warn('applyCanonicalToInput error', e); }
+}
+
+// Définit une fonction globale de sauvegarde et installe une délégation de clic (SPA-friendly)
+window.handleSaveEmail = async function(btn) {
+  const form = document.querySelector('#account-info-form');
+  const input = form?.querySelector('#profileEmail');
+  if (!input) { console.warn('handleSaveEmail: input introuvable'); return; }
+
+  const val = (input.value || '').trim();
+  const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+  if (!emailRegex.test(val)) {
+    input.classList.add('is-invalid');
+    setTimeout(() => input.classList.remove('is-invalid'), 1200);
+    console.warn('handleSaveEmail: email invalide', val);
+    return;
+  }
+
+  // merge existing canonical user and persist
+  let existing = {};
+  try {
+    existing = (typeof getCanonicalUser === 'function' ? getCanonicalUser() : JSON.parse(localStorage.getItem('ecoride_user') || 'null')) || {};
+  } catch(e) { existing = {}; }
+  existing.email = val;
+
+  try {
+    if (typeof setCanonicalUser === 'function') {
+      setCanonicalUser(existing);
+    } else {
+      localStorage.setItem('ecoride_user', JSON.stringify(existing));
+    }
+    console.log('handleSaveEmail: stored', existing);
+  } catch(err) {
+    console.error('handleSaveEmail: save failed', err);
+    return;
+  }
+
+  // visual feedback
+  if (typeof window.showTemporarySavedText === 'function') {
+    try { await window.showTemporarySavedText(btn, 'Enregistré ✓', 900); } catch(e){}
+  } else {
+    const prev = btn.textContent;
+    btn.textContent = 'Enregistré ✓';
+    btn.setAttribute('aria-disabled', 'true');
+    setTimeout(() => {
+      btn.textContent = prev;
+      btn.removeAttribute('aria-disabled');
+    }, 900);
+  }
+
+  // notify other listeners / reinit
+  try { initAccountInfoForm && initAccountInfoForm(document); } catch(e){ console.warn(e); }
+  window.dispatchEvent(new CustomEvent('ecoride:profileEmailChanged', { detail:{ email: val } }));
+};
+
+// Delegated click handler (install once) — fonctionne même si le bouton est recréé
+if (!window.__ecoride_save_delegate_installed) {
+  document.addEventListener('click', e => {
+    const saveBtn = e.target && e.target.closest && e.target.closest('#saveEmailBtn');
+    if (saveBtn) {
+      e.preventDefault();
+      window.handleSaveEmail(saveBtn);
+    }
+  }, { capture: false });
+  window.__ecoride_save_delegate_installed = true;
+  console.info('Delegated save handler installed.');
+}

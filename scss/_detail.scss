@@ -318,6 +318,18 @@
     width: 100%; /* Elle occupe toute la largeur disponible jusqu'à max-width */
   }
 
+  .about {
+    background-color: $color-light-beige;
+    border-radius: 30px;
+    padding: 2rem;
+    margin-bottom: 3.5rem;
+    font-family: $font-title;
+    font-weight: $weight-medium;
+    font-size: $font-size-h3;
+    text-align: center;
+    width: 100%;
+  }
+
   .driver-reviews { 
     font-family: $font-title;
     font-weight: $weight-semibold;

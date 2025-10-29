@@ -409,6 +409,95 @@ document.addEventListener("pageContentLoaded", () => {
   const typeElement = document.getElementById("detail-vehicle-type");
   if (typeElement) typeElement.textContent = vehicle.type || "Non spécifié";
 
+ /* ---------- Insert "À propos du conducteur" next to <h1>Véhicule ---------- */
+
+  (function () {
+    const STORAGE_KEYS_TO_CHECK = ['profil', 'ecoride_user', 'profile', 'user', 'ecoride.profileAbout'];
+    const NO_DESCRIPTION_MSG = 'Aucune description fournie.';
+
+    function readFromProfil() {
+      try {
+        // check canonical profil key first
+        const rawProfil = localStorage.getItem('profil');
+        if (rawProfil) {
+          const obj = JSON.parse(rawProfil);
+          if (obj) {
+            if (typeof obj.role === 'string' && obj.role.trim()) return obj.role.trim();
+            if (typeof obj.role === 'object') {
+              if (typeof obj.role.description === 'string' && obj.role.description.trim()) return obj.role.description.trim();
+              if (typeof obj.role.text === 'string' && obj.role.text.trim()) return obj.role.text.trim();
+            }
+            if (typeof obj.about === 'string' && obj.about.trim()) return obj.about.trim();
+            if (typeof obj.bio === 'string' && obj.bio.trim()) return obj.bio.trim();
+          }
+        }
+
+        // fallback: try other known keys (ecoride.profileAbout etc.)
+        for (const k of STORAGE_KEYS_TO_CHECK) {
+          const r = localStorage.getItem(k);
+          if (!r) continue;
+          let p;
+          try { p = JSON.parse(r); } catch(e){ p = null; }
+          if (!p) continue;
+          const cand = p.text || p.about || p.bio || p.role || p.description;
+          if (cand && typeof cand === 'string' && cand.trim()) return cand.trim();
+          // if role is object
+          if (p.role && typeof p.role === 'object') {
+            if (typeof p.role.description === 'string' && p.role.description.trim()) return p.role.description.trim();
+          }
+        }
+      } catch (e) { /* ignore parse errors */ }
+
+      return null;
+    }
+
+    function render(text) {
+      const el = document.getElementById('driver-about-text') || document.querySelector('#profileAboutCard p') || document.querySelector('[data-ecoride-about]');
+      if (!el) return;
+      // if empty or falsy -> show NO_DESCRIPTION_MSG
+      const output = (text && String(text).trim()) ? String(text).trim() : NO_DESCRIPTION_MSG;
+      el.textContent = output;
+      // style hint
+      if (output === NO_DESCRIPTION_MSG) el.classList.add('text-muted');
+      else el.classList.remove('text-muted');
+    }
+
+    function init() {
+      const fromProfil = readFromProfil();
+      if (fromProfil) { render(fromProfil); return; }
+      // if nothing found, render the "no description" message
+      render('');
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+
+    // When about is updated elsewhere in the app we react:
+    window.addEventListener('ecoride:profileAboutChanged', (ev) => {
+      const newVal = ev?.detail?.about;
+      if (newVal && String(newVal).trim()) {
+        render(String(newVal).trim());
+      } else {
+        // empty -> show "Aucune description fournie."
+        render('');
+      }
+    });
+
+    // Sync across tabs: when storage is changed in another tab, re-init or render accordingly
+    window.addEventListener('storage', (ev) => {
+      if (!ev) return;
+      const interesting = ['ecoride.profileAbout', 'profil', 'ecoride_user', 'profile', 'user', '__ecoride_sync__'];
+      if (!interesting.includes(ev.key)) return;
+      // re-evaluate the source
+      const fromProfil = readFromProfil();
+      if (fromProfil) render(fromProfil);
+      else render('');
+    });
+  })();
+
   const reviews = trajet.reviews || ["Aucun avis disponible pour ce conducteur.", "", ""];
   ['detail-review1', 'detail-review2', 'detail-review3'].forEach((id, index) => {
     const reviewElement = document.getElementById(id);

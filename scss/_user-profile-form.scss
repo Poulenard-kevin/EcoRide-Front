@@ -298,6 +298,12 @@
     box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
     font-size: 20px;
   }
+
+  .ecoride-credit-number, .ecoride-credit-label {
+    @media (max-width: 576px) {
+    font-size: 14px;
+    }
+  }
   
   /* Optionnel : animation légère quand on met à jour */
   .eco-circle.pop {
@@ -311,7 +317,7 @@
   
   @media (max-width: 576px) {
     form { padding: 10px 20px 35px !important; }
-    .eco-circle { width: 68px; height: 80px; min-width:80px; min-height:80px; }
+    .eco-circle { width: 68px; height: 80px; min-width:80px; min-height:80px;}
     .eco-circle-value { font-size: 12px; }
     .eco-circle-unit { font-size: 12px; }
     .form-fields { gap: 10px; }
@@ -322,14 +328,14 @@
 
   /* classe si tu veux cibler juste cette textarea */
   #profileBio {
-    min-height: 120px; /* desktop par défaut */
+    min-height: 100px; /* desktop par défaut */
     box-sizing: border-box;
   }
 
   /* sur mobile, agrandir la zone */
   @media (max-width: 576px) {
     #profileBio {
-      min-height: 220px;
+      min-height: 130px;
       font-size: 12px;
     }
   }
@@ -442,5 +448,49 @@
   .form-control.is-invalid ~ .invalid-feedback {
     display: block;
     color: #D64545;
+  }
+
+  /* ======== Exemple pour textarea spécifique ======== */
+  /* Remplace #profileBio par ton id ou .ta-classe */
+  #profileBio {
+    overflow-y: auto;   /* s'assure que le scroll peut apparaître */
+    height: 150px;  /* juste pour test si tu veux forcer le scroll */
+    /* Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: #4B8A47 #F8F0E5; /* thumb, track */
+
+    @media (max-width: 990px) {
+      height: 350px
+    }
+  
+    @media (max-width: 768px) {
+      height: 320px
+    }
+  
+    @media (max-width: 576px) {
+      height: 220px
+    }
+  }
+
+  /* WebKit (Chrome, Edge, Safari) */
+  #profileBio::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  #profileBio::-webkit-scrollbar-track {
+    background: #F8F0E5;
+    border-radius: 10px;
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,0.02);
+  }
+
+  #profileBio::-webkit-scrollbar-thumb {
+    background-color: #4B8A47;
+    border-radius: 10px;
+    border: 2px solid #F8F0E5; /* crée un "padding" visuel */
+  }
+
+  #profileBio::-webkit-scrollbar-thumb:hover {
+    background-color: #3a6a37;
   }
 }

@@ -112,8 +112,11 @@
   .info {
     margin-bottom: 2rem !important; /* Réduit la marge en bas des sections */
   }
+  
+  .about {
+    margin-bottom: 2rem !important; /* Réduit la marge en bas des sections */
+  }
 }
-
   .profile-section {
     display: flex;
     align-items: center;
@@ -443,15 +446,28 @@
       }
    }
 
-    /* Déplacer Avis du conducteur et driver-reviews en dessous */
+    
     h1:nth-of-type(2) {
-      order: 5; /* Place le titre Avis du conducteur après les autres sections */
+      order: 5; 
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .about {
+      order: 6; 
+      width: 100%;
+      max-width: 100%;
+    }
+
+    /* Déplacer Avis du conducteur et driver-reviews en dessous */
+    h1:nth-of-type(3) {
+      order: 7; /* Place le titre Avis du conducteur après les autres sections */
       width: 100%;
       max-width: 100%;
     }
 
     .driver-reviews {
-      order: 6; /* Place la section driver-reviews après le titre Avis du conducteur */
+      order: 8; /* Place la section driver-reviews après le titre Avis du conducteur */
       width: 100%;
       max-width: 100%;
     }

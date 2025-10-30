@@ -183,7 +183,7 @@ footer.footer{
     }
   
     @media (max-width: 576px) {
-      font-size: $font-size-h3; /* Réduit encore la taille pour les écrans mobiles */
+      font-size: 22px !important; /* Réduit encore la taille pour les écrans mobiles */
       margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
       margin-right: 25px;
       margin-top: -30px; /* Conserve l'augmentation de 10px */
@@ -232,7 +232,7 @@ footer.footer{
   display: flex;
   background-color: $color-background;
   border-radius: 30px;
-  padding: 30px;
+  padding: 35px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   width: 100%;
   
@@ -244,7 +244,7 @@ footer.footer{
   @media (max-width: 1240px) {
     flex-direction: column; /* Passe les éléments en colonne */
     gap: 15px;
-    padding: 30px;
+    padding: 35px;
     margin-left: 100px;
     margin-right: 100px;
   }
@@ -280,10 +280,10 @@ footer.footer{
   transition: box-shadow 0.3s ease;
 
   @media (max-width: 1240px) {
-    width: 500px; /* Prend toute la largeur à 500px */
     gap: 15px;
     padding-left: 20px;
     padding-right: 20px;
+    width: 100%; /* Prend toute la largeur disponible */
   }
 
   @media (max-width: 768px) {
@@ -299,11 +299,13 @@ footer.footer{
     width: 100%; /* Prend toute la largeur disponible */
     flex-direction: column;
     gap: 15px;
-    padding-left: 20px;
-    padding-right: 20px;
+    font-size: 12px;
+    padding: 8px 16px;
     
   }
 }
+
+
 
 .search-input::placeholder {
   color: #7a8a6f;
@@ -329,6 +331,12 @@ footer.footer{
 
   &:hover {
     background-color: $color-dark-green;
+  }
+
+  @media (max-width: 576px) {
+    font-size: 16px;
+    padding: 8px 16px;
+    width: 200px;
   }
 }
 
@@ -392,6 +400,7 @@ footer.footer{
     width: calc(100% - 50px); /* Ajuste la largeur pour les petits écrans */
     margin-left: 25px;
     margin-right: 25px;
+    padding: 20px;
   }
 }
 
@@ -435,6 +444,10 @@ footer.footer{
   justify-content: center; /* Centre verticalement le texte */
   align-items: center; /* Centre horizontalement le texte */
   text-align: center; /* Centre le texte à l'intérieur */
+  
+  @media (max-width: 576px) {
+    padding: 15px 25px;
+  }
 }
 
 .presentation h1 {
@@ -472,6 +485,7 @@ footer.footer{
   }
 
   @media (max-width: 576px) { // Mobile
+    padding: 20px !important;
     margin-left: 25px;
     margin-right: 25px;
   }

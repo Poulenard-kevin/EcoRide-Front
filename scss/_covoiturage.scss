@@ -560,7 +560,11 @@
             display: flex; /* Active Flexbox */
             align-items: center; /* Centre les éléments verticalement */
             gap: 30px; /* Ajoute un espacement entre les éléments */
-  
+
+            @media (max-width: 576px) {
+              gap: 0px; /* Réduit l'espacement entre les éléments */
+            }
+
             .profile-photo {
               width: 120px; /* Taille fixe de la largeur */
               height: 120px; /* Taille fixe de la hauteur */
@@ -686,8 +690,7 @@
           align-items: center; /* Centre les éléments verticalement */
           gap: 15px; /* Ajoute un espacement entre la photo et les autres éléments */
           padding-right: 40px;
-          
-  
+
           .profile-photo {
             width: 120px; /* Taille fixe de la largeur */
             height: 120px; /* Taille fixe de la hauteur */
@@ -741,6 +744,7 @@
       .column {
         text-align: center; /* Centre le texte horizontalement */
         font-size: 12px; /* Réduit la taille de la police */
+        gap: 0px !important; /* Taille réduite pour les colonnes */
       }
     }
   
@@ -775,14 +779,18 @@
         margin-top: 8px;
         margin-bottom: 15px;
       }
+
+      .details {
+        margin-top: 10px;
+      }
   
       .price {
-  
-        margin-bottom: 20px;
+        margin-top: 0px !important;
+        margin-bottom: 0px !important;
       }
   
       .type, .places, .time {
-        font-size: 12px; /* Taille réduite pour les autres textes */
+        font-size: 14px; /* Taille réduite pour les autres textes */
       }
   
       .date {
@@ -811,6 +819,10 @@
   
       .result-header .date {
         max-width: 200px; /* Fixe une largeur maximale pour la date */
+      }
+
+      .profile-column {
+        padding-bottom: 10px !important;
       }
     }
   

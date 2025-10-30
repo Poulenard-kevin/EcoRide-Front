@@ -200,6 +200,7 @@ document.addEventListener("pageContentLoaded", () => {
     // ... mocks identiques à ta version (inchangé pour respecter ta demande)
     {
       id: 'trajet1',
+      __mock: true,
       date: 'Vendredi 16 septembre',
       chauffeur: { pseudo: 'Jean', rating: 4, photo: 'images/profil4m.png' },
       type: 'economique',
@@ -222,6 +223,7 @@ document.addEventListener("pageContentLoaded", () => {
     },
     {
       id: 'trajet2',
+      __mock: true,
       date: 'Samedi 17 septembre',
       chauffeur: { pseudo: 'Marie', rating: 5, photo: 'images/profil1.png' },
       type: 'hybride',
@@ -244,6 +246,7 @@ document.addEventListener("pageContentLoaded", () => {
     },
     {
       id: 'trajet3',
+      __mock: true,
       date: 'Dimanche 18 septembre',
       chauffeur: { pseudo: 'Luc', rating: 3, photo: 'images/profil3m.png' },
       type: 'thermique',
@@ -266,6 +269,7 @@ document.addEventListener("pageContentLoaded", () => {
     },
     {
       id: 'trajet4',
+      __mock: true,
       date: 'Lundi 19 septembre',
       chauffeur: { pseudo: 'Sophie', rating: 4, photo: 'images/profil2w.png' },
       type: 'electrique',
@@ -409,106 +413,138 @@ document.addEventListener("pageContentLoaded", () => {
   const typeElement = document.getElementById("detail-vehicle-type");
   if (typeElement) typeElement.textContent = vehicle.type || "Non spécifié";
 
- /* ---------- Insert "À propos du conducteur" next to <h1>Véhicule ---------- */
-
-  (function () {
+  /* ---------- Insert "À propos du conducteur" next to <h1>Véhicule ---------- */
+  function renderDriverAbout(trajetParam) {
     const STORAGE_KEYS_TO_CHECK = ['profil', 'ecoride_user', 'profile', 'user', 'ecoride.profileAbout'];
     const NO_DESCRIPTION_MSG = 'Aucune description fournie.';
 
-    function readFromProfil() {
+    function looksLikeARoleString(s) {
+      if (!s || typeof s !== 'string') return false;
+      const norm = s.trim().toLowerCase();
+      return ['chauffeur','passager','driver','passenger','both','les deux'].includes(norm)
+        || (/^[a-z]{1,20}$/i.test(norm));
+    }
+
+    function getDriverAboutFromTrajet(pTrajet) {
       try {
-        // check canonical profil key first
-        const rawProfil = localStorage.getItem('profil');
-        if (rawProfil) {
-          const obj = JSON.parse(rawProfil);
-          if (obj) {
-            if (typeof obj.role === 'string' && obj.role.trim()) return obj.role.trim();
-            if (typeof obj.role === 'object') {
-              if (typeof obj.role.description === 'string' && obj.role.description.trim()) return obj.role.description.trim();
-              if (typeof obj.role.text === 'string' && obj.role.text.trim()) return obj.role.text.trim();
-            }
-            if (typeof obj.about === 'string' && obj.about.trim()) return obj.about.trim();
-            if (typeof obj.bio === 'string' && obj.bio.trim()) return obj.bio.trim();
-          }
+        const drv = pTrajet ? (pTrajet.chauffeur || pTrajet.driver || null) : null;
+        if (!drv) return null;
+        const fields = ['about','bio','description','text'];
+        for (const f of fields) {
+          if (typeof drv[f] === 'string' && drv[f].trim()) return drv[f].trim();
         }
-
-        // fallback: try other known keys (ecoride.profileAbout etc.)
-        for (const k of STORAGE_KEYS_TO_CHECK) {
-          const r = localStorage.getItem(k);
-          if (!r) continue;
-          let p;
-          try { p = JSON.parse(r); } catch(e){ p = null; }
-          if (!p) continue;
-          const cand = p.text || p.about || p.bio || p.role || p.description;
-          if (cand && typeof cand === 'string' && cand.trim()) return cand.trim();
-          // if role is object
-          if (p.role && typeof p.role === 'object') {
-            if (typeof p.role.description === 'string' && p.role.description.trim()) return p.role.description.trim();
-          }
+        if (drv.role && typeof drv.role === 'object') {
+          if (typeof drv.role.description === 'string' && drv.role.description.trim()) return drv.role.description.trim();
+          if (typeof drv.role.text === 'string' && drv.role.text.trim()) return drv.role.text.trim();
         }
-      } catch (e) { /* ignore parse errors */ }
-
+        if (typeof drv.role === 'string' && drv.role.trim().length > 30 && !looksLikeARoleString(drv.role)) {
+          return drv.role.trim();
+        }
+      } catch (e) { console.warn('getDriverAboutFromTrajet error', e); }
       return null;
     }
 
-    function render(text) {
+    function readFromProfil() {
+      try {
+        const rawProfil = localStorage.getItem('profil');
+        if (rawProfil) {
+          let obj = null;
+          try { obj = JSON.parse(rawProfil); } catch(e){ obj = null; }
+          if (obj) {
+            if (typeof obj.about === 'string' && obj.about.trim()) return obj.about.trim();
+            if (typeof obj.bio === 'string' && obj.bio.trim()) return obj.bio.trim();
+            if (typeof obj.description === 'string' && obj.description.trim()) return obj.description.trim();
+            if (typeof obj.text === 'string' && obj.text.trim()) return obj.text.trim();
+            if (obj.role && typeof obj.role === 'object') {
+              if (typeof obj.role.description === 'string' && obj.role.description.trim()) return obj.role.description.trim();
+              if (typeof obj.role.text === 'string' && obj.role.text.trim()) return obj.role.text.trim();
+            }
+            if (typeof obj.role === 'string' && obj.role.trim().length > 30 && !looksLikeARoleString(obj.role)) return obj.role.trim();
+          }
+        }
+
+        for (const k of STORAGE_KEYS_TO_CHECK) {
+          const r = localStorage.getItem(k);
+          if (!r) continue;
+          let p = null;
+          try { p = JSON.parse(r); } catch(e){ p = null; }
+          if (!p) continue;
+          if (typeof p.about === 'string' && p.about.trim()) return p.about.trim();
+          if (typeof p.bio === 'string' && p.bio.trim()) return p.bio.trim();
+          if (typeof p.description === 'string' && p.description.trim()) return p.description.trim();
+          if (typeof p.text === 'string' && p.text.trim()) return p.text.trim();
+          if (p.role && typeof p.role === 'object') {
+            if (typeof p.role.description === 'string' && p.role.description.trim()) return p.role.description.trim();
+            if (typeof p.role.text === 'string' && p.role.text.trim()) return p.role.text.trim();
+          }
+          if (typeof p.role === 'string' && p.role.trim().length > 30 && !looksLikeARoleString(p.role)) return p.role.trim();
+        }
+      } catch (e) { console.warn('readFromProfil error', e); }
+      return null;
+    }
+
+    function writeToDom(text) {
       const el = document.getElementById('driver-about-text') || document.querySelector('#profileAboutCard p') || document.querySelector('[data-ecoride-about]');
-      if (!el) return;
-      // if empty or falsy -> show NO_DESCRIPTION_MSG
+      if (!el) {
+        console.warn('renderDriverAbout: élément cible introuvable');
+        return;
+      }
       const output = (text && String(text).trim()) ? String(text).trim() : NO_DESCRIPTION_MSG;
       el.textContent = output;
-      // style hint
       if (output === NO_DESCRIPTION_MSG) el.classList.add('text-muted');
       else el.classList.remove('text-muted');
     }
 
-    function init() {
-      const fromProfil = readFromProfil();
-      if (fromProfil) { render(fromProfil); return; }
-      // if nothing found, render the "no description" message
-      render('');
+    // priority: trajet.chauffeur => profil local => default
+    const aboutFromTrajet = getDriverAboutFromTrajet(trajetParam);
+    const aboutFromProfil = readFromProfil();
+
+    console.log('renderDriverAbout -> aboutFromTrajet:', aboutFromTrajet, 'aboutFromProfil:', aboutFromProfil);
+
+    if (trajetParam && (typeof trajetParam === 'object')) {
+      const isMock = !!trajetParam.__mock;
+      // Priorité :
+      // 1) description du chauffeur si présente
+      // 2) si ce n'est PAS un mock -> fallback vers la description du profil
+      // 3) sinon message par défaut
+      const chosen = aboutFromTrajet || ((!isMock && aboutFromProfil) ? aboutFromProfil : '') || '';
+      console.log('renderDriverAbout -> isMock:', isMock, 'chosen:', chosen ? 'profil/driver text' : 'none');
+      writeToDom(chosen);
+      return;
     }
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
-    } else {
-      init();
-    }
+    // sinon (pas de trajet fourni) : fallback vers profil local
+    if (aboutFromProfil) writeToDom(aboutFromProfil);
+    else writeToDom('');
 
-    // When about is updated elsewhere in the app we react:
-    window.addEventListener('ecoride:profileAboutChanged', (ev) => {
-      const newVal = ev?.detail?.about;
-      if (newVal && String(newVal).trim()) {
-        render(String(newVal).trim());
-      } else {
-        // empty -> show "Aucune description fournie."
-        render('');
+    // observer pour debug si nécessaire
+    try {
+      const tgt = document.getElementById('driver-about-text');
+      if (tgt && !window.__ecoride_about_mut_observer_installed) {
+        const mo = new MutationObserver((muts) => {
+          console.log('Mutation on #driver-about-text', muts);
+          console.trace('mutation stack');
+        });
+        mo.observe(tgt, { childList: true, characterData: true, subtree: true });
+        window.__ecoride_about_mut_observer_installed = true;
+      }
+    } catch(e){ /* ignore */ }
+  }
+
+// appel : juste après que `trajet` soit défini dans ton code
+renderDriverAbout(trajet);
+
+    const reviews = trajet.reviews || ["Aucun avis disponible pour ce conducteur.", "", ""];
+    ['detail-review1', 'detail-review2', 'detail-review3'].forEach((id, index) => {
+      const reviewElement = document.getElementById(id);
+      if (reviewElement) {
+        reviewElement.textContent = reviews[index] || "";
+        reviewElement.style.display = reviews[index] ? "block" : "none";
       }
     });
 
-    // Sync across tabs: when storage is changed in another tab, re-init or render accordingly
-    window.addEventListener('storage', (ev) => {
-      if (!ev) return;
-      const interesting = ['ecoride.profileAbout', 'profil', 'ecoride_user', 'profile', 'user', '__ecoride_sync__'];
-      if (!interesting.includes(ev.key)) return;
-      // re-evaluate the source
-      const fromProfil = readFromProfil();
-      if (fromProfil) render(fromProfil);
-      else render('');
-    });
-  })();
-
-  const reviews = trajet.reviews || ["Aucun avis disponible pour ce conducteur.", "", ""];
-  ['detail-review1', 'detail-review2', 'detail-review3'].forEach((id, index) => {
-    const reviewElement = document.getElementById(id);
-    if (reviewElement) {
-      reviewElement.textContent = reviews[index] || "";
-      reviewElement.style.display = reviews[index] ? "block" : "none";
-    }
+    console.log("✅ Page détail chargée et remplie pour le trajet:", trajet.id);
   });
-
-  console.log("✅ Page détail chargée et remplie pour le trajet:", trajet.id);
-});
 
 // =================== Fonctions utilitaires ===================
 

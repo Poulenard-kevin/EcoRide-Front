@@ -480,5 +480,23 @@ input:disabled,
     color: #6c757d !important; /* texte gris */
     cursor: not-allowed !important;
     opacity: 1 !important; /* pour garder le texte lisible */
+}
+
+@media (max-width: 576px) {
+
+  h1 {
+    font-size: 24px !important; /* Réduit la taille des titres h1 */
   }
 
+  h2 {
+    font-size: 20px !important; /* Réduit la taille des titres h1 */
+  }
+
+  h3 {
+    font-size: 18px !important; /* Réduit la taille des titres h1 */
+  }
+
+  .icon {
+     margin-bottom: 0px !important; /* Espace sous les icônes */
+  }
+}

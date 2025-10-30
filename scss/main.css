@@ -12378,6 +12378,20 @@ textarea:disabled {
   opacity: 1 !important; /* pour garder le texte lisible */
 }
 
+@media (max-width: 576px) {
+  h1, .h1 {
+    font-size: 24px !important; /* Réduit la taille des titres h1 */
+  }
+  h2, .h2 {
+    font-size: 20px !important; /* Réduit la taille des titres h1 */
+  }
+  h3, .h3 {
+    font-size: 18px !important; /* Réduit la taille des titres h1 */
+  }
+  .icon {
+    margin-bottom: 0px !important; /* Espace sous les icônes */
+  }
+}
 /* === SECTION BARRE DE RECHERCHE === */
 /* === SECTION BARRE DE RECHERCHE === */
 /* === SECTION BARRE DE RECHERCHE === */
@@ -12897,6 +12911,11 @@ textarea:disabled {
   align-items: center; /* Centre les éléments verticalement */
   gap: 30px; /* Ajoute un espacement entre les éléments */
 }
+@media (max-width: 576px) {
+  .covoiturage-results .results-container .results .result-card .result-body {
+    gap: 0px; /* Réduit l'espacement entre les éléments */
+  }
+}
 .covoiturage-results .results-container .results .result-card .result-body .profile-photo {
   width: 120px; /* Taille fixe de la largeur */
   height: 120px; /* Taille fixe de la hauteur */
@@ -13057,6 +13076,7 @@ textarea:disabled {
   .result-card .details .column {
     text-align: center; /* Centre le texte horizontalement */
     font-size: 12px; /* Réduit la taille de la police */
+    gap: 0px !important; /* Taille réduite pour les colonnes */
   }
   .filters-toggle {
     display: none; /* Masqué par défaut */
@@ -13084,11 +13104,15 @@ textarea:disabled {
     margin-top: 8px;
     margin-bottom: 15px;
   }
+  .details {
+    margin-top: 10px;
+  }
   .price {
-    margin-bottom: 20px;
+    margin-top: 0px !important;
+    margin-bottom: 0px !important;
   }
   .type, .places, .time {
-    font-size: 12px; /* Taille réduite pour les autres textes */
+    font-size: 14px; /* Taille réduite pour les autres textes */
   }
   .date {
     font-size: 14px !important; /* Taille réduite pour la date */
@@ -13113,6 +13137,9 @@ textarea:disabled {
   }
   .result-header .date {
     max-width: 200px; /* Fixe une largeur maximale pour la date */
+  }
+  .profile-column {
+    padding-bottom: 10px !important;
   }
 }
 @media (max-width: 1290px) {
@@ -13486,6 +13513,9 @@ textarea:disabled {
   .detail-container .info {
     margin-bottom: 2rem !important; /* Réduit la marge en bas des sections */
   }
+  .detail-container .about {
+    margin-bottom: 2rem !important; /* Réduit la marge en bas des sections */
+  }
 }
 .detail-container .profile-section {
   display: flex;
@@ -13775,12 +13805,22 @@ textarea:disabled {
     gap: 20px; /* Ajoute un espace entre les éléments */
   }
   .detail-container h1:nth-of-type(2), .detail-container .h1:nth-of-type(2) {
-    order: 5; /* Place le titre Avis du conducteur après les autres sections */
+    order: 5;
+    width: 100%;
+    max-width: 100%;
+  }
+  .detail-container .about {
+    order: 6;
+    width: 100%;
+    max-width: 100%;
+  }
+  .detail-container h1:nth-of-type(3), .detail-container .h1:nth-of-type(3) {
+    order: 7; /* Place le titre Avis du conducteur après les autres sections */
     width: 100%;
     max-width: 100%;
   }
   .detail-container .driver-reviews {
-    order: 6; /* Place la section driver-reviews après le titre Avis du conducteur */
+    order: 8; /* Place la section driver-reviews après le titre Avis du conducteur */
     width: 100%;
     max-width: 100%;
   }
@@ -13950,6 +13990,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   /* même chose pour l'état valide */
   /* cas des inputs dans des input-groups */
   /* si tu utilises des inputs personnalisés ou d'autres variantes, cible-les aussi */
+  /* ======== Exemple pour textarea spécifique ======== */
+  /* Remplace #profileBio par ton id ou .ta-classe */
+  /* WebKit (Chrome, Edge, Safari) */
 }
 #user-profile-form h1, #user-profile-form .h1 {
   text-align: center;
@@ -14249,6 +14292,11 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
   font-size: 20px;
 }
+@media (max-width: 576px) {
+  #user-profile-form .ecoride-credit-number, #user-profile-form .ecoride-credit-label {
+    font-size: 14px;
+  }
+}
 #user-profile-form .eco-circle.pop {
   animation: eco-pop 360ms cubic-bezier(0.2, 0.9, 0.3, 1);
 }
@@ -14293,12 +14341,12 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   }
 }
 #user-profile-form #profileBio {
-  min-height: 120px; /* desktop par défaut */
+  min-height: 100px; /* desktop par défaut */
   box-sizing: border-box;
 }
 @media (max-width: 576px) {
   #user-profile-form #profileBio {
-    min-height: 220px;
+    min-height: 130px;
     font-size: 12px;
   }
 }
@@ -14392,6 +14440,45 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-profile-form .form-control.is-invalid ~ .invalid-feedback {
   display: block;
   color: #D64545;
+}
+#user-profile-form #profileBio {
+  overflow-y: auto; /* s'assure que le scroll peut apparaître */
+  height: 150px; /* juste pour test si tu veux forcer le scroll */
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #4B8A47 #F8F0E5; /* thumb, track */
+}
+@media (max-width: 990px) {
+  #user-profile-form #profileBio {
+    height: 350px;
+  }
+}
+@media (max-width: 768px) {
+  #user-profile-form #profileBio {
+    height: 320px;
+  }
+}
+@media (max-width: 576px) {
+  #user-profile-form #profileBio {
+    height: 220px;
+  }
+}
+#user-profile-form #profileBio::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+#user-profile-form #profileBio::-webkit-scrollbar-track {
+  background: #F8F0E5;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.02);
+}
+#user-profile-form #profileBio::-webkit-scrollbar-thumb {
+  background-color: #4B8A47;
+  border-radius: 10px;
+  border: 2px solid #F8F0E5; /* crée un "padding" visuel */
+}
+#user-profile-form #profileBio::-webkit-scrollbar-thumb:hover {
+  background-color: #3a6a37;
 }
 
 #user-trajects-form {
@@ -15920,6 +16007,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 }
 .page-contact {
   /* état invalide */
+  /* ======== Exemple pour textarea spécifique ======== */
+  /* Remplace #contact-message par ton id ou .ta-classe */
+  /* WebKit (Chrome, Edge, Safari) */
 }
 .page-contact .contact-section {
   background-color: #CACFAA;
@@ -16149,6 +16239,31 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 .page-contact .invalid-feedback {
   font-size: 1.4rem; /* Ajuste la taille selon ton besoin */
   margin-top: 0px !important;
+}
+.page-contact #contact-message {
+  overflow-y: auto; /* s'assure que le scroll peut apparaître */
+  max-height: 300px; /* juste pour test si tu veux forcer le scroll */
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #4B8A47 #F8F0E5; /* thumb, track */
+}
+.page-contact #contact-message::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  border-radius: 10px !important;
+}
+.page-contact #contact-message::-webkit-scrollbar-track {
+  background: #F8F0E5;
+  border-radius: 10px !important;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.02);
+}
+.page-contact #contact-message::-webkit-scrollbar-thumb {
+  background-color: #4B8A47;
+  border-radius: 10px !important;
+  border: 2px solid #F8F0E5; /* crée un "padding" visuel */
+}
+.page-contact #contact-message::-webkit-scrollbar-thumb:hover {
+  background-color: #3a6a37;
 }
 
 .employee-space-section.container {
@@ -17230,7 +17345,7 @@ footer.footer {
 }
 @media (max-width: 576px) {
   .big-title-accueil {
-    font-size: 24px; /* Réduit encore la taille pour les écrans mobiles */
+    font-size: 22px !important; /* Réduit encore la taille pour les écrans mobiles */
     margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
     margin-right: 25px;
     margin-top: -30px; /* Conserve l'augmentation de 10px */
@@ -17274,7 +17389,7 @@ footer.footer {
   display: flex;
   background-color: #CACFAA;
   border-radius: 30px;
-  padding: 30px;
+  padding: 35px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   width: 100%;
   gap: 20px;
@@ -17286,7 +17401,7 @@ footer.footer {
   .search-container {
     flex-direction: column; /* Passe les éléments en colonne */
     gap: 15px;
-    padding: 30px;
+    padding: 35px;
     margin-left: 100px;
     margin-right: 100px;
   }
@@ -17325,10 +17440,10 @@ footer.footer {
 }
 @media (max-width: 1240px) {
   .search-input {
-    width: 500px; /* Prend toute la largeur à 500px */
     gap: 15px;
     padding-left: 20px;
     padding-right: 20px;
+    width: 100%; /* Prend toute la largeur disponible */
   }
 }
 @media (max-width: 768px) {
@@ -17345,8 +17460,8 @@ footer.footer {
     width: 100%; /* Prend toute la largeur disponible */
     flex-direction: column;
     gap: 15px;
-    padding-left: 20px;
-    padding-right: 20px;
+    font-size: 12px;
+    padding: 8px 16px;
   }
 }
 
@@ -17378,6 +17493,13 @@ footer.footer {
 }
 .search-btn:hover {
   background-color: #1F4924;
+}
+@media (max-width: 576px) {
+  .search-btn {
+    font-size: 16px;
+    padding: 8px 16px;
+    width: 200px;
+  }
 }
 
 .reserver-btn {
@@ -17437,6 +17559,7 @@ footer.footer {
     width: calc(100% - 50px); /* Ajuste la largeur pour les petits écrans */
     margin-left: 25px;
     margin-right: 25px;
+    padding: 20px;
   }
 }
 
@@ -17480,6 +17603,11 @@ footer.footer {
   align-items: center; /* Centre horizontalement le texte */
   text-align: center; /* Centre le texte à l'intérieur */
 }
+@media (max-width: 576px) {
+  .card-1 {
+    padding: 15px 25px;
+  }
+}
 
 .presentation h1, .presentation .h1 {
   text-align: center; /* Centre le texte horizontalement */
@@ -17512,6 +17640,7 @@ footer.footer {
 }
 @media (max-width: 576px) {
   .avantages {
+    padding: 20px !important;
     margin-left: 25px;
     margin-right: 25px;
   }

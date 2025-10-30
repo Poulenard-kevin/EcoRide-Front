@@ -14,23 +14,86 @@ function initRoleForm(containerSelector = document) {
     return;
   }
 
-  // sentinel pour éviter double initialisation sur le même container
   if (container.__roleInit) {
     console.log('initRoleForm: déjà initialisé pour', container);
     return;
   }
   container.__roleInit = true;
 
-  // helper : trouve d'abord dans le container, fallback vers document
   const q = (sel) => container.querySelector(sel) || document.querySelector(sel);
   const qa = (sel) => Array.from((container.querySelectorAll(sel).length ? container.querySelectorAll(sel) : document.querySelectorAll(sel)));
 
-  // attacher les handlers de changement sur les radios role (idempotent)
-  function attachRoleListeners() {
+  // persistence helpers
+  function persistRole(role) {
+    if (!role) return;
+    try {
+      if (typeof getCanonicalUser === 'function' && typeof setCanonicalUser === 'function') {
+        const user = getCanonicalUser() || {};
+        user.role = role;
+        setCanonicalUser(user);
+      } else {
+        localStorage.setItem('ecoride_role', role);
+        window.dispatchEvent(new CustomEvent('ecoride:rolePersisted', { detail: { role } }));
+      }
+    } catch (err) {
+      console.warn('persistRole error', err);
+      try { localStorage.setItem('ecoride_role', role); } catch(e){}
+    }
+  }
+
+  function restoreRole() {
+    try {
+      if (typeof getCanonicalUser === 'function') {
+        const c = getCanonicalUser();
+        if (c && c.role) return c.role;
+      }
+      return localStorage.getItem('ecoride_role') || null;
+    } catch (err) {
+      console.warn('restoreRole error', err);
+      return localStorage.getItem('ecoride_role');
+    }
+  }
+
+  function applyRoleToRadios(role, root = document) {
+    if (!role) return false;
+    const radio = (root && root.querySelector ? root : document).querySelector(`input[name="role"][value="${role}"]`)
+                || document.querySelector(`input[name="role"][value="${role}"]`);
+    if (radio) {
+      if (!radio.checked) {
+        radio.checked = true;
+        radio.dispatchEvent(new Event('change', { bubbles: true }));
+      } else {
+        if (typeof window.updateRoleFields === 'function') window.updateRoleFields();
+        else radio.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      return true;
+    }
+    return false;
+  }
+
+  // install storage listener once globally
+  if (!window.__ecoride_role_storage_listener_installed) {
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'ecoride_role' || e.key === 'ecoride_user') {
+        const r = restoreRole();
+        if (r) applyRoleToRadios(r);
+      }
+    }, { passive: true });
+    window.__ecoride_role_storage_listener_installed = true;
+  }
+
+  // listeners with persist
+  function attachRoleListenersWithPersist() {
     const radios = qa('input[name="role"]');
     radios.forEach(radio => {
       if (radio.__roleListenerAttached) return;
-      radio.addEventListener('change', toggleVehicleFields);
+      radio.addEventListener('change', (ev) => {
+        try {
+          const val = (ev.target && ev.target.value) ? ev.target.value : null;
+          persistRole(val);
+          toggleVehicleFields();
+        } catch(e) { console.warn('role change handler error', e); }
+      });
       radio.addEventListener('click', toggleVehicleFields);
       radio.__roleListenerAttached = true;
     });
@@ -41,27 +104,20 @@ function initRoleForm(containerSelector = document) {
     if (!root) return;
     const controls = root.querySelectorAll('input, select, textarea, button, a');
     controls.forEach(el => {
-      // skip elements explicitly marked to never be disabled
       if (el.classList && el.classList.contains('no-disable')) return;
-  
-      // inputs/selects/textareas/buttons -> disabled
       if (['INPUT','SELECT','TEXTAREA','BUTTON'].includes(el.tagName)) {
-        try { el.disabled = disabled; } catch (e) { /* ignore */ }
+        try { el.disabled = disabled; } catch (e) {}
         el.setAttribute('aria-disabled', String(disabled));
         el.classList.toggle('disabled-by-role', disabled);
       }
-  
-      // links -> make non-interactive
       if (el.tagName === 'A') {
         el.style.pointerEvents = disabled ? 'none' : '';
         el.setAttribute('aria-disabled', String(disabled));
         el.classList.toggle('disabled-by-role', disabled);
       }
-  
-      // manage tabindex for accessibility (prevent tabbing when disabled)
       if (disabled) {
         if (el.tabIndex >= 0) el.dataset._savedTabindex = el.tabIndex;
-        try { el.tabIndex = -1; } catch (e) { /* ignore */ }
+        try { el.tabIndex = -1; } catch (e) {}
       } else {
         if (el.dataset && el.dataset._savedTabindex !== undefined) {
           try { el.tabIndex = parseInt(el.dataset._savedTabindex, 10); } catch {}
@@ -70,9 +126,8 @@ function initRoleForm(containerSelector = document) {
       }
     });
   }
-  
+
   function toggleVehicleFields() {
-    // recalculer les champs à la volée (car peuvent être injectés dynamiquement)
     const plate = q('#plate');
     const registrationDate = q('#registration-date');
     const vehicleMarque = q('#vehicle-marque');
@@ -81,38 +136,30 @@ function initRoleForm(containerSelector = document) {
     const vehicleType = q('#vehicle-type') || q('#vehicleType');
     const seats = q('#seats');
     const other = q('#other');
-  
-    // préférer le scope container pour le choix du rôle, fallback document
+
     const selected = container.querySelector('input[name="role"]:checked') || document.querySelector('input[name="role"]:checked');
     const role = selected ? selected.value : null;
     const isPassager = role === 'passager';
-  
+
     const preferences = qa('input[name="preferences"]');
-  
-    // champs inputs/selects
+
     [plate, registrationDate, vehicleMarque, vehicleModel, vehicleColor, vehicleType, seats, other].forEach((field) => {
       if (!field) return;
       field.disabled = isPassager;
       field.setAttribute('aria-disabled', String(isPassager));
       field.classList.toggle('disabled-by-role', isPassager);
     });
-  
-    // checkboxes preferences
+
     preferences.forEach((chk) => {
       if (!chk) return;
       chk.disabled = isPassager;
       chk.setAttribute('aria-disabled', String(isPassager));
       chk.classList.toggle('disabled-by-role', isPassager);
     });
-  
-    // --- NOUVEAU : appliquer la même logique au formulaire "Publier un trajet" ---
-    // adapte ces sélecteurs si ton HTML diffère
+
     const publishContainer = document.querySelector('#user-trajects-form') || document.querySelector('#publish-trajet-form') || document.querySelector('#trajets-en-cours');
     if (publishContainer) {
-      // disable all standard controls inside the publish form when passager
       setControlsDisabled(publishContainer, isPassager);
-  
-      // additionally, disable edit/delete actions in the trajets list (si tu as des classes spécifiques)
       const trajetsList = document.querySelector('#trajets-list') || document.querySelector('#user-trajets-list') || document.querySelector('#trajets-en-cours-list');
       if (trajetsList) {
         trajetsList.querySelectorAll('.link-edit, .link-delete, .btn-edit, .btn-delete').forEach(el => {
@@ -128,54 +175,42 @@ function initRoleForm(containerSelector = document) {
           }
         });
       }
-    } else {
-      // console.debug('toggleVehicleFields: publishContainer introuvable, skip trajets lock');
     }
-  
-    // événement global pour listeners externes
+
     window.dispatchEvent(new CustomEvent('ecoride:roleChanged', {
       detail: { role, isPassager }
     }));
-  
-    console.log('initRoleForm -> role:', role, 'isPassager:', isPassager,
-                'fieldsFound:', {
-                  plate: !!plate,
-                  registrationDate: !!registrationDate,
-                  vehicleMarque: !!vehicleMarque,
-                  vehicleModel: !!vehicleModel,
-                  vehicleColor: !!vehicleColor,
-                  vehicleType: !!vehicleType,
-                  seats: !!seats,
-                  other: !!other,
-                  preferencesCount: preferences.length
-                });
+
+    console.log('initRoleForm -> role:', role, 'isPassager:', isPassager);
   }
 
-  // expose la fonction pour appel manuel après injection dynamique
-  // safe: n'écrase pas si une implémentation existe déjà
+  // expose helper
   if (typeof window.updateRoleFields !== 'function') {
     window.updateRoleFields = toggleVehicleFields;
   } else {
-    // si déjà défini, on conserve l'existant mais on propose un fallback si nécessaire
     window.updateRoleFieldsFallback = toggleVehicleFields;
   }
 
-  // tentative d'attacher si les radios existent maintenant
-  attachRoleListeners();
+  // attach listeners & restore saved value
+  attachRoleListenersWithPersist();
 
-  // exécution initiale (ne fera rien si pas de radios cochées)
+  const saved = restoreRole();
+  if (saved) {
+    if (!applyRoleToRadios(saved, container)) applyRoleToRadios(saved, document);
+  } else {
+    const c = (typeof getCanonicalUser === 'function') ? getCanonicalUser() : null;
+    if (c && c.role) applyRoleToRadios(c.role, container);
+  }
+
   toggleVehicleFields();
 
-  // MutationObserver : détecte l'apparition d'éléments injectés dynamiquement
+  // observer pour injections dynamiques
   const observer = new MutationObserver((mutations) => {
     let sawRelevant = false;
-
     for (const m of mutations) {
-      // si de nouveaux noeuds ajoutés, vérifier s'ils contiennent nos éléments
       if (m.addedNodes && m.addedNodes.length) {
         for (const node of m.addedNodes) {
           if (!(node instanceof Element)) continue;
-          // selectors à surveiller : role radios, vehicle fields, preferences
           if (
             node.matches && (
               node.matches('input[name="role"]') ||
@@ -193,10 +228,7 @@ function initRoleForm(containerSelector = document) {
             sawRelevant = true;
             break;
           }
-          // si node contient sous-éléments pertinents
-          if (node.querySelector &&
-            (node.querySelector('input[name="role"], #plate, #vehicle-type, input[name="preferences"]'))
-          ) {
+          if (node.querySelector && node.querySelector('input[name="role"], #plate, #vehicle-type, input[name="preferences"]')) {
             sawRelevant = true;
             break;
           }
@@ -206,29 +238,24 @@ function initRoleForm(containerSelector = document) {
     }
 
     if (sawRelevant) {
-      // attacher listeners si de nouvelles radios sont apparues
-      attachRoleListeners();
-      // mettre à jour l'état des champs
+      attachRoleListenersWithPersist();
       toggleVehicleFields();
-      // option : on peut déconnecter l'observer si on juge que c'est suffisant
-      // observer.disconnect();
+      const savedNow = restoreRole();
+      if (savedNow) applyRoleToRadios(savedNow, container);
     }
   });
 
-  // commencer l'observation du container (subtree true pour surveiller profondément)
   try {
     observer.observe(container, { childList: true, subtree: true });
   } catch (err) {
     console.warn('initRoleForm: échec observer.observe', err);
   }
 
-  // sécurité : arrêter l'observer automatiquement après 10s pour éviter leak si inutile
   setTimeout(() => {
     try { observer.disconnect(); } catch (e) { /* ignore */ }
   }, 10000);
 }
 
-// export global
 window.initRoleForm = initRoleForm;
 
 //<!-- FORM 1 : Photo de profil -->

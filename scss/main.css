@@ -12369,6 +12369,29 @@ button.nav-link.dropdown-toggle:hover:active {
   position: relative;
 }
 
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background-color: #e9ecef !important; /* gris clair */
+  color: #6c757d !important; /* texte gris */
+  cursor: not-allowed !important;
+  opacity: 1 !important; /* pour garder le texte lisible */
+}
+
+@media (max-width: 576px) {
+  h1, .h1 {
+    font-size: 24px !important; /* Réduit la taille des titres h1 */
+  }
+  h2, .h2 {
+    font-size: 20px !important; /* Réduit la taille des titres h1 */
+  }
+  h3, .h3 {
+    font-size: 18px !important; /* Réduit la taille des titres h1 */
+  }
+  .icon {
+    margin-bottom: 0px !important; /* Espace sous les icônes */
+  }
+}
 /* === SECTION BARRE DE RECHERCHE === */
 /* === SECTION BARRE DE RECHERCHE === */
 /* === SECTION BARRE DE RECHERCHE === */
@@ -12888,6 +12911,11 @@ button.nav-link.dropdown-toggle:hover:active {
   align-items: center; /* Centre les éléments verticalement */
   gap: 30px; /* Ajoute un espacement entre les éléments */
 }
+@media (max-width: 576px) {
+  .covoiturage-results .results-container .results .result-card .result-body {
+    gap: 0px; /* Réduit l'espacement entre les éléments */
+  }
+}
 .covoiturage-results .results-container .results .result-card .result-body .profile-photo {
   width: 120px; /* Taille fixe de la largeur */
   height: 120px; /* Taille fixe de la hauteur */
@@ -13048,6 +13076,7 @@ button.nav-link.dropdown-toggle:hover:active {
   .result-card .details .column {
     text-align: center; /* Centre le texte horizontalement */
     font-size: 12px; /* Réduit la taille de la police */
+    gap: 0px !important; /* Taille réduite pour les colonnes */
   }
   .filters-toggle {
     display: none; /* Masqué par défaut */
@@ -13075,11 +13104,15 @@ button.nav-link.dropdown-toggle:hover:active {
     margin-top: 8px;
     margin-bottom: 15px;
   }
+  .details {
+    margin-top: 10px;
+  }
   .price {
-    margin-bottom: 20px;
+    margin-top: 0px !important;
+    margin-bottom: 0px !important;
   }
   .type, .places, .time {
-    font-size: 12px; /* Taille réduite pour les autres textes */
+    font-size: 14px; /* Taille réduite pour les autres textes */
   }
   .date {
     font-size: 14px !important; /* Taille réduite pour la date */
@@ -13104,6 +13137,9 @@ button.nav-link.dropdown-toggle:hover:active {
   }
   .result-header .date {
     max-width: 200px; /* Fixe une largeur maximale pour la date */
+  }
+  .profile-column {
+    padding-bottom: 10px !important;
   }
 }
 @media (max-width: 1290px) {
@@ -13477,6 +13513,9 @@ button.nav-link.dropdown-toggle:hover:active {
   .detail-container .info {
     margin-bottom: 2rem !important; /* Réduit la marge en bas des sections */
   }
+  .detail-container .about {
+    margin-bottom: 2rem !important; /* Réduit la marge en bas des sections */
+  }
 }
 .detail-container .profile-section {
   display: flex;
@@ -13657,6 +13696,17 @@ button.nav-link.dropdown-toggle:hover:active {
   max-width: 600px; /* La div ne dépassera pas 300px */
   width: 100%; /* Elle occupe toute la largeur disponible jusqu'à max-width */
 }
+.detail-container .about {
+  background-color: #F1E7D1;
+  border-radius: 30px;
+  padding: 2rem;
+  margin-bottom: 3.5rem;
+  font-family: "Poppins", sans-serif;
+  font-weight: 500;
+  font-size: 24px;
+  text-align: center;
+  width: 100%;
+}
 .detail-container .driver-reviews {
   font-family: "Poppins", sans-serif;
   font-weight: 600;
@@ -13755,12 +13805,22 @@ button.nav-link.dropdown-toggle:hover:active {
     gap: 20px; /* Ajoute un espace entre les éléments */
   }
   .detail-container h1:nth-of-type(2), .detail-container .h1:nth-of-type(2) {
-    order: 5; /* Place le titre Avis du conducteur après les autres sections */
+    order: 5;
+    width: 100%;
+    max-width: 100%;
+  }
+  .detail-container .about {
+    order: 6;
+    width: 100%;
+    max-width: 100%;
+  }
+  .detail-container h1:nth-of-type(3), .detail-container .h1:nth-of-type(3) {
+    order: 7; /* Place le titre Avis du conducteur après les autres sections */
     width: 100%;
     max-width: 100%;
   }
   .detail-container .driver-reviews {
-    order: 6; /* Place la section driver-reviews après le titre Avis du conducteur */
+    order: 8; /* Place la section driver-reviews après le titre Avis du conducteur */
     width: 100%;
     max-width: 100%;
   }
@@ -13818,7 +13878,7 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 .user-tabs .nav-link {
-  width: 230px;
+  width: 240px;
   font-family: "Poppins", sans-serif;
   font-size: 24px;
   font-weight: 500;
@@ -13859,7 +13919,7 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 .user-space-section .nav-pills.user-tabs {
   display: flex;
 }
-@media (max-width: 1335px) {
+@media (max-width: 1375px) {
   .user-space-section .nav-pills.user-tabs {
     display: none;
   }
@@ -13869,7 +13929,7 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   display: none;
   margin: 0 auto;
 }
-@media (max-width: 1335px) {
+@media (max-width: 1374px) {
   .user-space-section .user-space-toggle {
     display: block;
   }
@@ -13912,6 +13972,27 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-profile-form {
   /* Style de base (placeholder visuel gris) */
   /* En vert quand rempli (pas empty) */
+  /* Aligner les radios horizontalement */
+  /* Cercle contenant le montant */
+  /* Optionnel : animation légère quand on met à jour */
+  /* classe si tu veux cibler juste cette textarea */
+  /* sur mobile, agrandir la zone */
+  /* ecoride-credits-modal.css
+   Styles légers pour les packs et états actifs (Bootstrap gère le reste).
+  */
+  /* léger effet tactile */
+  /* état "sélectionné" — harmonisé avec la palette verte */
+  /* input personnalisé */
+  /* si tu veux réduire la largeur des boutons dans les petits écrans */
+  /* Validation Bootstrap personnalisée */
+  /* Enlever uniquement la bordure colorée de Bootstrap quand .is-invalid / .is-valid est active,
+   mais garder le halo (box-shadow) pour l'indication visuelle. */
+  /* même chose pour l'état valide */
+  /* cas des inputs dans des input-groups */
+  /* si tu utilises des inputs personnalisés ou d'autres variantes, cible-les aussi */
+  /* ======== Exemple pour textarea spécifique ======== */
+  /* Remplace #profileBio par ton id ou .ta-classe */
+  /* WebKit (Chrome, Edge, Safari) */
 }
 #user-profile-form h1, #user-profile-form .h1 {
   text-align: center;
@@ -14063,6 +14144,7 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   display: flex;
   align-items: center;
   margin-bottom: 10px;
+  font-style: italic;
 }
 #user-profile-form .form-fields {
   display: flex;
@@ -14125,6 +14207,278 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-profile-form input[type=date]:not(.empty)::-webkit-datetime-edit-fields-wrapper,
 #user-profile-form input[type=time]:not(.empty)::-webkit-datetime-edit-fields-wrapper {
   color: #1F4924;
+}
+#user-profile-form .card-like {
+  border-radius: 30px;
+  padding: 10px 35px 35px;
+}
+#user-profile-form .section-title {
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+  color: #2e5d3b;
+}
+#user-profile-form .profile-photo-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+#user-profile-form .avatar-preview {
+  width: 120px;
+  height: 120px;
+  -o-object-fit: cover;
+  object-fit: cover;
+  -o-object-position: center;
+  object-position: center;
+  border-radius: 50%;
+  border: 4px solid #4B8A47;
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+  margin-left: 10px;
+  flex-shrink: 0;
+}
+#user-profile-form .profile-photo-row {
+  display: flex; /* déjà en flex dans ton code précédent */
+  justify-content: center; /* centre horizontalement les éléments enfants */
+  align-items: center;
+  gap: 30px;
+  flex-wrap: wrap; /* permet le retour à la ligne sur petit écran */
+}
+#user-profile-form #role-form .role-group {
+  display: flex;
+  gap: 20px; /* espace entre chaque option */
+  align-items: center; /* aligne verticalement le radio et le texte */
+  flex-wrap: wrap; /* passe à la ligne si l'espace manque */
+}
+#user-profile-form #role-form .role-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+#user-profile-form .btn-delete:hover {
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+  color: #fff !important;
+  cursor: pointer;
+}
+#user-profile-form .email-actions, #user-profile-form .btn-row, #user-profile-form .meta-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+}
+#user-profile-form .form-fields-role {
+  margin-top: 20px;
+}
+#user-profile-form .eco-circle {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: #F8F0E5;
+  border: 4px solid #4B8A47;
+  color: #1F4924;
+  padding: 8px;
+  text-align: center;
+  min-width: 84px;
+  min-height: 84px;
+  font-family: inherit;
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+  font-size: 20px;
+}
+@media (max-width: 576px) {
+  #user-profile-form .ecoride-credit-number, #user-profile-form .ecoride-credit-label {
+    font-size: 14px;
+  }
+}
+#user-profile-form .eco-circle.pop {
+  animation: eco-pop 360ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes eco-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@media (max-width: 576px) {
+  #user-profile-form form {
+    padding: 10px 20px 35px !important;
+  }
+  #user-profile-form .eco-circle {
+    width: 68px;
+    height: 80px;
+    min-width: 80px;
+    min-height: 80px;
+  }
+  #user-profile-form .eco-circle-value {
+    font-size: 12px;
+  }
+  #user-profile-form .eco-circle-unit {
+    font-size: 12px;
+  }
+  #user-profile-form .form-fields {
+    gap: 10px;
+  }
+  #user-profile-form .btn-row {
+    gap: 0px;
+  }
+  #user-profile-form .email-actions {
+    gap: 0px;
+  }
+  #user-profile-form .profile-photo-row {
+    gap: 10px;
+  }
+}
+#user-profile-form #profileBio {
+  min-height: 100px; /* desktop par défaut */
+  box-sizing: border-box;
+}
+@media (max-width: 576px) {
+  #user-profile-form #profileBio {
+    min-height: 130px;
+    font-size: 12px;
+  }
+}
+#user-profile-form .ecoride-credit-packs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+#user-profile-form .ecoride-pack {
+  min-width: 80px;
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.5rem;
+  text-align: center;
+  cursor: pointer;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
+  transition: transform 0.08s ease, box-shadow 0.12s ease;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #f8f9fa; /* light */
+  color: #212529;
+}
+#user-profile-form .ecoride-pack:active {
+  transform: translateY(1px);
+}
+#user-profile-form .ecoride-pack.active,
+#user-profile-form .ecoride-pack.active.btn-outline-secondary {
+  background-color: #2f7a39 !important;
+  color: #fff !important;
+  border-color: #2f7a39 !important;
+  box-shadow: 0 6px 18px rgba(47, 122, 57, 0.12);
+}
+#user-profile-form .ecoride-custom-input {
+  max-width: 160px;
+}
+@media (max-width: 420px) {
+  #user-profile-form .ecoride-pack {
+    min-width: 60px;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.95rem;
+  }
+  #user-profile-form .ecoride-custom-input {
+    max-width: 100%;
+  }
+}
+#user-profile-form .text-muted {
+  color: #1F4924 !important;
+  font-size: 14px;
+  margin-top: 0px !important;
+}
+#user-profile-form .form-control.is-valid {
+  border-color: #4B8A47 !important; /* vert */
+  box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25) !important; /* ombre verte */
+  /* background-image est géré par Bootstrap, donc icône visible */
+}
+#user-profile-form .form-control.is-invalid {
+  border-color: #dc3545 !important; /* rouge */
+  box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important; /* ombre rouge */
+  /* background-image est géré par Bootstrap, donc icône visible */
+}
+#user-profile-form .form-control.is-invalid,
+#user-profile-form .was-validated .form-control:invalid,
+#user-profile-form .form-select.is-invalid,
+#user-profile-form textarea.is-invalid {
+  border-color: transparent !important; /* cache la bordure rouge */
+}
+#user-profile-form .form-control.is-valid,
+#user-profile-form .was-validated .form-control:valid,
+#user-profile-form .form-select.is-valid,
+#user-profile-form textarea.is-valid {
+  border-color: transparent !important; /* cache la bordure verte/noire */
+}
+#user-profile-form .input-group .form-control.is-invalid,
+#user-profile-form .input-group .form-control.is-valid {
+  border-color: transparent !important;
+}
+#user-profile-form input[type=password].is-invalid,
+#user-profile-form input[type=password].is-valid {
+  border-color: transparent !important;
+}
+#user-profile-form .valid-feedback,
+#user-profile-form .invalid-feedback {
+  font-size: 1.4rem; /* Ajuste la taille selon ton besoin */
+  margin-top: 10px !important;
+}
+#user-profile-form .form-control.is-valid ~ .valid-feedback {
+  display: block;
+  color: #4B8A47;
+}
+#user-profile-form .form-control.is-invalid ~ .invalid-feedback {
+  display: block;
+  color: #D64545;
+}
+#user-profile-form #profileBio {
+  overflow-y: auto; /* s'assure que le scroll peut apparaître */
+  height: 150px; /* juste pour test si tu veux forcer le scroll */
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #4B8A47 #F8F0E5; /* thumb, track */
+}
+@media (max-width: 990px) {
+  #user-profile-form #profileBio {
+    height: 350px;
+  }
+}
+@media (max-width: 768px) {
+  #user-profile-form #profileBio {
+    height: 320px;
+  }
+}
+@media (max-width: 576px) {
+  #user-profile-form #profileBio {
+    height: 220px;
+  }
+}
+#user-profile-form #profileBio::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+#user-profile-form #profileBio::-webkit-scrollbar-track {
+  background: #F8F0E5;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.02);
+}
+#user-profile-form #profileBio::-webkit-scrollbar-thumb {
+  background-color: #4B8A47;
+  border-radius: 10px;
+  border: 2px solid #F8F0E5; /* crée un "padding" visuel */
+}
+#user-profile-form #profileBio::-webkit-scrollbar-thumb:hover {
+  background-color: #3a6a37;
 }
 
 #user-trajects-form {
@@ -14220,6 +14574,7 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   display: flex;
   align-items: center;
   margin-bottom: 10px;
+  font-style: italic;
 }
 #user-trajects-form .form-fields {
   display: flex;
@@ -14269,10 +14624,6 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-trajects-form input[type=date],
 #user-trajects-form input[type=time] {
   flex: 1;
-  -webkit-appearance: none;
-     -moz-appearance: none;
-          appearance: none;
-  border-left: none;
   font-size: 16px;
   background-color: #F8F0E5;
   transition: border-color 0.3s ease;
@@ -14304,30 +14655,66 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-trajects-form input[type=time]:not(.empty)::-webkit-datetime-edit-fields-wrapper {
   color: #1F4924;
 }
-#user-trajects-form #trajets-en-cours .trajets-list {
+@media (max-width: 576px) {
+  #user-trajects-form form {
+    padding: 10px 20px 35px;
+  }
+  #user-trajects-form .trajet-card .trajet-body .btn-trajet {
+    font-size: 16px;
+    padding: 8px 16px;
+  }
+  #user-trajects-form .form-control {
+    padding: 8px 15px;
+    font-size: 12px;
+  }
+  #user-trajects-form label {
+    font-size: 16px;
+  }
+  #user-trajects-form .search-input {
+    padding: 8px 15px !important;
+    font-size: 12px !important;
+  }
+  #user-trajects-form .form-select {
+    padding: 8px 15px !important;
+    font-size: 12px !important;
+  }
+  #user-trajects-form .form-fields {
+    gap: 10px;
+  }
+  #user-trajects-form .unit {
+    padding: 8px 15px !important;
+    font-size: 12px !important;
+  }
+  #user-trajects-form .btn {
+    font-size: 16px;
+    padding: 8px 16px;
+  }
+}
+
+#trajets-en-cours .trajets-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
-#user-trajects-form #trajets-en-cours .trajet-card {
+#trajets-en-cours .trajet-card {
   background: #F1E7D1;
   border-radius: 20px;
   padding: 15px 20px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
-#user-trajects-form #trajets-en-cours .trajet-card .trajet-body {
+#trajets-en-cours .trajet-card .trajet-body {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   flex-wrap: wrap;
   gap: 20px;
 }
-#user-trajects-form #trajets-en-cours .trajet-card .trajet-body .trajet-info {
+#trajets-en-cours .trajet-card .trajet-body .trajet-info {
   text-align: left;
   display: inline-block;
   line-height: 1.5;
 }
-#user-trajects-form #trajets-en-cours .trajet-card .trajet-body .trajet-info strong {
+#trajets-en-cours .trajet-card .trajet-body .trajet-info strong {
   display: block;
   font-family: "Roboto", sans-serif;
   font-size: 20px;
@@ -14335,19 +14722,19 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   color: #1F4924;
   margin-bottom: 4px;
 }
-#user-trajects-form #trajets-en-cours .trajet-card .trajet-body .trajet-info .details {
+#trajets-en-cours .trajet-card .trajet-body .trajet-info .details {
   font-family: "Roboto", sans-serif;
   font-size: 16px;
   font-weight: 400;
   opacity: 0.8;
 }
-#user-trajects-form #trajets-en-cours .trajet-card .trajet-body .trajet-price {
+#trajets-en-cours .trajet-card .trajet-body .trajet-price {
   font-family: "Roboto", sans-serif;
   font-size: 16px;
   font-weight: 400;
   margin-left: 20px;
 }
-#user-trajects-form #trajets-en-cours .trajet-card .trajet-body .btn-trajet {
+#trajets-en-cours .trajet-card .trajet-body .btn-trajet {
   margin-left: auto;
   background-color: #4B8A47;
   color: #F1E7D1;
@@ -14360,113 +14747,110 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   transition: background 0.3s ease, transform 0.3s ease;
   box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
 }
-#user-trajects-form #trajets-en-cours .trajet-card .trajet-body .btn-trajet:hover {
+#trajets-en-cours .trajet-card .trajet-body .btn-trajet:hover {
   background-color: #1F4924;
   transform: scale(1.05);
   box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
 }
-#user-trajects-form #trajets-en-cours .trajet-card .trajet-body .trajet-status {
+#trajets-en-cours .trajet-card .trajet-body .trajet-status {
   margin-left: auto;
   font-style: italic;
   font-size: 16px;
 }
-#user-trajects-form #trajets-en-cours .trajet-card.actif {
+#trajets-en-cours .trajet-card.actif {
   background: #4B8A47;
   color: #F1E7D1;
 }
-#user-trajects-form #trajets-en-cours .trajet-card.actif .trajet-info strong,
-#user-trajects-form #trajets-en-cours .trajet-card.actif .trajet-price,
-#user-trajects-form #trajets-en-cours .trajet-card.actif .details,
-#user-trajects-form #trajets-en-cours .trajet-card.actif .trajet-status {
+#trajets-en-cours .trajet-card.actif .trajet-info strong,
+#trajets-en-cours .trajet-card.actif .trajet-price,
+#trajets-en-cours .trajet-card.actif .details,
+#trajets-en-cours .trajet-card.actif .trajet-status {
   color: #F1E7D1;
 }
-#user-trajects-form #trajets-en-cours .trajet-card.actif .btn-trajet {
+#trajets-en-cours .trajet-card.actif .btn-trajet {
   background: #F1E7D1;
   color: #1F4924;
   transition: background 0.3s ease, transform 0.3s ease;
   box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
 }
-#user-trajects-form #trajets-en-cours .trajet-card.actif .btn-trajet:hover {
+#trajets-en-cours .trajet-card.actif .btn-trajet:hover {
   background-color: #1F4924;
   color: #F1E7D1;
   transform: scale(1.05);
   box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
 }
-#user-trajects-form #trajets-en-cours .trajet-card.termine {
+#trajets-en-cours .trajet-card.termine {
   background: #CACFAA;
 }
-#user-trajects-form #trajets-en-cours .trajet-card.attente {
+#trajets-en-cours .trajet-card.attente {
   background: #F8F0E5;
 }
-#user-trajects-form #trajets-en-cours .trajet-card.reserve {
+#trajets-en-cours .trajet-card.reserve {
   background: #F8F0E5;
   border: 1px solid #4B8A47;
 }
 @media (max-width: 1415px) {
-  #user-trajects-form #trajets-en-cours .trajet-card .trajet-body {
+  #trajets-en-cours .trajet-card .trajet-body {
     flex-direction: column;
     align-items: center;
     gap: 15px;
   }
-  #user-trajects-form #trajets-en-cours .trajet-card .trajet-body .btn-trajet,
-  #user-trajects-form #trajets-en-cours .trajet-card .trajet-body .trajet-status,
-  #user-trajects-form #trajets-en-cours .trajet-card .trajet-body .trajet-price,
-  #user-trajects-form #trajets-en-cours .trajet-card .trajet-body .details {
+  #trajets-en-cours .trajet-card .trajet-body .btn-trajet,
+  #trajets-en-cours .trajet-card .trajet-body .trajet-status,
+  #trajets-en-cours .trajet-card .trajet-body .trajet-price,
+  #trajets-en-cours .trajet-card .trajet-body .details {
     text-align: center;
     margin: 0 auto;
   }
 }
 @media (max-width: 576px) {
-  #user-trajects-form #trajets-en-cours form {
+  #trajets-en-cours form {
     padding: 10px 20px 35px;
   }
-  #user-trajects-form #trajets-en-cours .trajet-card .trajet-body .btn-trajet {
+  #trajets-en-cours .trajet-card .trajet-body .btn-trajet {
     font-size: 16px;
     padding: 8px 16px;
   }
-  #user-trajects-form #trajets-en-cours .form-control {
+  #trajets-en-cours .form-control {
     padding: 8px 15px;
     font-size: 12px;
   }
-  #user-trajects-form #trajets-en-cours label {
+  #trajets-en-cours label {
     font-size: 16px;
   }
-  #user-trajects-form #trajets-en-cours .input-with-unit .unit {
+  #trajets-en-cours .input-with-unit .unit {
     padding: 8px 15px;
     font-size: 12px;
   }
-  #user-trajects-form #trajets-en-cours .trajet-info strong {
+  #trajets-en-cours .trajet-info strong {
     font-size: 16px !important;
   }
-  #user-trajects-form #trajets-en-cours .trajet-info .details {
+  #trajets-en-cours .trajet-info .details {
     font-size: 14px !important;
   }
-  #user-trajects-form #trajets-en-cours .trajet-price {
+  #trajets-en-cours .trajet-price {
     font-size: 14px !important;
   }
 }
-
 @media (max-width: 1240px) {
-  #user-trajects-form .search-input {
+  #trajets-en-cours #user-trajects-form .search-input {
     width: 100% !important;
   }
 }
-.vehicle-label {
+#trajets-en-cours .vehicle-label {
   display: inline-block; /* évite que ça prenne toute la ligne */
   font-weight: 500; /* un peu plus visible */
   white-space: nowrap; /* empêche les retours à la ligne */
 }
-
-.btn-trajet.trajet-cancel-btn:hover,
-.btn-trajet.trajet-delete-btn:hover {
+#trajets-en-cours .btn-trajet.trajet-cancel-btn:hover,
+#trajets-en-cours .btn-trajet.trajet-delete-btn:hover {
   background-color: #dc3545 !important;
   border-color: #dc3545 !important;
   color: #fff !important;
   cursor: pointer;
 }
-
-.btn-trajet.trajet-cancel-btn,
-.btn-trajet.trajet-delete-btn {
+#trajets-en-cours .btn-trajet.trajet-cancel-btn,
+#trajets-en-cours .btn-trajet.trajet-delete-btn {
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
@@ -14487,13 +14871,18 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   color: #4B8A47;
 }
 
+#user-vehicles-form {
+  /* Style de base (placeholder visuel gris) */
+  /* En vert quand rempli (pas empty) */
+  /* Fallback léger pour inert */
+}
 #user-vehicles-form h1, #user-vehicles-form .h1 {
   text-align: center;
   margin: 35px;
 }
 #user-vehicles-form h2, #user-vehicles-form .h2 {
   text-align: left;
-  margin-bottom: 30px;
+  margin-bottom: 5px;
 }
 #user-vehicles-form form {
   background-color: #F1E7D1;
@@ -14509,26 +14898,14 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   gap: 10px;
   margin-top: 20px;
 }
-#user-vehicles-form .form-field {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: #CACFAA;
-  padding: 12px 20px;
-  border-radius: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  font-size: 20px;
-  font-weight: 400;
-  font-family: "Roboto", sans-serif;
-  text-align: left;
-}
 #user-vehicles-form .form-field-modify-delete {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 15px;
-  padding: 0px 20px;
-  margin-bottom: 10px;
+  padding: 5px 20px 0 20px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
 }
 #user-vehicles-form .form-field-modify-delete .link-modify {
   color: #4B8A47;
@@ -14608,12 +14985,6 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   font-size: 1rem;
   color: #2f4f2f;
 }
-#user-vehicles-form .form-field-modify-delete {
-  display: flex;
-  justify-content: space-between;
-  padding: 5px 20px 0 20px;
-  font-size: 0.9rem;
-}
 #user-vehicles-form .form-field-modify-delete a {
   color: #2f4f2f;
   text-decoration: underline;
@@ -14659,6 +15030,171 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-vehicles-form .vehicle-color {
   flex: 1;
   text-align: right;
+}
+#user-vehicles-form input[type=checkbox] {
+  width: 16px;
+  height: 16px;
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
+  background: #F8F0E5;
+  border: 2px solid #4B8A47;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 10px;
+  position: relative;
+}
+#user-vehicles-form input[type=checkbox]:checked {
+  background: #4B8A47;
+}
+#user-vehicles-form input[type=checkbox]:checked::after {
+  content: "✔";
+  color: #F1E7D1;
+  font-size: 10px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+#user-vehicles-form .form-control {
+  border-radius: 20px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 16px;
+  color: #1F4924;
+  background-color: #F8F0E5;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  outline: none;
+  transition: box-shadow 0.3s ease;
+}
+#user-vehicles-form .form-control::-moz-placeholder {
+  color: #7a8a6f;
+}
+#user-vehicles-form .form-control::placeholder {
+  color: #7a8a6f;
+}
+#user-vehicles-form .form-control:focus {
+  background-color: #F8F0E5; /* ne change pas le fond */
+  box-shadow: 0 0 5px 2px #1F4924; /* halo lumineux vert */
+}
+#user-vehicles-form select.form-input {
+  border-radius: 20px;
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 16px;
+  color: #1F4924;
+  background-color: #F8F0E5;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  outline: none;
+  transition: box-shadow 0.3s ease;
+  border: none;
+  width: 100%;
+  /* On supprime la flèche native */
+  appearance: none;
+  -moz-appearance: none;
+  -webkit-appearance: none;
+  /* 🔥 Flèche custom */
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%237a8a6f' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 20px center; /* 👈 décale la flèche vers la gauche */
+  background-size: 25px;
+  /* Placeholder (option sélectionnée vide) */
+}
+#user-vehicles-form select.form-input:focus {
+  background-color: #F8F0E5;
+  box-shadow: 0 0 5px 2px #1F4924;
+}
+#user-vehicles-form select.form-input:has(option[value=""]:checked) {
+  color: #7a8a6f;
+}
+#user-vehicles-form label {
+  font-family: "Roboto", sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: #1F4924;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+#user-vehicles-form .form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  margin-top: 20px;
+}
+#user-vehicles-form .form-fields .role-group {
+  display: flex;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+#user-vehicles-form .form-fields .checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+#user-vehicles-form .form-fields .btn {
+  align-self: center;
+  margin-top: 20px;
+  min-width: 200px;
+}
+@media (max-width: 576px) {
+  #user-vehicles-form .btn {
+    font-size: 16px; /* Réduit la taille des boutons */
+    padding: 8px 16px; /* Ajuste le padding des boutons */
+  }
+  #user-vehicles-form .form-control {
+    padding: 8px 15px;
+    font-size: 12px;
+  }
+  #user-vehicles-form .form-fields {
+    gap: 10px;
+  }
+  #user-vehicles-form .form-input {
+    padding: 8px 15px !important;
+    font-size: 12px !important;
+  }
+  #user-vehicles-form label {
+    font-size: 16px;
+  }
+  #user-vehicles-form form {
+    padding: 10px 20px 35px;
+  }
+  #user-vehicles-form .vehicle-line {
+    font-size: 16px;
+    padding: 8px 15px;
+  }
+}
+#user-vehicles-form input[type=date]::-webkit-calendar-picker-indicator,
+#user-vehicles-form input[type=time]::-webkit-calendar-picker-indicator {
+  filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
+}
+#user-vehicles-form input[type=date].empty::-webkit-datetime-edit,
+#user-vehicles-form input[type=time].empty::-webkit-datetime-edit,
+#user-vehicles-form input[type=date].empty::-webkit-datetime-edit-text,
+#user-vehicles-form input[type=time].empty::-webkit-datetime-edit-text,
+#user-vehicles-form input[type=date].empty::-webkit-datetime-edit-fields-wrapper,
+#user-vehicles-form input[type=time].empty::-webkit-datetime-edit-fields-wrapper {
+  color: #7a8a6f;
+}
+#user-vehicles-form input[type=date]:not(.empty)::-webkit-datetime-edit,
+#user-vehicles-form input[type=time]:not(.empty)::-webkit-datetime-edit,
+#user-vehicles-form input[type=date]:not(.empty)::-webkit-datetime-edit-text,
+#user-vehicles-form input[type=time]:not(.empty)::-webkit-datetime-edit-text,
+#user-vehicles-form input[type=date]:not(.empty)::-webkit-datetime-edit-fields-wrapper,
+#user-vehicles-form input[type=time]:not(.empty)::-webkit-datetime-edit-fields-wrapper {
+  color: #1F4924;
+}
+#user-vehicles-form [inert] {
+  pointer-events: none;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
+}
+#user-vehicles-form .user-space-form {
+  display: none !important;
+}
+#user-vehicles-form .user-space-form.active {
+  display: block !important;
 }
 
 #user-history-form h1, #user-history-form .h1 {
@@ -14729,7 +15265,6 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   flex-direction: column;
   gap: 30px;
   margin-top: 20px;
-  color: #F1E7D1;
 }
 #user-history-form .form-fields .form-field,
 #user-history-form .trajets-historique .form-field {
@@ -14776,7 +15311,7 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 }
 #user-history-form .trajets-en-cours,
 #user-history-form .trajets-historique {
-  gap: 10px;
+  gap: 30px;
 }
 #user-history-form .trajets-en-cours label,
 #user-history-form .trajets-historique label {
@@ -14788,6 +15323,7 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   border-radius: 20px;
   padding: 15px 20px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  color: #F1E7D1;
 }
 #user-history-form .trajets-en-cours .trajet-card .trajet-header,
 #user-history-form .trajets-historique .trajet-card .trajet-header {
@@ -14931,6 +15467,30 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   border: 1px solid #4B8A47;
   color: #1F4924 !important;
 }
+#user-history-form .trajets-historique {
+  max-height: 800px; /* hauteur max souhaitée */
+  overflow-y: auto; /* scroll vertical si dépassement */
+  padding-right: 10px;
+  /* Scrollbar pour WebKit (Chrome, Safari, Edge) */
+  /* Scrollbar pour Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #4B8A47 #F8F0E5;
+}
+#user-history-form .trajets-historique::-webkit-scrollbar {
+  width: 8px; /* largeur scrollbar verticale */
+  height: 8px; /* hauteur scrollbar horizontale */
+}
+#user-history-form .trajets-historique::-webkit-scrollbar-track {
+  background: #F8F0E5;
+  border-radius: 6px;
+}
+#user-history-form .trajets-historique::-webkit-scrollbar-thumb {
+  background: #4B8A47;
+  border-radius: 6px;
+}
+#user-history-form .trajets-historique::-webkit-scrollbar-thumb:hover {
+  background: rgb(47.54784689, 87.4880382775, 45.0119617225);
+}
 @media (max-width: 576px) {
   #user-history-form .btn {
     font-size: 16px; /* Réduit la taille des boutons */
@@ -14939,6 +15499,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   #user-history-form .trajet-card .btn-trajet {
     font-size: 16px; /* Réduit la taille des boutons */
     padding: 8px 16px; /* Ajuste le padding des boutons */
+  }
+  #user-history-form .trajets-historique {
+    gap: 10px;
   }
   #user-history-form .form-control {
     padding: 8px 15px;
@@ -15444,6 +16007,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 }
 .page-contact {
   /* état invalide */
+  /* ======== Exemple pour textarea spécifique ======== */
+  /* Remplace #contact-message par ton id ou .ta-classe */
+  /* WebKit (Chrome, Edge, Safari) */
 }
 .page-contact .contact-section {
   background-color: #CACFAA;
@@ -15673,6 +16239,31 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 .page-contact .invalid-feedback {
   font-size: 1.4rem; /* Ajuste la taille selon ton besoin */
   margin-top: 0px !important;
+}
+.page-contact #contact-message {
+  overflow-y: auto; /* s'assure que le scroll peut apparaître */
+  max-height: 300px; /* juste pour test si tu veux forcer le scroll */
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #4B8A47 #F8F0E5; /* thumb, track */
+}
+.page-contact #contact-message::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  border-radius: 10px !important;
+}
+.page-contact #contact-message::-webkit-scrollbar-track {
+  background: #F8F0E5;
+  border-radius: 10px !important;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.02);
+}
+.page-contact #contact-message::-webkit-scrollbar-thumb {
+  background-color: #4B8A47;
+  border-radius: 10px !important;
+  border: 2px solid #F8F0E5; /* crée un "padding" visuel */
+}
+.page-contact #contact-message::-webkit-scrollbar-thumb:hover {
+  background-color: #3a6a37;
 }
 
 .employee-space-section.container {
@@ -16754,7 +17345,7 @@ footer.footer {
 }
 @media (max-width: 576px) {
   .big-title-accueil {
-    font-size: 24px; /* Réduit encore la taille pour les écrans mobiles */
+    font-size: 22px !important; /* Réduit encore la taille pour les écrans mobiles */
     margin-left: 25px; /* Ajuste la marge pour les écrans mobiles */
     margin-right: 25px;
     margin-top: -30px; /* Conserve l'augmentation de 10px */
@@ -16798,7 +17389,7 @@ footer.footer {
   display: flex;
   background-color: #CACFAA;
   border-radius: 30px;
-  padding: 30px;
+  padding: 35px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   width: 100%;
   gap: 20px;
@@ -16810,7 +17401,7 @@ footer.footer {
   .search-container {
     flex-direction: column; /* Passe les éléments en colonne */
     gap: 15px;
-    padding: 30px;
+    padding: 35px;
     margin-left: 100px;
     margin-right: 100px;
   }
@@ -16849,10 +17440,10 @@ footer.footer {
 }
 @media (max-width: 1240px) {
   .search-input {
-    width: 500px; /* Prend toute la largeur à 500px */
     gap: 15px;
     padding-left: 20px;
     padding-right: 20px;
+    width: 100%; /* Prend toute la largeur disponible */
   }
 }
 @media (max-width: 768px) {
@@ -16869,8 +17460,8 @@ footer.footer {
     width: 100%; /* Prend toute la largeur disponible */
     flex-direction: column;
     gap: 15px;
-    padding-left: 20px;
-    padding-right: 20px;
+    font-size: 12px;
+    padding: 8px 16px;
   }
 }
 
@@ -16902,6 +17493,13 @@ footer.footer {
 }
 .search-btn:hover {
   background-color: #1F4924;
+}
+@media (max-width: 576px) {
+  .search-btn {
+    font-size: 16px;
+    padding: 8px 16px;
+    width: 200px;
+  }
 }
 
 .reserver-btn {
@@ -16961,6 +17559,7 @@ footer.footer {
     width: calc(100% - 50px); /* Ajuste la largeur pour les petits écrans */
     margin-left: 25px;
     margin-right: 25px;
+    padding: 20px;
   }
 }
 
@@ -17004,6 +17603,11 @@ footer.footer {
   align-items: center; /* Centre horizontalement le texte */
   text-align: center; /* Centre le texte à l'intérieur */
 }
+@media (max-width: 576px) {
+  .card-1 {
+    padding: 15px 25px;
+  }
+}
 
 .presentation h1, .presentation .h1 {
   text-align: center; /* Centre le texte horizontalement */
@@ -17036,6 +17640,7 @@ footer.footer {
 }
 @media (max-width: 576px) {
   .avantages {
+    padding: 20px !important;
     margin-left: 25px;
     margin-right: 25px;
   }

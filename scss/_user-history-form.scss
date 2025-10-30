@@ -74,7 +74,6 @@
         flex-direction: column; 
         gap: 30px; 
         margin-top: 20px;
-        color: $color-light-beige;
       
         .form-field { display: flex; flex-direction: column; text-align: left; }
         .role-group { display: flex; gap: 15px; flex-wrap: wrap; }
@@ -112,7 +111,7 @@
     
       .trajets-en-cours,
       .trajets-historique {
-        gap:10px; 
+        gap:30px; 
         
         label {
           margin-bottom: 0px;
@@ -122,6 +121,7 @@
           border-radius: 20px;
           padding: 15px 20px;
           box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          color: $color-light-beige;
       
           .trajet-header {
             margin-bottom: 8px;
@@ -262,6 +262,35 @@
           } 
         }
       }
+
+      .trajets-historique {
+        max-height: 800px;      /* hauteur max souhaitée */
+        overflow-y: auto;       /* scroll vertical si dépassement */
+        padding-right: 10px;
+        /* Scrollbar pour WebKit (Chrome, Safari, Edge) */
+        &::-webkit-scrollbar {
+          width: 8px;   /* largeur scrollbar verticale */
+          height: 8px;  /* hauteur scrollbar horizontale */
+        }
+      
+        &::-webkit-scrollbar-track {
+          background: $color-very-light-beige;
+          border-radius: 6px;
+        }
+      
+        &::-webkit-scrollbar-thumb {
+          background: $color-medium-green;
+          border-radius: 6px;
+        }
+      
+        &::-webkit-scrollbar-thumb:hover {
+          background: darken($color-medium-green, 15%);
+        }
+      
+        /* Scrollbar pour Firefox */
+        scrollbar-width: thin;
+        scrollbar-color: $color-medium-green $color-very-light-beige;
+      }
     
       @media (max-width: 576px) {
         .btn {
@@ -272,6 +301,10 @@
         .trajet-card .btn-trajet {
           font-size: $font-size-nav; /* Réduit la taille des boutons */
           padding: 8px 16px; /* Ajuste le padding des boutons */
+        }
+
+        .trajets-historique {
+          gap: 10px;     
         }
     
         .form-control {

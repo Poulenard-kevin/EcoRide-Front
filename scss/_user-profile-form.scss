@@ -154,6 +154,7 @@
       color: $color-dark-green;
       display: flex; align-items: center;
       margin-bottom: 10px;
+      font-style: italic;
     }
     
     // layout champs
@@ -211,5 +212,285 @@
   input[type="date"]:not(.empty)::-webkit-datetime-edit-fields-wrapper,
   input[type="time"]:not(.empty)::-webkit-datetime-edit-fields-wrapper {
     color: $color-dark-green;
+  }
+
+  .card-like { border-radius:30px; padding:10px 35px 35px; }
+  .section-title { font-size:1.1rem; margin-bottom:12px; color:#2e5d3b; }
+  .profile-photo-row { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+
+  .avatar-preview {
+    width: 120px;
+    height: 120px;
+    -o-object-fit: cover;
+    object-fit: cover;
+    -o-object-position: center;
+    object-position: center;
+    border-radius: 50%;
+    border: 4px solid #4B8A47;
+    box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+    margin-left: 10px;
+    flex-shrink: 0;
+  }
+
+  .profile-photo-row {
+    display: flex;             /* déjà en flex dans ton code précédent */
+    justify-content: center;   /* centre horizontalement les éléments enfants */
+    align-items: center;
+    gap: 30px;
+    flex-wrap: wrap;           /* permet le retour à la ligne sur petit écran */
+  }
+
+  /* Aligner les radios horizontalement */
+  #role-form .role-group {
+    display: flex;
+    gap: 20px;           /* espace entre chaque option */
+    align-items: center; /* aligne verticalement le radio et le texte */
+    flex-wrap: wrap;     /* passe à la ligne si l'espace manque */
+  }
+
+  #role-form .role-group label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px 6px;
+  }
+
+  
+
+  .btn-delete:hover {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: #fff !important;
+    cursor: pointer;
+  }
+
+  .email-actions, .btn-row, .meta-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .form-fields-role {
+    margin-top: 20px;
+  }
+
+  /* Cercle contenant le montant */
+  .eco-circle {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background:$color-very-light-beige;
+    border: 4px solid $color-medium-green;
+    color: $color-dark-green;
+    padding: 8px;
+    text-align: center;
+    min-width: 84px;
+    min-height: 84px;
+    font-family: inherit;
+    box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+    font-size: 20px;
+  }
+
+  .ecoride-credit-number, .ecoride-credit-label {
+    @media (max-width: 576px) {
+    font-size: 14px;
+    }
+  }
+  
+  /* Optionnel : animation légère quand on met à jour */
+  .eco-circle.pop {
+    animation: eco-pop 360ms cubic-bezier(.2,.9,.3,1);
+  }
+  @keyframes eco-pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.06); }
+    100% { transform: scale(1); }
+  }
+  
+  @media (max-width: 576px) {
+    form { padding: 10px 20px 35px !important; }
+    .eco-circle { width: 68px; height: 80px; min-width:80px; min-height:80px;}
+    .eco-circle-value { font-size: 12px; }
+    .eco-circle-unit { font-size: 12px; }
+    .form-fields { gap: 10px; }
+    .btn-row { gap: 0px; }
+    .email-actions { gap: 0px; }
+    .profile-photo-row { gap: 10px; }
+  }
+
+  /* classe si tu veux cibler juste cette textarea */
+  #profileBio {
+    min-height: 100px; /* desktop par défaut */
+    box-sizing: border-box;
+  }
+
+  /* sur mobile, agrandir la zone */
+  @media (max-width: 576px) {
+    #profileBio {
+      min-height: 130px;
+      font-size: 12px;
+    }
+  }
+
+  /* ecoride-credits-modal.css
+   Styles légers pour les packs et états actifs (Bootstrap gère le reste).
+  */
+  .ecoride-credit-packs {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin-bottom: .75rem;
+  }
+
+  .ecoride-pack {
+    min-width: 80px;
+    padding: .45rem .7rem;
+    border-radius: .5rem;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition: transform .08s ease, box-shadow .12s ease;
+    border: 1px solid rgba(0,0,0,0.08);
+    background: #f8f9fa; /* light */
+    color: #212529;
+  }
+
+  /* léger effet tactile */
+  .ecoride-pack:active { transform: translateY(1px); }
+
+  /* état "sélectionné" — harmonisé avec la palette verte */
+  .ecoride-pack.active,
+  .ecoride-pack.active.btn-outline-secondary {
+    background-color: #2f7a39 !important;
+    color: #fff !important;
+    border-color: #2f7a39 !important;
+    box-shadow: 0 6px 18px rgba(47,122,57,0.12);
+  }
+
+  /* input personnalisé */
+  .ecoride-custom-input {
+    max-width: 160px;
+  }
+
+  /* si tu veux réduire la largeur des boutons dans les petits écrans */
+  @media (max-width: 420px) {
+    .ecoride-pack { min-width: 60px; padding: .4rem .5rem; font-size: .95rem; }
+    .ecoride-custom-input { max-width: 100%; }
+  }
+
+  .text-muted {
+    color: $color-dark-green !important;
+    font-size: 14px;
+    margin-top: 0px !important;
+  }
+
+  /* Validation Bootstrap personnalisée */
+  .form-control.is-valid {
+    border-color: $color-medium-green!important; /* vert */
+    box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25) !important; /* ombre verte */
+    /* background-image est géré par Bootstrap, donc icône visible */
+  }
+  .form-control.is-invalid {
+    border-color: #dc3545 !important; /* rouge */
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important; /* ombre rouge */
+    /* background-image est géré par Bootstrap, donc icône visible */
+  }
+
+  /* Enlever uniquement la bordure colorée de Bootstrap quand .is-invalid / .is-valid est active,
+   mais garder le halo (box-shadow) pour l'indication visuelle. */
+
+  .form-control.is-invalid,
+  .was-validated .form-control:invalid,
+  .form-select.is-invalid,
+  textarea.is-invalid {
+    border-color: transparent !important; /* cache la bordure rouge */
+  }
+
+  /* même chose pour l'état valide */
+  .form-control.is-valid,
+  .was-validated .form-control:valid,
+  .form-select.is-valid,
+  textarea.is-valid {
+    border-color: transparent !important; /* cache la bordure verte/noire */
+  }
+
+  /* cas des inputs dans des input-groups */
+  .input-group .form-control.is-invalid,
+  .input-group .form-control.is-valid {
+    border-color: transparent !important;
+  }
+
+  /* si tu utilises des inputs personnalisés ou d'autres variantes, cible-les aussi */
+  input[type="password"].is-invalid,
+  input[type="password"].is-valid {
+    border-color: transparent !important;
+  }
+
+  .valid-feedback,
+    .invalid-feedback {
+      font-size: 1.4rem; /* Ajuste la taille selon ton besoin */
+      margin-top: 10px !important;
+  }
+
+  .form-control.is-valid ~ .valid-feedback {
+    display: block;
+    color: #4B8A47;
+  }
+
+  .form-control.is-invalid ~ .invalid-feedback {
+    display: block;
+    color: #D64545;
+  }
+
+  /* ======== Exemple pour textarea spécifique ======== */
+  /* Remplace #profileBio par ton id ou .ta-classe */
+  #profileBio {
+    overflow-y: auto;   /* s'assure que le scroll peut apparaître */
+    height: 150px;  /* juste pour test si tu veux forcer le scroll */
+    /* Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: #4B8A47 #F8F0E5; /* thumb, track */
+
+    @media (max-width: 990px) {
+      height: 350px
+    }
+  
+    @media (max-width: 768px) {
+      height: 320px
+    }
+  
+    @media (max-width: 576px) {
+      height: 220px
+    }
+  }
+
+  /* WebKit (Chrome, Edge, Safari) */
+  #profileBio::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  #profileBio::-webkit-scrollbar-track {
+    background: #F8F0E5;
+    border-radius: 10px;
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,0.02);
+  }
+
+  #profileBio::-webkit-scrollbar-thumb {
+    background-color: #4B8A47;
+    border-radius: 10px;
+    border: 2px solid #F8F0E5; /* crée un "padding" visuel */
+  }
+
+  #profileBio::-webkit-scrollbar-thumb:hover {
+    background-color: #3a6a37;
   }
 }

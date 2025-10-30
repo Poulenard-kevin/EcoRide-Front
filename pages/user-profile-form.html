@@ -1,79 +1,124 @@
-   <!-- Onglet Profile / Rôle -->
-    <h1>Profil / Rôle</h1>
-    <form>
-      <div class="form-fields">
-        <!-- 1. Rôle -->
-        <div class="form-group role-group">
-          <label><input type="radio" name="role" value="chauffeur"> Chauffeur</label>
-          <label><input type="radio" name="role" value="passager"> Passager</label>
-          <label><input type="radio" name="role" value="les-deux"> Les deux</label>
-        </div>
-      
-        <h2>Ajouter un véhicule</h2>
-        <!-- 2. Plaque -->
-        <div class="form-field">
-          <label for="plate">Plaque d'immatriculation</label>
-          <input type="text" id="plate" class="form-control" placeholder="AB - 123 - CD">
-        </div>
-      
-        <!-- 3. Date -->
-        <div class="form-field">
-          <label for="registration-date">Date de première immatriculation</label>
-          <input type="date" id="registration-date" class="form-control">
-        </div>
-      
-        <!-- Marque -->
-        <div class="form-field">
-          <label for="vehicle-marque">Marque</label>
-          <input type="text" id="vehicle-marque" class="form-control" placeholder="Tesla">
-        </div>
-        
-        <!-- Modèle -->
-        <div class="form-field">
-          <label for="vehicle-model">Modèle</label>
-          <input type="text" id="vehicle-model" class="form-control" placeholder="Model 3">
-        </div>
-        
-        <!-- Couleur -->
-        <div class="form-field">
-          <label for="vehicle-color">Couleur</label>
-          <input type="text" id="vehicle-color" class="form-control" placeholder="Noir">
-        </div>
+<!-- Onglet Profil / Rôle (extrait) -->
+<h1>Profil / Rôle</h1>
 
-        <!-- 5. Type de vehicule-->
-        <div class="form-field">
-          <label for="vehicleType">Type de véhicule</label>
-          <select id="vehicleType" name="vehicleType" class="form-input">
-            <option value="" selected hidden>-- Sélectionner un type--</option>
-            <option value="Électrique">Électrique</option>
-            <option value="Hybride">Hybride</option>
-            <option value="Thermique">Thermique</option>
-          </select>
-        </div>
-      
-        <!-- 6. Nombre de places -->
-        <div class="form-field">
-          <label for="seats">Nombre de places disponibles</label>
-          <input type="number" id="seats" class="form-control" placeholder="3">
-        </div>
-      
-        <!-- 7. Préférences chauffeur -->
-        <div class="form-field">
-          <label>Préférences chauffeur</label>
-          <div class="checkbox-group">
-            <label><input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="fumeur"> Fumeur</label>
-            <label><input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="animal"> Animal</label>
-            <label><input type="checkbox" class="checkbox-input custom-checkbox" name="preferences" value="musique"> Musique</label>
-          </div>
-        </div>
-      
-        <!-- 8. Autre -->
-        <div class="form-field">
-          <label for="other">Autre</label>
-          <input type="text" id="other" class="form-control" placeholder="Discussion...">
-        </div>
-      
-        <!-- 9. Bouton -->
-        <button type="submit" class="btn">Enregistrer</button>
+<!-- FORM : Rôle -->
+<form id="role-form" class="card-like">
+  <div class="form-fields-role">
+    <h2>Rôle</h2>
+
+    <fieldset class="form-group role-group" id="role-fieldset" aria-labelledby="role-legend">
+      <legend id="role-legend" class="visually-hidden">Choisir votre rôle</legend>
+
+      <label><input type="radio" name="role" value="chauffeur"> Chauffeur</label>
+      <label><input type="radio" name="role" value="passager"> Passager</label>
+      <label><input type="radio" name="role" value="les-deux"> Les deux</label>
+    </fieldset>
+
+  </div>
+</form>
+
+<!-- FORM 1 : Photo de profil -->
+<form id="profile-photo-form" class="card-like">
+  <div class="form-fields">
+    <h2>Photo de profil</h2>
+
+    <div class="profile-photo-row">
+      <img id="profileAvatarPreview" class="avatar-preview" src="images/default-avatar.png" alt="Avatar">
+      <div class="avatar-actions">
+        <input type="file" id="profileAvatarInput" accept="image/*" class="form-control">
+        <small class="text-muted">PNG/JPG jusqu’à 2 Mo. Carré recommandé.</small>
       </div>
-    </form>
+    </div>
+    <div class="btn-row">
+      <button type="button" id="confirmAvatarBtn" class="btn">Enregistrer</button>
+      <button type="button" id="removeAvatarBtn" class="btn btn-delete">Supprimer</button>
+    </div>
+  </div>
+</form>
+
+<!-- FORM 2 : Crédits -->
+<form id="credit-form" class="card-like">
+  <div class="form-fields">
+    <h2>Crédits</h2>
+
+      <div class="credit-row">
+        <div id="ecoCircle" class="eco-circle" role="status" data-ecoride-credits>
+          <span class="ecoride-credit-number">0</span>
+          <span class="ecoride-credit-label">crédits</span>
+        </div>
+      </div>
+
+      <!-- contrôle d'ajout -->
+      <div class="btn-row">
+        <button type="button" id="creditAddBtn" class="btn">Ajouter</button>
+      </div>   
+  </div>
+</form>
+
+
+<!-- FORM 3 : À propos -->
+<form id="about-me-form" class="card-like">
+  <div class="form-fields">
+    <h2>À propos de moi</h2>
+
+    <textarea class="form-control" id="profileBio" placeholder="Quelques mots sur vous..." maxlength="600"></textarea>
+    <div class="meta-row">
+      <button type="button" class="btn" id="saveBioBtn" disabled>Enregistrer</button>
+      <button type="button" class="btn btn-delete" id="deleteBioBtn">Supprimer</button>
+    </div>
+  </div>
+</form>
+
+<!-- FORM 4 : Informations du compte -->
+<form id="account-info-form" class="card-like">
+  <div class="form-fields">
+    <h2>Informations du compte</h2>
+
+    <div class="form-row">
+      <div>
+        <label for="profileEmail">Adresse email</label>
+        <input type="email" class="form-control" id="profileEmail" placeholder="vous@exemple.com" autocomplete="email">
+        <div id="profileEmailInvalid" class="invalid-feedback">
+          Email invalide.
+        </div>
+        <div id="profileEmailValid" class="valid-feedback">
+          Email OK.
+        </div>
+        <div class="email-actions">
+          <button type="button" id="saveEmailBtn" class="btn btn-success hidden">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="form-fields">
+      <div>
+        <label for="currentPassword">Mot de passe actuel</label>
+        <input type="password" class="form-control" id="currentPassword" autocomplete="current-password">
+        <div class="invalid-feedback">Veuillez saisir votre mot de passe actuel. Il doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial. </div>
+        <div class="valid-feedback">Mot de passe correct.</div>
+      </div>
+
+      <div>
+        <label for="newPassword">Nouveau mot de passe</label>
+        <input type="password" class="form-control" id="newPassword" autocomplete="new-password">
+        <div class="invalid-feedback">
+          Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.
+        </div>
+        <div class="valid-feedback">Mot de passe valide.</div>
+      </div>
+
+      <div>
+        <label for="confirmPassword">Confirmer</label>
+        <input type="password" class="form-control" id="confirmPassword" autocomplete="new-password">
+        <div class="invalid-feedback">Les mots de passe ne correspondent pas.</div>
+        <div class="valid-feedback">Mot de passe confirmé.</div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" class="btn" id="saveAccountBtn">Valider</button>
+    </div>
+  </div>
+</form>

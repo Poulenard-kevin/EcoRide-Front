@@ -6,6 +6,21 @@ function getVehicleLabel(v) {
   return `${brand} ${model} ${color}`.trim();
 }
 
+function onDomReady(selector, callback) {
+  const el = document.querySelector(selector);
+  if (el) return callback(el);
+
+  // 🔁 Observe le DOM jusqu'à ce que le sélecteur existe
+  const observer = new MutationObserver(() => {
+    const node = document.querySelector(selector);
+    if (node) {
+      observer.disconnect();
+      callback(node);
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
 // Helper pour obtenir l'ID du covoiturage à partir d'un objet trajet/réservation
 function getCovoId(item) {
   if (!item) return null;
@@ -15,6 +30,48 @@ function getCovoId(item) {
     || item.tripId
     || (item.covoiturage && item.covoiturage.id)
     || null;
+}
+
+// ---------- helpers/avatar / user ----------
+export function resolveAvatarSrc(src) {
+  if (!src) return '/images/default-avatar.png';
+  src = String(src).trim();
+  if (/^https?:\/\//i.test(src)) return src;
+  if (src.startsWith('/')) return src;
+  return '/' + src.replace(/^\/+/, '');
+}
+
+export function getCurrentUser() {
+  try {
+    return JSON.parse(localStorage.getItem('ecoride_user') || 'null');
+  } catch (e) {
+    console.warn('getCurrentUser parse error', e);
+    return null;
+  }
+}
+
+export function getCurrentUserPseudo() {
+  const me = getCurrentUser();
+  return me?.pseudo ?? 'Moi';
+}
+
+export function enrichTrajetWithCurrentUser(trajet = {}) {
+  try {
+    const me = getCurrentUser();
+    if (!me) return trajet;
+
+    if (!trajet.chauffeur || typeof trajet.chauffeur !== 'object') {
+      trajet.chauffeur = {};
+    }
+
+    trajet.chauffeur.pseudo = trajet.chauffeur.pseudo ?? me.pseudo ?? 'Moi';
+    const rawPhoto = trajet.chauffeur.photo ?? me.photo ?? 'images/default-avatar.png';
+    trajet.chauffeur.photo = resolveAvatarSrc(rawPhoto);
+    trajet.chauffeur.rating = (trajet.chauffeur.rating ?? me.rating ?? 0);
+  } catch (e) {
+    console.warn('enrichTrajetWithCurrentUser error', e);
+  }
+  return trajet;
 }
 
 function normalizePassagers(list = []) {
@@ -154,14 +211,15 @@ function openRatingModal({ reservationId, onSubmit }) {
   });
 }
 
-function getCurrentUserPseudo() {
-  try {
-    const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
-    return me && me.pseudo ? me.pseudo : 'Moi';
-  } catch (e) { return 'Moi'; }
-}
+document.addEventListener('hidden.bs.modal', () => {
+  // si un paneau “user-space-form” a été caché, on le réaffiche
+  const active = document.querySelector('.user-space-form.active');
+  if (active && active.style.display === 'none') {
+    active.style.display = 'block';
+  }
+});
 
-function genId() {
+export function genId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return 'id_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
@@ -201,12 +259,68 @@ export function initTrajets() {
     console.log("✅ Event listener formulaire ajouté");
   }
 
+  // 🚀 Auto-scroll & focus suivant dans les formulaires
+  ['#trajet-form', '#vehicule-form'].forEach(selector => {
+    const formEl = document.querySelector(selector);
+    if (!formEl) return;
+
+    const inputs = formEl.querySelectorAll('input, select, textarea');
+    inputs.forEach((input, i) => {
+
+      // appui sur Entrée → focus champ suivant
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const next = inputs[i + 1];
+          if (next) {
+            next.focus({ preventScroll: true });
+            next.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } else {
+            formEl.requestSubmit?.();
+          }
+        }
+      });
+
+      // changement de valeur → focus champ suivant + scroll
+      input.addEventListener('change', () => {
+        const next = inputs[i + 1];
+        if (next) {
+          next.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          next.focus({ preventScroll: true });
+        }
+      });
+
+      // saisie complète (utile si maxlength)
+      input.addEventListener('input', () => {
+        if (input.maxLength && input.value.length >= input.maxLength) {
+          const next = inputs[i + 1];
+          if (next) {
+            next.focus({ preventScroll: true });
+            next.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      });
+    });
+  });
+
   // Event listeners pour les boutons dynamiques
   document.addEventListener('click', handleTrajetActions);
 
-  renderTrajetsInProgress();
-  renderHistorique();
-  populateVehiclesDatalist();
+  // ✅ Appel unique et sécurisé de renderHistorique
+  onDomReady('.trajets-historique', (container) => {
+    console.log('🟢 Container historique apparu dans le DOM');
+    
+    // ✅ Éviter double rendu
+    if (container.dataset.rendered === '1') {
+      console.log('⚪ Historique déjà rendu, skip');
+      return;
+    }
+    container.dataset.rendered = '1';
+  
+    renderHistorique();
+    renderTrajetsInProgress();
+    populateVehiclesDatalist();
+  });
 
   // =================== ⚡ Gestion placeholder Date / Time ===================
   document.querySelectorAll('input[type="date"], input[type="time"]').forEach(input => {
@@ -252,7 +366,7 @@ export function initTrajets() {
           console.log(`🧹 Historique vidé (dev). Trajets supprimés: ${removed}`);
         });
 
-        histoContainer.parentNode.insertBefore(clearBtn, histoContainer);
+        histoContainer.parentNode.insertBefore(clearBtn, histoContainer.nextSibling);
       }
     }
   }
@@ -316,6 +430,9 @@ function handleTrajetSubmit(e) {
     role: "chauffeur",
     status: 'ajoute'
   };
+
+  // enrichir avec profil courant (pseudo/photo/rating) avant d'ajouter
+  enrichTrajetWithCurrentUser(trajetData);
 
   if (!trajetData.depart || !trajetData.arrivee || !trajetData.date) {
     alert('Veuillez remplir les champs obligatoires (départ, arrivée, date)');
@@ -798,10 +915,6 @@ function handleTrajetActions(e) {
     e.preventDefault();
     e.stopPropagation();
   
-    if (typeof switchToTab === 'function') {
-      switchToTab('user-trajects-form');
-    }
-  
     const reservationId = target.dataset.id;
     if (!reservationId) return;
   
@@ -891,6 +1004,17 @@ function handleTrajetActions(e) {
           updatePlacesReservees();
           renderTrajetsInProgress();
           renderHistorique();
+
+          // ✅ Ouvre automatiquement l'onglet "Mes trajets" après réservation
+          if (typeof switchToTab === 'function') {
+            switchToTab('user-trajects-form'); // adapte si ton id diffère
+          }
+
+          // ✅ Scroll jusqu’à la section “Mes trajets en cours”
+          const sectionMesTrajets = document.querySelector('#trajets-en-cours');
+          if (sectionMesTrajets) {
+            sectionMesTrajets.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
   
           alert('✅ Merci ! Votre validation et avis ont bien été enregistrés (en attente de modération).');
         } catch (err) {
@@ -1083,41 +1207,79 @@ function renderTrajetsInProgress() {
 }
 
 // -------------------- Historique --------------------
+export function renderHistorique() {
+  console.log("[renderHistorique] Démarrage");
 
-function renderHistorique() {
+  // ✅ Vérifier qu'il n'y a qu'un seul conteneur
+  const allContainers = document.querySelectorAll('.trajets-historique');
+  if (allContainers.length > 1) {
+    console.warn(`⚠️ ${allContainers.length} conteneurs .trajets-historique détectés, nettoyage...`);
+    allContainers.forEach((el, i) => {
+      if (i > 0) el.remove();
+    });
+  }
+
   const container = document.querySelector('.trajets-historique');
-  if (!container) return;
+  if (!container) {
+    console.warn("⚠️ Conteneur .trajets-historique introuvable");
+    return;
+  }
 
+  // ✅ Éviter double rendu simultané
+  if (container.dataset.rendering === '1') {
+    console.log('⚪ renderHistorique déjà en cours, skip');
+    return;
+  }
+  container.dataset.rendering = '1';
+
+  // Réinitialise le contenu du conteneur
   container.innerHTML = `<h2>Mes trajets passés</h2>`;
 
-  const passe = trajets.filter(t => t.status === "valide");
+  // ✅ Recharge toujours depuis le localStorage
+  let allTrajets = [];
+  try {
+    allTrajets = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+  } catch (e) {
+    console.error('❌ Impossible de parser les trajets', e);
+  }
+
+  const passe = allTrajets.filter(t => t.status === "valide");
+  console.log(`[renderHistorique] Trajets valides : ${passe.length}`);
+
+  // 🧮 Trier les trajets du plus récent au plus ancien
+  passe.sort((a, b) => {
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    return dateB - dateA; // tri décroissant : plus récent d'abord
+  });
 
   if (passe.length === 0) {
     container.innerHTML += `<p>Aucun trajet terminé</p>`;
     return;
   }
 
+  // 🧱 Construction du HTML directement dans container
   passe.forEach(trajet => {
     const placesReservees = trajet.placesReservees || 0;
     let cardClass = 'trajet-card valide';
-  
+
     if (trajet.role === 'passager') {
       cardClass = 'trajet-card reserve';
-  
       const covoId = getCovoId(trajet);
-      const trajetChauffeur = trajets.find(t => t.id === covoId && t.role === 'chauffeur');
+      const trajetChauffeur = allTrajets.find(t => t.id === covoId && t.role === 'chauffeur');
       if (trajetChauffeur && trajetChauffeur.date) {
         trajet.date = trajetChauffeur.date;
       }
     }
-  
+
     container.innerHTML += `
       <div class="${cardClass}">
         <div class="trajet-body">
           <div class="trajet-info">
             <strong>Covoiturage (${formatDateJJMMAAAA(trajet.date) || ""}) : <br>${trajet.depart} → ${trajet.arrivee}</strong>
             <span class="details">
-              ${trajet.heureDepart || ""} → ${trajet.heureArrivee || ""} • ${placesReservees} place${placesReservees > 1 ? 's' : ''} réservée${placesReservees > 1 ? 's' : ''}
+              ${trajet.heureDepart || ""} → ${trajet.heureArrivee || ""} • 
+              ${placesReservees} place${placesReservees > 1 ? 's' : ''} réservée${placesReservees > 1 ? 's' : ''}
             </span>
           </div>
           <div class="trajet-price">${trajet.prix} crédits</div>
@@ -1125,6 +1287,41 @@ function renderHistorique() {
       </div>
     `;
   });
+
+  // ✅ Ne pas forcer le display : il est géré par les onglets
+  console.log(`✅ Historique rendu (${passe.length} trajets affichés)`);
+
+  // --- Gérer la visibilité du panneau Historique uniquement si l'onglet est actif ---
+  const histContainer = document.querySelector('.trajets-historique');
+  if (histContainer) {
+    const parentPanel = histContainer.closest('.user-space-form');
+
+    // détecte l’onglet actuellement actif
+    const activeTab = document.querySelector('.tab.active, .nav-link.active');
+    const isHistoriqueTabActive =
+      activeTab &&
+      (
+        activeTab.id?.includes('historique') ||
+        activeTab.dataset?.target === '#user-history-form' ||
+        activeTab.href?.includes('#user-history-form')
+      );
+
+    if (parentPanel) {
+      if (isHistoriqueTabActive) {
+        console.log('🟢 Onglet Historique actif → on rend visible');
+        parentPanel.style.display = 'block';
+        parentPanel.style.visibility = 'visible';
+        parentPanel.style.opacity = '1';
+      } else {
+        console.log('⚪ Onglet Historique inactif → on ne le rend pas visible');
+        parentPanel.style.display = '';
+        parentPanel.style.visibility = '';
+        parentPanel.style.opacity = '';
+      }
+    }
+  }
+  // ✅ À la toute fin de la fonction
+  delete container.dataset.rendering;
 }
 
 // -------------------- Persistance --------------------
@@ -1252,7 +1449,7 @@ function ajouterAuCovoiturage(trajetData) {
 }
 
 // Fonction helper pour formater la date
-function formatDateJJMMAAAA(input) {
+export function formatDateJJMMAAAA(input) {
   if (!input) return '';
   const d = (input instanceof Date) ? input : new Date(input);
   if (isNaN(d)) return '';

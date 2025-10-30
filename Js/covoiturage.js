@@ -1,9 +1,20 @@
+// covoiturage.js (module)
+import { enrichTrajetWithCurrentUser, getCurrentUser, resolveAvatarSrc, genId, formatDateJJMMAAAA, } from './trajets.js';
+
+// utilisation :
+if (!enrichTrajetWithCurrentUser) {
+  console.warn('enrichTrajetWithCurrentUser non importé — vérifier chemin');
+}
+
 // -------------------- Helpers --------------------
 document.addEventListener('pageContentLoaded', () => {
   const resultsContainer = document.querySelector('.results');
   if (!resultsContainer) {
     return; // 🚪 sort si pas sur la page covoiturage
   }
+
+  // charger une fois l'utilisateur courant
+  let me = getCurrentUser(); // -> objet ou null
 
   // === Code bouton dev pour effacer trajets ajoutés ===
   const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -97,17 +108,35 @@ document.addEventListener('pageContentLoaded', () => {
     // Charger et normaliser les trajets publiés depuis l'espace utilisateur (localStorage)
     const trajetsSauvegardes = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
     if (trajetsSauvegardes.length > 0) {
-      // const vehicles = JSON.parse(localStorage.getItem('ecoride_vehicles') || '[]'); // optionnel si besoin
       const normalized = trajetsSauvegardes.map(t => {
-        const nt = {...t};
+        const nt = { ...t };
+
+        // assures arrays & chauffeur object
         nt.passagers = Array.isArray(nt.passagers) ? nt.passagers : [];
-        // Si capacity manquante : prendre vehicle.places ou nt.places ou fallback 4
+        nt.chauffeur = nt.chauffeur || {};
+
+        // utilise getCurrentUser pour fallback
+        let me = getCurrentUser();
+        nt.chauffeur.pseudo = nt.chauffeur.pseudo || me?.pseudo || 'Moi';
+        nt.chauffeur.photo = resolveAvatarSrc(nt.chauffeur.photo || me?.photo || '/images/default-avatar.png');
+        nt.chauffeur.rating = (nt.chauffeur.rating ?? me?.rating ?? 0);
+
+        // id : si absent, générer un id stable
+        if (!nt.id) nt.id = genId();
+
+        // normalisation date (stockee en ISO ou JJ/MM/AAAA etc.)
+        // stocke une date "raw" pour l'affichage, et normalise si besoin pour comparaison
+        nt._isoDate = (nt.date && !isNaN(new Date(nt.date))) ? new Date(nt.date).toISOString() : null;
+        nt.date = nt._isoDate ? nt._isoDate : nt.date;
+
+        // capacité / places
         const vehiclePlaces = nt.vehicle?.places ?? nt.vehicle?.seats ?? null;
-        nt.capacity = (nt.capacity !== undefined && nt.capacity !== null)
-          ? Number(nt.capacity)
-          : (vehiclePlaces !== null ? Number(vehiclePlaces) : (nt.places !== undefined ? Number(nt.places) : 4));
-        // Si places manquante : initialiser à capacity si création (ou garder si existe)
-        nt.places = (nt.places !== undefined && nt.places !== null) ? Number(nt.places) : Number(nt.capacity);
+        nt.capacity = (nt.capacity != null) ? Number(nt.capacity) : (vehiclePlaces != null ? Number(vehiclePlaces) : (nt.places != null ? Number(nt.places) : 4));
+        nt.places = (nt.places != null) ? Number(nt.places) : nt.capacity;
+
+        // enrich (optionnel, garantit champs chauffeur propre)
+        enrichTrajetWithCurrentUser(nt);
+
         return nt;
       });
 
@@ -136,49 +165,45 @@ document.addEventListener('pageContentLoaded', () => {
     });
 
     // Formate une date "souple" en "lundi 19 septembre"
-function formatFullFrDay(anyDate) {
-  if (!anyDate) return '';
-  let d = anyDate instanceof Date ? new Date(anyDate) : null;
+  function formatFullFrDay(anyDate) {
+    if (!anyDate) return '';
+    let d = anyDate instanceof Date ? new Date(anyDate) : null;
 
-  if (!d) {
-    const s = String(anyDate).trim();
+    if (!d) {
+      const s = String(anyDate).trim();
 
-    if (/^\d{2}-\d{2}-\d{4}$/.test(s)) { // JJ-MM-AAAA
-      const [dd,mm,yyyy] = s.split('-').map(Number);
-      d = new Date(yyyy, mm-1, dd);
-    } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) { // JJ/MM/AAAA
-      const [dd,mm,yyyy] = s.split('/').map(Number);
-      d = new Date(yyyy, mm-1, dd);
-    } else if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { // AAAA-MM-JJ
-      const [yyyy,mm,dd] = s.split('-').map(Number);
-      d = new Date(yyyy, mm-1, dd);
-    } else {
-      const tmp = new Date(s);
-      if (!isNaN(tmp)) d = tmp;
+      if (/^\d{2}-\d{2}-\d{4}$/.test(s)) { // JJ-MM-AAAA
+        const [dd,mm,yyyy] = s.split('-').map(Number);
+        d = new Date(yyyy, mm-1, dd);
+      } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) { // JJ/MM/AAAA
+        const [dd,mm,yyyy] = s.split('/').map(Number);
+        d = new Date(yyyy, mm-1, dd);
+      } else if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { // AAAA-MM-JJ
+        const [yyyy,mm,dd] = s.split('-').map(Number);
+        d = new Date(yyyy, mm-1, dd);
+      } else {
+        const tmp = new Date(s);
+        if (!isNaN(tmp)) d = tmp;
+      }
     }
+    if (!d || isNaN(d)) return String(anyDate); // si non parsable, on affiche tel quel
+
+    const dayName = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' }).format(d);
+    const month   = new Intl.DateTimeFormat('fr-FR', { month: 'long' }).format(d);
+    const dayNum  = d.getDate();
+
+    // sortie en minuscules pour cohérence visuelle
+    return `${dayName} ${dayNum} ${month}`.toLowerCase();
   }
-  if (!d || isNaN(d)) return String(anyDate); // si non parsable, on affiche tel quel
 
-  const dayName = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' }).format(d);
-  const month   = new Intl.DateTimeFormat('fr-FR', { month: 'long' }).format(d);
-  const dayNum  = d.getDate();
-
-  // sortie en minuscules pour cohérence visuelle
-  return `${dayName} ${dayNum} ${month}`.toLowerCase();
-}
-
-function capFirst(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
-  
-    // Crée la carte HTML d’un trajet
+  function capFirst(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+    
+      // Crée la carte HTML d’un trajet
     function createTrajetCard(trajet) {
       const card = document.createElement('div');
       card.classList.add('result-card');
       card.dataset.id = trajet.id;
-
-      // ======= Calcul des places restantes (source unique) =======
-      // Priorité : trajet.places si c'est un nombre
-      // Sinon si capacity défini => capacity - passagers.length
-      // Sinon fallback 0
+    
       const passagersArray = Array.isArray(trajet.passagers) ? trajet.passagers : [];
       const remaining = (typeof trajet.places === 'number')
         ? trajet.places
@@ -186,21 +211,22 @@ function capFirst(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
             ? Math.max(0, trajet.capacity - passagersArray.length)
             : (typeof trajet.places === 'string' && !isNaN(Number(trajet.places)) ? Number(trajet.places) : 0)
         );
-
+    
       const placesText = `${remaining} place${remaining > 1 ? 's' : ''} disponible${remaining > 1 ? 's' : ''}`;
-
-      // ===========================================================
-
+    
+      const avatarSrc = resolveAvatarSrc(trajet.chauffeur?.photo || (me?.photo || '/images/default-avatar.png'));
+    
+      // Injecte l'HTML en premier (avatarSrc utilisé directement)
       card.innerHTML = `
         <div class="result-header">
           <p class="date">${capFirst(formatFullFrDay(trajet.date))}</p>
         </div>
         <div class="result-body">
           <div class="profile-column">
-            <img src="${trajet.chauffeur.photo}" alt="Profil" class="profile-photo">
+            <img src="${avatarSrc}" alt="Profil ${trajet.chauffeur?.pseudo || ''}" class="profile-photo" onerror="this.onerror=null;this.src='/images/default-avatar.png'">
             <div class="pseudo-rating">
-              <p class="pseudo">${trajet.chauffeur.pseudo}</p>
-              <p class="rating">${'★'.repeat(trajet.chauffeur.rating)}${'☆'.repeat(5 - trajet.chauffeur.rating)}</p>
+              <p class="pseudo">${trajet.chauffeur?.pseudo || 'Inconnu'}</p>
+              <p class="rating">${'★'.repeat(trajet.chauffeur?.rating || 0)}${'☆'.repeat(5 - (trajet.chauffeur?.rating || 0))}</p>
             </div>
             <div class="column">
               <p class="type">${capitalize(trajet.type)}</p>
@@ -224,6 +250,9 @@ function capFirst(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
         </div>
       `;
 
+      const imgEl = card.querySelector('img.profile-photo');
+      if (imgEl) imgEl.src = avatarSrc;
+
       const btn = card.querySelector('.detail-btn');
       if (btn) {
         btn.addEventListener('click', () => {
@@ -231,8 +260,8 @@ function capFirst(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
           window.history.pushState({}, "", newPath);
           window.dispatchEvent(new Event("popstate"));
         });
-      }
-
+      };
+    
       return card;
     }
   
@@ -326,21 +355,21 @@ function capFirst(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
       const filtered = trajets.filter(trajet => {
         const trajetDepart = trajet.depart.toLowerCase().trim();
         const trajetArrivee = trajet.arrivee.toLowerCase().trim();
-  
+
         const departOk = departVal === '' || trajetDepart.includes(departVal);
         const arriveeOk = arriveeVal === '' || trajetArrivee.includes(arriveeVal);
         const dateOk = dateVal === '' || trajet.date.toLowerCase().includes(dateVal);
         const heureOk = heureVal === '' || trajet.heureDepart.toLowerCase().includes(heureVal);
         const placesOk = passagersVal === 0 || trajet.places >= passagersVal;
         const typeRechercheOk = typeVal === '' || trajet.type.toLowerCase() === typeVal;
-  
+
         const typeFilterOk = checkedTypes.length === 0 || checkedTypes.includes(trajet.type.toLowerCase());
         const prixOk = trajet.prix <= prixMax;
         const dureeOk = trajet.duree <= dureeMax;
         const noteOk = trajet.rating >= noteMini;
-  
+
         return departOk && arriveeOk && dateOk && heureOk && placesOk && typeRechercheOk &&
-               typeFilterOk && prixOk && dureeOk && noteOk;
+              typeFilterOk && prixOk && dureeOk && noteOk;
       });
   
       console.log('Trajets filtrés:', filtered.map(t => t.id));
@@ -449,6 +478,27 @@ function capFirst(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
     const btnReserver = document.querySelector('.search-btn.reserve-btn');
     btnReserver.addEventListener('click', () => {
       filterBySearchAndFilters();
+    });
+
+    // helper pour recalculer src d'un avatar à partir d'un trajet
+    function getAvatarForTrajet(trajet) {
+      return resolveAvatarSrc(trajet.chauffeur?.photo || me?.photo || '/images/default-avatar.png');
+    }
+
+    function updateAllAvatars() {
+      document.querySelectorAll('.result-card').forEach(card => {
+        const id = card.dataset.id;
+        const trajet = trajets.find(t => t.id === id);
+        if (!trajet) return;
+        const img = card.querySelector('img.profile-photo');
+        if (img) img.src = getAvatarForTrajet(trajet);
+      });
+    }
+
+    // écoute l'événement déclenché quand le profil est sauvegardé ailleurs
+    document.addEventListener('userUpdated', () => {
+      me = getCurrentUser();      // recharge l'objet utilisateur
+      updateAllAvatars();         // met à jour les images visibles
     });
   
     // Affiche tous les trajets au départ

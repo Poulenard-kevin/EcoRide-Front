@@ -1,0 +1,221 @@
+LocalStorage keys found:
+rememberMe
+rememberedEmail
+nouveauxTrajets
+ecoride_trajets
+ecoride_user
+profil
+ecoride_avis
+ecoride_trajets_signales
+ecoride_vehicules
+ecoride_vehicles
+ecoride_notifications
+ecoride_role
+ecoride.credits
+__ecoride_sync__
+trajets
+
+Property names found (candidates):
+Content-Type, DateTimeFormat, ECORIDE_DEV_LOCAL_SAVE, EcoridePassword, LOAD_ERROR, Modal, NO_FILE_SELECTED, Offcanvas, PREVIEW_READY, PREVIEW_READY_ALT, SAVED, SAVE_ERROR, SIZE_TOO_LARGE, TYPE_NOT_SUPPORTED, __accountInfoHandlersAttached, __attached, __ecorideAccessibleHideCreditsModal, __ecorideCreditsClickHandler, __ecorideCreditsModalBootstrapAdded, __ecorideCreditsSubmitHandler, __ecorideOpenCreditsModal, __ecorideOpenCreditsModalAccessiblePatched, __ecoride_about_mut_observer_installed, __ecoride_avatarConfirmToggleAdded, __ecoride_avatarDeleteDelegationAdded, __ecoride_forceRefreshCredits, __ecoride_password_delegate_installed, __ecoride_password_feature_installed, __ecoride_profilePhoto, __ecoride_remove_test_password, __ecoride_role_storage_listener_installed, __ecoride_save_delegate_installed, __ecoride_saving, __employeeSpace, __mock, __roleInit, __roleListenerAttached, __searchInputCleaner, _detailHandler, _ecorideTrajetSignaleListenerAdded, _installed, _isoDate, _savedTabindex, about, action, activeElement, add, addEventListener, addedNodes, adminComment, ajouterTrajetPaye, align, all, allInputsInContainer, anchor, appendChild, arguments, arrivee, assign, at, attach, autoSkip, avisData, backdrop, background, backgroundColor, bar, barPercentage, beginAtZero, behavior, bio, block, blur, body, bootstrap, border, borderRadius, bottom, boxHeight, boxWidth, brand, bubbles, call, callee, cancelable, cancellationAt, cancellationReason, capacity, capture, catch, categoryPercentage, charAt, characterData, chauffeur, chauffeurMail, checked, checkedTypes, childList, childNodes, children, clamp, classList, className, cleanListenerAttached, cleanOnSubmit, cleaned, click, cloneNode, closest, color, commissionEcoRide, commissions, computed, configurable, confirm, containerQuery, contains, couleur, counts, covoId, covoiturage, covoiturageId, createDocumentFragment, createElement, createdAt, credits, current, currentTarget, cursor, cwd, d, data, dataTransfer, dataURL, datalabels, dataset, datasets, date, dateArrivee, dateDepart, dateFR, datePaiement, dateReservation, dateTrajet, day, debugTrajets, default, defineProperty, depart, description, destroy, detail, detailId, disabled, disconnect, dispatchEvent, display, documentElement, drawBorder, driver, duree, dureeMax, ecorideCredits, editIndex, el, email, error, errors, every, extname, file, files, filter, find, findIndex, firstElementChild, flagged, flatMap, floor, focus, font, forEach, forgotAttached, form, format, formatter, found, from, fromEntries, get, getAttribute, getBoundingClientRect, getCanonicalUser, getComputedStyle, getDate, getDay, getElementById, getFullYear, getInstance, getItem, getMonth, getOwnPropertyDescriptor, getState, getTime, green, grid, handleSaveEmail, handleSavePassword, has, hasAttribute, hasFocus, head, headers, height, heureArrivee, heureDepart, hide, history, hostname, href, id, immatriculation, inRange, includes, index, indexOf, inert, info, init, initAccountInfoForm, initProfilePhotoForm, initRoleForm, innerHTML, innerText, inputConfirm, inputCurrent, inputEmail, inputNew, inputNom, inputPassword, inputPrenom, inputValidatePassword, insertAdjacentElement, insertAdjacentHTML, insertBefore, invalidEl, isArray, isDirectory, isDriverRide, isFile, isFinite, isNaN, isPassager, isTrusted, join, key, keyboard, keys, label, labels, layout, left, legend, len, length, licencePlate, load, loaded, localStorageKeys, location, lockTab, lockVehiclesWrite, log, loginValidationInitialized, mail, maintainAspectRatio, map, margin, marginTop, marque, match, matchMedia, matches, max, maxLength, maxRotation, message, meta, method, minRotation, model, modele, month, name, neu, nextElementSibling, nextSibling, node, nodeType, nom, note, noteMini, notified, now, object, observe, offset, offsetWidth, ok, okDriverPaid, onSubmit, once, onerror, onload, onpopstate, opacity, openTrajetModal, options, origin, other, outerHTML, overflow, overflowX, overflowY, padStart, padding, paddingRight, pageYOffset, parentElement, parentNode, parse, parseFromString, passager, passagerId, passagerMail, passagers, passive, password, pathHtml, pathJS, pathname, photo, places, placesReserved, placesReservees, plate, plugins, pointerEvents, position, precision, preferences, prepend, preventDefault, preventScroll, prix, prixChauffeurCredits, prixMax, propNames, property, prototype, pseudo, push, pushState, pwValidationInit, queryParams, querySelector, querySelectorAll, random, randomUUID, rating, read, readAsDataURL, readFileSync, readdirSync, readyState, reason, reduce, refuseAvis, register, registrationDate, relatedCovoiturageId, reload, remove, removeAttribute, removeEventListener, removeItem, removeProperty, removeTestPassword, renderAvisList, renderTrajetsTable, rendered, rendering, repeat, replace, requestSubmit, reservationId, reset, resolve, responsive, result, review, reviewModeration, reviewedAt, reviewedBy, reviews, right, role, round, route, save, saveBtn, scales, scrollIntoView, scrollTo, scrollTop, scrollingElement, search, seats, set, setAttribute, setCanonicalUser, setDate, setDevLocalSave, setHours, setItem, setProperty, setSelectionRange, show, showTemporarySavedText, size, slice, snippet, some, sort, source, sourceType, splice, split, src, startsWith, statSync, state, status, statut, statutPaiement, statutRaw, stopPropagation, stringLiterals, stringify, style, subject, submittedAt, substring, subtree, switchToTab, t, tabIndex, tabsInitialized, tag, tagName, target, test, text, textContent, texte, then, ticks, timestamp, title, to, toFRDash, toISOString, toLocaleDateString, toLowerCase, toString, toUpperCase, toggle, top, touched, trace, trajet, trajetsData, trim, tripId, type, unshift, updateAdminDashboard, updateAvatarUI, updateRoleFields, updateRoleFieldsFallback, updatedAt, url, user, userId, userInitiated, validEl, validateAvis, validatedAt, validationInitialized, value, values, vehicle, vehicleModel, vehicles, vehiclesLen, vehicule, visibility, warn, weekday, x, y, zIndex
+
+String literals (sample):
+admin-space.js chargé
+undefined
+ecoride_trajets
+0
+lun.
+mar.
+mer.
+jeu.
+ven.
+sam.
+dim.
+-
+/
+payé
+paye
+payee
+validé
+valide
+validee
+terminé
+termine
+done
+completed
+confirme
+confirmé
+confirmée
+conducteur
+driver
+chauffeur
+ecoride:trajet-updated
+[migrate] trajets convertis/normalisés → save
+fr-FR
+short
+[agg] init keys
+[agg] init counts keys
+[agg] test
+[agg] dates hors fenêtre 7j
+[upd] start
+function
+[upd] Chart.js non chargé
+covoituragesChart
+creditsChart
+[upd] canvas1?
+canvas2?
+[upd] Canvas introuvable (IDs)
+[upd] keys
+[upd] trajets
+[upd] trajets raw
+[upd] counts
+commissions
+totalCredits7J
+totalCreditsAll
+totalCovoits7J
+totalCovoitsAll
+(max-width: 420px)
+bottom
+end
+top
+bar
+Covoiturages (trajets payés)
+#4B8A47
+Crédits EcoRide (commission)
+#CACFAA
+[upd] charts rendus
+DOMContentLoaded
+[boot] DOM prêt, migration éventuelle + updateAdminDashboard
+[boot] Appel updateAdminDashboard()
+[spa] Vue admin déjà présente, rendu immédiat
+[spa] Canvases détectés via MutationObserver, rendu
+[spa] Canvases détectés via retry, rendu
+[spa] Canvases introuvables après retentatives
+focus
+[focus] refresh dashboard
+ecoride_utilisateurs
+Utilisateur 1
+user1@exemple.com
+Utilisateur
+actif
+Employé 1
+employe1@exemple.com
+Employé
+Utilisateur 2
+user2@exemple.com
+suspendu
+ecoride:users-updated
+accountsTableBody
+tr
+btn-suspendre
+btn-reactiver
+Suspendre
+Réactiver
+.btn-action
+click
+data-id
+employeeForm
+employeeName
+employeeEmail
+employeePassword
+button[type="submit"]
+.form-group
+is-invalid
+is-valid
+.invalid-feedback
+none
+.valid-feedback
+block
+Le nom est requis.
+Le nom doit contenir au moins 2 caractères (lettres/chiffres).
+L'email est requis.
+Le mail n'est pas au bon format.
+Le mot de passe est requis.
+8+ caractères, minuscule, majuscule, chiffre et spécial.
+input
+blur
+submit
+input[type="checkbox"][name="rememberMe"]
+input[name="email"], input#EmailInput
+Checkbox "Souviens-toi de moi" non trouvée
+Input email non trouvé
+rememberMe
+true
+rememberedEmail
+change
+login-tab
+register-tab
+login-form
+register-form
+active
+DOM ready - gestion rememberMe active
+auth.js chargé correctement (unified init)
+switch-to-register
+auth
+forgotPasswordModal
+div
+static
+#forgot-email
+#forgot-confirm
+[data-bs-dismiss="modal"]
+#forgot-feedback
+Envoi en cours...
+/api/forgot-password
+POST
+Content-Type
+application/json
+Erreur serveur
+forgot-password error
+hidden.bs.modal
+.forgot-password a, a.forgot-password-link
+forgot password requested for
+routeLoaded
+tab
+register
+smooth
+routeLoaded handler :
+#login-tab, #register-tab
+.auth-social-icons a
+data-provider
+aria-label
+provider
+input[name="Nom"]
+input[name="Prenom"]
+input[name="email"]
+input[name="password"]
+input[name="confirm-password"]
+.auth-button[type="submit"]
+.auth-button
+#EmailInput
+#PasswordInput
+#btn-validation-connexion
+login-global-feedback
+Login inputs manquants
+form-control
+contact-form
+#contact-name
+#contact-email
+#contact-subject
+#contact-message
+.btn-send
+name
+email
+input, textarea
+invalid-feedback
+valid-feedback
+invalid
+valid
+aria-invalid
+false
+Envoi...
+✅ Message envoyé (simulation).
+.invalid-feedback, .valid-feedback
+./trajets.js
+enrichTrajetWithCurrentUser non importé — vérifier chemin
+pageContentLoaded
+.results
+localhost
+127.0.0.1
+clear-user-trajets-dev
+⚠️ [DEV] Effacer tous les trajets ajoutés ?
+nouveauxTrajets
+✅ Trajets ajoutés effacés (DEV).

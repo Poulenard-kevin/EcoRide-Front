@@ -1,5 +1,5 @@
 // covoiturage.js (module)
-import { enrichTrajetWithCurrentUser, getCurrentUser, resolveAvatarSrc, genId, formatDateJJMMAAAA, } from './trajets.js';
+import { resolveAvatarSrc, getProfileAvatarFromStorage, getCurrentUser, enrichTrajetWithCurrentUser, genId, formatDateJJMMAAAA } from './trajets.js';
 
 // utilisation :
 if (!enrichTrajetWithCurrentUser) {
@@ -199,71 +199,89 @@ document.addEventListener('pageContentLoaded', () => {
   function capFirst(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
     
       // Crée la carte HTML d’un trajet
-    function createTrajetCard(trajet) {
-      const card = document.createElement('div');
-      card.classList.add('result-card');
-      card.dataset.id = trajet.id;
-    
-      const passagersArray = Array.isArray(trajet.passagers) ? trajet.passagers : [];
-      const remaining = (typeof trajet.places === 'number')
-        ? trajet.places
-        : (typeof trajet.capacity === 'number'
-            ? Math.max(0, trajet.capacity - passagersArray.length)
-            : (typeof trajet.places === 'string' && !isNaN(Number(trajet.places)) ? Number(trajet.places) : 0)
-        );
-    
-      const placesText = `${remaining} place${remaining > 1 ? 's' : ''} disponible${remaining > 1 ? 's' : ''}`;
-    
-      const avatarSrc = resolveAvatarSrc(trajet.chauffeur?.photo || (me?.photo || '/images/default-avatar.png'));
-    
-      // Injecte l'HTML en premier (avatarSrc utilisé directement)
-      card.innerHTML = `
-        <div class="result-header">
-          <p class="date">${capFirst(formatFullFrDay(trajet.date))}</p>
-        </div>
-        <div class="result-body">
-          <div class="profile-column">
-            <img src="${avatarSrc}" alt="Profil ${trajet.chauffeur?.pseudo || ''}" class="profile-photo" onerror="this.onerror=null;this.src='/images/default-avatar.png'">
-            <div class="pseudo-rating">
-              <p class="pseudo">${trajet.chauffeur?.pseudo || 'Inconnu'}</p>
-              <p class="rating">${'★'.repeat(trajet.chauffeur?.rating || 0)}${'☆'.repeat(5 - (trajet.chauffeur?.rating || 0))}</p>
+      function createTrajetCard(trajet) {
+        const card = document.createElement('div');
+        card.classList.add('result-card');
+        card.dataset.id = trajet.id;
+      
+        const passagersArray = Array.isArray(trajet.passagers) ? trajet.passagers : [];
+        const remaining = (typeof trajet.places === 'number')
+          ? trajet.places
+          : (typeof trajet.capacity === 'number'
+              ? Math.max(0, trajet.capacity - passagersArray.length)
+              : (typeof trajet.places === 'string' && !isNaN(Number(trajet.places)) ? Number(trajet.places) : 0)
+          );
+      
+        const placesText = `${remaining} place${remaining > 1 ? 's' : ''} disponible${remaining > 1 ? 's' : ''}`;
+      
+        // ✅ Nouvelle logique d'avatar améliorée
+        let avatarSrc = null;
+        if (trajet.chauffeur?.photo) {
+          avatarSrc = resolveAvatarSrc(trajet.chauffeur.photo);
+        }
+      
+        try {
+          const currentUser = getCurrentUser();
+          if (currentUser && trajet.chauffeur?.pseudo === currentUser.pseudo) {
+            avatarSrc = getProfileAvatarFromStorage() || avatarSrc;
+          }
+        } catch (e) {
+          console.warn('Erreur lors de la vérification du currentUser', e);
+        }
+      
+        if (!avatarSrc) {
+          avatarSrc = getProfileAvatarFromStorage();
+        }
+      
+        // Injecte l'HTML avec avatarSrc
+        card.innerHTML = `
+          <div class="result-header">
+            <p class="date">${capFirst(formatFullFrDay(trajet.date))}</p>
+          </div>
+          <div class="result-body">
+            <div class="profile-column">
+              <img src="${avatarSrc}" alt="Profil ${trajet.chauffeur?.pseudo || ''}" class="profile-photo" onerror="this.onerror=null;this.src='/images/default-avatar.png'">
+              <div class="pseudo-rating">
+                <p class="pseudo">${trajet.chauffeur?.pseudo || 'Inconnu'}</p>
+                <p class="rating">${'★'.repeat(trajet.chauffeur?.rating || 0)}${'☆'.repeat(5 - (trajet.chauffeur?.rating || 0))}</p>
+              </div>
+              <div class="column">
+                <p class="type">${capitalize(trajet.type)}</p>
+                <p class="places">${placesText}</p>
+              </div>
             </div>
-            <div class="column">
-              <p class="type">${capitalize(trajet.type)}</p>
-              <p class="places">${placesText}</p>
+            <div class="details">
+              <div class="column">
+                <p>${trajet.depart}</p>
+                <p>${trajet.arrivee}</p>
+              </div>
+              <div class="column">
+                <p class="time">${trajet.heureDepart}</p>
+                <p class="time">${trajet.heureArrivee}</p>
+              </div>
+              <div class="column">
+                <p class="price">${trajet.prix} crédits</p>
+                <button class="detail-btn">Détail</button>
+              </div>
             </div>
           </div>
-          <div class="details">
-            <div class="column">
-              <p>${trajet.depart}</p>
-              <p>${trajet.arrivee}</p>
-            </div>
-            <div class="column">
-              <p class="time">${trajet.heureDepart}</p>
-              <p class="time">${trajet.heureArrivee}</p>
-            </div>
-            <div class="column">
-              <p class="price">${trajet.prix} crédits</p>
-              <button class="detail-btn">Détail</button>
-            </div>
-          </div>
-        </div>
-      `;
-
-      const imgEl = card.querySelector('img.profile-photo');
-      if (imgEl) imgEl.src = avatarSrc;
-
-      const btn = card.querySelector('.detail-btn');
-      if (btn) {
-        btn.addEventListener('click', () => {
-          const newPath = `/detail/${trajet.id}`;
-          window.history.pushState({}, "", newPath);
-          window.dispatchEvent(new Event("popstate"));
-        });
-      };
-    
-      return card;
-    }
+        `;
+      
+        // Redondant mais OK si tu veux forcer
+        const imgEl = card.querySelector('img.profile-photo');
+        if (imgEl) imgEl.src = avatarSrc;
+      
+        const btn = card.querySelector('.detail-btn');
+        if (btn) {
+          btn.addEventListener('click', () => {
+            const newPath = `/detail/${trajet.id}`;
+            window.history.pushState({}, "", newPath);
+            window.dispatchEvent(new Event("popstate"));
+          });
+        }
+      
+        return card;
+      }
   
     // Capitalise la première lettre
     function capitalize(str) {

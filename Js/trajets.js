@@ -33,12 +33,33 @@ function getCovoId(item) {
 }
 
 // ---------- helpers/avatar / user ----------
-export function resolveAvatarSrc(src) {
-  if (!src) return '/images/default-avatar.png';
-  src = String(src).trim();
-  if (/^https?:\/\//i.test(src)) return src;
-  if (src.startsWith('/')) return src;
-  return '/' + src.replace(/^\/+/, '');
+
+export function resolveAvatarSrc(raw) {
+  if (!raw) return null;
+  raw = String(raw).trim();
+  if (!raw) return null;
+  if (raw.startsWith('data:') || raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('//')) return raw;
+  return raw.startsWith('/') ? raw : '/' + raw;
+}
+
+export function getProfileAvatarFromStorage() {
+  try {
+    const rawUser = localStorage.getItem('ecoride_user');
+    if (rawUser) {
+      const u = JSON.parse(rawUser);
+      if (u && u.photo) return resolveAvatarSrc(u.photo);
+    }
+  } catch(e){}
+  try {
+    const raw = localStorage.getItem('ecoride_profileAvatar');
+    if (raw) {
+      const v = JSON.parse(raw);
+      if (typeof v === 'string') return resolveAvatarSrc(v);
+      if (v && v.dataURL) return resolveAvatarSrc(v.dataURL);
+      if (v && v.url) return resolveAvatarSrc(v.url);
+    }
+  } catch(e){}
+  return '/images/default-avatar.png';
 }
 
 export function getCurrentUser() {

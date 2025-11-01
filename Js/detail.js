@@ -1,3 +1,5 @@
+import { resolveAvatarSrc, getProfileAvatarFromStorage } from './trajets.js';
+
 console.log("🔍 detail.js chargé !");
 
 // =================== Helpers ===================
@@ -311,9 +313,29 @@ document.addEventListener("pageContentLoaded", () => {
 
   const photoElement = document.getElementById("detail-photo");
   if (photoElement) {
-    let src = trajet.chauffeur?.photo || "images/default-avatar.png";
-    if (!src.startsWith("http") && src.startsWith("/")) src = src.substring(1);
-    photoElement.src = "/" + src;
+    let computedSrc = null;
+
+    // Priorité 1 : photo explicite du chauffeur
+    if (trajet.chauffeur?.photo) {
+      computedSrc = resolveAvatarSrc(trajet.chauffeur.photo);
+    }
+
+    // Priorité 2 : si le chauffeur est l'utilisateur actuel, utiliser l'avatar du profil
+    try {
+      const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
+      if (me && me.pseudo && trajet.chauffeur?.pseudo && me.pseudo === trajet.chauffeur.pseudo) {
+        computedSrc = getProfileAvatarFromStorage() || computedSrc;
+      }
+    } catch (e) {
+      console.warn('Erreur lors de la vérification du currentUser', e);
+    }
+
+    // Priorité 3 : fallback global
+    if (!computedSrc) {
+      computedSrc = getProfileAvatarFromStorage();
+    }
+
+    photoElement.src = computedSrc;
   }
 
   const pseudoElement = document.getElementById("detail-pseudo");
@@ -723,3 +745,9 @@ function reserverPlace(trajet, seats = 1) {
   // Redirection vers espace utilisateur avec onglet trajets ouvert
   window.location.href = "/espace-utilisateur?tab=trajets";
 }
+
+window.addEventListener('userUpdated', (ev) => {
+  const avatar = ev?.detail?.avatar || getProfileAvatarFromStorage();
+  const photoElement = document.getElementById("detail-photo");
+  if (photoElement) photoElement.src = avatar;
+});

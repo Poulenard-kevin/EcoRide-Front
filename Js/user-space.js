@@ -36,6 +36,28 @@ function getVehicleLabel(v) {
   return `${brand} ${model} ${color}`.trim();
 }
 
+// Helpers réutilisables au niveau module (utilisés par plusieurs fonctions)
+function readField(frm, idOrName) {
+  if (!frm) return '';
+  const byId = frm.querySelector(`#${idOrName}`);
+  if (byId) return (byId.value ?? '').trim();
+  const byName = frm.elements?.[idOrName];
+  if (byName) return (byName.value ?? '').trim();
+  const byNameSel = frm.querySelector(`[name="${idOrName}"]`);
+  if (byNameSel) return (byNameSel.value ?? '').trim();
+  return '';
+}
+
+function setField(frm, idOrName, value) {
+  if (!frm) return false;
+  const byId = frm.querySelector(`#${idOrName}`);
+  if (byId) { byId.value = value ?? ''; return true; }
+  if (frm.elements?.[idOrName]) { frm.elements[idOrName].value = value ?? ''; return true; }
+  const byNameSel = frm.querySelector(`[name="${idOrName}"]`);
+  if (byNameSel) { byNameSel.value = value ?? ''; return true; }
+  return false;
+}
+
 // -------------------- Normalisation dates trajets --------------------
 function normalizeRideDates() {
   let trajets = JSON.parse(localStorage.getItem('trajets')) || [];
@@ -480,90 +502,83 @@ function initVehicleManagement() {
 }
 
 function bindVehiclesFormHandlers() {
-  const form = document.querySelector('#user-vehicles-form #create-vehicle-form');
-  const plateInput = form?.querySelector('#plate');
-  if (!form || !plateInput) {
+  // Récupère le form au moment de l'init (pour l'attacher),
+  // mais dans le handler on re-query pour avoir des références fraîches.
+  let form = document.querySelector('#user-vehicles-form #create-vehicle-form');
+  if (!form) {
     console.warn('Formulaire véhicules introuvable (bind)');
     return;
   }
 
   const saveBtn = document.querySelector('#vehicle-save-btn');
+  if (saveBtn) saveBtn.type = 'button';
 
-  // 🚫 Neutralise le comportement natif du bouton et du formulaire
-  if (saveBtn) {
-    saveBtn.type = 'button'; // évite submit automatique
-  }
-  form.addEventListener('submit', e => e.preventDefault()); // stop toute soumission par Enter
-
-  // 🟢 Le bouton "Enregistrer" déclenche manuellement le submit du form
-  if (saveBtn) {
-    saveBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      // Appelle le gestionnaire de submit du formulaire
-      form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+  // Format plaque (on garde ta logique)
+  const plateInput = form.querySelector('#plate');
+  if (plateInput) {
+    plateInput.addEventListener('input', (e) => {
+      let raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      raw = raw.slice(0, 7);
+      let formatted = '';
+      if (raw.length <= 2) formatted = raw;
+      else if (raw.length <= 5) formatted = raw.slice(0, 2) + ' - ' + raw.slice(2);
+      else formatted = raw.slice(0, 2) + ' - ' + raw.slice(2, 5) + ' - ' + raw.slice(5);
+      e.target.value = formatted;
     });
   }
 
-  // --- Format intelligent de plaque : AB - 123 - CD ---
-  plateInput.addEventListener('input', (e) => {
-    let raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-
-    // Tronque à 7 caractères max
-    raw = raw.slice(0, 7);
-
-    // Décompose selon progression
-    let formatted = '';
-    if (raw.length <= 2) {
-      // lettres
-      formatted = raw;
-    } else if (raw.length <= 5) {
-      // 2 lettres + 3 chiffres
-      formatted = raw.slice(0, 2) + ' - ' + raw.slice(2);
-    } else {
-      // complet : 2 lettres, 3 chiffres, 2 lettres
-      formatted = raw.slice(0, 2) + ' - ' + raw.slice(2, 5) + ' - ' + raw.slice(5);
+  // Le handler de submit — on re-query le form et les champs à l'intérieur
+  const handleSubmit = (e) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+      e.stopPropagation();
     }
 
-    e.target.value = formatted;
-  });
+    // Reprendre une référence fraîche du form (au cas où il ait été réinjecté)
+    form = document.querySelector('#user-vehicles-form #create-vehicle-form');
+    if (!form) {
+      console.error('Formulaire introuvable au moment du submit');
+      return;
+    }
 
-  // Submit
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+    // Lecture défensive des champs
+    const plate = readField(form, 'plate');
+    // Debug utile si plate est vide
+    if (!plate) {
+      console.error('Champ #plate introuvable ou vide', { plate });
+      alert('Le champ de la plaque est introuvable ou vide.');
+      return;
+    }
 
-    // Bloquer les onglets pendant le traitement
-    document.body.dataset.lockTab = '1';
+    const regex = /^[A-Z]{2} - \d{3} - [A-Z]{2}$/;
+    if (!regex.test(plate)) {
+      alert("⚠️ La plaque doit être au format : AB - 123 - CD");
+      return;
+    }
+
+    let registrationDate = readField(form, 'registration-date');
+    if (registrationDate.includes('/')) registrationDate = convertFRtoISO(registrationDate);
+
+    const vehicleData = {
+      id: plate,
+      plate,
+      registrationDate,
+      marque: readField(form, 'vehicle-marque'),
+      model: readField(form, 'vehicle-model'),
+      color: readField(form, 'vehicle-color'),
+      // support id="vehicle-type" ou name="vehicleType"
+      type: readField(form, 'vehicle-type') || readField(form, 'vehicleType'),
+      seats: readField(form, 'seats'),
+      preferences: Array.from(form.querySelectorAll('input[name="preferences"]:checked')).map(el => el.value),
+      other: readField(form, 'other'),
+    };
 
     try {
+      document.body.dataset.lockTab = '1';
       loadVehicles();
 
       const editIdxAttr = form.dataset.editIndex;
       const editIdx = editIdxAttr !== undefined ? parseInt(editIdxAttr, 10) : null;
-
-      const plate = form.querySelector('#plate').value.trim();
-      const regex = /^[A-Z]{2} - \d{3} - [A-Z]{2}$/;
-      if (!regex.test(plate)) {
-        alert("⚠️ La plaque doit être au format : AB - 123 - CD");
-        return;
-      }
-
-      let registrationDate = form.querySelector('#registration-date').value.trim();
-      if (registrationDate.includes('/')) registrationDate = convertFRtoISO(registrationDate);
-
-      const vehicleData = {
-        id: plate,
-        plate,
-        registrationDate,
-        marque: form.querySelector('#vehicle-marque').value.trim(),
-        model: form.querySelector('#vehicle-model').value.trim(),
-        color: form.querySelector('#vehicle-color').value.trim(),
-        type: form.querySelector('#vehicleType').value.trim(),
-        seats: form.querySelector('#seats').value.trim(),
-        preferences: Array.from(form.querySelectorAll('input[name="preferences"]:checked')).map(el => el.value),
-        other: form.querySelector('#other').value.trim(),
-      };
 
       const existsIdx = vehicles.findIndex(v =>
         normalizePlate(v.id || v.plate) === normalizePlate(plate)
@@ -591,44 +606,48 @@ function bindVehiclesFormHandlers() {
       form.reset();
       updateVehicleListOnly();
 
-      // >>> Scroll vers "Mes véhicules enregistrés"
-    const usedForm = document.querySelector('#used-vehicles-form');
-    const usedTitle = usedForm?.querySelector('.title-my-used-vehicles h2'); // "Mes véhicules enregistrés"
-    (usedTitle || usedForm)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const usedForm = document.querySelector('#used-vehicles-form');
+      const usedTitle = usedForm?.querySelector('.title-my-used-vehicles h2');
+      (usedTitle || usedForm)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     } catch (err) {
       console.error('❌ Erreur submit véhicules', err);
+      alert('Une erreur est survenue lors de l\'enregistrement du véhicule. Regarde la console.');
     } finally {
       delete document.body.dataset.lockTab;
     }
-  });
+  };
 
- // ✅ Gestion propre d'Enter : navigation + envoi uniquement au dernier champ
-  const fields = Array.from(form.querySelectorAll('input, select, textarea'));
-  const lastField = fields[fields.length - 1];
+  // Attache le listener (une seule fois)
+  form.addEventListener('submit', handleSubmit);
 
-  // empêcher toute soumission automatique
-  form.addEventListener('submit', e => e.preventDefault());
+  // Bouton Enregistrer : appelle directement le handler (plus sûr que dispatchEvent)
+  if (saveBtn) {
+    saveBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handleSubmit();
+    });
+  }
 
+  // Gestion propre d'Enter : navigation + envoi uniquement au dernier champ
+  const refreshFields = () => Array.from(form.querySelectorAll('input, select, textarea'));
   form.addEventListener('keydown', (e) => {
-    // on réagit uniquement à Enter
     if (e.key !== 'Enter') return;
-
-    // toujours empêcher la soumission HTML native
     e.preventDefault();
     e.stopPropagation();
 
+    const fields = refreshFields();
+    const lastField = fields[fields.length - 1];
     const currentIndex = fields.indexOf(document.activeElement);
     const next = fields[currentIndex + 1];
 
-    // 🔹 Si pas dernier → focus suivant
     if (next && document.activeElement !== lastField) {
       next.focus({ preventScroll: true });
       next.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
-    // 🔹 Si dernier champ → on valide (manuellement)
     if (document.activeElement === lastField) {
       if (saveBtn) saveBtn.click();
     }
@@ -813,13 +832,17 @@ function updateVehicleListOnly() {
   console.log('✅ Liste véhicules mise à jour:', vehiclesLocal.length, 'véhicules');
 }
 
+// ---------- showVehicleModal ----------
 function showVehicleModal(vehicle) {
   let modal = document.getElementById('vehicleDetailModal');
+
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'vehicleDetailModal';
     modal.className = 'modal fade';
     modal.tabIndex = -1;
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
     modal.innerHTML = `
       <div class="modal-dialog">
         <div class="modal-content">
@@ -834,6 +857,7 @@ function showVehicleModal(vehicle) {
     document.body.appendChild(modal);
   }
 
+  // Remplir le contenu
   const modalBody = modal.querySelector('.modal-body');
   modalBody.innerHTML = `
     <p><strong>Marque :</strong> ${vehicle.marque || "Non spécifiée"}</p>
@@ -847,15 +871,50 @@ function showVehicleModal(vehicle) {
     <p><strong>Autre :</strong> ${vehicle.other || "N/A"}</p>
   `;
 
-  const bsModal = new bootstrap.Modal(modal);
-  bsModal.show();
+  // Attacher handlers idempotents (shown / hide) pour gérer le focus et éviter le warning aria-hidden
+  if (!modal.dataset.modalHandlersAttached) {
+    // Quand la modale est affichée -> focus sur la croix
+    modal.addEventListener('shown.bs.modal', () => {
+      const closeBtn = modal.querySelector('.btn-close');
+      if (closeBtn && typeof closeBtn.focus === 'function') {
+        try { closeBtn.focus({ preventScroll: true }); } catch (e) { try { closeBtn.focus(); } catch (er) {} }
+      } else {
+        // fallback : focus sur le dialog container
+        try { modal.focus(); } catch (e) {}
+      }
+    });
+
+    // Avant que la modale commence à se cacher -> blur l'élément actif s'il est dans la modale (évite aria-hidden block)
+    modal.addEventListener('hide.bs.modal', () => {
+      try {
+        const active = document.activeElement;
+        if (active && modal.contains(active) && typeof active.blur === 'function') {
+          active.blur();
+        } else if (active && typeof active.blur === 'function') {
+          // fallback: blur global
+          active.blur();
+        }
+      } catch (e) { /* ignore */ }
+    });
+
+    modal.dataset.modalHandlersAttached = '1';
+  }
+
+  // Blur l'élément actif avant d'ouvrir (préventif)
+  if (typeof safeBlurActiveElement === 'function') safeBlurActiveElement();
+
+  // Ouvrir la modale (backdrop true / keyboard true) => permet fermeture clic en dehors
+  let bs = bootstrap.Modal.getInstance(modal);
+  if (!bs) bs = new bootstrap.Modal(modal, { backdrop: true, keyboard: true, focus: true });
+  bs.show();
 }
 
+// ---------- injectDeleteModal ----------
 function injectDeleteModal() {
   if (document.getElementById('deleteModal')) return;
 
   const modalHTML = `
-    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel">
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" role="dialog" aria-modal="true">
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
@@ -875,9 +934,37 @@ function injectDeleteModal() {
   `;
   document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-  // Rendez le conteneur modale focusable (utile pour déplacer le focus)
   const el = document.getElementById('deleteModal');
   if (el) el.setAttribute('tabindex', '-1');
+
+  // Attacher handlers idempotents pour focus / blur
+  if (!el.dataset.modalHandlersAttached) {
+    el.addEventListener('shown.bs.modal', () => {
+      const closeBtn = el.querySelector('.btn-close');
+      if (closeBtn && typeof closeBtn.focus === 'function') {
+        try { closeBtn.focus({ preventScroll: true }); } catch (e) { try { closeBtn.focus(); } catch (er) {} }
+      } else {
+        try { el.focus(); } catch (e) {}
+      }
+    });
+
+    el.addEventListener('hide.bs.modal', () => {
+      try {
+        const active = document.activeElement;
+        if (active && el.contains(active) && typeof active.blur === 'function') {
+          active.blur();
+        } else if (active && typeof active.blur === 'function') {
+          active.blur();
+        }
+      } catch (e) { /* ignore */ }
+    });
+
+    el.dataset.modalHandlersAttached = '1';
+  }
+
+  // (optionnel) initialiser instance Bootstrap pour être sûr
+  let inst = bootstrap.Modal.getInstance(el);
+  if (!inst) inst = new bootstrap.Modal(el, { backdrop: true, keyboard: true, focus: true });
 }
 
 // -------------------- Events globaux actions (Modifier/Supprimer) --------------------
@@ -925,18 +1012,22 @@ function handleModifyClick(index) {
       console.error('Formulaire véhicules introuvable');
       return;
     }
-
+  
     form.dataset.editIndex = String(index);
-
-    form.querySelector('#plate').value = vehicle.plate || '';
-    form.querySelector('#registration-date').value = formatDateForInput(vehicle.registrationDate);
-    form.querySelector('#vehicle-marque').value = vehicle.marque || '';
-    form.querySelector('#vehicle-model').value = vehicle.model || '';
-    form.querySelector('#vehicle-color').value = vehicle.color || '';
-    form.querySelector('#vehicleType').value = vehicle.type || '';
-    form.querySelector('#seats').value = vehicle.seats || '';
-    form.querySelector('#other').value = vehicle.other || '';
-
+  
+    // remplissage défensif via setField (supporte id ou name)
+    setField(form, 'plate', vehicle.plate || '');
+    setField(form, 'registration-date', formatDateForInput(vehicle.registrationDate));
+    setField(form, 'vehicle-marque', vehicle.marque || '');
+    setField(form, 'vehicle-model', vehicle.model || '');
+    setField(form, 'vehicle-color', vehicle.color || '');
+    // support id="vehicle-type" ou name="vehicleType"
+    setField(form, 'vehicle-type', vehicle.type || '');
+    setField(form, 'vehicleType', vehicle.type || '');
+    setField(form, 'seats', vehicle.seats || '');
+    setField(form, 'other', vehicle.other || '');
+  
+    // preferences (checkboxes)
     form.querySelectorAll('input[name="preferences"]').forEach(input => {
       input.checked = !!(vehicle.preferences && vehicle.preferences.includes(input.value));
     });
@@ -953,6 +1044,17 @@ function handleAddClick() {
   switchToTab('user-vehicles-form');
 }
 
+// Helper module-level (unique)
+function safeBlurActiveElement() {
+  try {
+    const prev = document.activeElement;
+    if (prev && prev !== document.body && typeof prev.blur === 'function') {
+      prev.blur();
+    }
+  } catch (e) { /* ignore */ }
+}
+
+// ---------------- handleDeleteClick corrigé ----------------
 function handleDeleteClick(target) {
   const vehicleElements = Array.from(document.querySelectorAll('#vehicleList .vehicle-container'));
   vehicleToDeleteIndex = vehicleElements.findIndex(vc => vc.contains(target));
@@ -960,10 +1062,23 @@ function handleDeleteClick(target) {
     console.error("Véhicule à supprimer non trouvé");
     return;
   }
-  // Déplace le focus sur la modale après son affichage (optionnel)
+
   const deleteModalEl = document.getElementById('deleteModal');
-  const deleteModal = new bootstrap.Modal(deleteModalEl, { backdrop: true, focus: true });
-  deleteModal.show();
+  if (!deleteModalEl) {
+    console.error('❌ deleteModal introuvable');
+    return;
+  }
+
+  // Blur l'élément actif pour éviter le warning aria-hidden
+  safeBlurActiveElement();
+
+  // Récupère l'instance existante ou en crée une nouvelle
+  let deleteModalInstance = bootstrap.Modal.getInstance(deleteModalEl);
+  if (!deleteModalInstance) {
+    deleteModalInstance = new bootstrap.Modal(deleteModalEl, { backdrop: true, focus: true });
+  }
+
+  deleteModalInstance.show();
 }
 
 function handleConfirmDelete() {
@@ -974,11 +1089,12 @@ function handleConfirmDelete() {
 
   console.log('🗑️ Suppression du véhicule à l\'index', vehicleToDeleteIndex);
 
+  // Suppression des données + persistance
   vehicles.splice(vehicleToDeleteIndex, 1);
   saveVehicles();
   vehicleToDeleteIndex = null;
 
-  // ✅ Met à jour UNIQUEMENT la liste (pas tout le panel)
+  // Mise à jour uniquement de la liste visible
   updateVehicleListOnly();
 
   const deleteModalEl = document.getElementById('deleteModal');
@@ -989,65 +1105,100 @@ function handleConfirmDelete() {
 
   // 🔒 Verrouille navigation + réécritures
   document.body.dataset.lockTab = '1';
-  document.body.dataset.lockVehiclesWrite = '1'; // nouveau verrou
+  document.body.dataset.lockVehiclesWrite = '1';
 
-  deleteModalEl.removeAttribute('aria-hidden');
-  if (deleteModalEl.contains(document.activeElement)) {
-    try { (document.activeElement instanceof HTMLElement) && document.activeElement.blur(); } catch {}
-  }
-
-  const vehTabLink = document.querySelector('.nav-pills.user-tabs .nav-link[href="#user-vehicles-form"]');
-  if (vehTabLink && typeof vehTabLink.focus === 'function') {
-    vehTabLink.focus({ preventScroll: true });
-  }
-
+  // Récupère et prépare la modale Bootstrap
   let bsModal = bootstrap.Modal.getInstance(deleteModalEl);
   if (!bsModal) bsModal = new bootstrap.Modal(deleteModalEl);
-  
-  console.log('Modal about to hide; active tab =',
-    document.querySelector('.nav-pills.user-tabs .nav-link.active')?.textContent?.trim()
-  );
-  
-  bsModal.hide();
 
+  // Déplacer le focus sur une cible sûre (onglet Véhicules ou body)
+  const safeTarget = document.querySelector('.nav-pills.user-tabs .nav-link[href="#user-vehicles-form"]') || document.body;
+
+  try {
+    // Si le focus est dans la modale, blur() d'abord
+    const prevActive = document.activeElement;
+    if (deleteModalEl.contains(prevActive) && typeof prevActive.blur === 'function') {
+      try { prevActive.blur(); } catch (e) { /* ignore */ }
+    }
+  } catch (e) { /* ignore */ }
+
+  // Tenter de focaliser l'élément sûr
+  try {
+    if (safeTarget && typeof safeTarget.focus === 'function') safeTarget.focus({ preventScroll: true });
+  } catch (e) { /* ignore */ }
+
+  // Fonction util : attendre que le focus ne soit plus dans la modal, sinon fallback
+  const waitAndHide = (modalEl, modalInstance, maxMs = 300) => {
+    const start = Date.now();
+    const tick = () => {
+      // Si l'élément focussé n'est PAS dans la modal -> safe to hide
+      if (!modalEl.contains(document.activeElement)) {
+        try {
+          modalInstance.hide();
+        } catch (err) {
+          console.warn('Erreur hide() (fallback remove)', err);
+          try { modalEl.remove(); } catch (e) {}
+        }
+        return;
+      }
+      // timeout encore disponible -> re-tenter rapidement
+      if (Date.now() - start < maxMs) {
+        setTimeout(tick, 10);
+        return;
+      }
+      // Timeout atteint : fallback forcé (blur + hide)
+      try { document.activeElement && document.activeElement.blur(); } catch (e) {}
+      setTimeout(() => {
+        try {
+          modalInstance.hide();
+        } catch (err) {
+          try { modalEl.remove(); } catch (e) {}
+        }
+      }, 0);
+    };
+    // Lancer la première vérification dans la prochaine frame
+    setTimeout(tick, 0);
+  };
+
+  // Lance la fermeture sécurisée
+  waitAndHide(deleteModalEl, bsModal, 400);
+
+  // Nettoyage et réactivation UI quand la modale est effectivement cachée
   deleteModalEl.addEventListener('hidden.bs.modal', () => {
     console.log('🔓 Modal hidden event triggered');
-  
-    // Nettoyage backdrops
+
+    // Nettoyage des backdrops / classes Bootstrap si restées
     document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
     document.body.classList.remove('modal-open');
-  
-    // Remise à zéro des styles pour permettre le scroll
-    document.body.style.overflow = 'auto';  
+
+    // Remise à zéro des styles (scroll)
+    document.body.style.overflow = 'auto';
     document.body.style.paddingRight = '';
-  
+
     // Vérifie et restaure le markup si corrompu
-    ensureVehiclesPanelMarkup();
-  
+    try { ensureVehiclesPanelMarkup(); } catch (e) { console.warn('ensureVehiclesPanelMarkup erreur', e); }
+
     // Désactive tous les onglets et active "Mes véhicules"
-    const allTabs = document.querySelectorAll('.nav-pills .nav-link');
-    let vehTabActivated = false;
-  
-    allTabs.forEach(tab => {
-      tab.classList.remove('active');
-      const text = tab.textContent.trim().toLowerCase();
-      if (text.includes('véhicule') || text.includes('vehicule')) {
-        tab.classList.add('active');
-        vehTabActivated = true;
-        console.log(`✅ Onglet activé: "${tab.textContent.trim()}"`);
-      } else {
-        console.log(`🔹 Onglet "${tab.textContent.trim()}" désactivé`);
-      }
-    });
-  
-    if (!vehTabActivated) {
-      console.error('❌ Impossible d\'activer l\'onglet "Mes véhicules"');
+    try {
+      const allTabs = document.querySelectorAll('.nav-pills .nav-link');
+      let vehTabActivated = false;
+      allTabs.forEach(tab => {
+        tab.classList.remove('active');
+        const text = tab.textContent.trim().toLowerCase();
+        if (text.includes('véhicule') || text.includes('vehicule')) {
+          tab.classList.add('active');
+          vehTabActivated = true;
+        }
+      });
+      if (!vehTabActivated) console.error('❌ Impossible d\'activer l\'onglet "Mes véhicules"');
+    } catch (e) {
+      console.warn('Erreur lors de la réactivation des onglets', e);
     }
-  
+
     // Déverrouille
     delete document.body.dataset.lockTab;
     delete document.body.dataset.lockVehiclesWrite;
-  
+
     const activeTab = document.querySelector('.nav-pills .nav-link.active');
     console.log('✅ Modal closed. Active tab =', activeTab?.textContent?.trim() || 'NONE');
   }, { once: true });

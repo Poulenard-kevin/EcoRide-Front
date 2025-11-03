@@ -3,6 +3,103 @@ import { resolveAvatarSrc, getProfileAvatarFromStorage } from './trajets.js';
 console.log("🔍 detail.js chargé !");
 
 // =================== Helpers ===================
+
+// Renvoie la description de profil (legacy ou canonical)
+function getProfileAboutFromStorage() {
+  try {
+    // legacy key peut être une string JSON { text: "...", ... } ou une simple string
+    const legacyRaw = localStorage.getItem('ecoride.profileAbout');
+    if (legacyRaw) {
+      try {
+        const parsed = JSON.parse(legacyRaw);
+        if (parsed) {
+          if (typeof parsed === 'object' && parsed.text && String(parsed.text).trim()) return String(parsed.text).trim();
+          // parfois stocké { about: '...' }
+          if (typeof parsed === 'object' && parsed.about && String(parsed.about).trim()) return String(parsed.about).trim();
+        }
+      } catch (e) {
+        // pas JSON -> peut être une string brute
+        if (typeof legacyRaw === 'string' && legacyRaw.trim()) return legacyRaw.trim();
+      }
+    }
+
+    // fallback canonical user
+    const raw = localStorage.getItem('ecoride_user');
+    if (!raw) return null;
+    const user = JSON.parse(raw);
+    if (user && user.about && String(user.about).trim()) return String(user.about).trim();
+
+    return null;
+  } catch (err) {
+    console.error('getProfileAboutFromStorage error', err);
+    return null;
+  }
+}
+
+// S'assure qu'il existe un élément DOM pour afficher le about ; si non, il le crée sous le <h1> principal
+function ensureAboutEl() {
+  let el = document.getElementById('driver-about-text') || document.querySelector('#profileAboutCard p') || document.querySelector('[data-ecoride-about]');
+  if (el) return el;
+
+  // trouver un point d'insertion raisonnable : .detail-container, main ou premier <h1>
+  const container = document.querySelector('.detail-container') || document.querySelector('main') || document.body;
+  const h1 = container.querySelector('h1') || container.querySelector('header h1');
+
+  // créer wrapper si absent
+  const wrapper = document.createElement('div');
+  wrapper.id = 'profileAboutCard';
+  wrapper.style.margin = '1rem 0';
+  wrapper.innerHTML = `<p id="driver-about-text" class="text-muted"></p>`;
+
+  if (h1 && h1.parentNode) {
+    h1.parentNode.insertBefore(wrapper, h1.nextSibling);
+  } else {
+    // sinon append en tête du container
+    container.prepend(wrapper);
+  }
+
+  return document.getElementById('driver-about-text');
+}
+
+// update DOM pour le texte "À propos"
+function updateDriverAboutDom() {
+  const el = ensureAboutEl();
+  if (!el) return;
+  const about = getProfileAboutFromStorage();
+  const output = about && about.trim() ? about.trim() : 'Aucune description fournie.';
+  el.textContent = output;
+  if (output === 'Aucune description fournie.') el.classList.add('text-muted');
+  else el.classList.remove('text-muted');
+}
+
+if (!window.__ecoride_about_listeners_installed) {
+  window.addEventListener('ecoride:userUpdated', updateDriverAboutDom);
+  window.addEventListener('userUpdated', updateDriverAboutDom);
+  window.__ecoride_about_listeners_installed = true;
+}
+
+// --- Gestion de l'avatar ---
+const DEFAULT_AVATAR = '/images/default-avatar.png'; // <-- Adapte ce chemin si ton avatar par défaut est ailleurs
+
+function handleAvatarUpdateEvent(ev) {
+  const avatar = ev?.detail?.avatar || getProfileAvatarFromStorage();
+  const photoElement = document.getElementById("detail-photo");
+  if (photoElement) {
+    photoElement.src = avatar || DEFAULT_AVATAR;
+    // Ajout d'un gestionnaire d'erreur pour les images cassées
+    photoElement.onerror = () => {
+      photoElement.onerror = null; // Évite les boucles infinies
+      photoElement.src = DEFAULT_AVATAR;
+    };
+  }
+}
+
+if (!window.__ecoride_avatar_listeners_installed) {
+  window.addEventListener('userUpdated', handleAvatarUpdateEvent);
+  window.addEventListener('ecoride:userUpdated', handleAvatarUpdateEvent);
+  window.__ecoride_avatar_listeners_installed = true;
+}
+
 function getCovoId(item) {
   return item?.detailId || item?.covoiturageId || item?.id || null;
 }
@@ -335,7 +432,9 @@ document.addEventListener("pageContentLoaded", () => {
       computedSrc = getProfileAvatarFromStorage();
     }
 
-    photoElement.src = computedSrc;
+    const DEFAULT_AVATAR = '/images/default-avatar.png'; // adapte le chemin
+    photoElement.src = computedSrc || DEFAULT_AVATAR;
+    photoElement.onerror = () => { photoElement.onerror = null; photoElement.src = DEFAULT_AVATAR; };
   }
 
   const pseudoElement = document.getElementById("detail-pseudo");
@@ -437,16 +536,15 @@ document.addEventListener("pageContentLoaded", () => {
 
   /* ---------- Insert "À propos du conducteur" next to <h1>Véhicule ---------- */
   function renderDriverAbout(trajetParam) {
-    const STORAGE_KEYS_TO_CHECK = ['profil', 'ecoride_user', 'profile', 'user', 'ecoride.profileAbout'];
     const NO_DESCRIPTION_MSG = 'Aucune description fournie.';
-
+  
     function looksLikeARoleString(s) {
       if (!s || typeof s !== 'string') return false;
       const norm = s.trim().toLowerCase();
       return ['chauffeur','passager','driver','passenger','both','les deux'].includes(norm)
         || (/^[a-z]{1,20}$/i.test(norm));
     }
-
+  
     function getDriverAboutFromTrajet(pTrajet) {
       try {
         const drv = pTrajet ? (pTrajet.chauffeur || pTrajet.driver || null) : null;
@@ -462,53 +560,17 @@ document.addEventListener("pageContentLoaded", () => {
         if (typeof drv.role === 'string' && drv.role.trim().length > 30 && !looksLikeARoleString(drv.role)) {
           return drv.role.trim();
         }
-      } catch (e) { console.warn('getDriverAboutFromTrajet error', e); }
-      return null;
+        return null;
+      } catch (e) {
+        console.warn('getDriverAboutFromTrajet error', e);
+        return null;
+      }
     }
-
-    function readFromProfil() {
-      try {
-        const rawProfil = localStorage.getItem('profil');
-        if (rawProfil) {
-          let obj = null;
-          try { obj = JSON.parse(rawProfil); } catch(e){ obj = null; }
-          if (obj) {
-            if (typeof obj.about === 'string' && obj.about.trim()) return obj.about.trim();
-            if (typeof obj.bio === 'string' && obj.bio.trim()) return obj.bio.trim();
-            if (typeof obj.description === 'string' && obj.description.trim()) return obj.description.trim();
-            if (typeof obj.text === 'string' && obj.text.trim()) return obj.text.trim();
-            if (obj.role && typeof obj.role === 'object') {
-              if (typeof obj.role.description === 'string' && obj.role.description.trim()) return obj.role.description.trim();
-              if (typeof obj.role.text === 'string' && obj.role.text.trim()) return obj.role.text.trim();
-            }
-            if (typeof obj.role === 'string' && obj.role.trim().length > 30 && !looksLikeARoleString(obj.role)) return obj.role.trim();
-          }
-        }
-
-        for (const k of STORAGE_KEYS_TO_CHECK) {
-          const r = localStorage.getItem(k);
-          if (!r) continue;
-          let p = null;
-          try { p = JSON.parse(r); } catch(e){ p = null; }
-          if (!p) continue;
-          if (typeof p.about === 'string' && p.about.trim()) return p.about.trim();
-          if (typeof p.bio === 'string' && p.bio.trim()) return p.bio.trim();
-          if (typeof p.description === 'string' && p.description.trim()) return p.description.trim();
-          if (typeof p.text === 'string' && p.text.trim()) return p.text.trim();
-          if (p.role && typeof p.role === 'object') {
-            if (typeof p.role.description === 'string' && p.role.description.trim()) return p.role.description.trim();
-            if (typeof p.role.text === 'string' && p.role.text.trim()) return p.role.text.trim();
-          }
-          if (typeof p.role === 'string' && p.role.trim().length > 30 && !looksLikeARoleString(p.role)) return p.role.trim();
-        }
-      } catch (e) { console.warn('readFromProfil error', e); }
-      return null;
-    }
-
+  
     function writeToDom(text) {
-      const el = document.getElementById('driver-about-text') || document.querySelector('#profileAboutCard p') || document.querySelector('[data-ecoride-about]');
+      const el = ensureAboutEl(); // ensureAboutEl doit être défini dans Helpers (créé si nécessaire)
       if (!el) {
-        console.warn('renderDriverAbout: élément cible introuvable');
+        console.warn('renderDriverAbout: élément cible introuvable/après ensureAboutEl');
         return;
       }
       const output = (text && String(text).trim()) ? String(text).trim() : NO_DESCRIPTION_MSG;
@@ -516,45 +578,38 @@ document.addEventListener("pageContentLoaded", () => {
       if (output === NO_DESCRIPTION_MSG) el.classList.add('text-muted');
       else el.classList.remove('text-muted');
     }
-
-    // priority: trajet.chauffeur => profil local => default
+  
+    // priorités : trajet.chauffeur -> profil local (legacy/canonical) -> défaut
     const aboutFromTrajet = getDriverAboutFromTrajet(trajetParam);
-    const aboutFromProfil = readFromProfil();
-
+    const aboutFromProfil = getProfileAboutFromStorage(); // doit gérer le JSON legacy
+  
     console.log('renderDriverAbout -> aboutFromTrajet:', aboutFromTrajet, 'aboutFromProfil:', aboutFromProfil);
-
-    if (trajetParam && (typeof trajetParam === 'object')) {
-      const isMock = !!trajetParam.__mock;
-      // Priorité :
-      // 1) description du chauffeur si présente
-      // 2) si ce n'est PAS un mock -> fallback vers la description du profil
-      // 3) sinon message par défaut
-      const chosen = aboutFromTrajet || ((!isMock && aboutFromProfil) ? aboutFromProfil : '') || '';
-      console.log('renderDriverAbout -> isMock:', isMock, 'chosen:', chosen ? 'profil/driver text' : 'none');
+  
+    if (trajetParam && typeof trajetParam === 'object') {
+      const chosen = aboutFromTrajet || aboutFromProfil || '';
       writeToDom(chosen);
       return;
     }
-
-    // sinon (pas de trajet fourni) : fallback vers profil local
-    if (aboutFromProfil) writeToDom(aboutFromProfil);
-    else writeToDom('');
-
-    // observer pour debug si nécessaire
+  
+    // pas de trajet : afficher profil local ou message par défaut
+    writeToDom(aboutFromProfil || '');
+  
+    // installer un MutationObserver simple pour debug (idempotent)
     try {
       const tgt = document.getElementById('driver-about-text');
       if (tgt && !window.__ecoride_about_mut_observer_installed) {
         const mo = new MutationObserver((muts) => {
           console.log('Mutation on #driver-about-text', muts);
-          console.trace('mutation stack');
         });
         mo.observe(tgt, { childList: true, characterData: true, subtree: true });
         window.__ecoride_about_mut_observer_installed = true;
       }
-    } catch(e){ /* ignore */ }
+    } catch (e) { /* ignore */ }
   }
 
 // appel : juste après que `trajet` soit défini dans ton code
 renderDriverAbout(trajet);
+updateDriverAboutDom();
 
     const reviews = trajet.reviews || ["Aucun avis disponible pour ce conducteur.", "", ""];
     ['detail-review1', 'detail-review2', 'detail-review3'].forEach((id, index) => {

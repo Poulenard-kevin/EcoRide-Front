@@ -1638,6 +1638,115 @@ function setCanonicalUser(obj) {
 if (typeof window.getCanonicalUser !== 'function') window.getCanonicalUser = getCanonicalUser;
 if (typeof window.setCanonicalUser !== 'function') window.setCanonicalUser = setCanonicalUser;
 
+// --- handleProfileSave : met à jour ecoride_user (pseudo, about, photo) et notifie app ---
+window.handleProfileSave = window.handleProfileSave || async function(btn) {
+  try {
+    // defensive selectors (adapt si nécessaire)
+    const pseudoEl = document.getElementById('pseudo') || document.querySelector('input[name="pseudo"]');
+    const aboutEl  = document.getElementById('about')  || document.querySelector('textarea[name="about"], #profileBio');
+
+    const pseudo = pseudoEl && pseudoEl.value ? String(pseudoEl.value).trim() : null;
+    const about  = aboutEl  && aboutEl.value  ? String(aboutEl.value).trim()  : null;
+
+    // try to read avatar saved by profile-photo form (supports legacy keys)
+    function readSavedAvatar() {
+      try {
+        // priority : canonical avatar storage used by your profile form
+        const keys = ['ecoride.profileAvatar','ecoride_profileAvatar','ecoride.profileAvatar']; // keep candidates
+        for (const k of keys) {
+          const raw = localStorage.getItem(k);
+          if (!raw) continue;
+          try {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+              if (parsed.dataURL) return parsed.dataURL;
+              if (parsed.url) return parsed.url;
+            } else if (typeof raw === 'string' && raw.trim()) {
+              return raw.trim();
+            }
+          } catch(e) {
+            // not JSON -> maybe a plain dataURL string
+            if (typeof raw === 'string' && raw.trim()) return raw.trim();
+          }
+        }
+      } catch (e) { /* ignore */ }
+      return null;
+    }
+
+    const avatarFromAvatarForm = readSavedAvatar();
+
+    // get existing canonical user or fallback to raw localStorage read
+    let user = (typeof getCanonicalUser === 'function' ? getCanonicalUser() : null) || null;
+    if (!user) {
+      try { user = JSON.parse(localStorage.getItem('ecoride_user') || '{}'); } catch(e){ user = {}; }
+    }
+    if (!user || typeof user !== 'object') user = {};
+
+    // merge only non-empty fields (do not wipe existing data)
+    if (pseudo) user.pseudo = pseudo;
+    if (about) user.about = about;
+
+    // if avatar available from the profile-photo form, prefer it (overwrite)
+    if (avatarFromAvatarForm) user.photo = avatarFromAvatarForm;
+
+    // ensure updatedAt
+    user.updatedAt = Date.now();
+
+    // persist: prefer setCanonicalUser if present (keeps event already wired), else raw setItem
+    try {
+      if (typeof setCanonicalUser === 'function') {
+        setCanonicalUser(user); // setCanonicalUser already dispatches ecoride:userUpdated in your file
+      } else {
+        localStorage.setItem('ecoride_user', JSON.stringify(user));
+        // dispatch legacy / global events for compatibility with other modules
+        window.dispatchEvent(new CustomEvent('ecoride:userUpdated', { detail: { user } }));
+      }
+    } catch (e) {
+      // fallback direct write
+      try { localStorage.setItem('ecoride_user', JSON.stringify(user)); } catch(err) { console.error('save ecoride_user failed', err); }
+      window.dispatchEvent(new CustomEvent('ecoride:userUpdated', { detail: { user } }));
+    }
+
+    // also emit a generic userUpdated event (older code listens to this plain name)
+    window.dispatchEvent(new CustomEvent('userUpdated', { detail: { avatar: user.photo || null, about: user.about || null, user } }));
+
+    // UX feedback (if btn provided)
+    if (btn && btn instanceof Element) {
+      const prev = btn.textContent;
+      try {
+        btn.textContent = 'Enregistré ✓';
+        btn.disabled = true;
+      } catch(e){}
+      setTimeout(() => {
+        try { btn.textContent = prev; btn.disabled = false; } catch(e){}
+      }, 900);
+    }
+
+    console.log('handleProfileSave: ecoride_user updated', user);
+    return true;
+  } catch (err) {
+    console.error('handleProfileSave error', err);
+    return false;
+  }
+};
+
+// --- Delegated click handler : attache une seule fois (SPA friendly) ---
+// Adapte '#saveProfileBtn' au sélecteur réel de ton bouton de sauvegarde profil
+if (!window.__ecoride_profile_save_delegate_installed) {
+  document.addEventListener('click', (e) => {
+    const btn = e.target && e.target.closest && (e.target.closest('#saveProfileBtn') || e.target.closest('.save-profile-btn'));
+    if (!btn) return;
+    e.preventDefault();
+    try {
+      // appel asynchrone (upload photo asynchrone devrait déjà avoir mis à jour localStorage)
+      window.handleProfileSave(btn);
+    } catch (err) {
+      console.error('profile save click handler failed', err);
+    }
+  }, { capture: false });
+  window.__ecoride_profile_save_delegate_installed = true;
+}
+
 // === fallback visuel si showTemporarySavedText absent ===
 function fallbackShowSaved(btn, text = 'Enregistré ✓', duration = 900) {
   if (!btn) return Promise.resolve();

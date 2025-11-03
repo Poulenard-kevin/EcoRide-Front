@@ -287,6 +287,7 @@ export function initTrajets() {
 
     const inputs = formEl.querySelectorAll('input, select, textarea');
     inputs.forEach((input, i) => {
+      if (input.type === 'time') return; // Ignore les inputs heure pour ce comportement
 
       // appui sur Entrée → focus champ suivant
       input.addEventListener('keydown', (e) => {
@@ -429,10 +430,7 @@ function handleTrajetSubmit(e) {
 
   const selectedVehicle = vehicles.find(v => v.plate === selectedPlate);
 
-  console.log("DEBUG selectedVehicle.places:", selectedVehicle ? selectedVehicle.places : "aucun véhicule sélectionné");
-
-  console.log("DEBUG selectedPlate:", selectedPlate);
-  console.log("DEBUG selectedVehicle:", selectedVehicle);
+  const prix = Number(formData.get('prix')) || 0;
 
   const trajetData = {
     id: (editingIndex !== null && trajets[editingIndex]) 
@@ -441,9 +439,10 @@ function handleTrajetSubmit(e) {
     depart: formData.get('depart')?.trim() || '',
     arrivee: formData.get('arrivee')?.trim() || '',
     date: formData.get('date') || '',
+    dateArrivee: formData.get('date-arrivee') || '',
     heureDepart: formData.get('heure-depart') || '',
     heureArrivee: formData.get('heure-arrivee') || '',
-    prix: formData.get('prix') || '',
+    prix: prix,
     vehicle: selectedVehicle || null,
     places: (selectedVehicle && selectedVehicle.seats !== undefined && selectedVehicle.seats !== null)
       ? Number(selectedVehicle.seats)
@@ -452,13 +451,20 @@ function handleTrajetSubmit(e) {
     status: 'ajoute'
   };
 
-  // enrichir avec profil courant (pseudo/photo/rating) avant d'ajouter
-  enrichTrajetWithCurrentUser(trajetData);
-
-  if (!trajetData.depart || !trajetData.arrivee || !trajetData.date) {
-    alert('Veuillez remplir les champs obligatoires (départ, arrivée, date)');
+  if (
+    !trajetData.date ||
+    !trajetData.dateArrivee ||
+    !trajetData.depart ||
+    !trajetData.arrivee ||
+    !trajetData.vehicle ||
+    prix < 5
+  ) {
+    alert('Veuillez remplir tous les champs obligatoires correctement : date départ, date arrivée, lieu départ, lieu arrivée, véhicule, et un prix minimum de 5 crédits.');
     return;
   }
+
+  // enrichir avec profil courant (pseudo/photo/rating) avant d'ajouter
+  enrichTrajetWithCurrentUser(trajetData);
 
   if (editingIndex !== null && trajets[editingIndex]) {
     trajetData.status = trajets[editingIndex].status; 
@@ -607,10 +613,16 @@ function handleTrajetActions(e) {
       setIf('[name="depart"]', trajet.depart);
       setIf('[name="arrivee"]', trajet.arrivee);
       setIf('[name="date"]', trajet.date);
+      setIf('[name="date-arrivee"]', trajet.dateArrivee);
       setIf('[name="heure-depart"]', trajet.heureDepart);
       setIf('[name="heure-arrivee"]', trajet.heureArrivee);
       setIf('[name="prix"]', trajet.prix);
       setIf('[name="vehicle"]', trajet.vehicle ? trajet.vehicle.plate : '');
+
+      document.querySelectorAll('#trajet-form input, #trajet-form select').forEach(input => {
+        if (!input.value) input.classList.add('empty');
+        else input.classList.remove('empty');
+      });
 
       editingIndex = trajets.findIndex(t => t.id === id);
       console.log("✏️ Trajet prêt pour modification (index:", editingIndex, "):", trajet);

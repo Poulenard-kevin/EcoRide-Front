@@ -1008,10 +1008,7 @@ function handleModifyClick(index) {
 
   setTimeout(() => {
     const form = document.querySelector('#user-vehicles-form #create-vehicle-form');
-    if (!form) {
-      console.error('Formulaire véhicules introuvable');
-      return;
-    }
+    if (!form) return;
   
     form.dataset.editIndex = String(index);
   
@@ -1030,6 +1027,12 @@ function handleModifyClick(index) {
     // preferences (checkboxes)
     form.querySelectorAll('input[name="preferences"]').forEach(input => {
       input.checked = !!(vehicle.preferences && vehicle.preferences.includes(input.value));
+    });
+  
+    // Mise à jour des classes empty selon la valeur des champs
+    form.querySelectorAll('input, select, textarea').forEach(input => {
+      if (!input.value) input.classList.add('empty');
+      else input.classList.remove('empty');
     });
   }, 50);
 }

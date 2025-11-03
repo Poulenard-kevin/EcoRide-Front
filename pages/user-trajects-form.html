@@ -9,42 +9,48 @@
       <!-- 2 -->
       <div class="form-field">
         <label for="date-depart">Date de départ</label>
-        <input type="date" name="date" class="search-input" id="date-depart">
+        <input type="date" name="date" class="search-input" id="date-depart" required>
       </div>
 
       <!-- 3 -->
       <div class="form-field">
         <label for="lieu-depart">Lieu de départ</label>
-        <input type="text" name="depart" id="lieu-depart" class="form-control" placeholder="Lyon">
+        <input type="text" name="depart" id="lieu-depart" class="form-control" placeholder="Lyon" required>
       </div>
 
       <!-- 4 -->
       <div class="form-field">
         <label for="heure-depart">Heure de départ</label>
-        <input type="time" name="heure-depart" class="search-input" id="heure-depart">
+        <input type="time" name="heure-depart" class="search-input" id="heure-depart" required>
       </div>
 
       <!-- 5 -->
       <div class="form-field">
-        <label for="lieu-arrivee">Lieu d'arrivée</label>
-        <input type="text" name="arrivee" id="lieu-arrivee" class="form-control" placeholder="Grenoble">
+        <label for="date-arrivee">Date d'arrivée</label>
+        <input type="date" name="date-arrivee" class="search-input" id="date-arrivee" required>
       </div>
 
       <!-- 6 -->
       <div class="form-field">
-        <label for="heure-arrivee">Heure d'arrivée</label>
-        <input type="time" name="heure-arrivee" class="search-input" id="heure-arrivee">
+        <label for="lieu-arrivee">Lieu d'arrivée</label>
+        <input type="text" name="arrivee" id="lieu-arrivee" class="form-control" placeholder="Grenoble" required>
       </div>
-    
+
       <!-- 7 -->
       <div class="form-field">
+        <label for="heure-arrivee">Heure d'arrivée</label>
+        <input type="time" name="heure-arrivee" class="search-input" id="heure-arrivee" required>
+      </div>
+    
+      <!-- 8 -->
+      <div class="form-field">
         <label for="vehicle">Véhicule</label>
-        <select name="vehicle" id="vehicle" class="form-select">
+        <select name="vehicle" id="vehicle" class="form-select" required>
           <option value="" selected hidden>-- Sélectionner un véhicule --</option>
         </select>
       </div>
     
-      <!-- 8 -->
+      <!-- 9 -->
       <div class="form-field price-field">
         <label for="price">Prix</label>
         <div class="input-with-unit">
@@ -54,12 +60,12 @@
             name="prix"
             class="form-control" 
             min="5" max="100" step="5" 
-            placeholder="5 crédits">
+            placeholder="5 crédits" required>
           <span class="unit">crédits</span>
         </div>
       </div>
     
-      <!-- 9 -->
+      <!-- 10 -->
       <button type="submit" class="btn">Publier</button>
     </div>
   </form>

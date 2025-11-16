@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Définir le port
-PORT=8000
+PORT=3000
 
 # Détecter l'OS
 OS="$(uname)"

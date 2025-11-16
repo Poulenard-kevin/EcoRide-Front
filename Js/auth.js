@@ -138,6 +138,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Scroll doux centré sur le lien "Se connecter"
+  const linkSwitchToLogin = document.getElementById('switch-to-login');
+  if (linkSwitchToLogin) {
+    linkSwitchToLogin.addEventListener('click', async (e) => {
+      e.preventDefault();
+
+      if (typeof showLogin === 'function') {
+        showLogin();
+      }
+
+      const loginForm = document.getElementById('login-form');
+      if (!loginForm) return;
+      void loginForm.offsetWidth; // force reflow si nécessaire
+
+      await new Promise(r => setTimeout(r, 80));
+
+      const rect = loginForm.getBoundingClientRect();
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const targetPosition = rect.top + scrollTop - 100; // ajuste -100 si nécessaire (hauteur navbar)
+
+      try { document.documentElement.scrollTo(0, targetPosition); } catch (err) { window.scrollTo(0, targetPosition); }
+
+      setTimeout(() => {
+        loginForm.querySelector('input[type="email"], input[type="text"], input')?.focus();
+      }, 120);
+    });
+  }
+
   // Scroll doux centré sur le lien "Inscrivez-vous"
   const linkInscrivezVous = document.getElementById('switch-to-register');
   if (linkInscrivezVous) {
@@ -370,24 +398,43 @@ document.addEventListener('routeLoaded', async (event) => {
       if (typeof showRegister === 'function') await showRegister({ focus: !!userInitiated });
 
       const rf = document.getElementById('register-form');
-      if (!rf) return;
-      void rf.offsetWidth;
-      await new Promise(r => setTimeout(r, 80));
-      const rect = rf.getBoundingClientRect();
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const targetPosition = rect.top + scrollTop - 100;
-      try { document.documentElement.scrollTo(0, targetPosition); } catch (err) { window.scrollTo(0, targetPosition); }
-      setTimeout(() => {
-        try { window.scrollTo({ top: targetPosition, behavior: 'smooth' }); } catch (e) {}
-      }, 20);
-
-      // focus already handled by showRegister when userInitiated === true
-      if (userInitiated) {
-        // just in case, attempt a small delayed focus
-        setTimeout(() => rf.querySelector('input')?.focus(), 180);
+      if (rf) {
+        void rf.offsetWidth;
+        await new Promise(r => setTimeout(r, 80));
+        const rect = rf.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const targetPosition = rect.top + scrollTop - 100;
+        try { document.documentElement.scrollTo({ top: targetPosition, behavior: 'smooth' }); } catch (err) { window.scrollTo(0, targetPosition); }
+        // focus only if navigation was user-initiated
+        if (userInitiated) setTimeout(() => rf.querySelector('input')?.focus(), 180);
+      } else {
+        console.warn('routeLoaded(tab=register) : register-form non trouvé, affichage ignoré.');
       }
+
+    } else if (tab === 'login') {
+      blurActiveIfNotBody();
+
+      // showLogin (et focus si navigation user-initiated)
+      if (typeof showLogin === 'function') await showLogin({ focus: !!userInitiated });
+
+      const lf = document.getElementById('login-form');
+      if (lf) {
+        void lf.offsetWidth;
+        await new Promise(r => setTimeout(r, 80));
+        const rect = lf.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const targetPosition = rect.top + scrollTop - 100;
+        try { document.documentElement.scrollTo({ top: targetPosition, behavior: 'smooth' }); } catch (err) { window.scrollTo(0, targetPosition); }
+        if (userInitiated) setTimeout(() => lf.querySelector('input[type="email"], input')?.focus(), 180);
+      } else {
+        console.warn('routeLoaded(tab=login) : login-form non trouvé, affichage ignoré.');
+        // fallback : essayer d'afficher l'onglet login sans scroll
+        if (typeof showLogin === 'function') showLogin();
+      }
+
     } else {
-      showLogin && showLogin();
+      // par défaut : basculer sur login (comportement existant)
+      if (typeof showLogin === 'function') showLogin();
     }
   } catch (err) {
     console.warn('routeLoaded handler :', err);

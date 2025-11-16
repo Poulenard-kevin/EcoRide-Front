@@ -2,143 +2,150 @@
 (function () {
     'use strict';
   
-    // Config : adapte si besoin
-    const REGISTER_URL = '/api/register';         // endpoint d'inscription (à adapter)
-    const REDIRECT_TO_AUTH = '/auth';             // page d'authentification (où ?tab=login sera ajouté)
-    const REDIRECT_AFTER_REGISTER = null;         // ex: '/user-space' ou null pour redirection vers auth
+    // ---------- CONFIG ----------
+    // Changez ici si votre API est ailleurs
+    const REGISTER_URL = 'http://127.0.0.1:8000/api/register';
+    const REDIRECT_TO_AUTH = '/auth';            // page d'auth (ex: /auth?tab=login)
+    const REDIRECT_AFTER_REGISTER = null;        // ex: '/espace-utilisateur' ou null pour reload
   
-    // Utilitaires
-    function qs(sel, ctx = document) { return ctx.querySelector(sel); }
-    function qsa(sel, ctx = document) { return Array.from((ctx || document).querySelectorAll(sel)); }
-    function createErrorNode(msg) {
+    // ---------- utilitaires ----------
+    const qs = (sel, ctx = document) => ctx.querySelector(sel);
+    const qsa = (sel, ctx = document) => Array.from((ctx || document).querySelectorAll(sel));
+    const createErrorNode = (msg) => {
       const d = document.createElement('div');
       d.className = 'invalid-feedback d-block field-error';
       d.textContent = msg;
       return d;
-    }
-  
-    // Capitalise la première lettre de chaque mot (ex: "jean-pierre" => "Jean-Pierre")
-    function capitalizeName(str) {
+    };
+    const capitalizeName = (str) => {
       if (!str) return '';
       return str.trim().toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+    };
+  
+    // Lecture robuste des champs depuis un <form> ou un conteneur <div>
+    function readPayloadFromContainer(container) {
+      if (!container) return {};
+      if (container.tagName === 'FORM') {
+        return Object.fromEntries(new FormData(container).entries());
+      }
+      const inputs = Array.from(container.querySelectorAll('input, textarea, select'));
+      const data = {};
+      inputs.forEach(i => {
+        if (!i.name) return;
+        if (i.type === 'checkbox') data[i.name] = i.checked;
+        else if (i.type === 'radio') {
+          if (i.checked) data[i.name] = i.value;
+        } else data[i.name] = i.value;
+      });
+      return data;
     }
   
-    async function submitRegisterForm(e) {
-      e.preventDefault();
-      const form = e.currentTarget;
-      if (!form || form.dataset.sending === 'true') return;
+    // Envoi POST vers le backend
+    async function postRegister(payload) {
+      const res = await fetch(REGISTER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload),
+        // changez 'omit' -> 'include' si votre API utilise cookie/session côté serveur
+        credentials: 'omit'
+      });
   
-      const submitBtn = form.querySelector('.auth-button[type="submit"], .auth-button');
-      if (submitBtn && submitBtn.disabled) {
-        const firstInvalid = form.querySelector('.is-invalid, input:invalid');
-        if (firstInvalid) firstInvalid.focus();
-        return;
+      const text = await res.text();
+      let data;
+      try { data = text ? JSON.parse(text) : {}; } catch (err) { data = { raw: text }; }
+  
+      if (!res.ok) {
+        const err = new Error(data?.message || data?.detail || `Erreur ${res.status}`);
+        err.body = data;
+        err.status = res.status;
+        throw err;
+      }
+      return data;
+    }
+  
+    // Handler principal
+    async function submitRegisterForm(e) {
+      if (e && typeof e.preventDefault === 'function') {
+        e.preventDefault();
+        e.stopPropagation();
       }
   
-      // Collecte champs (noms basés sur ton HTML existant)
-      const lastNameInput = qs('input[name="Nom"]', form);
-      const firstNameInput = qs('input[name="Prenom"]', form);
-      const emailInput = qs('input[name="email"]', form);
-      const passwordInput = qs('input[name="password"]', form);
-      const confirmInput = qs('input[name="confirm-password"]', form);
+      // On cherche le conteneur : d'abord id="register-form", sinon premier form, sinon un div avec id
+      const container = document.getElementById('register-form') ||
+                        document.querySelector('form#register-form') ||
+                        document.querySelector('form') ||
+                        document.getElementById('register-form') ||
+                        document.body;
   
-      // Récupération + capitalisation automatique
-      const lastName = capitalizeName(lastNameInput?.value || '');
-      const firstName = capitalizeName(firstNameInput?.value || '');
-      const email = (emailInput?.value || '').trim();
-      const password = (passwordInput?.value || '').trim();
-      const confirm = (confirmInput?.value || '').trim();
+      if (!container) return;
   
-      // Mise à jour des champs avec les versions capitalisées (optionnel mais propre)
-      if (lastNameInput) lastNameInput.value = lastName;
-      if (firstNameInput) firstNameInput.value = firstName;
+      // Bouton submit (si existant) pour UI feedback
+      const submitBtn = container.querySelector('.auth-button[type="submit"], .auth-button');
   
-      // Simple validation côté client
+      // Lecture des champs
+      const raw = readPayloadFromContainer(container);
+      const lastName = (raw['Nom'] || raw['lastName'] || '').trim();
+      const firstName = (raw['Prenom'] || raw['firstName'] || '').trim();
+      const email = (raw['email'] || '').trim();
+      const password = (raw['password'] || '').trim();
+      const confirm = (raw['confirm-password'] || raw['confirmPassword'] || '').trim();
+  
+      // Maj champs capitalisés (optionnel)
+      const lastNameInput = container.querySelector('input[name="Nom"], input[name="lastName"]');
+      const firstNameInput = container.querySelector('input[name="Prenom"], input[name="firstName"]');
+      if (lastNameInput) lastNameInput.value = capitalizeName(lastName);
+      if (firstNameInput) firstNameInput.value = capitalizeName(firstName);
+  
+      // Validation simple côté client
       if (!email || !password || password !== confirm) {
-        if (!email) emailInput?.classList.add('is-invalid');
-        if (!password) passwordInput?.classList.add('is-invalid');
-        if (password !== confirm) confirmInput?.classList.add('is-invalid');
-        const firstInvalid = form.querySelector('.is-invalid');
-        firstInvalid?.focus();
+        if (!email) (container.querySelector('input[name="email"]') || {}).classList?.add?.('is-invalid');
+        if (!password) (container.querySelector('input[name="password"]') || {}).classList?.add?.('is-invalid');
+        if (password !== confirm) (container.querySelector('input[name="confirm-password"], input[name="confirmPassword"]') || {}).classList?.add?.('is-invalid');
         return;
       }
   
       // UI -> envoi en cours
-      form.dataset.sending = 'true';
       if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.dataset.origHtml = submitBtn.innerHTML;
         submitBtn.innerHTML = 'Envoi en cours…';
       }
   
-      // nettoyage erreurs précédentes
-      qsa('.field-error', form).forEach(n => n.remove());
-      qsa('input', form).forEach(i => i.classList.remove('is-invalid'));
+      // cleanup erreurs précédentes
+      qsa('.field-error', container).forEach(n => n.remove());
+      qsa('input', container).forEach(i => i.classList.remove('is-invalid'));
   
-      const payload = { lastName, firstName, email, password };
+      // Préparer payload attendu par votre backend
+      const payload = {
+        lastName: lastName,
+        firstName: firstName,
+        email: email,
+        password: password,
+        confirmPassword: confirm
+      };
   
       try {
-        const res = await fetch(REGISTER_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify(payload),
-          credentials: 'same-origin'
-        });
+        console.log('[register] POST ->', REGISTER_URL, payload);
+        const data = await postRegister(payload);
+        console.log('[register] response', data);
   
-        const text = await res.text();
-        let data;
-        try { data = text ? JSON.parse(text) : {}; } catch (err) { data = { raw: text }; }
-  
-        if (!res.ok) {
-          // errors: ApiPlatform style violations or generic message
-          if (data && Array.isArray(data.violations)) {
-            data.violations.forEach(v => {
-              const field = v.propertyPath || v.field || null;
-              const msg = v.message || v.title || 'Erreur';
-              let inputEl = null;
-              if (field) {
-                if (field === 'firstName') inputEl = firstNameInput;
-                else if (field === 'lastName') inputEl = lastNameInput;
-                else inputEl = qs(`input[name="${field}"]`, form);
-              }
-              if (inputEl) {
-                inputEl.classList.add('is-invalid');
-                inputEl.parentNode?.appendChild(createErrorNode(msg));
-              } else {
-                form.prepend(createErrorNode(msg));
-              }
-            });
-          } else {
-            const msg = (data && (data.message || data.detail)) || `Erreur ${res.status}`;
-            form.prepend(createErrorNode(msg));
-          }
-          return;
-        }
-  
-        // Succès : si API renvoie token on peut le stocker, sinon rediriger vers auth
-        const token = data?.token || data?.access_token || data?.tokenValue || null;
+        // Tolérance sur le nom du token renvoyé
+        const token = data?.apiToken || data?.token || data?.access_token || null;
         if (token) {
-          try {
-            localStorage.setItem('token', token);
-            if (window.ecoAuth && typeof window.ecoAuth.setToken === 'function') {
-              window.ecoAuth.setToken(token);
-            }
-            if (window.ecoAuth && typeof window.ecoAuth.refresh === 'function') {
-              await window.ecoAuth.refresh();
-            } else if (REDIRECT_AFTER_REGISTER) {
-              window.location.href = REDIRECT_AFTER_REGISTER;
-            } else {
-              window.location.reload();
-            }
-          } catch (err) {
-            console.warn('register: erreur stockage token', err);
-            if (REDIRECT_AFTER_REGISTER) window.location.href = REDIRECT_AFTER_REGISTER;
-            else window.location.reload();
+          localStorage.setItem('apiToken', token);
+          // si vous avez un objet global d'auth
+          if (window.ecoAuth && typeof window.ecoAuth.setToken === 'function') {
+            try { window.ecoAuth.setToken(token); } catch(e){/* ignore */ }
+          }
+          if (REDIRECT_AFTER_REGISTER) {
+            window.location.href = REDIRECT_AFTER_REGISTER;
+          } else {
+            window.location.reload();
           }
           return;
         }
   
-        // Pas de token : rediriger vers la page de connexion avec pré-remplissage de l'email
+        // Pas de token -> rediriger vers page de connexion en pré-remplissant l'email
         const next = new URL(window.location.href);
         next.pathname = REDIRECT_TO_AUTH;
         next.searchParams.set('tab', 'login');
@@ -146,10 +153,31 @@
         window.location.href = next.toString();
   
       } catch (err) {
-        console.error('register: erreur réseau', err);
-        form.prepend(createErrorNode('Erreur réseau. Réessayez.'));
+        console.error('register: erreur', err);
+        // Si erreurs de validation renvoyées par le backend (API Platform style)
+        const body = err?.body || {};
+        if (Array.isArray(body.violations) && body.violations.length) {
+          body.violations.forEach(v => {
+            const field = v.propertyPath || v.field;
+            const msg = v.message || 'Erreur';
+            let el = null;
+            if (field) {
+              if (field === 'firstName') el = firstNameInput;
+              else if (field === 'lastName') el = lastNameInput;
+              else el = qs(`input[name="${field}"]`, container);
+            }
+            if (el) {
+              el.classList.add('is-invalid');
+              el.parentNode?.appendChild(createErrorNode(msg));
+            } else {
+              container.prepend(createErrorNode(msg));
+            }
+          });
+        } else {
+          const msg = body?.message || body?.detail || err.message || 'Erreur inscription';
+          container.prepend(createErrorNode(msg));
+        }
       } finally {
-        form.dataset.sending = 'false';
         if (submitBtn) {
           submitBtn.disabled = false;
           if (submitBtn.dataset.origHtml) submitBtn.innerHTML = submitBtn.dataset.origHtml;
@@ -157,25 +185,36 @@
       }
     }
   
-    // Attache le handler si le formulaire est présent
+    // Attache le handler : si c'est un <form> on écoute 'submit', sinon on écoute le click sur le container
     function attachIfRegisterFormExists() {
-      const regForm = document.getElementById('register-form');
+      const regForm = document.getElementById('register-form') ||
+                      document.querySelector('form#register-form') ||
+                      document.querySelector('form') ||
+                      document.getElementById('register-form');
+  
       if (!regForm) return false;
       if (regForm.dataset.registerHandlerAttached === 'true') return true;
-      regForm.addEventListener('submit', submitRegisterForm);
+  
+      if (regForm.tagName === 'FORM') {
+        regForm.addEventListener('submit', submitRegisterForm);
+      } else {
+        // container non-form — on intercepte le click sur le bouton submit
+        regForm.addEventListener('click', (e) => {
+          const btn = e.target.closest('button, input[type="submit"], a');
+          if (!btn) return;
+          if (!regForm.contains(btn)) return;
+          e.preventDefault(); e.stopPropagation();
+          submitRegisterForm(e);
+        }, { capture: true });
+      }
+  
       regForm.dataset.registerHandlerAttached = 'true';
       return true;
     }
   
-    // Au chargement initial
-    document.addEventListener('DOMContentLoaded', () => {
-      attachIfRegisterFormExists();
-    });
-  
-    // Si ton app émet un événement 'routeLoaded' lorsque le DOM de la route est injecté,
-    // on écoute aussi pour s'attacher dynamiquement
-    document.addEventListener('routeLoaded', () => {
-      setTimeout(attachIfRegisterFormExists, 30);
-    });
+    // init
+    document.addEventListener('DOMContentLoaded', () => { attachIfRegisterFormExists(); });
+    // si vous avez un route loader (SPA), on réessaie
+    document.addEventListener('routeLoaded', () => setTimeout(attachIfRegisterFormExists, 30));
   
   })();

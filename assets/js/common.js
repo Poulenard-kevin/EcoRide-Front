@@ -6,6 +6,48 @@
 
   const PUBLIC_PATHS = ['/', '/accueil', '/contact', '/auth'];
 
+  // appelé au chargement des pages sensibles (admin/employee)
+  (async function ensureRoleOnProtectedPage() {
+    try {
+      // attend jusqu'à 2s que window.ecoAuth.fetchMe soit disponible
+      const waitForEcoAuth = (timeout = 2000, interval = 50) => new Promise((resolve) => {
+        const start = Date.now();
+        (function check() {
+          if (window.ecoAuth && typeof window.ecoAuth.fetchMe === 'function') return resolve(true);
+          if (Date.now() - start > timeout) return resolve(false);
+          setTimeout(check, interval);
+        })();
+      });
+  
+      const ready = await waitForEcoAuth();
+      if (!ready) {
+        console.warn('ecoAuth not ready — skipping role check');
+        return;
+      }
+  
+      const path = location.pathname;
+      if (path.startsWith('/espace-administrateur')) {
+        const user = await window.ecoAuth.fetchMe();
+        const roles = (user && user.roles) || [];
+        if (!roles.map(r => r.toUpperCase()).includes('ROLE_ADMIN')) {
+          window.location.href = '/'; // ou '/auth?tab=login' ou '/403.html'
+          return;
+        }
+      }
+  
+      if (path.startsWith('/espace-employe')) {
+        const user = await window.ecoAuth.fetchMe();
+        const roles = (user && user.roles) || [];
+        const allowed = roles.map(r => r.toUpperCase())
+          .some(r => ['ROLE_EMPLOYE', 'ROLE_EMPLOYEE', 'ROLE_ADMIN'].includes(r));
+        if (!allowed) window.location.href = '/';
+      }
+  
+    } catch (err) {
+      console.error('ensureRoleOnProtectedPage failed', err);
+    }
+  })();
+
   function normalizePath(p) {
     const path = (p || '').split('?')[0];
     return path.replace(/\/+$/, '') || '/';
@@ -62,21 +104,68 @@
   function setLoginToLogout() {
     const loginEls = Array.from(document.querySelectorAll('#dropdown-login'));
     loginEls.forEach(loginEl => {
+      // si on a déjà remplacé, on skip
+      if (loginEl.dataset.logoutAttached === 'true') return;
+  
+      // remplace par un clone et transforme en bouton accessible
       const newLogin = replaceWithClone(loginEl);
       newLogin.textContent = 'Déconnexion';
-      newLogin.setAttribute('href', '#');
-      newLogin.addEventListener('click', function (e) {
-        e.preventDefault();
-        doLogout(true);
-      });
+      // si c'est un <a>, transforme en button pour éviter navigation
+      if (newLogin.tagName === 'A') {
+        const btn = document.createElement('button');
+        btn.id = 'logoutBtn';
+        btn.type = 'button';
+        btn.className = newLogin.className || 'logout-btn';
+        btn.textContent = 'Déconnexion';
+        newLogin.parentNode && newLogin.parentNode.replaceChild(btn, newLogin);
+        // marque pour éviter double attach
+        btn.dataset.logoutAttached = 'true';
+      } else {
+        // si déjà un bouton ou autre, on attribue l'id et dataset
+        newLogin.id = newLogin.id || 'logoutBtn';
+        newLogin.dataset.logoutAttached = 'true';
+      }
+  
+      // direct listener (fallback) — il appellera la logique centrale
+      const target = document.getElementById('logoutBtn') || newLogin;
+      if (target && !target._logoutHandlerAttached) {
+        target.addEventListener('click', function (e) {
+          e.preventDefault();
+          // appeler la logique centrale (doLogout ou window.ecoAuth)
+          if (window.ecoAuth && typeof window.ecoAuth.logout === 'function') {
+            window.ecoAuth.logout();
+          } else {
+            doLogout(true);
+          }
+        });
+        target._logoutHandlerAttached = true;
+      }
     });
   }
   function restoreLoginLinks() {
+    // Cherche partout les boutons de logout et recrée des liens "Connexion"
+    const btns = Array.from(document.querySelectorAll('#logoutBtn, .logout-btn'));
+    if (btns.length) {
+      btns.forEach(b => {
+        const a = document.createElement('a');
+        a.id = 'dropdown-login';
+        a.className = b.className || 'nav-link';
+        a.href = LOGIN_URL;
+        a.textContent = 'Connexion';
+        b.parentNode && b.parentNode.replaceChild(a, b);
+      });
+      return;
+    }
+  
+    // fallback: si on a des éléments #dropdown-login (ancres/clones), restore leur href/text
     const loginEls = Array.from(document.querySelectorAll('#dropdown-login'));
     loginEls.forEach(loginEl => {
       const newLogin = replaceWithClone(loginEl);
       newLogin.textContent = 'Connexion';
       newLogin.setAttribute('href', LOGIN_URL);
+      // remove flags if any
+      delete newLogin.dataset.logoutAttached;
+      newLogin._logoutHandlerAttached = false;
     });
   }
 
@@ -282,4 +371,16 @@
     refresh: refreshAuthUI,
     fetchMe
   };
+
+  // délégation globale : capture clics sur éléments créés dynamiquement
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest && e.target.closest('#logoutBtn, .logout-btn');
+    if (!btn) return;
+    e.preventDefault();
+    if (window.ecoAuth && typeof window.ecoAuth.logout === 'function') {
+      window.ecoAuth.logout();
+    } else {
+      doLogout(true);
+    }
+  });
 })();

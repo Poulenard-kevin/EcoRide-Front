@@ -9,7 +9,9 @@ const vehicles = [];
 
 // -------------------- Utils --------------------
 function normalizePlate(p) {
-  return (p || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  // Forcer en string (protège contre null/undefined/objet)
+  const s = (p === null || p === undefined) ? '' : String(p);
+  return s.toUpperCase().trim();
 }
 
 // Conversion jj/mm/aaaa → yyyy-mm-dd
@@ -58,6 +60,59 @@ function setField(frm, idOrName, value) {
   return false;
 }
 
+// Petit helper : attendre qu'une variable globale apparaisse (utile pour les scripts chargés dynamiquement)
+async function waitForGlobal(name, timeout = 2000) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    if (window[name]) return window[name];
+    await new Promise(r => setTimeout(r, 50));
+  }
+  throw new Error(`${name} not available after ${timeout}ms`);
+}
+
+/**
+ * Récupère le bouton Confirm dans la modale en essayant plusieurs sélecteurs courants.
+ * Retourne le bouton ou null.
+ */
+function findConfirmButtonInModal(modalEl) {
+  if (!modalEl) return null;
+  return modalEl.querySelector(
+    '#confirmDeleteBtn, .confirm-delete-btn, [data-action="confirm-delete"], button[data-role="confirm-delete"], .modal-footer .btn-danger, .modal-footer .btn-primary'
+  );
+}
+
+/**
+ * Attache un listener unique au bouton de confirmation de la modale.
+ * handler async sera appelé lors du click.
+ */
+function attachOnceConfirmHandler(modalEl, handler) {
+  const btn = findConfirmButtonInModal(modalEl);
+  if (!btn) {
+    console.warn('Aucun bouton de confirmation trouvé dans la modale (vérifie id/class des boutons)');
+    return false;
+  }
+
+  // Assure que c'est bien un button (évite les submit)
+  try { btn.setAttribute('type', 'button'); } catch (e) {}
+
+  // Replace-with-clone pour supprimer tout ancien listener résiduel
+  const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+
+  // attache handler une seule fois
+  newBtn.addEventListener('click', async (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    try {
+      await handler();
+    } catch (err) {
+      console.error('Erreur dans le handler de confirmation :', err);
+    }
+  }, { once: true });
+
+  return true;
+}
+
 // -------------------- Normalisation dates trajets --------------------
 function normalizeRideDates() {
   let trajets = JSON.parse(localStorage.getItem('trajets')) || [];
@@ -94,7 +149,21 @@ function normalizeRideDates() {
 }
 
 // -------------------- Persistance véhicules --------------------
-function loadVehicles() {
+async function loadVehicles() {
+  try {
+    const token = await window.ecorideCarsApi.getAuthToken();
+    if (token) {
+      const apiVehicles = await window.ecorideCarsApi.apiGetCars();
+      vehicles.length = 0;
+      vehicles.push(...apiVehicles);
+      localStorage.setItem('ecoride_vehicles', JSON.stringify(vehicles)); // cache local
+      return;
+    }
+  } catch (err) {
+    console.warn('Erreur API, fallback localStorage', err);
+  }
+
+  // fallback localStorage
   try {
     const stored = localStorage.getItem('ecoride_vehicles');
     if (stored) {
@@ -109,12 +178,16 @@ function loadVehicles() {
   }
 }
 
-function saveVehicles() {
+async function saveVehicles() {
   try {
-    localStorage.setItem('ecoride_vehicles', JSON.stringify(vehicles));
-    if (typeof populateVehiclesSelect === 'function') {
-      populateVehiclesSelect();  // ✅ OK
+    const token = await window.ecorideCarsApi.getAuthToken();
+    if (token) {
+      // Sauvegarde déjà faite via API dans handleSubmit
+      localStorage.setItem('ecoride_vehicles', JSON.stringify(vehicles)); // cache
+    } else {
+      localStorage.setItem('ecoride_vehicles', JSON.stringify(vehicles));
     }
+    if (typeof populateVehiclesSelect === 'function') populateVehiclesSelect();
   } catch (err) {
     console.error("❌ Erreur sauvegarde véhicules:", err);
   }
@@ -143,6 +216,17 @@ export async function initUserSpace() {
     }
   });
 
+  // 🧹 Nettoyer les doublons de modales au démarrage
+  ['deleteModal', 'vehicleDetailModal'].forEach(id => {
+    const all = document.querySelectorAll(`#${id}`);
+    if (all.length > 1) {
+      console.warn(`⚠️ ${all.length} modales #${id} détectées, suppression des doublons`);
+      all.forEach((el, i) => {
+        if (i > 0) el.remove();
+      });
+    }
+  });
+
   // ✅ Empêcher double initialisation
   if (userSpaceInitialized) {
     console.log('⚪ initUserSpace déjà appelé, skip');
@@ -157,7 +241,14 @@ export async function initUserSpace() {
     localStorage.removeItem('ecoride_vehicules');
   }
 
-  loadVehicles();
+  try {
+    // Attendre que cars-api soit présent (si le script est chargé juste après)
+    await waitForGlobal('ecorideCarsApi', 1500);
+  } catch (err) {
+    console.warn('ecorideCarsApi non disponible, l\'app continuera en mode offline', err);
+  }
+
+  await loadVehicles();
 
   const userSpaceSection = document.querySelector(".user-space-section");
   if (!userSpaceSection) {
@@ -528,7 +619,7 @@ function bindVehiclesFormHandlers() {
   }
 
   // Le handler de submit — on re-query le form et les champs à l'intérieur
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     if (e && e.preventDefault) {
       e.preventDefault();
       e.stopPropagation();
@@ -556,17 +647,18 @@ function bindVehiclesFormHandlers() {
       return;
     }
 
-    let registrationDate = readField(form, 'registration-date');
+    let registrationDate = readField(form, 'registration-date') || '';
     if (registrationDate.includes('/')) registrationDate = convertFRtoISO(registrationDate);
 
+    // Construire l'objet véhicule (local + API)
     const vehicleData = {
       id: plate,
       plate,
       registrationDate,
+      firstRegistration: registrationDate !== '' ? registrationDate : null,
       marque: readField(form, 'vehicle-marque'),
       model: readField(form, 'vehicle-model'),
       color: readField(form, 'vehicle-color'),
-      // support id="vehicle-type" ou name="vehicleType"
       type: readField(form, 'vehicle-type') || readField(form, 'vehicleType'),
       seats: readField(form, 'seats'),
       preferences: Array.from(form.querySelectorAll('input[name="preferences"]:checked')).map(el => el.value),
@@ -575,7 +667,7 @@ function bindVehiclesFormHandlers() {
 
     try {
       document.body.dataset.lockTab = '1';
-      loadVehicles();
+      await loadVehicles();
 
       const editIdxAttr = form.dataset.editIndex;
       const editIdx = editIdxAttr !== undefined ? parseInt(editIdxAttr, 10) : null;
@@ -591,20 +683,68 @@ function bindVehiclesFormHandlers() {
         return;
       }
 
-      if (editIdx !== null && !Number.isNaN(editIdx)) {
-        vehicles[editIdx] = vehicleData;
-        delete form.dataset.editIndex;
-        editingVehicleIndex = null;
-      } else if (editingVehicleIndex !== null) {
-        vehicles[editingVehicleIndex] = vehicleData;
-        editingVehicleIndex = null;
-      } else {
-        vehicles.push(vehicleData);
+      try {
+        const token = await window.ecorideCarsApi.getAuthToken();
+        if (token) {
+          const editIdxAttr = form.dataset.editIndex;
+          const editIdx = editIdxAttr !== undefined ? parseInt(editIdxAttr, 10) : null;
+          const isEditing = (editIdx !== null && !Number.isNaN(editIdx)) || (editingVehicleIndex !== null);
+      
+          if (isEditing) {
+            const target = (editIdx !== null && !Number.isNaN(editIdx)) ? vehicles[editIdx] : vehicles[editingVehicleIndex];
+            if (!target || !target.id) {
+              alert("Impossible d'identifier le véhicule à modifier.");
+              return;
+            }
+            const updated = await window.ecorideCarsApi.apiUpdateCar(target.id, vehicleData);
+            if (editIdx !== null && !Number.isNaN(editIdx)) vehicles[editIdx] = updated;
+            else vehicles[editingVehicleIndex] = updated;
+          } else {
+            const existsIdx = vehicles.findIndex(v =>
+              normalizePlate(v.plate || v.id || '') === normalizePlate(plate)
+            );
+            if (existsIdx !== -1) {
+              alert("Un véhicule avec cette plaque existe déjà.");
+              return;
+            }
+            const created = await window.ecorideCarsApi.apiCreateCar(vehicleData);
+            vehicles.push(created);
+          }
+          localStorage.setItem('ecoride_vehicles', JSON.stringify(vehicles));
+        } else {
+          // fallback local
+          const existsIdx = vehicles.findIndex(v =>
+            normalizePlate(v.plate || v.id || '') === normalizePlate(plate)
+          );
+          if (!isEditing && existsIdx !== -1) {
+            alert("Un véhicule avec cette plaque existe déjà.");
+            return;
+          }
+          if (editIdx !== null && !Number.isNaN(editIdx)) {
+            vehicles[editIdx] = vehicleData;
+            delete form.dataset.editIndex;
+            editingVehicleIndex = null;
+          } else if (editingVehicleIndex !== null) {
+            vehicles[editingVehicleIndex] = vehicleData;
+            editingVehicleIndex = null;
+          } else {
+            vehicles.push(vehicleData);
+          }
+          saveVehicles();
+        }
+      
+        form.reset();
+        updateVehicleListOnly();
+      } catch (err) {
+        console.error('Erreur lors de l\'envoi au serveur', err);
+        if (err.status === 401 || err.status === 403) {
+          alert('Accès refusé. Vous devez être connecté.');
+          localStorage.removeItem('api_token');
+          window.location.href = '/auth?tab=login';
+        } else {
+          alert('Erreur lors de l\'enregistrement du véhicule.');
+        }
       }
-
-      saveVehicles();
-      form.reset();
-      updateVehicleListOnly();
 
       const usedForm = document.querySelector('#used-vehicles-form');
       const usedTitle = usedForm?.querySelector('.title-my-used-vehicles h2');
@@ -758,10 +898,12 @@ function renderVehicleList() {
 function createVehicleElement(v, index) {
   const vehicleContainer = document.createElement('div');
   vehicleContainer.className = 'vehicle-container';
+  vehicleContainer.dataset.index = String(index); 
 
   const vehicleLine = document.createElement('div');
   vehicleLine.className = 'form-field vehicle-label vehicle-line';
   vehicleLine.style.cursor = 'pointer';
+  vehicleLine.addEventListener('click', () => showVehicleModal(v));
 
   const brandDiv = document.createElement('div');
   brandDiv.className = 'vehicle-brand';
@@ -778,18 +920,17 @@ function createVehicleElement(v, index) {
   vehicleLine.appendChild(brandDiv);
   vehicleLine.appendChild(modelDiv);
   vehicleLine.appendChild(colorDiv);
-  vehicleLine.addEventListener('click', () => showVehicleModal(v));
 
   const actionDiv = document.createElement('div');
   actionDiv.className = 'form-field-modify-delete';
   actionDiv.innerHTML = `
     <a href="javascript:void(0);" class="link-modify" data-index="${index}">Modifier</a>
-    <a href="javascript:void(0);" class="link-delete" data-index="${index}" data-bs-toggle="modal" data-bs-target="#deleteModal">Supprimer</a>
+    <a href="javascript:void(0);" class="link-delete" data-index="${index}">Supprimer</a>
   `;
 
   vehicleContainer.appendChild(vehicleLine);
   vehicleContainer.appendChild(actionDiv);
-  
+
   return vehicleContainer;
 }
 
@@ -816,20 +957,47 @@ function updateVehicleListOnly() {
     return;
   }
 
+  // source fiable : preferer le tableau module 'vehicles'
+  let source = vehicles;
+  if (!Array.isArray(source) || source.length === 0) {
+    // fallback : recharger depuis localStorage si vehicles vide
+    try {
+      const stored = localStorage.getItem('ecoride_vehicles');
+      source = stored ? JSON.parse(stored) : [];
+      // si on a des données et vehicles est vide, synchronise le tableau module
+      if (Array.isArray(source) && source.length > 0) {
+        vehicles.length = 0;
+        vehicles.push(...source);
+      }
+    } catch (e) {
+      console.error('Erreur parsing ecoride_vehicles', e);
+      source = [];
+    }
+  }
+
   listDiv.innerHTML = "";
 
-  const stored = localStorage.getItem('ecoride_vehicles');
-  const vehiclesLocal = stored ? JSON.parse(stored) : [];
-
-  if (vehiclesLocal.length === 0) {
+  if (!source || source.length === 0) {
     listDiv.innerHTML = "<p>Aucun véhicule enregistré.</p>";
   } else {
-    vehiclesLocal.forEach((v, index) => {
-      listDiv.appendChild(createVehicleElement(v, index));
+    source.forEach((v, index) => {
+      const el = createVehicleElement(v, index);
+      // ensure data-index à jour sur le container et les liens
+      el.dataset.index = String(index);
+      const mod = el.querySelector('.link-modify');
+      const del = el.querySelector('.link-delete');
+      if (mod) mod.setAttribute('data-index', String(index));
+      if (del) del.setAttribute('data-index', String(index));
+      listDiv.appendChild(el);
     });
   }
-  
-  console.log('✅ Liste véhicules mise à jour:', vehiclesLocal.length, 'véhicules');
+
+  // garder le cache local à jour depuis vehicles
+  try {
+    localStorage.setItem('ecoride_vehicles', JSON.stringify(vehicles));
+  } catch (e) { /* ignore */ }
+
+  console.log('✅ Liste véhicules mise à jour:', vehicles.length, 'véhicules');
 }
 
 // ---------- showVehicleModal ----------
@@ -911,6 +1079,26 @@ function showVehicleModal(vehicle) {
 
 // ---------- injectDeleteModal ----------
 function injectDeleteModal() {
+  // Ferme / dispose et supprime TOUTES les occurrences existantes de #deleteModal
+  const existing = Array.from(document.querySelectorAll('#deleteModal'));
+  if (existing.length > 0) {
+    console.warn(`🧹 nettoyage injectDeleteModal : ${existing.length} instance(s) trouvée(s)`);
+    existing.forEach(el => {
+      try {
+        // fermer le modal si une instance bootstrap existe
+        if (window.bootstrap && typeof bootstrap.Modal === 'function') {
+          const inst = bootstrap.Modal.getInstance(el);
+          if (inst) {
+            try { inst.hide(); } catch (e) { /* ignore */ }
+            try { inst.dispose(); } catch (e) { /* ignore */ }
+          }
+        }
+      } catch (e) { /* ignore */ }
+      try { el.remove(); } catch (e) { console.warn('remove failed', e); }
+    });
+  }
+
+  // Si une modal reste (par sécurité), on ne recrée pas — mais on verra après l'avoir supprimée
   if (document.getElementById('deleteModal')) return;
 
   const modalHTML = `
@@ -962,9 +1150,12 @@ function injectDeleteModal() {
     el.dataset.modalHandlersAttached = '1';
   }
 
-  // (optionnel) initialiser instance Bootstrap pour être sûr
-  let inst = bootstrap.Modal.getInstance(el);
-  if (!inst) inst = new bootstrap.Modal(el, { backdrop: true, keyboard: true, focus: true });
+  // Initialiser instance Bootstrap pour être sûr
+  let inst = null;
+  try {
+    inst = bootstrap.Modal.getInstance(el);
+    if (!inst) inst = new bootstrap.Modal(el, { backdrop: true, keyboard: true, focus: true });
+  } catch (e) { console.warn('Bootstrap Modal init failed', e); }
 }
 
 // -------------------- Events globaux actions (Modifier/Supprimer) --------------------
@@ -981,14 +1172,11 @@ document.body.addEventListener('click', (event) => {
   } else if (target.classList.contains('link-delete')) {
     event.preventDefault();
     handleDeleteClick(target);
-  } else if (target.id === 'confirmDeleteBtn') {
-    event.preventDefault();
-    handleConfirmDelete();
   }
 });
 
-function handleModifyClick(index) {
-  loadVehicles();
+async function handleModifyClick(index) {
+  await loadVehicles();
   if (isNaN(index) || !vehicles[index]) {
     console.error('Véhicule à modifier introuvable', { index, vehiclesLen: vehicles.length });
     return;
@@ -1014,7 +1202,7 @@ function handleModifyClick(index) {
   
     // remplissage défensif via setField (supporte id ou name)
     setField(form, 'plate', vehicle.plate || '');
-    setField(form, 'registration-date', formatDateForInput(vehicle.registrationDate));
+    setField(form, 'registration-date', formatDateForInput(vehicle.firstRegistration || vehicle.registrationDate));
     setField(form, 'vehicle-marque', vehicle.marque || '');
     setField(form, 'vehicle-model', vehicle.model || '');
     setField(form, 'vehicle-color', vehicle.color || '');
@@ -1057,14 +1245,31 @@ function safeBlurActiveElement() {
   } catch (e) { /* ignore */ }
 }
 
-// ---------------- handleDeleteClick corrigé ----------------
+// ---------------- handleDeleteClick corrigé (attach handler avant show) ----------------
 function handleDeleteClick(target) {
-  const vehicleElements = Array.from(document.querySelectorAll('#vehicleList .vehicle-container'));
-  vehicleToDeleteIndex = vehicleElements.findIndex(vc => vc.contains(target));
-  if (vehicleToDeleteIndex === -1) {
-    console.error("Véhicule à supprimer non trouvé");
+  // trouver le container parent le plus proche
+  const container = target.closest ? target.closest('.vehicle-container') : null;
+  let index = null;
+
+  if (container && container.dataset && typeof container.dataset.index !== 'undefined') {
+    index = parseInt(container.dataset.index, 10);
+  } else {
+    // fallback : si link a data-index
+    const idxAttr = target.getAttribute && target.getAttribute('data-index');
+    if (idxAttr !== null) index = parseInt(idxAttr, 10);
+    else {
+      // ancien fallback : recalculer par position DOM
+      const vehicleElements = Array.from(document.querySelectorAll('#vehicleList .vehicle-container'));
+      index = vehicleElements.findIndex(vc => vc.contains(target));
+    }
+  }
+
+  if (isNaN(index) || !vehicles[index]) {
+    console.error("Véhicule à supprimer introuvable", { index, vehiclesLen: vehicles.length });
     return;
   }
+
+  vehicleToDeleteIndex = index;
 
   const deleteModalEl = document.getElementById('deleteModal');
   if (!deleteModalEl) {
@@ -1072,139 +1277,53 @@ function handleDeleteClick(target) {
     return;
   }
 
-  // Blur l'élément actif pour éviter le warning aria-hidden
   safeBlurActiveElement();
 
-  // Récupère l'instance existante ou en crée une nouvelle
   let deleteModalInstance = bootstrap.Modal.getInstance(deleteModalEl);
   if (!deleteModalInstance) {
     deleteModalInstance = new bootstrap.Modal(deleteModalEl, { backdrop: true, focus: true });
   }
 
-  deleteModalInstance.show();
-}
-
-function handleConfirmDelete() {
-  if (vehicleToDeleteIndex === null || vehicleToDeleteIndex < 0) {
-    console.error('❌ Index invalide', vehicleToDeleteIndex);
-    return;
-  }
-
-  console.log('🗑️ Suppression du véhicule à l\'index', vehicleToDeleteIndex);
-
-  // Suppression des données + persistance
-  vehicles.splice(vehicleToDeleteIndex, 1);
-  saveVehicles();
-  vehicleToDeleteIndex = null;
-
-  // Mise à jour uniquement de la liste visible
-  updateVehicleListOnly();
-
-  const deleteModalEl = document.getElementById('deleteModal');
-  if (!deleteModalEl) {
-    console.error('❌ Modal deleteModal introuvable');
-    return;
-  }
-
-  // 🔒 Verrouille navigation + réécritures
-  document.body.dataset.lockTab = '1';
-  document.body.dataset.lockVehiclesWrite = '1';
-
-  // Récupère et prépare la modale Bootstrap
-  let bsModal = bootstrap.Modal.getInstance(deleteModalEl);
-  if (!bsModal) bsModal = new bootstrap.Modal(deleteModalEl);
-
-  // Déplacer le focus sur une cible sûre (onglet Véhicules ou body)
-  const safeTarget = document.querySelector('.nav-pills.user-tabs .nav-link[href="#user-vehicles-form"]') || document.body;
-
-  try {
-    // Si le focus est dans la modale, blur() d'abord
-    const prevActive = document.activeElement;
-    if (deleteModalEl.contains(prevActive) && typeof prevActive.blur === 'function') {
-      try { prevActive.blur(); } catch (e) { /* ignore */ }
-    }
-  } catch (e) { /* ignore */ }
-
-  // Tenter de focaliser l'élément sûr
-  try {
-    if (safeTarget && typeof safeTarget.focus === 'function') safeTarget.focus({ preventScroll: true });
-  } catch (e) { /* ignore */ }
-
-  // Fonction util : attendre que le focus ne soit plus dans la modal, sinon fallback
-  const waitAndHide = (modalEl, modalInstance, maxMs = 300) => {
-    const start = Date.now();
-    const tick = () => {
-      // Si l'élément focussé n'est PAS dans la modal -> safe to hide
-      if (!modalEl.contains(document.activeElement)) {
-        try {
-          modalInstance.hide();
-        } catch (err) {
-          console.warn('Erreur hide() (fallback remove)', err);
-          try { modalEl.remove(); } catch (e) {}
-        }
-        return;
-      }
-      // timeout encore disponible -> re-tenter rapidement
-      if (Date.now() - start < maxMs) {
-        setTimeout(tick, 10);
-        return;
-      }
-      // Timeout atteint : fallback forcé (blur + hide)
-      try { document.activeElement && document.activeElement.blur(); } catch (e) {}
-      setTimeout(() => {
-        try {
-          modalInstance.hide();
-        } catch (err) {
-          try { modalEl.remove(); } catch (e) {}
-        }
-      }, 0);
-    };
-    // Lancer la première vérification dans la prochaine frame
-    setTimeout(tick, 0);
-  };
-
-  // Lance la fermeture sécurisée
-  waitAndHide(deleteModalEl, bsModal, 400);
-
-  // Nettoyage et réactivation UI quand la modale est effectivement cachée
-  deleteModalEl.addEventListener('hidden.bs.modal', () => {
-    console.log('🔓 Modal hidden event triggered');
-
-    // Nettoyage des backdrops / classes Bootstrap si restées
-    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-    document.body.classList.remove('modal-open');
-
-    // Remise à zéro des styles (scroll)
-    document.body.style.overflow = 'auto';
-    document.body.style.paddingRight = '';
-
-    // Vérifie et restaure le markup si corrompu
-    try { ensureVehiclesPanelMarkup(); } catch (e) { console.warn('ensureVehiclesPanelMarkup erreur', e); }
-
-    // Désactive tous les onglets et active "Mes véhicules"
+  const attached = attachOnceConfirmHandler(deleteModalEl, async () => {
     try {
-      const allTabs = document.querySelectorAll('.nav-pills .nav-link');
-      let vehTabActivated = false;
-      allTabs.forEach(tab => {
-        tab.classList.remove('active');
-        const text = tab.textContent.trim().toLowerCase();
-        if (text.includes('véhicule') || text.includes('vehicule')) {
-          tab.classList.add('active');
-          vehTabActivated = true;
-        }
-      });
-      if (!vehTabActivated) console.error('❌ Impossible d\'activer l\'onglet "Mes véhicules"');
-    } catch (e) {
-      console.warn('Erreur lors de la réactivation des onglets', e);
+      const token = window.ecorideCarsApi && typeof window.ecorideCarsApi.getAuthToken === 'function'
+        ? await window.ecorideCarsApi.getAuthToken()
+        : null;
+      const targetVehicle = vehicles[vehicleToDeleteIndex];
+
+      if (token && targetVehicle && targetVehicle.id) {
+        await window.ecorideCarsApi.apiDeleteCar(targetVehicle.id);
+        console.log('✅ Véhicule supprimé via API');
+      } else {
+        console.log('ℹ️ Aucun token ou ID — suppression locale uniquement');
+      }
+
+      // suppression en mémoire et mise à jour cache
+      vehicles.splice(vehicleToDeleteIndex, 1);
+      try { localStorage.setItem('ecoride_vehicles', JSON.stringify(vehicles)); } catch(e){}
+      // fermer la modal
+      const bs = bootstrap.Modal.getInstance(deleteModalEl);
+      if (bs) bs.hide();
+
+      // attendre la fin d'animation puis re-render proprement
+      setTimeout(() => {
+        updateVehicleListOnly();
+      }, 80);
+
+    } catch (err) {
+      console.error('❌ Erreur suppression', err);
+      if (err && (err.status === 401 || err.status === 403)) {
+        alert('Accès refusé. Vous n’êtes pas autorisé à supprimer ce véhicule.');
+      } else {
+        alert('Erreur lors de la suppression du véhicule.');
+      }
+    } finally {
+      vehicleToDeleteIndex = null;
     }
+  });
 
-    // Déverrouille
-    delete document.body.dataset.lockTab;
-    delete document.body.dataset.lockVehiclesWrite;
-
-    const activeTab = document.querySelector('.nav-pills .nav-link.active');
-    console.log('✅ Modal closed. Active tab =', activeTab?.textContent?.trim() || 'NONE');
-  }, { once: true });
+  if (!attached) console.warn('Impossible d’attacher le handler de confirmation');
+  deleteModalInstance.show();
 }
 
 // -------------------- Datalist/select véhicules (global) --------------------
@@ -1269,6 +1388,18 @@ function populateVehiclesSelect() {
   });
   mo.observe(document.body, { childList: true, subtree: true });
 })();
+
+// Réagir aux mises à jour globales des véhicules (dispatched par saveVehicles)
+window.addEventListener('ecoride:vehiclesUpdated', (ev) => {
+  try {
+    // ré-synchroniser vehicles depuis localStorage si besoin
+    const stored = localStorage.getItem('ecoride_vehicles');
+    const parsed = stored ? JSON.parse(stored) : [];
+    vehicles.length = 0;
+    vehicles.push(...(Array.isArray(parsed) ? parsed : []));
+  } catch (e) { /* ignore */ }
+  updateVehicleListOnly();
+});
 
 // -------------------- Lancement --------------------
 document.addEventListener('pageContentLoaded', () => {

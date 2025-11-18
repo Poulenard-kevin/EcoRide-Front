@@ -1,6 +1,6 @@
 // trajets.js
 import { apiFetch } from '/assets/js/api.js';
-import { createCarIfNeeded, createCarpoolApi, deleteCarpoolApi, carOwnedBy } from '/assets/js/trips-api.js';
+import { createCarIfNeeded, saveCarpoolApi, deleteCarpoolApi, carOwnedBy } from '/assets/js/trips-api.js';
 console.log('apiFetch typeof =', typeof apiFetch);
 // -------------------- Utilitaires & exports de base --------------------
 
@@ -325,6 +325,14 @@ export async function initTrajets() {
 
 async function handleTrajetSubmit(e) {
   e.preventDefault();
+
+  // === Désactiver le bouton pendant l'envoi ===
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.dataset.origText = submitBtn.textContent;
+    submitBtn.textContent = 'Envoi en cours…';
+  }
   const formData = new FormData(e.target);
 
   const prix = Number(formData.get('prix')) || 0;
@@ -362,7 +370,11 @@ async function handleTrajetSubmit(e) {
   enrichTrajetWithCurrentUser(trajetData);
 
   if (editingIndex !== null && trajets[editingIndex]) {
+    // garder status, serverId et autres métadonnées existantes
     trajetData.status = trajets[editingIndex].status;
+    trajetData.serverId = trajets[editingIndex].serverId ?? trajetData.serverId;
+    trajetData.synced = trajets[editingIndex].synced ?? trajetData.synced;
+    trajetData.syncError = trajets[editingIndex].syncError ?? trajetData.syncError;
     trajets[editingIndex] = trajetData;
     editingIndex = null;
   } else {
@@ -474,26 +486,106 @@ async function handleTrajetSubmit(e) {
     return;
   }
 
-  // === Envoi vers l'API (async) ===
+  // === Envoi vers l'API (create ou update) ===
   try {
-    const serverObj = await createCarpoolApi(trajetData, { useSession: true });
-    // ApiPlatform renvoie souvent @id ou id
-    trajetData.serverId = serverObj['@id'] || serverObj.id || null;
+    // --- Construction du payload (champs envoyés au serveur) ---
+    const payload = {
+      departureDate: trajetData.date,
+      departureTime: trajetData.heureDepart ? trajetData.heureDepart.padStart(5, '0') + ':00' : '00:00:00',
+      departureLocation: trajetData.depart,
+      arrivalDate: trajetData.dateArrivee,
+      arrivalTime: trajetData.heureArrivee ? trajetData.heureArrivee.padStart(5, '0') + ':00' : '00:00:00',
+      arrivalLocation: trajetData.arrivee,
+      pricePerSeat: Number(trajetData.prix) || 0,
+      nbPlacesTotal: Number(trajetData.totalSeats ?? trajetData.places ?? 4)
+    };
+
+    if (trajetData.carId) {
+      const id = String(trajetData.carId).startsWith('/api/')
+        ? trajetData.carId
+        : `/api/cars/${trajetData.carId}`;
+      payload.car = id;
+    }
+
+    // --- Envoi au serveur : PATCH (update) ou POST (create) ---
+    let serverObj;
+    const serverIdRaw = trajetData.serverId || trajetData['@id'] || null;
+
+    if (serverIdRaw) {
+      // === Mise à jour (PATCH) ===
+      const id = String(serverIdRaw).startsWith('/api/')
+        ? String(serverIdRaw).replace(/^\/api\/carpools\//, '')
+        : String(serverIdRaw);
+
+      serverObj = await apiFetch(`/carpools/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/merge-patch+json' },
+        body: JSON.stringify(payload)
+      });
+    } else {
+      // === Création (POST) ===
+      serverObj = await apiFetch('/carpools', {
+        method: 'POST',
+        body: payload
+      });
+    }
+
+    // === Mise à jour de l'ID serveur local ===
+  const newServerId = serverObj?.['@id'] || serverObj?.id || null;
+
+  if (newServerId) {
+    trajetData.serverId = newServerId;
     trajetData.synced = true;
     delete trajetData.syncError;
+
+    // Mettre à jour dans le tableau trajets
+    const idx = trajets.findIndex(x => x.id === trajetData.id);
+    if (idx !== -1) {
+      trajets[idx] = { ...trajets[idx], ...trajetData };
+    }
+
     saveTrajets(trajets);
     console.log('✅ Trajet synchronisé avec le serveur :', trajetData.serverId);
+  } else if (serverObj && serverObj.status === 204) {
+    trajetData.synced = true;
+    delete trajetData.syncError;
+
+    const idx = trajets.findIndex(x => x.id === trajetData.id);
+    if (idx !== -1) {
+      trajets[idx] = { ...trajets[idx], ...trajetData };
+    }
+
+    saveTrajets(trajets);
+    console.log('✅ Trajet synchronisé (204 No Content) :', trajetData.serverId);
+  } else {
+    trajetData.synced = false;
+    trajetData.syncError = 'Aucun identifiant serveur retourné';
+
+    const idx = trajets.findIndex(x => x.id === trajetData.id);
+    if (idx !== -1) {
+      trajets[idx] = { ...trajets[idx], ...trajetData };
+    }
+
+    saveTrajets(trajets);
+    console.warn('⚠️ Aucun identifiant serveur retourné, trajet non synchronisé');
+  }
+
   } catch (err) {
     trajetData.synced = false;
     trajetData.syncError = err.message || String(err);
     saveTrajets(trajets);
     console.warn('⚠️ Synchronisation échouée — trajet mis en file d\'attente', err);
-    // Optionnel : afficher un toast ou alerte utilisateur
     alert('Trajet enregistré localement. Synchronisation serveur en attente.');
-  }
+  } finally {
+    // === Réactiver le bouton ===
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = submitBtn.dataset.origText || 'Publier';
+    }
 
-  // Reset du formulaire
-  e.target.reset();
+    // Reset du formulaire
+    e.target.reset();
+  }
 }
 
 // -------------------- Actions globales --------------------
@@ -514,7 +606,7 @@ function tryUntilExists(fn, maxAttempts = 8, intervalMs = 80) {
   });
 }
 
-function handleTrajetActions(e) {
+async function handleTrajetActions(e) {
   const target = e.target;
   if (!target) return;
 
@@ -662,51 +754,65 @@ function handleTrajetActions(e) {
     return;
   }
 
-  // delete
+  // suppression : appeler depuis handleTrajetActions -> trajet-delete-btn
   if (target.classList.contains('trajet-delete-btn')) {
     const id = target.dataset.id;
     const index = trajets.findIndex(t => t.id === id);
     if (index === -1) return;
     if (!confirm("Supprimer ce trajet ?")) return;
-
-    const prevNouveaux = localStorage.getItem('nouveauxTrajets');
-    const prevUserTrajets = localStorage.getItem('ecoride_trajets');
-    const prevNotifications = localStorage.getItem('ecoride_notifications');
-
-    const removed = trajets.splice(index, 1)[0];
-    saveTrajets();
-    renderTrajetsInProgress();
-    renderHistorique();
-
-    (async () => {
-      try {
-        const serverId = removed?.serverId || removed?.server_id || removed?.['@id'] || removed?.id || null;
-        if (!serverId) return;
-
-        const res = await deleteCarpoolApi(serverId);
-
-        if (res && res.status === 204) {
-          console.log('Suppression serveur OK', serverId);
-        } else if (res && res.status === 404) {
-          console.warn('Ressource déjà supprimée côté serveur (404), suppression locale conservée', serverId);
-        } else {
-          console.warn('Suppression serveur réponse inattendue', res);
-        }
-      } catch (err) {
-        console.error('Erreur suppression serveur', err);
-        // rollback local pour erreur serveur non-404
-        trajets.splice(index, 0, removed);
-        saveTrajets();
-        if (prevNouveaux !== null) localStorage.setItem('nouveauxTrajets', prevNouveaux); else localStorage.removeItem('nouveauxTrajets');
-        if (prevUserTrajets !== null) localStorage.setItem('ecoride_trajets', prevUserTrajets); else localStorage.removeItem('ecoride_trajets');
-        if (prevNotifications !== null) localStorage.setItem('ecoride_notifications', prevNotifications); else localStorage.removeItem('ecoride_notifications');
-        window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+  
+    const removed = trajets[index];
+    const serverId = removed?.serverId || removed?.server_id || removed?.['@id'] || null;
+  
+    // Si pas d'id serveur connu => suppression locale immédiate
+    if (!serverId) {
+      trajets.splice(index, 1);
+      saveTrajets(trajets);
+      renderTrajetsInProgress();
+      renderHistorique();
+      return;
+    }
+  
+    try {
+      const res = await deleteCarpoolApi(serverId);
+      console.debug('[delete] res', res);
+  
+      if (res.status === 204 || res.status === 200) {
+        // Suppression confirmée -> supprimer localement
+        trajets.splice(index, 1);
+        saveTrajets(trajets);
         renderTrajetsInProgress();
         renderHistorique();
-        alert('Erreur lors de la suppression sur le serveur. La suppression locale a été annulée.');
+        console.log('Suppression serveur et locale OK', serverId);
+        return;
       }
-    })();
-
+  
+      if (res.status === 404) {
+        // Déjà supprimé côté serveur : supprimer local aussi
+        trajets.splice(index, 1);
+        saveTrajets(trajets);
+        renderTrajetsInProgress();
+        renderHistorique();
+        console.warn('Ressource déjà supprimée côté serveur (404) — suppression locale appliquée', serverId);
+        return;
+      }
+  
+      // Autres erreurs (network, 403, 500, etc.) => afficher détail et proposer forcer suppression locale
+      console.warn('Suppression serveur inattendue', res);
+      const details = JSON.stringify(res.body || res, null, 2);
+      if (confirm(`La suppression côté serveur a échoué (statut: ${res.status}). Détails:\n${details}\n\nVoulez-vous forcer la suppression locale ?`)) {
+        trajets.splice(index, 1);
+        saveTrajets(trajets);
+        renderTrajetsInProgress();
+        renderHistorique();
+        console.log('Suppression locale forcée pour', serverId);
+      } else {
+        alert('Suppression annulée.');
+      }
+    } catch (err) {
+      console.error('Erreur inattendue lors de la suppression', err);
+      alert('Erreur inattendue lors de la suppression. Regarde la console pour plus de détails.');
+    }
     return;
   }
 
@@ -1155,12 +1261,47 @@ async function retryPendingSyncs() {
         }
       }
 
-      // poster le trajet (createCarpoolApi gère l'Authorization via apiFetch)
-      const serverObj = await createCarpoolApi(t);
-      t.serverId = serverObj['@id'] || serverObj.id || null;
-      t.synced = true;
-      delete t.syncError;
-      console.log('🔁 Retry sync OK pour', t.id);
+      const serverIdRaw = t.serverId || t['@id'] || null;
+
+      try {
+        const serverObj = await saveCarpoolApi(t);
+        console.log('DEBUG saveCarpoolApi result for', t.id, serverObj);
+
+        // Accepter plusieurs formes de réponse :
+        const newServerId = serverObj?.['@id'] || serverObj?.id || null;
+
+        // Si l'API a répondu 204 (No Content) et qu'on avait déjà un serverId, on considère OK
+        const isNoContent = serverObj && serverObj.status === 204;
+
+        if (newServerId) {
+          t.serverId = newServerId;
+          t.synced = true;
+          delete t.syncError;
+          console.log('🔁 Retry sync OK pour', t.id, '->', t.serverId);
+        } else if (isNoContent && serverIdRaw) {
+          // pas d'id renvoyé mais suppression/ack possible — conserver l'ancien id
+          t.synced = true;
+          delete t.syncError;
+          console.log('🔁 Retry sync OK (204) pour', t.id, 'conserve serverId=', serverIdRaw);
+        } else {
+          // Pas d'id renvoyé — ne pas écraser serverId ; marquer erreur
+          throw new Error('Aucun identifiant serveur retourné par saveCarpoolApi');
+        }
+      } catch (err) {
+        // ❌ Ne jamais faire de POST si serverId existe
+        if (serverIdRaw) {
+          console.warn('🔁 Échec mise à jour (PATCH) pour', t.id, '. On ne recrée pas.', err.message || err);
+          t.syncError = `update-failed: ${err.message || String(err)}`;
+          // Optionnel : si 404, marquer comme "stale"
+          if (err.status === 404) {
+            t.syncError = 'stale-serverid';
+          }
+        } else {
+          // Si c’est une création échouée, on peut retenter plus tard
+          t.syncError = `create-failed: ${err.message || String(err)}`;
+          console.warn('🔁 Échec création (POST) pour', t.id, err.message || err);
+        }
+      }
     } catch (err) {
       t.syncError = err.message || String(err);
       console.warn('🔁 Retry échoué pour', t.id, err.message || err);

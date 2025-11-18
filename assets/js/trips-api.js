@@ -1,6 +1,7 @@
 // assets/js/trips-api.js
 import { apiFetch } from './api.js';
 
+
 const API_BASE = window.ecoConfig?.apiBase || 'http://localhost:8000';
 
 /**
@@ -23,9 +24,6 @@ export function formatTimeForApi(timeStr) {
 }
 
 export async function createCarpoolApi(trajetData, options = {}) {
-  const { jwtToken } = options;
-
-  // Helpers locaux
   const padTimeParts = (t) => {
     if (!t) return '00:00:00';
     const parts = (''+t).split(':').map(p => p.padStart(2, '0'));
@@ -33,7 +31,6 @@ export async function createCarpoolApi(trajetData, options = {}) {
     return `${parts[0]}:${parts[1]}:${parts[2]}`;
   };
 
-  // Normalisation flexible des champs
   const departureDate = trajetData.departureDate || trajetData.date || null;
   const arrivalDate   = trajetData.arrivalDate   || trajetData.dateArrivee || null;
   const departureTime = trajetData.departureTime || trajetData.heureDepart || '';
@@ -43,9 +40,8 @@ export async function createCarpoolApi(trajetData, options = {}) {
   const arrivalLocation = trajetData.arrivee || trajetData.arrival || trajetData.arrivalLocation || '';
 
   const pricePerSeat = trajetData.pricePerSeat ?? trajetData.prix ?? trajetData.price ?? 0;
-  const totalSeats = trajetData.totalSeats ?? trajetData.places ?? trajetData.totalSeats ?? 4;
+  const totalSeats = trajetData.totalSeats ?? trajetData.places ?? trajetData.nbPlacesTotal ?? 4;
 
-  // Construire payload attendu par le backend
   const payload = {
     departureDate: departureDate,
     departureTime: padTimeParts(departureTime),
@@ -54,26 +50,56 @@ export async function createCarpoolApi(trajetData, options = {}) {
     arrivalTime: padTimeParts(arrivalTime),
     arrivalLocation: arrivalLocation,
     pricePerSeat: Number(pricePerSeat),
-    totalSeats: Number(totalSeats)
+    nbPlacesTotal: Number(totalSeats)
   };
 
-  // ajoute la voiture si tu as un carId
   if (trajetData.carId) {
-    payload.car = `/api/cars/${trajetData.carId}`;
+    const id = String(trajetData.carId).startsWith('/api/') ? String(trajetData.carId).replace('/api/cars/', '') : String(trajetData.carId);
+    payload.car = `/api/cars/${id}`;
   }
 
-  // supprimer les champs vides/null
   Object.keys(payload).forEach(k => {
     if (payload[k] === null || payload[k] === '' || payload[k] === undefined) delete payload[k];
   });
 
-  console.log('createCarpoolApi payload:', JSON.stringify(payload, null, 2));
+  try {
+    // apiFetch attend le path relatif (api.js a API_BASE '/api' intégré)
+    const res = await apiFetch('/carpools', { method: 'POST', body: payload });
+    return res;
+  } catch (err) {
+    // normalize error for callers
+    const message = err?.body?.['hydra:description'] || err?.body?.message || err?.message || 'Erreur création covoiturage';
+    const e = new Error(message);
+    e.status = err.status;
+    e.body = err.body;
+    throw e;
+  }
+}
 
-  // Envoi via apiFetch (gère token automatiquement)
-  return await apiFetch('/carpools', {
-    method: 'POST',
-    body: payload
-  });
+// Normalize owner check (owner can be IRI string or object)
+export function carOwnedBy(carJson, currentUser) {
+  if (!carJson || !currentUser) return false;
+
+  // Normalize current user id/IRI
+  const userIdNum = currentUser.id ?? null;
+  const userIri = currentUser['@id'] ?? (userIdNum ? `/api/users/${userIdNum}` : null);
+
+  const owner = carJson.owner ?? carJson.user ?? carJson.ownerId ?? null;
+  if (!owner) return false;
+
+  if (typeof owner === 'string') {
+    // owner is an IRI string like "/api/users/33"
+    if (userIri && owner === userIri) return true;
+    if (userIdNum && owner.endsWith(`/users/${userIdNum}`)) return true;
+    return false;
+  }
+
+  if (typeof owner === 'object') {
+    if ('id' in owner && userIdNum) return Number(owner.id) === Number(userIdNum);
+    if ('@id' in owner && userIri) return owner['@id'] === userIri;
+  }
+
+  return false;
 }
 
 /**
@@ -129,4 +155,24 @@ export async function createCarIfNeeded(vehicle, options = {}) {
     return String(res['@id']).replace('/api/cars/', '');
   }
   return res?.id ?? null;
+}
+
+export async function deleteCarpoolApi(serverIdOrAtId) {
+  if (!serverIdOrAtId) return { status: 'no-id' };
+
+  let id = String(serverIdOrAtId);
+  if (id.startsWith('/api/')) {
+    id = id.replace(/^\/api\/carpools\//, '');
+  }
+
+  try {
+    await apiFetch(`/carpools/${id}`, { method: 'DELETE' });
+    return { status: 204 };
+  } catch (err) {
+    const status = err?.status || (err?.response && err.response.status) || null;
+    if (status === 404) {
+      return { status: 404 };
+    }
+    throw err;
+  }
 }

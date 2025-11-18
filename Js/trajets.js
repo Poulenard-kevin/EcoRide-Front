@@ -1,7 +1,7 @@
 // trajets.js
-
-import { createCarIfNeeded, createCarpoolApi } from '/assets/js/trips-api.js';
-
+import { apiFetch } from '/assets/js/api.js';
+import { createCarIfNeeded, createCarpoolApi, deleteCarpoolApi, carOwnedBy } from '/assets/js/trips-api.js';
+console.log('apiFetch typeof =', typeof apiFetch);
 // -------------------- Utilitaires & exports de base --------------------
 
 export function genId() {
@@ -279,8 +279,20 @@ function onDomReady(selector, callback) {
   observer.observe(document.body, { childList: true, subtree: true });
 }
 
-export function initTrajets() {
+export async function initTrajets() {
   console.log("🚀 initTrajets");
+  // Charger l'utilisateur courant si token présent mais pas de user en local
+  if (localStorage.getItem('api_token') && !localStorage.getItem('ecoride_user')) {
+    try {
+      const me = await apiFetch('/me');
+      if (me) {
+        localStorage.setItem('ecoride_user', JSON.stringify(me));
+        console.log('✅ Utilisateur courant récupéré et stocké');
+      }
+    } catch (e) {
+      console.warn('⚠ Impossible de récupérer /me au démarrage :', e);
+    }
+  }
   // charger depuis storage
   trajets = getTrajets();
   updatePlacesReservees();
@@ -387,7 +399,7 @@ async function handleTrajetSubmit(e) {
         } catch (e) { console.warn('failed to update ecoride_vehicles', e); }
       }
     }
-  } catch (err) {
+    } catch (err) {
     console.error('Erreur création voiture avant covoiturage:', err);
     // si échec de création voiture -> empêcher la création covoiturage côté serveur (DataPersister exige car)
     alert('Impossible d\'enregistrer la voiture sur le serveur. Le trajet sera sauvegardé localement.');
@@ -395,7 +407,72 @@ async function handleTrajetSubmit(e) {
     trajetData.syncError = err.message || String(err);
     saveTrajets(trajets);
     return; // quitte la soumission distante
-}
+  }
+
+  // === VALIDATION : vérifier que la voiture existe ET appartient bien à l'utilisateur ===
+  try {
+    if (!trajetData.carId) {
+      throw new Error('Aucun id de voiture serveur disponible.');
+    }
+
+    // Normalise carId numeric/IRI
+    const carIdNormalized = String(trajetData.carId).startsWith('/api/') 
+      ? String(trajetData.carId).replace('/api/cars/', '') 
+      : String(trajetData.carId);
+
+    // Récupérer la voiture côté serveur (utilise apiFetch)
+    let car;
+    try {
+      car = await apiFetch(`/cars/${carIdNormalized}`, { method: 'GET' });
+    } catch (fetchErr) {
+      const status = fetchErr?.status || (fetchErr?.response && fetchErr.response.status) || null;
+      console.warn('fetch car error:', fetchErr);
+      if (status === 404) {
+        // rollback local optimistic ajout
+        trajets = trajets.filter(t => t.id !== trajetData.id);
+        saveTrajets(trajets);
+        renderTrajetsInProgress();
+        renderHistorique();
+        alert('La voiture sélectionnée est introuvable sur le serveur.');
+        return;
+      }
+      // réseau ou autre erreur : conserver le trajet local et informer l'utilisateur
+      alert('Impossible de vérifier la voiture (réseau). Le trajet restera en local et sera retenté plus tard.');
+      trajetData.synced = false;
+      trajetData.syncError = fetchErr.message || String(fetchErr);
+      saveTrajets(trajets);
+      return;
+    }
+
+    // Récupérer l'utilisateur courant (doit être fait APRÈS la tentative réseau)
+    const me = getCurrentUser();
+
+    // DEBUG (temporaires) : affichez après l'initialisation de me et car
+    console.log('DEBUG car fetched (raw or mapped):', car);
+    console.log('DEBUG current user (me):', me);
+    console.log('DEBUG local api token:', localStorage.getItem('api_token'));
+
+    // Vérifier la propriété côté front (UX)
+    if (!carOwnedBy(car, me)) {
+      // rollback optimistic ajout
+      trajets = trajets.filter(t => t.id !== trajetData.id);
+      saveTrajets(trajets);
+      renderTrajetsInProgress();
+      renderHistorique();
+      alert('La voiture sélectionnée ne vous appartient pas.');
+      return;
+    }
+  } catch (err) {
+    console.warn('Validation voiture avant création covoiturage échouée:', err);
+    // err déjà traité plus haut; si on arrive ici pour d'autres raisons, garder le trajet en local
+    if (!err.status) {
+      alert('Erreur inattendue lors de la vérification de la voiture. Le trajet restera en local.');
+      trajetData.synced = false;
+      trajetData.syncError = err.message || String(err);
+      saveTrajets(trajets);
+    }
+    return;
+  }
 
   // === Envoi vers l'API (async) ===
   try {
@@ -592,55 +669,44 @@ function handleTrajetActions(e) {
     if (index === -1) return;
     if (!confirm("Supprimer ce trajet ?")) return;
 
+    const prevNouveaux = localStorage.getItem('nouveauxTrajets');
+    const prevUserTrajets = localStorage.getItem('ecoride_trajets');
+    const prevNotifications = localStorage.getItem('ecoride_notifications');
+
     const removed = trajets.splice(index, 1)[0];
     saveTrajets();
-
-    let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
-    const covoIndex = trajetsCovoiturage.findIndex(t => t.id === id);
-    if (covoIndex !== -1) {
-      trajetsCovoiturage.splice(covoIndex, 1);
-      localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
-      window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
-    }
-
-    let userTrajets = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
-    let notifications = JSON.parse(localStorage.getItem('ecoride_notifications') || '[]');
-
-    const getPassengerIdentifier = (res) => {
-      return res.userId || res.passagerId || res.pseudo || (res.user && res.user.id) || (res.passager && res.passager.id) || null;
-    };
-
-    userTrajets = userTrajets.map(res => {
-      const ref = getCovoId(res);
-      if (ref === id) {
-        res.status = 'annule_par_chauffeur';
-        res.cancellationReason = res.cancellationReason || "Trajet annulé par le chauffeur";
-        res.cancellationAt = new Date().toISOString();
-        res.notified = false;
-
-        const passengerId = getPassengerIdentifier(res);
-        const notification = {
-          id: genId(),
-          to: passengerId,
-          message: `Le trajet ${removed.depart || ''} → ${removed.arrivee || ''} a été annulé.`,
-          relatedCovoiturageId: id,
-          type: 'trajet_annule',
-          read: false,
-          createdAt: new Date().toISOString()
-        };
-        notifications.push(notification);
-      }
-      return res;
-    });
-
-    localStorage.setItem('ecoride_trajets', JSON.stringify(userTrajets));
-    localStorage.setItem('ecoride_notifications', JSON.stringify(notifications));
-    window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
-    window.dispatchEvent(new CustomEvent('ecoride:notificationsUpdated'));
-
-    updatePlacesReservees();
     renderTrajetsInProgress();
     renderHistorique();
+
+    (async () => {
+      try {
+        const serverId = removed?.serverId || removed?.server_id || removed?.['@id'] || removed?.id || null;
+        if (!serverId) return;
+
+        const res = await deleteCarpoolApi(serverId);
+
+        if (res && res.status === 204) {
+          console.log('Suppression serveur OK', serverId);
+        } else if (res && res.status === 404) {
+          console.warn('Ressource déjà supprimée côté serveur (404), suppression locale conservée', serverId);
+        } else {
+          console.warn('Suppression serveur réponse inattendue', res);
+        }
+      } catch (err) {
+        console.error('Erreur suppression serveur', err);
+        // rollback local pour erreur serveur non-404
+        trajets.splice(index, 0, removed);
+        saveTrajets();
+        if (prevNouveaux !== null) localStorage.setItem('nouveauxTrajets', prevNouveaux); else localStorage.removeItem('nouveauxTrajets');
+        if (prevUserTrajets !== null) localStorage.setItem('ecoride_trajets', prevUserTrajets); else localStorage.removeItem('ecoride_trajets');
+        if (prevNotifications !== null) localStorage.setItem('ecoride_notifications', prevNotifications); else localStorage.removeItem('ecoride_notifications');
+        window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+        renderTrajetsInProgress();
+        renderHistorique();
+        alert('Erreur lors de la suppression sur le serveur. La suppression locale a été annulée.');
+      }
+    })();
+
     return;
   }
 

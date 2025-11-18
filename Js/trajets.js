@@ -4,6 +4,8 @@ import { createCarIfNeeded, saveCarpoolApi, deleteCarpoolApi, carOwnedBy } from 
 console.log('apiFetch typeof =', typeof apiFetch);
 // -------------------- Utilitaires & exports de base --------------------
 
+const deleting = new Set();
+
 export function genId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return 'id_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -261,6 +263,55 @@ export function saveTrajets(updated = null) {
   } catch (err) {
     console.error("❌ Erreur sauvegarde trajets:", err);
   }
+}
+
+// -------------------- Helpers suppression locale --------------------
+
+export function removeLocalTrajetByServerId(serverId, localId = null) {
+  if (!serverId && !localId) return;
+
+  const normalize = (v) => {
+    if (v === null || v === undefined) return '';
+    const s = String(v);
+    // cas où on stocke l'IRI complet (/api/carpools/12)
+    const m = s.match(/\/api\/carpools\/(\d+)$/);
+    if (m) return m[1];
+    // retirer un éventuel préfixe /api/carpools/
+    return s.replace(/^\/api\/carpools\//, '');
+  };
+
+  const sid = normalize(serverId);
+  const lid = localId ? String(localId) : null;
+
+  const removeFromKey = (key) => {
+    try {
+      const list = JSON.parse(localStorage.getItem(key) || '[]');
+      const filtered = list.filter(t => {
+        // récupérer identifiants connus sur l'objet
+        const tServerRaw = t.serverId ?? t['@id'] ?? t.carserverId ?? t.covoServerId ?? '';
+        const tServer = normalize(tServerRaw);
+        const tLocal = t._localId ?? t.id ?? t.detailId ?? t.covoId ?? null;
+
+        if (lid && tLocal && String(tLocal) === lid) return false;
+        if (sid && tServer && (tServer === sid || String(tServer).endsWith(String(sid)))) return false;
+
+        return true;
+      });
+      if (filtered.length !== list.length) {
+        localStorage.setItem(key, JSON.stringify(filtered));
+      }
+    } catch (e) {
+      console.warn('removeLocalTrajetByServerId: error handling key', key, e);
+    }
+  };
+
+  // clés primaires à nettoyer
+  removeFromKey('ecoride_trajets');
+  removeFromKey('nouveauxTrajets');
+
+  // notifier les autres vues
+  window.dispatchEvent(new CustomEvent('ecoride:trajets-synced', { detail: { serverId: sid, localId: lid } }));
+  window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
 }
 
 // -------------------- Init & helpers DOM --------------------
@@ -759,61 +810,96 @@ async function handleTrajetActions(e) {
     const id = target.dataset.id;
     const index = trajets.findIndex(t => t.id === id);
     if (index === -1) return;
-    if (!confirm("Supprimer ce trajet ?")) return;
-  
+
     const removed = trajets[index];
-    const serverId = removed?.serverId || removed?.server_id || removed?.['@id'] || null;
-  
-    // Si pas d'id serveur connu => suppression locale immédiate
+    const serverId = removed?.serverId || removed?.['@id'] || null;
+    const deleteKey = serverId || id;
+
+    // protège contre double-click / requêtes concurrentes
+    if (deleting.has(deleteKey)) {
+      console.debug('[delete] suppression déjà en cours pour', deleteKey);
+      return;
+    }
+    deleting.add(deleteKey);
+
+    // disable + visual feedback
+    target.disabled = true;
+    target.classList.add('is-loading');
+
+    if (!confirm("Supprimer ce trajet ?")) {
+      deleting.delete(deleteKey);
+      target.disabled = false;
+      target.classList.remove('is-loading');
+      return;
+    }
+
     if (!serverId) {
+      // suppression locale immédiate
       trajets.splice(index, 1);
       saveTrajets(trajets);
       renderTrajetsInProgress();
       renderHistorique();
+
+      // aussi supprimer dans 'nouveauxTrajets' si présent
+      try {
+        const key = 'nouveauxTrajets';
+        let covos = JSON.parse(localStorage.getItem(key) || '[]');
+        covos = covos.filter(c => String(c.id) !== String(id));
+        localStorage.setItem(key, JSON.stringify(covos));
+        window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+      } catch (e) { /* ignore */ }
+
+      window.dispatchEvent(new CustomEvent('ecoride:carpool-deleted', { detail: { localId: id, serverId: null } }));
+      deleting.delete(deleteKey);
+      target.disabled = false;
+      target.classList.remove('is-loading');
       return;
     }
-  
+
     try {
       const res = await deleteCarpoolApi(serverId);
-      console.debug('[delete] res', res);
-  
-      if (res.status === 204 || res.status === 200) {
-        // Suppression confirmée -> supprimer localement
-        trajets.splice(index, 1);
-        saveTrajets(trajets);
-        renderTrajetsInProgress();
-        renderHistorique();
-        console.log('Suppression serveur et locale OK', serverId);
-        return;
-      }
-  
-      if (res.status === 404) {
-        // Déjà supprimé côté serveur : supprimer local aussi
-        trajets.splice(index, 1);
-        saveTrajets(trajets);
-        renderTrajetsInProgress();
-        renderHistorique();
-        console.warn('Ressource déjà supprimée côté serveur (404) — suppression locale appliquée', serverId);
-        return;
-      }
-  
-      // Autres erreurs (network, 403, 500, etc.) => afficher détail et proposer forcer suppression locale
-      console.warn('Suppression serveur inattendue', res);
-      const details = JSON.stringify(res.body || res, null, 2);
-      if (confirm(`La suppression côté serveur a échoué (statut: ${res.status}). Détails:\n${details}\n\nVoulez-vous forcer la suppression locale ?`)) {
-        trajets.splice(index, 1);
-        saveTrajets(trajets);
-        renderTrajetsInProgress();
-        renderHistorique();
-        console.log('Suppression locale forcée pour', serverId);
+      console.debug('[delete] response', res);
+
+      if (res && (res.status === 204 || res.status === 200 || res.status === 404)) {
+        // nettoyer le localStorage (ecoride_trajets et nouveauxTrajets)
+        try {
+          removeLocalTrajetByServerId(serverId, id);
+        } catch (e) {
+          console.warn('removeLocalTrajetByServerId failed', e);
+        }
+    
+        // mettre à jour l'état en mémoire et sauvegarder
+        const idx = trajets.findIndex(t => t.id === id);
+        if (idx !== -1) {
+          trajets.splice(idx, 1);
+          saveTrajets(trajets);
+          renderTrajetsInProgress();
+          renderHistorique();
+        }
+    
+        // notifier les autres vues (la fonction removeLocalTrajetByServerId a déjà dispatché 'ecoride:trajetsUpdated',
+        // mais on redemande un event ciblé 'carpool-deleted' pour compatibilité)
+        window.dispatchEvent(new CustomEvent('ecoride:carpool-deleted', { detail: { serverId, localId: id } }));
+        console.log('Suppression appliquée localement et serveur OK', serverId);
       } else {
-        alert('Suppression annulée.');
+        console.warn('Suppression serveur inattendue', res);
+        // logique fallback (forcer suppression locale si l'utilisateur le souhaite)
+        if (confirm(`La suppression côté serveur a échoué (statut: ${res?.status}). Forcer suppression locale ?`)) {
+          // nettoyage local identique
+          try { removeLocalTrajetByServerId(serverId, id); } catch (e) { console.warn(e); }
+          const idx = trajets.findIndex(t => t.id === id);
+          if (idx !== -1) { trajets.splice(idx, 1); saveTrajets(trajets); renderTrajetsInProgress(); renderHistorique(); }
+          window.dispatchEvent(new CustomEvent('ecoride:carpool-deleted', { detail: { serverId, localId: id } }));
+        }
       }
     } catch (err) {
-      console.error('Erreur inattendue lors de la suppression', err);
-      alert('Erreur inattendue lors de la suppression. Regarde la console pour plus de détails.');
+      console.error('Erreur lors du traitement de la suppression:', err);
+      alert('Erreur lors de la suppression. Vérifie la console / Network.');
+    } finally {
+      deleting.delete(deleteKey);
+      target.disabled = false;
+      target.classList.remove('is-loading');
     }
-    return;
   }
 
   // close (valide)

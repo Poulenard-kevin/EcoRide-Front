@@ -4,15 +4,13 @@ import { apiFetch, setToken } from './api.js';
 export async function login(email, password) {
   console.log('[auth-client] login called for', email);
 
-  // Envoi du payload attendu par le backend (email + password)
-  const body = await apiFetch('/login', {
+  const body = await apiFetch('/api/login', {
     method: 'POST',
     body: { email, password }
   });
 
   console.log('[auth-client] raw response body =', body);
 
-  // Tolérance sur différents noms possibles pour le token
   const token =
     body?.apiToken ??
     body?.token ??
@@ -29,7 +27,6 @@ export async function login(email, password) {
     throw err;
   }
 
-  // Mettre en place le token (implémentation dans api.js)
   setToken(token);
   return token;
 }

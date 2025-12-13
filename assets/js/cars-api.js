@@ -198,12 +198,29 @@
     async function refreshLocalCache(key = 'ecoride_vehicles') {
       try {
         const arr = await apiGetCars();
-        try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) { console.warn('refreshLocalCache: write fail', e); }
+        try { 
+          localStorage.setItem(key, JSON.stringify(arr)); 
+          notifyVehiclesChanged('refresh', null); // 🚗 AJOUT
+        } catch (e) { 
+          console.warn('refreshLocalCache: write fail', e); 
+        }
         return arr;
       } catch (e) {
         console.warn('refreshLocalCache failed', e);
         // fallback read LS
         try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (err) { return []; }
+      }
+    }
+
+    // Helper pour notifier les autres modules qu'un véhicule a changé
+    function notifyVehiclesChanged(action = 'update', vehicle = null) {
+      try {
+        window.dispatchEvent(new CustomEvent('ecoride:vehicles-updated', {
+          detail: { action, vehicle }
+        }));
+        console.log(`🚗 Event dispatched: ecoride:vehicles-updated (${action})`);
+      } catch (e) {
+        console.warn('notifyVehiclesChanged failed', e);
       }
     }
   
@@ -219,7 +236,8 @@
       apiCreateCar,
       apiUpdateCar,
       apiDeleteCar,
-      refreshLocalCache
+      refreshLocalCache,
+      notifyVehiclesChanged
     };
   
     // Attach to global

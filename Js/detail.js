@@ -1,4 +1,5 @@
 import { resolveAvatarSrc, getProfileAvatarFromStorage } from './trajets.js';
+import { carpoolFromApiAsync } from '/assets/js/trips-api.js';
 
 console.log("🔍 detail.js chargé !");
 
@@ -277,132 +278,74 @@ function renderPlaces(trajetObj) {
 
 // =================== Main ===================
 
-document.addEventListener("pageContentLoaded", () => {
-  console.log("🎯 DOMContentLoaded dans detail.js");
+document.addEventListener("pageContentLoaded", async () => {
+  console.log("🎯 pageContentLoaded dans detail.js");
 
-  let id = new URLSearchParams(window.location.search).get('id');
+  function getCarpoolIdFromLocation() {
+    const params = new URLSearchParams(window.location.search);
+    const queryId = params.get('id');
+    if (queryId && queryId.trim()) return queryId.trim();
 
-  if (!id) {
-    const parts = window.location.pathname.split('/');
-    if (parts.length >= 3 && parts[1] === 'detail') {
-      id = parts[2];
+    const path = window.location.pathname || '';
+    const parts = path.split('/').filter(Boolean); // ["detail","3"]
+    if (parts.length >= 2 && parts[0] === 'detail' && parts[1]) {
+      return parts[1];
     }
+    return null;
   }
 
+  const id = getCarpoolIdFromLocation();
   console.log("🟢 ID récupéré dans detail.js:", id);
+
+  // 🚫 Ne plus faire de history.push/replace/popstate ici
+  if (!id) {
+    console.warn('Aucun ID de covoiturage valide, rien à afficher dans detail.js');
+    // On sort simplement, le router décidera quoi faire
+    return;
+  }
 
   // =================== Récupération des trajets ===================
 
-  const trajetsSauvegardes = JSON.parse(localStorage.getItem("nouveauxTrajets") || "[]");
 
-  const trajetsMock = [
-    // ... mocks identiques à ta version (inchangé pour respecter ta demande)
-    {
-      id: 'trajet1',
-      __mock: true,
-      date: 'Vendredi 16 septembre',
-      chauffeur: { pseudo: 'Jean', rating: 4, photo: 'images/profil4m.png' },
-      type: 'economique',
-      places: 2,
-      depart: 'Paris',
-      arrivee: 'Lyon',
-      heureDepart: '16h00',
-      heureArrivee: '20h30',
-      prix: 30,
-      rating: 4,
-      passagers: ['Alice', 'Bob'],
-      duree: 4.5,
-      vehicle: { brand: 'Peugeot', model: '308', color: 'Bleu', type: 'Économique' },
-      preferences: ['Non-fumeur', 'Animaux acceptés', 'Musique'],
-      reviews: [
-        "Super expérience avec EcoRide ! Jean était très ponctuel et la voiture impeccable. Je recommande !",
-        "Trajet agréable et efficace. Le chauffeur était courtois et la conduite souple.",
-        "EcoRide, c'est l'assurance d'un trajet serein. Jean était professionnel et très sympathique."
-      ]
-    },
-    {
-      id: 'trajet2',
-      __mock: true,
-      date: 'Samedi 17 septembre',
-      chauffeur: { pseudo: 'Marie', rating: 5, photo: 'images/profil1.png' },
-      type: 'hybride',
-      places: 3,
-      depart: 'Marseille',
-      arrivee: 'Nice',
-      heureDepart: '10h00',
-      heureArrivee: '13h00',
-      prix: 25,
-      rating: 5,
-      passagers: ['Paul', 'Sophie'],
-      duree: 3,
-      vehicle: { brand: 'Toyota', model: 'Prius', color: 'Blanc', type: 'Hybride' },
-      preferences: ['Non-fumeur', 'Pas d\'animaux', 'Silence'],
-      reviews: [
-        "Marie est une excellente conductrice ! Trajet très confortable.",
-        "Ponctuelle et sympathique, je recommande vivement.",
-        "Voiture propre et conduite sécurisée. Parfait !"
-      ]
-    },
-    {
-      id: 'trajet3',
-      __mock: true,
-      date: 'Dimanche 18 septembre',
-      chauffeur: { pseudo: 'Luc', rating: 3, photo: 'images/profil3m.png' },
-      type: 'thermique',
-      places: 1,
-      depart: 'Lille',
-      arrivee: 'Bruxelles',
-      heureDepart: '09h30',
-      heureArrivee: '12h00',
-      prix: 20,
-      rating: 3,
-      passagers: ['Emma'],
-      duree: 2.5,
-      vehicle: { brand: 'Renault', model: 'Clio', color: 'Rouge', type: 'Thermique' },
-      preferences: ['Fumeur autorisé', 'Animaux acceptés', 'Musique'],
-      reviews: [
-        "Trajet correct, rien d'exceptionnel mais ça fait le travail.",
-        "Luc était sympa mais un peu en retard au départ.",
-        "Voiture un peu ancienne mais trajet sans problème."
-      ]
-    },
-    {
-      id: 'trajet4',
-      __mock: true,
-      date: 'Lundi 19 septembre',
-      chauffeur: { pseudo: 'Sophie', rating: 4, photo: 'images/profil2w.png' },
-      type: 'electrique',
-      places: 4,
-      depart: 'Bordeaux',
-      arrivee: 'Toulouse',
-      heureDepart: '14h00',
-      heureArrivee: '17h00',
-      prix: 35,
-      rating: 4,
-      passagers: ['Marc', 'Julie', 'Nina'],
-      duree: 3,
-      vehicle: { brand: 'Tesla', model: 'Model 3', color: 'Noir', type: 'Électrique' },
-      preferences: ['Non-fumeur', 'Animaux acceptés', 'Musique douce'],
-      reviews: [
-        "Tesla très confortable ! Sophie conduit très bien.",
-        "Expérience premium avec cette voiture électrique.",
-        "Trajet silencieux et agréable, je recommande."
-      ]
+  // Charger le trajet depuis l'API
+  let trajet = null;
+  try {
+    // 🔹 Utilise apiFetch pour bénéficier du token / cookie
+    const data = await apiFetch(`/carpools/${id}`);
+    console.log('DEBUG API raw carpool:', {
+      departureDate: data.departureDate,
+      departureTime: data.departureTime,
+      arrivalDate: data.arrivalDate,
+      arrivalTime: data.arrivalTime
+    });
+    trajet = await carpoolFromApiAsync(data);
+    console.log('DEBUG carpoolFromApi output date:', trajet.date);
+    console.log('✅ Trajet chargé depuis l\'API :', trajet);
+  } catch (e) {
+    console.warn('⚠️ Erreur chargement trajet API', e);
+
+    // Si 401, rediriger vers connexion
+    if (String(e).includes('401') || String(e).includes('Unauthorized')) {
+      alert('🔒 Vous devez être connecté pour voir ce trajet.');
+      window.location.href = '/connexion';
+      return;
     }
-  ];
 
-  const trajets = [...trajetsMock, ...trajetsSauvegardes];
-  const trajet = trajets.find(t => t.id === id);
+    // Fallback sur les trajets locaux (nouveauxTrajets uniquement)
+    try {
+      const trajetsSauvegardes = JSON.parse(localStorage.getItem("nouveauxTrajets") || "[]");
+      trajet = trajetsSauvegardes.find(t => String(t.id) === String(id));
+      if (trajet) {
+        console.log('✅ Trajet trouvé dans localStorage (nouveauxTrajets)');
+      }
+    } catch (localErr) {
+      console.error('Erreur lors du fallback localStorage', localErr);
+    }
+  }
 
   if (!trajet) {
-    const container = document.querySelector(".detail-container") || document.querySelector("main") || document.body;
-    container.innerHTML = `
-      <div style="text-align: center; padding: 50px;">
-        <h2>❌ Trajet introuvable</h2>
-        <p>Le trajet avec l'ID "${id}" n'existe pas ou a été supprimé.</p>
-        <a href="/covoiturage" data-link class="search-btn reserve-btn">← Retour aux trajets</a>
-      </div>
-    `;
+    console.warn('Trajet introuvable côté API, navigation simple vers /covoiturage');
+    window.location.href = '/covoiturage';
     return;
   }
 

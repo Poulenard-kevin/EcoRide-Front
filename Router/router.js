@@ -83,6 +83,16 @@ const LoadContentPage = async () => {
   const pathname = window.location.pathname;
   const queryParams = new URLSearchParams(window.location.search);
 
+  // 🔒 Sécurité de route : /detail sans ID -> /covoiturage
+  if (pathname === '/detail' || pathname === '/detail/') {
+    console.warn('Route /detail sans ID, redirection vers /covoiturage côté router');
+    window.history.replaceState({}, '', '/covoiturage');
+    // On rappelle LoadContentPage pour charger la bonne page
+    // ⚠️ on sort tout de suite pour éviter d'enchaîner le reste
+    setTimeout(() => LoadContentPage(), 0);
+    return;
+  }
+
   const route = (typeof getRouteByPathname === 'function')
     ? getRouteByPathname(pathname)
     : (typeof getRouteByUrl === 'function' ? getRouteByUrl(pathname) : null);

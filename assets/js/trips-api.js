@@ -33,6 +33,247 @@ export function normalizeServerId(serverId) {
   return s;
 }
 
+/**
+ * Normalise un objet carpool de l'API vers le format front
+ */
+export function carpoolFromApi(apiItem) {
+  if (!apiItem) return null;
+
+  // ---------- Helpers ----------
+  const toDateIso = (value) => {
+    if (!value) return null;
+    const s = String(value);
+    const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+    return m ? m[1] : null;
+  };
+
+  const formatTime = (value) => {
+    if (!value) return '';
+    const s = String(value);
+  
+    // Extraire HH:MM depuis n'importe quel format (ISO, "10:00", "10:00:00")
+    const m = s.match(/(\d{2}):(\d{2})(?::\d{2})?/);
+    if (m) return `${m[1]}h${m[2]}`;
+  
+    // Fallback si pas de match
+    return '';
+  };
+
+  // ---------- Driver ----------
+  const rawDriver = apiItem.driver || apiItem.chauffeur || apiItem.user || {};
+
+  let driverFirstName = null;
+  let driverLastName  = null;
+  let driverEmail     = null;
+  let driverRating    = null;
+  let driverAbout     = null;
+
+  // cas normal : l'API renvoie un objet user
+  if (typeof rawDriver === 'object' && rawDriver !== null) {
+    driverFirstName = rawDriver.firstName || rawDriver.firstname || null;
+    driverLastName  = rawDriver.lastName  || rawDriver.lastname  || null;
+    driverEmail     = rawDriver.email || null;
+    driverRating    = rawDriver.averageRating ?? rawDriver.rating ?? null;
+    driverAbout     = rawDriver.about || rawDriver.bio || rawDriver.description || null;
+  }
+
+  let driverPseudo =
+    rawDriver.pseudo ||
+    rawDriver.name   ||
+    null;
+
+  // Si pas de pseudo explicite mais firstName/lastName dispo -> "Prénom Nom"
+  if (!driverPseudo && (driverFirstName || driverLastName)) {
+    driverPseudo = [driverFirstName, driverLastName].filter(Boolean).join(' ').trim();
+  }
+
+  // Fallback sur l'email si toujours rien
+  if (!driverPseudo && driverEmail) {
+    driverPseudo = String(driverEmail).split('@')[0];
+  }
+
+  // Fallback final
+  if (!driverPseudo) {
+    driverPseudo = 'Inconnu';
+  }
+
+  const chauffeur = {
+    pseudo: driverPseudo,
+    photo: rawDriver.avatarUrl || rawDriver.avatar || rawDriver.photo || null,
+    rating: driverRating ?? 0,
+    about: driverAbout
+  };
+
+  // ---------- Dates / heures ----------
+  // Champs possibles venant de l'API (adapter si besoin)
+  const rawDepartureDate =
+    apiItem.dateDepart ||
+    apiItem.date_depart ||
+    apiItem.departureDate ||
+    apiItem.date ||
+    null;
+
+  const rawArrivalDate =
+    apiItem.dateArrivee ||
+    apiItem.date_arrivee ||
+    apiItem.arrivalDate ||
+    null;
+
+  const departureDate = toDateIso(rawDepartureDate) || rawDepartureDate;
+  const arrivalDate = toDateIso(rawArrivalDate) || rawArrivalDate;
+
+  const departureTimeRaw =
+    apiItem.heureDepart ||
+    apiItem.heure_depart ||
+    apiItem.departureTime ||
+    rawDepartureDate || // si l'heure est incluse dans la date
+    '';
+
+  const arrivalTimeRaw =
+    apiItem.heureArrivee ||
+    apiItem.heure_arrivee ||
+    apiItem.arrivalTime ||
+    rawArrivalDate ||
+    '';
+
+  const departureTime = formatTime(departureTimeRaw);
+  const arrivalTime = formatTime(arrivalTimeRaw);
+
+  // ---------- Lieux ----------
+  const depart =
+    apiItem.lieuDepart ||
+    apiItem.lieu_depart ||
+    apiItem.departureLocation ||
+    apiItem.depart ||
+    apiItem.departure ||
+    '';
+
+  const arrivee =
+    apiItem.lieuArrivee ||
+    apiItem.lieu_arrivee ||
+    apiItem.arrivalLocation ||
+    apiItem.arrivee ||
+    apiItem.arrival ||
+    '';
+
+  // ---------- Prix / places ----------
+  const prix =
+    apiItem.pricePerSeat ??
+    apiItem.prixParPlace ??
+    apiItem.prix ??
+    apiItem.price ??
+    0;
+
+  const totalSeats =
+    apiItem.nbPlacesTotal ??
+    apiItem.nb_places_total ??
+    apiItem.totalSeats ??
+    apiItem.places ??
+    4;
+
+  const availableSeats =
+    apiItem.nbPlacesAvailable ??
+    apiItem.nb_places_dispo ??
+    apiItem.availableSeats ??
+    totalSeats;
+
+  // ---------- Véhicule ----------
+  const vehicle = apiItem.car || apiItem.vehicle || {};
+  const vehicleNormalized = {
+    marque: vehicle.brand || vehicle.marque || 'Non spécifié',
+    model: vehicle.model || vehicle.modele || 'Non spécifié',
+    color: vehicle.color || vehicle.couleur || 'Non spécifié',
+    type: vehicle.type || 'Économique',
+    places: vehicle.seats || vehicle.places || totalSeats,
+    other: vehicle.other || vehicle.autre || ''
+  };
+
+  // ---------- Passagers ----------
+  const passagers = Array.isArray(apiItem.bookings)
+  ? apiItem.bookings.map((b) => {
+      const u = b.user || {};
+      const uFirst = u.firstName || u.firstname || null;
+      const uLast  = u.lastName  || u.lastname  || null;
+
+      let pPseudo = u.pseudo || null;
+
+      if (!pPseudo && (uFirst || uLast)) {
+        pPseudo = [uFirst, uLast].filter(Boolean).join(' ').trim();
+      }
+      if (!pPseudo && u.email) {
+        pPseudo = String(u.email).split('@')[0];
+      }
+      if (!pPseudo) {
+        pPseudo = 'Passager';
+      }
+
+      return {
+        pseudo: pPseudo,
+        places: b.seats || b.nbPlaces || 1
+      };
+    })
+  : Array.isArray(apiItem.passagers)
+  ? apiItem.passagers
+  : [];
+
+  // ---------- Retour normalisé ----------
+  return {
+    id: apiItem.id || apiItem['@id']?.replace('/api/carpools/', ''),
+    serverId: apiItem['@id'] || `/api/carpools/${apiItem.id}`,
+    date: departureDate,
+    heureDepart: departureTime,
+    heureArrivee: arrivalTime,
+    depart,
+    arrivee,
+    prix,
+    places: availableSeats,
+    capacity: totalSeats,
+    type: 'économique',
+    chauffeur,
+    vehicle: vehicleNormalized,
+    passagers,
+    rating: chauffeur.rating
+  };
+}
+
+
+export async function carpoolFromApiAsync(apiItem) {
+  const trip = carpoolFromApi(apiItem);
+
+  const carRef = apiItem?.car;
+  if (typeof carRef === 'string' && carRef.startsWith('/api/')) {
+    try {
+      const carObj = await apiFetch(carRef.replace('/api', '')); // "/cars/1"
+      if (carObj) {
+        // fuelType vient de ton entité Car : "Électrique", "Thermique", "Hybride"
+        const fuelType = carObj.fuelType || '';
+
+        // trip.type sert à ton <p class="type">${capitalize(trajet.type)}</p>
+        // On stocke en minuscule pour uniformiser
+        if (fuelType) {
+          trip.type = fuelType.toLowerCase();    // "électrique", "thermique", "hybride"
+        } else {
+          trip.type = (trip.type || 'économique').toLowerCase();
+        }
+
+        trip.vehicle = {
+          marque: carObj.brand || carObj.marque || 'Non spécifié',
+          model: carObj.model || carObj.modele || 'Non spécifié',
+          color: carObj.color || carObj.couleur || 'Non spécifié',
+          // Pour la section "Véhicules"
+          type: fuelType || trip.vehicle?.type || 'Économique',
+          places: carObj.seats || carObj.places || trip.capacity || 4,
+          other: carObj.otherPreferences || carObj.other || carObj.autre || ''
+        };
+      }
+    } catch (e) {
+      console.warn('[carpoolFromApiAsync] impossible de charger le véhicule', carRef, e);
+    }
+  }
+
+  return trip;
+}
+
 // Fonction delete tolerant
 export async function deleteCarpoolApi(serverIdOrAtId) {
   if (!serverIdOrAtId) return { status: 'no-id' };

@@ -132,7 +132,7 @@
         // Tolérance sur le nom du token renvoyé
         const token = data?.apiToken || data?.token || data?.access_token || null;
         if (token) {
-          localStorage.setItem('apiToken', token);
+          localStorage.setItem('api_token', token);
           // si vous avez un objet global d'auth
           if (window.ecoAuth && typeof window.ecoAuth.setToken === 'function') {
             try { window.ecoAuth.setToken(token); } catch(e){/* ignore */ }

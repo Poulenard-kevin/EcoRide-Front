@@ -1,6 +1,7 @@
 // /assets/js/api.js
 
 const API_BASE = 'http://127.0.0.1:8000';
+const API_PREFIX = '/api'; // préfixe automatique pour toutes les routes API Platform
 
 export function setToken(token) {
   if (token) localStorage.setItem('api_token', token);
@@ -35,8 +36,20 @@ export async function handleResponse(res) {
 }
 
 export async function apiFetch(path, { method = 'GET', body, headers = {}, useApiKey = false } = {}) {
-  // Normaliser l'URL : si path commence par /api, on ne préfixe pas
-  const url = path.startsWith('http') ? path : `${API_BASE}${path.startsWith('/') ? '' : '/'}${path}`;
+  // Normaliser le path : ajouter /api automatiquement si absent
+  let normalizedPath = path;
+  
+  // Si le path ne commence pas par http et ne commence pas déjà par /api, on préfixe
+  if (!path.startsWith('http') && !path.startsWith('/api')) {
+    normalizedPath = `${API_PREFIX}${path.startsWith('/') ? '' : '/'}${path}`;
+  }
+  
+  // Construire l'URL finale
+  const url = normalizedPath.startsWith('http') 
+    ? normalizedPath 
+    : `${API_BASE}${normalizedPath}`;
+
+  console.debug('[apiFetch]', method, url); // log pour debug
 
   const h = { Accept: 'application/json', ...headers };
 

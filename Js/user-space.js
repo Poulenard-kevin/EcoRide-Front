@@ -192,7 +192,8 @@ async function saveVehicles() {
     console.error("❌ Erreur sauvegarde véhicules:", err);
   }
 
-  window.dispatchEvent(new CustomEvent('ecoride:vehiclesUpdated', {
+  // 🚗 Notifier les autres vues (trajets.js)
+  window.dispatchEvent(new CustomEvent('ecoride:vehicles-updated', {
     detail: { vehicles: JSON.parse(localStorage.getItem('ecoride_vehicles') || '[]') }
   }));
 }
@@ -735,8 +736,13 @@ function bindVehiclesFormHandlers() {
       
         form.reset();
         updateVehicleListOnly();
-      } catch (err) {
-        console.error('Erreur lors de l\'envoi au serveur', err);
+
+        // 🚗 Notifier les autres modules
+        if (window.ecorideCarsApi && typeof window.ecorideCarsApi.notifyVehiclesChanged === 'function') {
+          window.ecorideCarsApi.notifyVehiclesChanged(isEditing ? 'update' : 'create', vehicleData);
+        }
+        } catch (err) {
+          console.error('Erreur lors de l\'envoi au serveur', err);
         if (err.status === 401 || err.status === 403) {
           alert('Accès refusé. Vous devez être connecté.');
           localStorage.removeItem('api_token');
@@ -1308,6 +1314,10 @@ function handleDeleteClick(target) {
       // attendre la fin d'animation puis re-render proprement
       setTimeout(() => {
         updateVehicleListOnly();
+        // 🚗 Notifier les autres modules
+        if (window.ecorideCarsApi && typeof window.ecorideCarsApi.notifyVehiclesChanged === 'function') {
+          window.ecorideCarsApi.notifyVehiclesChanged('delete', targetVehicle);
+        }
       }, 80);
 
     } catch (err) {

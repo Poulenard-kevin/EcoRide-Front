@@ -1,5 +1,9 @@
 // covoiturage.js (module)
 import { resolveAvatarSrc, getProfileAvatarFromStorage, getCurrentUser, enrichTrajetWithCurrentUser, genId, formatDateJJMMAAAA } from './trajets.js';
+import { apiFetch } from '/assets/js/api.js';
+import { carpoolFromApiAsync } from '/assets/js/trips-api.js';
+
+console.log('[covoiturage] script chargé');
 
 // utilisation :
 if (!enrichTrajetWithCurrentUser) {
@@ -7,8 +11,8 @@ if (!enrichTrajetWithCurrentUser) {
 }
 
 // -------------------- Helpers --------------------
-document.addEventListener('pageContentLoaded', () => {
-  const resultsContainer = document.querySelector('.results');
+document.addEventListener('pageContentLoaded', async () => {
+  const resultsContainer = document.getElementById('results-container');
   if (!resultsContainer) {
     return; // 🚪 sort si pas sur la page covoiturage
   }
@@ -46,7 +50,7 @@ document.addEventListener('pageContentLoaded', () => {
     });
   
     // Données des trajets
-    let trajets = [
+    /*let trajets = [
       {
         id: 'trajet1',
         date: 'Vendredi 16 septembre',
@@ -103,46 +107,69 @@ document.addEventListener('pageContentLoaded', () => {
         rating: 4,
         passagers: ['Marc', 'Julie', 'Nina'],
       },
-    ];
+    ];*/
 
-    // Charger et normaliser les trajets publiés depuis l'espace utilisateur (localStorage)
+    let trajets = [];
+
+    // =================== 🔄 Charger les trajets depuis l'API + localStorage ===================
+
+    // 1️⃣ Charger les trajets depuis l'API (authentifié)
+    let trajetsFromApi = [];
+    try {
+      console.log('🔎 Appel API GET /api/carpools via apiFetch');
+
+      // Tu peux passer '/carpools' ou '/api/carpools' :
+      // apiFetch va normaliser en http://127.0.0.1:8000/api/carpools
+      const data = await apiFetch('/carpools');
+      console.log('📦 JSON brut /api/carpools :', data);
+
+      const itemsDebug = (data['hydra:member'] || data || []).slice?.(0, 3) || [];
+      console.log('DEBUG raw first 3 dates:', itemsDebug.map(c => ({
+        id: c['@id'] || c.id,
+        departureDate: c.departureDate,
+        departureTime: c.departureTime
+      })));
+
+      const items = data['hydra:member'] || data;
+
+      // ✅ Utilise carpoolFromApiAsync pour récupérer le type de fuel
+      trajetsFromApi = await Promise.all(
+        (Array.isArray(items) ? items : []).map((it) => carpoolFromApiAsync(it))
+      );
+
+      console.log('DEBUG mapped first 3 dates:', trajetsFromApi.slice(0,3).map(t => ({
+        id: t.id,
+        date: t.date,
+        heureDepart: t.heureDepart,
+        type: t.type  
+      })));
+
+      console.log('🚗 Trajets chargés depuis l’API (normalisés) :', trajetsFromApi);
+    } catch (err) {
+      console.warn(
+        '⚠️ Erreur chargement trajets API',
+        err.status,
+        err.body || err.message
+      );
+    }
+
+    // 2️⃣ (optionnel) Charger trajets locaux pour debug, mais ne plus les fusionner
     const trajetsSauvegardes = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+    let trajetsLocaux = [];
+
     if (trajetsSauvegardes.length > 0) {
-      const normalized = trajetsSauvegardes.map(t => {
+      trajetsLocaux = trajetsSauvegardes.map(t => {
         const nt = { ...t };
-
-        // assures arrays & chauffeur object
-        nt.passagers = Array.isArray(nt.passagers) ? nt.passagers : [];
-        nt.chauffeur = nt.chauffeur || {};
-
-        // utilise getCurrentUser pour fallback
-        let me = getCurrentUser();
-        nt.chauffeur.pseudo = nt.chauffeur.pseudo || me?.pseudo || 'Moi';
-        nt.chauffeur.photo = resolveAvatarSrc(nt.chauffeur.photo || me?.photo || '/images/default-avatar.png');
-        nt.chauffeur.rating = (nt.chauffeur.rating ?? me?.rating ?? 0);
-
-        // id : si absent, générer un id stable
-        if (!nt.id) nt.id = genId();
-
-        // normalisation date (stockee en ISO ou JJ/MM/AAAA etc.)
-        // stocke une date "raw" pour l'affichage, et normalise si besoin pour comparaison
-        nt._isoDate = (nt.date && !isNaN(new Date(nt.date))) ? new Date(nt.date).toISOString() : null;
-        nt.date = nt._isoDate ? nt._isoDate : nt.date;
-
-        // capacité / places
-        const vehiclePlaces = nt.vehicle?.places ?? nt.vehicle?.seats ?? null;
-        nt.capacity = (nt.capacity != null) ? Number(nt.capacity) : (vehiclePlaces != null ? Number(vehiclePlaces) : (nt.places != null ? Number(nt.places) : 4));
-        nt.places = (nt.places != null) ? Number(nt.places) : nt.capacity;
-
-        // enrich (optionnel, garantit champs chauffeur propre)
-        enrichTrajetWithCurrentUser(nt);
-
+        // ... tu peux garder ta normalisation ici si tu veux les voir en console
         return nt;
       });
 
-      trajets.push(...normalized);
-      console.log("🚗 Trajets fusionnés avec ceux de l'utilisateur :", normalized);
+      console.log("🚗 Trajets locaux normalisés (DEV) :", trajetsLocaux);
     }
+
+    // 3️⃣ Pas de fusion : on n’utilise que les trajets API pour l’affichage
+    trajets = [...trajetsFromApi];
+    console.log("🚀 Trajets finaux utilisés pour l'affichage :", trajets);
   
     // Convertit "HHhMM" en minutes
     function timeStringToMinutes(timeStr) {
@@ -182,11 +209,9 @@ document.addEventListener('pageContentLoaded', () => {
         const [yyyy,mm,dd] = s.split('-').map(Number);
         d = new Date(yyyy, mm-1, dd);
       } else {
-        const tmp = new Date(s);
-        if (!isNaN(tmp)) d = tmp;
+        return String(anyDate);
       }
     }
-    if (!d || isNaN(d)) return String(anyDate); // si non parsable, on affiche tel quel
 
     const dayName = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' }).format(d);
     const month   = new Intl.DateTimeFormat('fr-FR', { month: 'long' }).format(d);
@@ -274,7 +299,15 @@ document.addEventListener('pageContentLoaded', () => {
         const btn = card.querySelector('.detail-btn');
         if (btn) {
           btn.addEventListener('click', () => {
+            console.log('🔍 Clic sur détail, trajet.id =', trajet.id);
+            
+            if (!trajet.id) {
+              console.warn('Trajet sans id, impossible d ouvrir le detail', trajet);
+              return;
+            }
+            
             const newPath = `/detail/${trajet.id}`;
+            console.log('Navigation vers', newPath);
             window.history.pushState({}, "", newPath);
             window.dispatchEvent(new Event("popstate"));
           });
@@ -345,12 +378,21 @@ document.addEventListener('pageContentLoaded', () => {
       };
     }
   
-    // Convertit une date ISO (YYYY-MM-DD) en "jour mois" en français, ex: "16 septembre"
     function formatDateISOToDayMonth(isoDate) {
       if (!isoDate) return '';
-      const dateObj = new Date(isoDate);
+      const s = String(isoDate).trim();
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (!m) return '';
+    
+      const yyyy = Number(m[1]);
+      const mm = Number(m[2]);
+      const dd = Number(m[3]);
+    
+      // ✅ Date construite en local, pas via parsing UTC
+      const d = new Date(yyyy, mm - 1, dd);
+    
       const options = { day: 'numeric', month: 'long' };
-      return dateObj.toLocaleDateString('fr-FR', options).toLowerCase();
+      return d.toLocaleDateString('fr-FR', options).toLowerCase();
     }
   
     // Convertit une heure ISO (HH:MM) en format "HHhMM", ex: "16:00" -> "16h00"

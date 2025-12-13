@@ -50,7 +50,28 @@ export function getCurrentUser() {
 
 export function getCurrentUserPseudo() {
   const me = getCurrentUser();
-  return me?.pseudo ?? 'Moi';
+  if (!me) return 'Inconnu';
+
+  const first =
+    me.firstName ||
+    me.firstname ||
+    me.prenom ||
+    me.givenName ||
+    null;
+
+  const last =
+    me.lastName ||
+    me.lastname ||
+    me.nom ||
+    me.familyName ||
+    null;
+
+  if (first && last) return `${first} ${last}`;
+  if (first) return first;
+  if (last) return last;
+
+  // fallback: pseudo / username si existant
+  return me.pseudo || me.username || 'Inconnu';
 }
 
 export function enrichTrajetWithCurrentUser(trajet = {}) {
@@ -62,10 +83,17 @@ export function enrichTrajetWithCurrentUser(trajet = {}) {
       trajet.chauffeur = {};
     }
 
-    trajet.chauffeur.pseudo = trajet.chauffeur.pseudo ?? me.pseudo ?? 'Moi';
-    const rawPhoto = trajet.chauffeur.photo ?? me.photo ?? 'images/default-avatar.png';
+    const displayName = getCurrentUserPseudo(); // utilise now prénom/nom
+
+    trajet.chauffeur.pseudo = trajet.chauffeur.pseudo ?? displayName;
+
+    const rawPhoto =
+      trajet.chauffeur.photo ??
+      me.photo ??
+      'images/default-avatar.png';
+
     trajet.chauffeur.photo = resolveAvatarSrc(rawPhoto);
-    trajet.chauffeur.rating = (trajet.chauffeur.rating ?? me.rating ?? 0);
+    trajet.chauffeur.rating = trajet.chauffeur.rating ?? me.rating ?? 0;
   } catch (e) {
     console.warn('enrichTrajetWithCurrentUser error', e);
   }
@@ -74,6 +102,16 @@ export function enrichTrajetWithCurrentUser(trajet = {}) {
 
 export function formatDateJJMMAAAA(input) {
   if (!input) return '';
+
+  // Si input est déjà au format YYYY-MM-DD ou commence par YYYY-MM-DDTHH...
+  const s = String(input);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) {
+    const [, yyyy, mm, dd] = m;
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  // fallback si on reçoit autre chose
   const d = (input instanceof Date) ? input : new Date(input);
   if (isNaN(d)) return '';
   const jj = String(d.getDate()).padStart(2, '0');
@@ -345,9 +383,16 @@ export async function initTrajets() {
     }
   }
   // charger depuis storage
-  trajets = getTrajets();
+  trajets = await loadTrajetsFromApi();
+
   updatePlacesReservees();
   populateVehiclesDatalist();
+
+  // 🚗 Écouter les mises à jour de véhicules et recharger la liste
+  window.addEventListener('ecoride:vehicles-updated', (event) => {
+    console.log('🚗 Véhicules mis à jour, rechargement de la liste...', event.detail);
+    populateVehiclesDatalist(); // recharger le <select>
+  });
 
   const form = document.querySelector('#trajet-form');
   if (form) form.addEventListener('submit', handleTrajetSubmit);
@@ -359,6 +404,12 @@ export async function initTrajets() {
     container.dataset.rendered = '1';
     renderHistorique();
     renderTrajetsInProgress();
+    window.addEventListener('trajets:changed', (e) => {
+      console.log('📍 trajets:changed reçu', e.detail);
+      updatePlacesReservees();
+      renderTrajetsInProgress();
+      renderHistorique();
+    });
   });
 
   // placeholders date/time
@@ -370,6 +421,142 @@ export async function initTrajets() {
     input.addEventListener('input', toggleClass);
     input.addEventListener('change', toggleClass);
   });
+}
+
+/**
+ * Charge les carpools depuis l'API et les fusionne avec les données locales
+ * @returns {Promise<Array>} Liste des trajets (chauffeur + passager)
+ */
+export async function loadTrajetsFromApi() {
+  const me = getCurrentUser();
+  if (!me || !me.id) {
+    console.warn('⚠️ Utilisateur non connecté, impossible de charger les trajets API');
+    return getTrajets(); // fallback local
+  }
+
+  try {
+    // Charger tous les carpools
+    const allCarpools = await apiFetch('/carpools');
+    console.log('✅ Carpools chargés depuis l\'API :', allCarpools);
+
+    // Filtrer : carpools où je suis chauffeur
+    const myCarpools = allCarpools.filter(c => {
+      const driverId = c?.driver?.id || c?.driver || null;
+      return driverId === me.id || driverId === `/api/users/${me.id}`;
+    });
+
+    // ✅ Helpers pour extraire date/heure sans timezone
+    const dateOnly = (v) => {
+      const s = String(v || '');
+      const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+      return m ? m[1] : '';
+    };
+
+    const timeOnly = (v) => {
+      const s = String(v || '');
+      const m = s.match(/(\d{2}):(\d{2})(?::\d{2})?/);
+      return m ? `${m[1]}:${m[2]}` : '';
+    };
+
+    // Mapper vers le format local ✅ EXTRACTION ROBUSTE DU VÉHICULE
+    const mapped = myCarpools.map(c => {
+      // ✅ Extraire l'IRI du véhicule (string ou objet)
+      const carIri =
+        typeof c.car === 'string' ? c.car :
+        (c.car && (c.car['@id'] || c.car.iri)) ? (c.car['@id'] || c.car.iri) :
+        null;
+
+      const carObj = (c.car && typeof c.car === 'object') ? c.car : null;
+
+      // ✅ Extraire l'ID numérique depuis l'IRI si besoin
+      const carId = carIri ? parseInt(carIri.split('/').pop(), 10) : (carObj?.id || null);
+
+      return {
+        id: c.id || c['@id'],
+        serverId: c['@id'] || c.id,
+        depart: c.departureLocation || '',
+        arrivee: c.arrivalLocation || '',
+        date: dateOnly(c.departureDate),
+        dateArrivee: dateOnly(c.arrivalDate),
+        heureDepart: timeOnly(c.departureTime),
+        heureArrivee: timeOnly(c.arrivalTime),
+        prix: c.pricePerSeat || 0,
+        places: c.nbPlacesTotal || 4,
+        totalSeats: c.nbPlacesTotal || 4,
+        role: 'chauffeur',
+        status: 'ajoute', // ou déduire selon bookings
+        
+        // ✅ Stocker l'IRI au top-level pour faciliter la sélection
+        carIri,
+        carId,
+        
+        // ✅ Objet véhicule enrichi
+        vehicle: carIri || carObj ? {
+          iri: carIri,
+          id: carId,
+          marque: carObj?.brand || carObj?.marque || '',
+          model: carObj?.model || carObj?.modele || '',
+          color: carObj?.color || carObj?.couleur || '',
+          type: carObj?.type || 'Economique',
+          seats: carObj?.seats || carObj?.places || 4,
+          plate: carObj?.licensePlate || carObj?.plate || ''
+        } : null,
+        
+        chauffeur: {
+          pseudo: me.firstName || me.email || 'Moi',
+          photo: me.photo || '/images/default-avatar.png',
+          rating: me.rating || 0
+        },
+        synced: true
+      };
+    });
+
+    const needCarDetails = mapped.filter(t => t.carIri && (!t.vehicle || !t.vehicle.marque || !t.vehicle.model));
+
+    if (needCarDetails.length > 0) {
+      await Promise.all(needCarDetails.map(async (t) => {
+        try {
+          const car = await apiFetch(t.carIri.replace('/api', '')); 
+
+          t.vehicle = {
+            iri: t.carIri,
+            id: car.id,
+            marque: car.brand || car.marque || '',
+            model: car.model || car.modele || '',
+            color: car.color || car.couleur || '',
+            seats: car.seats || car.places || 4,
+            plate: car.licensePlate || car.plate || ''
+          };
+          t.carId = car.id;
+        } catch (e) {
+          console.warn('Impossible de charger les détails véhicule pour', t.carIri, e);
+        }
+      }));
+    }
+
+    // Fusionner avec les trajets locaux non synchronisés
+    const local = getTrajets();
+    const unsyncedLocal = local.filter(t => !t.synced);
+
+    // Éviter les doublons (si serverId match)
+    const merged = [...mapped];
+    unsyncedLocal.forEach(t => {
+      const exists = merged.some(m => m.serverId === t.serverId || m.id === t.id);
+      if (!exists) merged.push(t);
+    });
+
+    // Sauvegarder dans trajets (mémoire + localStorage)
+    trajets = merged;
+    saveTrajets(merged);
+
+    console.log('✅ Trajets fusionnés (API + local) :', trajets.length);
+    return trajets;
+
+  } catch (err) {
+    console.error('❌ Erreur chargement trajets API :', err);
+    // Fallback : utiliser les données locales
+    return getTrajets();
+  }
 }
 
 // -------------------- Form submit handler --------------------
@@ -434,7 +621,8 @@ async function handleTrajetSubmit(e) {
 
   // === Sauvegarde locale (optimistic) ===
   trajetData.synced = false;
-  saveTrajets();
+
+  await loadTrajetsFromApi(); // recharge depuis l'API
   ajouterAuCovoiturage(trajetData);
   updatePlacesReservees();
   renderTrajetsInProgress();
@@ -597,6 +785,11 @@ async function handleTrajetSubmit(e) {
 
     saveTrajets(trajets);
     console.log('✅ Trajet synchronisé avec le serveur :', trajetData.serverId);
+    ajouterAuCovoiturage(trajetData);
+    window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+    window.dispatchEvent(new CustomEvent('trajets:changed', {
+      detail: { source: serverIdRaw ? 'edit' : 'create', trajetId: trajetData.serverId || trajetData.id }
+    }));
   } else if (serverObj && serverObj.status === 204) {
     trajetData.synced = true;
     delete trajetData.syncError;
@@ -608,6 +801,9 @@ async function handleTrajetSubmit(e) {
 
     saveTrajets(trajets);
     console.log('✅ Trajet synchronisé (204 No Content) :', trajetData.serverId);
+    window.dispatchEvent(new CustomEvent('trajets:changed', {
+      detail: { source: 'edit', trajetId: trajetData.serverId || trajetData.id }
+    }));
   } else {
     trajetData.synced = false;
     trajetData.syncError = 'Aucun identifiant serveur retourné';
@@ -618,6 +814,9 @@ async function handleTrajetSubmit(e) {
     }
 
     saveTrajets(trajets);
+    window.dispatchEvent(new CustomEvent('trajets:changed', {
+      detail: { source: 'local', trajetId: trajetData.id }
+    }));
     console.warn('⚠️ Aucun identifiant serveur retourné, trajet non synchronisé');
   }
 
@@ -715,39 +914,91 @@ async function handleTrajetActions(e) {
   if (target.classList.contains('trajet-edit-btn')) {
     e.preventDefault?.();
     e.stopPropagation?.();
-    const id = target.dataset.id;
-    const trajet = trajets.find(t => t.id === id);
+
+    const rawId = target.dataset.id;
+
+    const trajet =
+      trajets.find(x => String(x.serverId) === String(rawId)) ||
+      trajets.find(x => String(x.id) === String(rawId)) ||
+      trajets.find(x => String(x.serverId) === `/api/carpools/${rawId}`);
+
     if (!trajet || trajet.role !== 'chauffeur') return;
 
-    tryUntilExists(() => document.querySelector('#trajet-form') !== null, 12, 80).then(found => {
-      if (!found) return;
+    // helper: date input expects YYYY-MM-DD
+    const toYMD = (val) => {
+      if (!val) return '';
+      // si c'est déjà YYYY-MM-DD, on garde
+      if (/^\d{4}-\d{2}-\d{2}$/.test(String(val))) return String(val);
+      const d = new Date(val);
+      if (isNaN(d)) return '';
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    tryUntilExists(() => document.querySelector('#trajet-form') !== null, 12, 80).then(() => {
       const form = document.querySelector('#trajet-form');
       if (!form) return;
 
       const setIf = (selector, value) => {
         const el = form.querySelector(selector);
-        if (el) el.value = value || '';
+        if (!el) return;
+        el.value = value ?? '';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
       };
 
+      // ✅ champs texte / time / price
       setIf('[name="depart"]', trajet.depart);
       setIf('[name="arrivee"]', trajet.arrivee);
-      setIf('[name="date"]', trajet.date);
-      setIf('[name="date-arrivee"]', trajet.dateArrivee);
+
+      // ✅ dates au bon format
+      setIf('[name="date"]', toYMD(trajet.date));
+      setIf('[name="date-arrivee"]', toYMD(trajet.dateArrivee));
+
       setIf('[name="heure-depart"]', trajet.heureDepart);
       setIf('[name="heure-arrivee"]', trajet.heureArrivee);
       setIf('[name="prix"]', trajet.prix);
-      setIf('[name="vehicle"]', trajet.vehicle ? trajet.vehicle.plate : '');
 
-      document.querySelectorAll('#trajet-form input, #trajet-form select').forEach(input => {
-        if (!input.value) input.classList.add('empty'); else input.classList.remove('empty');
+      // ✅ véhicule : ton select utilise la plaque comme value
+      const vehicles = JSON.parse(localStorage.getItem('ecoride_vehicles') || '[]');
+
+      const carId = trajet.carId || (trajet.carIri ? Number(String(trajet.carIri).split('/').pop()) : null);
+
+      const matched = vehicles.find(v => {
+        const vId = v.id ?? v.serverId ?? null;
+        return carId && vId && Number(vId) === Number(carId);
+      }) || null;
+
+      const plate = matched?.plate || matched?.immatriculation || matched?.licencePlate || '';
+
+      // ton champ s'appelle "vehicle" et l'id est "#vehicle"
+      setIf('[name="vehicle"]', plate);
+
+      // placeholders "empty"
+      form.querySelectorAll('input[type="date"], input[type="time"], input, select').forEach(input => {
+        if (!input.value) input.classList.add('empty');
+        else input.classList.remove('empty');
       });
 
-      editingIndex = trajets.findIndex(t => t.id === id);
+      // ✅ important : on passe en mode édition
+      editingIndex = trajets.findIndex(x =>
+        String(x.serverId) === String(rawId) ||
+        String(x.id) === String(rawId) ||
+        String(x.serverId) === `/api/carpools/${rawId}`
+      );
+
+      // focus
       setTimeout(() => {
         const first = form.querySelector('input, textarea, select, button');
         if (first) first.focus({ preventScroll: true });
       }, 40);
+
+      // scroll vers le formulaire
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
+
     return;
   }
 
@@ -834,9 +1085,8 @@ async function handleTrajetActions(e) {
     }
 
     if (!serverId) {
-      // suppression locale immédiate
-      trajets.splice(index, 1);
-      saveTrajets(trajets);
+
+      await loadTrajetsFromApi(); // recharge depuis l'API
       renderTrajetsInProgress();
       renderHistorique();
 
@@ -1092,7 +1342,6 @@ function updatePlacesReservees() {
 export function renderTrajetsInProgress() {
   const container = document.querySelector('#trajets-en-cours .trajets-list');
   if (!container) return;
-  container.innerHTML = '';
 
   const enCours = trajets.filter(t => t.status !== "valide");
   if (enCours.length === 0) {
@@ -1102,77 +1351,111 @@ export function renderTrajetsInProgress() {
 
   updatePlacesReservees();
 
-  enCours.forEach((trajet) => {
+  let html = '';
+
+  enCours.forEach((t) => {
     let bgClass = "";
     let actionHtml = "";
-    let dateToDisplay = formatDateJJMMAAAA(trajet.date) || '';
+    let dateToDisplay = formatDateJJMMAAAA(t.date) || '';
 
-    if (trajet.role === "chauffeur") {
-      if (trajet.status === "ajoute") {
+    // ✅ ID stable : on privilégie serverId (ex: "/api/carpools/3")
+    const stableId = t.serverId || t.id;
+
+    if (t.role === "chauffeur") {
+      if (t.status === "ajoute") {
         bgClass = "trajet-card actif";
         actionHtml = `
-          <button class="btn-trajet trajet-edit-btn" data-id="${trajet.id}">Modifier</button>
-          <button class="btn-trajet trajet-delete-btn" data-id="${trajet.id}">Supprimer</button>
-          <button class="btn-trajet trajet-start-btn" data-id="${trajet.id}">Démarrer</button>
+          <button class="btn-trajet trajet-edit-btn" data-id="${stableId}">Modifier</button>
+          <button class="btn-trajet trajet-delete-btn" data-id="${stableId}">Supprimer</button>
+          <button class="btn-trajet trajet-start-btn" data-id="${stableId}">Démarrer</button>
         `;
-      } else if (trajet.status === "demarre") {
+      } else if (t.status === "demarre") {
         bgClass = "trajet-card termine";
-        actionHtml = `<button class="btn-trajet trajet-arrive-btn" data-id="${trajet.id}">Arrivée</button>`;
-      } else if (trajet.status === "termine") {
+        actionHtml = `<button class="btn-trajet trajet-arrive-btn" data-id="${stableId}">Arrivée</button>`;
+      } else if (t.status === "termine") {
         bgClass = "trajet-card attente";
         actionHtml = `<span class="trajet-status">En attente de validation</span>`;
       }
-    } else if (trajet.role === "passager") {
-      if (trajet.status === "reserve") {
+    } else if (t.role === "passager") {
+      if (t.status === "reserve") {
         bgClass = "trajet-card reserve";
-        const refId = getCovoId(trajet);
+        const refId = getCovoId(t);
         actionHtml = `
           <button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>
-          <button class="btn-trajet trajet-cancel-btn" data-id="${trajet.id}">Annuler</button>
-          <button class="btn-trajet trajet-signaler-btn" data-id="${trajet.id}" data-covo-id="${refId}">⚠ Signaler</button>
+          <button class="btn-trajet trajet-cancel-btn" data-id="${stableId}">Annuler</button>
+          <button class="btn-trajet trajet-signaler-btn" data-id="${stableId}" data-covo-id="${refId}">⚠ Signaler</button>
         `;
-      } else if (trajet.status === "a_valider") {
+      } else if (t.status === "a_valider") {
         bgClass = "trajet-card attente";
+        const refId = getCovoId(t);
         actionHtml = `
-          <button class="btn-trajet trajet-detail-btn" data-covo-id="${getCovoId(trajet)}">Détail</button>
-          <button class="btn-trajet trajet-validate-btn" data-id="${trajet.id}">Valider</button>
+          <button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>
+          <button class="btn-trajet trajet-validate-btn" data-id="${stableId}">Valider</button>
         `;
-      } else if (trajet.status === "valide") {
-        actionHtml = `<button class="btn-trajet trajet-detail-btn" data-covo-id="${getCovoId(trajet)}">Détail</button>`;
+      } else if (t.status === "valide") {
+        const refId = getCovoId(t);
+        actionHtml = `<button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>`;
       }
     }
 
-    container.innerHTML += `
-      <div class="${bgClass}" data-id="${trajet.id}">
+    html += `
+      <div class="${bgClass}" data-id="${stableId}">
         <div class="trajet-body">
           <div class="trajet-info">
-            <strong>Covoiturage (${dateToDisplay}) : <br>${trajet.depart} → ${trajet.arrivee}</strong>
-            <span class="details">${trajet.heureDepart || ""} → ${trajet.heureArrivee || ""} • ${trajet.placesReservees} place${trajet.placesReservees > 1 ? 's' : ''} réservée${trajet.placesReservees > 1 ? 's' : ''}</span>
+            <strong>Covoiturage (${dateToDisplay}) : <br>${t.depart} → ${t.arrivee}</strong>
+            ${t.synced === false ? '<span style="color:orange;font-size:0.9em;">⚠ Non synchronisé</span>' : ''}
+            <span class="details">${t.heureDepart || ""} → ${t.heureArrivee || ""} • ${t.placesReservees} place${t.placesReservees > 1 ? 's' : ''} réservée${t.placesReservees > 1 ? 's' : ''}</span>
           </div>
-          <div class="trajet-price">${trajet.prix} crédits</div>
+          <div class="trajet-price">${t.prix} crédits</div>
           ${actionHtml}
         </div>
       </div>
     `;
   });
 
-  container.querySelectorAll('.trajet-detail-btn').forEach(btn => {
-    if (btn._detailHandler) btn.removeEventListener('click', btn._detailHandler);
-    const handler = (ev) => {
-      ev.preventDefault?.();
-      const covoId = btn.dataset.covoId;
-      if (!covoId) return;
-      const newPath = `/detail/${encodeURIComponent(covoId)}`;
-      try {
-        history.pushState({ id: covoId }, '', newPath);
-        window.dispatchEvent(new PopStateEvent('popstate', { state: { id: covoId } }));
-      } catch (err) {
-        window.location.href = newPath;
+  container.innerHTML = html;
+
+  // ✅ Bind une seule fois: event delegation
+  if (!container.dataset.boundTrajets) {
+    container.dataset.boundTrajets = "1";
+
+    container.addEventListener('click', (e) => {
+      const editBtn = e.target.closest('.trajet-edit-btn');
+      if (editBtn) {
+        const rawId = editBtn.dataset.id;
+        const foundTrajet =
+          trajets.find(x => String(x.serverId) === String(rawId)) ||
+          trajets.find(x => String(x.id) === String(rawId)) ||
+          trajets.find(x => String(x.serverId) === `/api/carpools/${rawId}`);
+
+        console.log('CLICK MODIFIER rawId=', rawId, 'trajet trouvé=', foundTrajet);
+
+        if (!foundTrajet) return;
+
+        // 👉 À brancher : ouvrir formulaire pré-rempli / modal / etc.
+        if (typeof openEditTrajetForm === 'function') {
+          openEditTrajetForm(foundTrajet);
+        }
+        return;
       }
-    };
-    btn._detailHandler = handler;
-    btn.addEventListener('click', handler);
-  });
+
+      const detailBtn = e.target.closest('.trajet-detail-btn');
+      if (detailBtn) {
+        const covoId = detailBtn.dataset.covoId;
+        if (!covoId) return;
+        const newPath = `/detail/${encodeURIComponent(covoId)}`;
+        try {
+          history.pushState({ id: covoId }, '', newPath);
+          window.dispatchEvent(new PopStateEvent('popstate', { state: { id: covoId } }));
+        } catch (err) {
+          window.location.href = newPath;
+        }
+        return;
+      }
+
+      // (Tu peux ajouter ici delete/start/arrive/cancel/validate pareil)
+    });
+  }
 }
 
 // -------------------- Historique --------------------
@@ -1232,7 +1515,7 @@ function ajouterAuCovoiturage(trajetData) {
     id: trajetData.id,
     date: formatDateJJMMAAAA(trajetData.date),
     chauffeur: {
-      pseudo: trajetData.chauffeur?.pseudo || "Moi",
+      pseudo: trajetData.chauffeur?.pseudo || getCurrentUserPseudo(),
       rating: trajetData.chauffeur?.rating || 0,
       photo: trajetData.chauffeur?.photo || "images/default-avatar.png"
     },

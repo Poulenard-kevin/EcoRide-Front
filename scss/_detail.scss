@@ -13,6 +13,21 @@
   margin-left: 100px;
   margin-right: 100px;
 
+  .driver-info-message {
+    display: inline-block;
+    max-width: 480px;
+    margin: 10px auto 0 auto;
+    padding: 10px 18px;
+    border-radius: 30px;              /* pill comme tes badges */
+    background-color: $color-light-beige;          /* vert très clair */
+    color: $color-dark-green;                    /* vert foncé lisible */
+    font-weight: 500;
+    font-size: 24px;
+    font-family: $font-body;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+  }
+
   @media (max-width: 990px) {
     margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
     margin-right: 50px;

@@ -627,7 +627,7 @@
           }
   
           .rating {
-            padding-top: 40px;
+            padding-top: 5px;
             color: $color-medium-green; /* Couleur des étoiles */
             margin-bottom: 10px; /* Ajoute un espacement sous les étoiles */
             max-width: 150px; /* Limite la largeur maximale du pseudo */
@@ -689,7 +689,7 @@
           display: flex; /* Utilise Flexbox pour organiser les éléments horizontalement */
           align-items: center; /* Centre les éléments verticalement */
           gap: 15px; /* Ajoute un espacement entre la photo et les autres éléments */
-          padding-right: 40px;
+          padding-right: 5px;
 
           .profile-photo {
             width: 120px; /* Taille fixe de la largeur */

@@ -98,6 +98,8 @@ export function carpoolFromApi(apiItem) {
   }
 
   const chauffeur = {
+    id: rawDriver.id || rawDriver.userId || null,         
+    email: driverEmail,                                      
     pseudo: driverPseudo,
     photo: rawDriver.avatarUrl || rawDriver.avatar || rawDriver.photo || null,
     rating: driverRating ?? 0,

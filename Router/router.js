@@ -209,5 +209,25 @@ window.route = routeEvent;
 
 // Chargement initial au DOMContentLoaded
 window.addEventListener('DOMContentLoaded', () => {
-  LoadContentPage();
+  // Ajoute spa-preload sur #main-page dès le début
+  const mainPageEl = document.getElementById('main-page');
+  if (mainPageEl) {
+    mainPageEl.classList.add('spa-preload');
+  }
+
+  LoadContentPage()
+    .catch(err => {
+      console.error('Erreur initiale LoadContentPage', err);
+    })
+    .finally(() => {
+      // Marque le body comme "SPA prête"
+      document.body.classList.add('spa-ready');
+
+      // Enlève les classes de préchargement sur #main-page
+      const mainPageEl = document.getElementById('main-page');
+      if (mainPageEl) {
+        mainPageEl.classList.remove('preload-hidden');
+        mainPageEl.classList.remove('spa-preload');
+      }
+    });
 });

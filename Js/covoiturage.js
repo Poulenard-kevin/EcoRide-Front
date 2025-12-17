@@ -268,7 +268,7 @@ document.addEventListener('pageContentLoaded', async () => {
               <img src="${avatarSrc}" alt="Profil ${trajet.chauffeur?.pseudo || ''}" class="profile-photo" onerror="this.onerror=null;this.src='/images/default-avatar.png'">
               <div class="pseudo-rating">
                 <p class="pseudo">${trajet.chauffeur?.pseudo || 'Inconnu'}</p>
-                <p class="rating">${'★'.repeat(trajet.chauffeur?.rating || 0)}${'☆'.repeat(5 - (trajet.chauffeur?.rating || 0))}</p>
+                <p class="rating">${'★'.repeat(Math.round(trajet.chauffeur?.averageRating ?? 5))}${'☆'.repeat(5 - Math.round(trajet.chauffeur?.averageRating ?? 5))}</p>
               </div>
               <div class="column">
                 <p class="type">${capitalize(trajet.type)}</p>

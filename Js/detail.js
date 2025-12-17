@@ -178,6 +178,41 @@ function cancelReservationById(reservationId) {
   return true;
 }
 
+function isCurrentUserDriver(trajet) {
+  try {
+    const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
+    const driver = trajet?.chauffeur || trajet?.driver || null;
+
+    console.log('[isCurrentUserDriver] me =', me, 'driver =', driver);
+
+    if (!me || !driver) return false;
+
+    // 1) Comparaison par id (le plus fiable)
+    if (me.id && driver.id && String(me.id) === String(driver.id)) {
+      console.log('[isCurrentUserDriver] match par id');
+      return true;
+    }
+
+    // 2) Comparaison par email
+    if (me.email && driver.email && me.email === driver.email) {
+      console.log('[isCurrentUserDriver] match par email');
+      return true;
+    }
+
+    // 3) Fallback par pseudo si dispo
+    if (me.pseudo && driver.pseudo && me.pseudo === driver.pseudo) {
+      console.log('[isCurrentUserDriver] match par pseudo');
+      return true;
+    }
+
+    console.log('[isCurrentUserDriver] pas le conducteur');
+    return false;
+  } catch (e) {
+    console.warn('isCurrentUserDriver error', e);
+    return false;
+  }
+}
+
 function renderActionButton(trajet) {
   const reservation = getUserReservationForCovoiturage(trajet.id);
   const actionsContainer = document.querySelector('.actions');
@@ -186,29 +221,30 @@ function renderActionButton(trajet) {
     return;
   }
 
-  // Supprimer d'éventuels boutons existants (sécurité)
+  // Supprimer d'éventuels boutons existants
   const oldReserve = actionsContainer.querySelector('#detail-reserver');
   const oldCancel = actionsContainer.querySelector('#cancel-reservation-btn');
   if (oldReserve) oldReserve.remove();
   if (oldCancel) oldCancel.remove();
 
   const typeEl = document.getElementById('detail-type');
+  const isDriver = isCurrentUserDriver(trajet);
+  console.log('[renderActionButton] reservation =', reservation, 'isDriver =', isDriver);
 
   if (reservation) {
+    // ----- Cas où l'utilisateur est déjà passager -----
     const cancelBtn = document.createElement('button');
     cancelBtn.id = 'cancel-reservation-btn';
     cancelBtn.className = 'btn btn-danger';
     cancelBtn.textContent = 'Annuler ma réservation';
     cancelBtn.dataset.reservationId = reservation.id;
 
-    // insertion avant le type si possible, sinon en tête
     if (typeEl && typeEl.parentNode === actionsContainer) {
       actionsContainer.insertBefore(cancelBtn, typeEl);
     } else {
       actionsContainer.prepend(cancelBtn);
     }
 
-    // === Ajout du style inline au hover ===
     cancelBtn.addEventListener('mouseenter', () => {
       cancelBtn.style.setProperty('background-color', '#dc3545', 'important');
       cancelBtn.style.setProperty('color', '#fff', 'important');
@@ -229,13 +265,24 @@ function renderActionButton(trajet) {
       }
     });
 
+  } else if (isDriver) {
+    // ----- Cas chauffeur : pas de bouton Réserver -----
+    const info = document.createElement('p');
+    info.className = 'driver-info-message';
+    info.textContent = "Vous êtes le conducteur de ce trajet. Vous ne pouvez pas réserver de place.";
+    if (typeEl && typeEl.parentNode === actionsContainer) {
+      actionsContainer.insertBefore(info, typeEl);
+    } else {
+      actionsContainer.prepend(info);
+    }
+
   } else {
+    // ----- Cas passager potentiel : bouton Réserver -----
     const reserveBtn = document.createElement('button');
     reserveBtn.id = 'detail-reserver';
     reserveBtn.className = 'search-btn reserve-btn';
     reserveBtn.textContent = 'Réserver';
 
-    // insertion avant le type si possible, sinon en tête
     if (typeEl && typeEl.parentNode === actionsContainer) {
       actionsContainer.insertBefore(reserveBtn, typeEl);
     } else {
@@ -321,6 +368,15 @@ document.addEventListener("pageContentLoaded", async () => {
     trajet = await carpoolFromApiAsync(data);
     console.log('DEBUG carpoolFromApi output date:', trajet.date);
     console.log('✅ Trajet chargé depuis l\'API :', trajet);
+
+    try {
+      const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
+      console.log('[detail] me =', me);
+      console.log('[detail] trajet.chauffeur =', trajet?.chauffeur);
+    } catch (e) {
+      console.warn('[detail] erreur log me/chauffeur', e);
+    }
+
   } catch (e) {
     console.warn('⚠️ Erreur chargement trajet API', e);
 
@@ -384,10 +440,15 @@ document.addEventListener("pageContentLoaded", async () => {
   if (pseudoElement) pseudoElement.textContent = trajet.chauffeur?.pseudo || "Inconnu";
 
   const ratingElement = document.getElementById("detail-rating");
-  if (ratingElement) {
-    const rating = trajet.chauffeur?.rating || 0;
-    ratingElement.textContent = "★".repeat(rating) + "☆".repeat(5 - rating);
-  }
+if (ratingElement) {
+  // ✅ Utilise averageRating au lieu de rating
+  const rating = trajet.chauffeur?.averageRating ?? 5.0;
+  
+  // Arrondi pour avoir un nombre entier d'étoiles
+  const fullStars = Math.round(rating);
+  
+  ratingElement.textContent = "★".repeat(fullStars) + "☆".repeat(5 - fullStars);
+}
 
   const trajetTypeElement = document.getElementById("detail-type");
   if (trajetTypeElement) {
@@ -564,6 +625,12 @@ updateDriverAboutDom();
     });
 
     console.log("✅ Page détail chargée et remplie pour le trajet:", trajet.id);
+
+    // Révèle le contenu maintenant que tout est rempli
+    const detailContainer = document.querySelector('.detail-container');
+    if (detailContainer) {
+      detailContainer.classList.add('loaded');
+    }
   });
 
 // =================== Fonctions utilitaires ===================
@@ -667,6 +734,12 @@ function showSeatSelector(max) {
 
 // =================== Fonction de réservation ===================
 function reserverPlace(trajet, seats = 1) {
+  // 🚫 Sécurité : le conducteur ne peut pas réserver
+  if (isCurrentUserDriver(trajet)) {
+    alert("Vous êtes le conducteur de ce trajet, vous ne pouvez pas réserver de place.");
+    return;
+  }
+
   seats = Number(seats) || 1;
   if (seats <= 0) seats = 1;
 

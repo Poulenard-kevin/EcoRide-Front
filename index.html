@@ -4,18 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.css">
+    <style>
+      #main-page.spa-preload {
+        visibility: hidden;
+      }
+    </style>
+    <script>
+      // On marque main-page en preload dès que possible
+      document.addEventListener('DOMContentLoaded', function () {
+        var main = document.getElementById('main-page');
+        if (main) {
+          main.classList.add('spa-preload');
+        }
+      });
+    </script>
+    
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Roboto:wght@400&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="scss/_custom.scss">
-    <link rel="stylesheet" href="scss/main.css">
-   
-    
 
+    <!-- ✅ TON CSS GLOBAL COMPILÉ PAR LIVE SASS -->
+    <link rel="stylesheet" href="/css/main.css">
    
     <title>Document</title>
 </head>
@@ -23,8 +35,8 @@
 
     <header style="background-color: #F1E7D1;">
       <nav class="navbar navbar-expand-lg" data-bs-theme="light" aria-label="Main navigation">
-        <a class="navbar-brand" href="#">
-          <img src="images/Logo-EcoRide.PNG" alt="EcoRide Logo" class="logo">
+        <a class="navbar-brand" href="/covoiturage">
+          <img src="/images/Logo-EcoRide.PNG" alt="EcoRide Logo" class="logo">
           EcoRide
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -93,7 +105,7 @@
       </div>
     </div>
 
-    <main id="main-page">
+    <main id="main-page" class="preload-hidden">
       <div id="loader-overlay" style="
         display:none; /* Caché par défaut */
         position: fixed;

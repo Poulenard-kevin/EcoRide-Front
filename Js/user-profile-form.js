@@ -335,6 +335,58 @@ const MESSAGES = {
     window.dispatchEvent(new CustomEvent(name, { detail }));
   }
 
+  // global helper (single definition)
+async function tryUploadAvatarToBackend(dataURL, meta, file) {
+  if (!window.apiPersist || typeof window.apiPersist.uploadAvatar !== 'function') return;
+  try {
+    const userId = window.apiPersist.getCurrentUserIdFallback ? window.apiPersist.getCurrentUserIdFallback() : null;
+    if (!userId) {
+      console.warn('tryUploadAvatarToBackend: userId introuvable, upload annulé');
+      return;
+    }
+
+    function dataURLtoFile(dataurl, filename = 'avatar.png') {
+      const arr = dataurl.split(',');
+      const mime = (arr[0].match(/:(.*?);/) || [])[1] || 'image/png';
+      const bstr = atob(arr[1] || '');
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) u8arr[n] = bstr.charCodeAt(n);
+      return new File([u8arr], filename, { type: mime });
+    }
+
+    const fileToSend = (file instanceof File) ? file : (dataURL ? dataURLtoFile(dataURL, meta && meta.name ? meta.name : 'avatar.png') : null);
+    if (!fileToSend) {
+      console.warn('tryUploadAvatarToBackend: aucun fichier détecté pour upload');
+      return;
+    }
+
+    const res = await window.apiPersist.uploadAvatar(userId, fileToSend);
+    console.log('Avatar upload backend OK', res);
+
+    if (res && res.url) {
+      try {
+        const raw = localStorage.getItem('ecoride_user');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          parsed.photo = res.url;
+          localStorage.setItem('ecoride_user', JSON.stringify(parsed));
+          window.dispatchEvent(new CustomEvent('ecoride:userUpdated', { detail: { user: parsed } }));
+        }
+      } catch (e) { console.warn('maj ecoride_user après upload avatar failed', e); }
+      try {
+        const preview = document.querySelector('#profileAvatarPreview');
+        if (preview) preview.src = res.url;
+      } catch (e) { /* silent */ }
+    }
+
+    return res;
+  } catch (err) {
+    console.warn('Upload avatar backend échoué (non bloquant)', err);
+    throw err;
+  }
+}
+
   // Main init
   function initProfilePhotoForm(root = document) {
     const form = root.querySelector('#profile-photo-form');
@@ -357,15 +409,16 @@ const MESSAGES = {
     }
 
     function updateUIForLoadedAvatar(dataURL, meta) {
+      const isDefault = !dataURL || dataURL === DEFAULT_SRC;
       previewImg.src = dataURL || DEFAULT_SRC;
-      currentDataURL = dataURL || null;
-      currentFileMeta = meta || null;
+      currentDataURL = isDefault ? null : dataURL;
+      currentFileMeta = isDefault ? null : (meta || null);
     
-      // Si une image est déjà présente (dataURL truthy) -> bouton Valider désactivé
-      if (btnConfirm) btnConfirm.disabled = !!dataURL;
+      // Si une image enregistrée -> bouton Valider activé, sinon désactivé
+      if (btnConfirm) btnConfirm.disabled = isDefault;
     
-      // Le bouton Supprimer doit être activé uniquement si on a une image enregistrée
-      if (btnRemove) btnRemove.disabled = !dataURL;
+      // Le bouton Supprimer activé uniquement si on a une image enregistrée
+      if (btnRemove) btnRemove.disabled = isDefault;
     }
 
     // load existing
@@ -417,14 +470,14 @@ const MESSAGES = {
       btnConfirm.addEventListener('click', (ev) => {
         ev.preventDefault();
 
-        function finalizeSave(dataURL, meta) {
+        function finalizeSave(dataURL, meta, file) {
           if (!dataURL) {
             setStatus("Aucun avatar à enregistrer.", true);
             return;
           }
           const ok = saveAvatarToStorage(dataURL, meta || {});
           if (!ok) {
-            setStatus('Impossible d’enregistrer la photo de profil, (localStorage plein ?).', true);
+            setStatus(MESSAGES.SAVE_ERROR, true);
             return;
           }
         
@@ -432,29 +485,28 @@ const MESSAGES = {
           currentDataURL = dataURL;
           currentFileMeta = meta || currentFileMeta || {};
           updateUIForLoadedAvatar(dataURL, currentFileMeta);
-          setStatus('Photo de profil enregistrée.');
+          setStatus(MESSAGES.SAVED);
           try { fileInput.value = ''; } catch {}
         
-          // --- PATCH : copier la photo dans ecoride_user (si présent) ---
+          // patch ecoride_user
           try {
             const raw = localStorage.getItem('ecoride_user');
             if (raw) {
               const parsed = JSON.parse(raw);
               if (parsed && typeof parsed === 'object') {
-                parsed.photo = dataURL; // stocke la dataURL (persistante)
+                parsed.photo = dataURL;
                 localStorage.setItem('ecoride_user', JSON.stringify(parsed));
                 console.log('ecoride_user mis à jour avec la photo (patch automatique)');
               }
             }
-          } catch (err) {
-            console.warn('Erreur lors du patch de ecoride_user', err);
-          }
+          } catch (err) { console.warn('Erreur lors du patch de ecoride_user', err); }
         
-          // dispatch global (notifie les autres modules)
+          // dispatchs
           window.dispatchEvent(new Event('userUpdated'));
-        
-          // event local / backward-compat (tu as déjà ce dispatch dans le code existant)
           dispatchAvatarEvent('ecoride:avatarChanged', { dataURL, meta: currentFileMeta });
+        
+          // passe le file si disponible (préférer l'envoi du File natif)
+          tryUploadAvatarToBackend(dataURL, currentFileMeta, file).catch(()=>{/* non bloquant */});
         
           if (btnConfirm) btnConfirm.disabled = true;
         }
@@ -483,7 +535,7 @@ const MESSAGES = {
         const fr = new FileReader();
         fr.onload = () => {
           const dataURL = fr.result;
-          finalizeSave(dataURL, { name: file.name, size: file.size, type: file.type });
+          finalizeSave(dataURL, { name: file.name, size: file.size, type: file.type }, file);
           btnConfirm.disabled = true;
         };
         fr.onerror = (err) => {
@@ -548,7 +600,10 @@ const MESSAGES = {
       },
       remove: () => {
         removeAvatarFromStorage();
+        // explicitement remettre l'UI à l'état "aucune image"
         updateUIForLoadedAvatar(DEFAULT_SRC, null);
+        if (btnConfirm) btnConfirm.disabled = true;
+        if (btnRemove) btnRemove.disabled = true;
         dispatchAvatarEvent('ecoride:avatarRemoved', {});
       }
     };
@@ -592,7 +647,7 @@ const MESSAGES = {
 if (!window.__ecoride_avatarDeleteDelegationAdded) {
   window.__ecoride_avatarDeleteDelegationAdded = true;
 
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', async (e) => {
     const btn = e.target.closest('[data-ecoride-avatar-delete], #removeAvatarBtn');
     if (!btn) return;
 
@@ -606,7 +661,21 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
 
     if (!confirm('Supprimer la photo de profil ?')) return;
 
+    // inside the click handler for delete avatars
     try {
+      const userId = (window.apiPersist && window.apiPersist.getCurrentUserIdFallback) ? window.apiPersist.getCurrentUserIdFallback() : null;
+
+      if (userId && window.apiPersist && typeof window.apiPersist.deleteAvatar === 'function') {
+        try {
+          // tentative serveur (attend l'API, mais ne bloque pas la suppression locale en cas d'erreur)
+          await window.apiPersist.deleteAvatar(userId);
+          console.log('Avatar supprimé côté backend pour user', userId);
+        } catch(apiErr) {
+          console.warn('Suppression avatar backend échouée (on continue local):', apiErr);
+        }
+      }
+
+      // comportement local (inchangé)
       if (window.__ecoride_profilePhoto && typeof window.__ecoride_profilePhoto.remove === 'function') {
         window.__ecoride_profilePhoto.remove();
       } else {
@@ -617,7 +686,8 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
         });
         window.dispatchEvent(new CustomEvent('ecoride:avatarRemoved', {}));
       }
-      console.log('Avatar supprimé via délégation');
+
+      console.log('Avatar supprimé via délégation (local + tentative backend)');
     } catch (err) {
       console.error('Erreur suppression avatar (délégation)', err);
       alert('Impossible de supprimer l\'avatar — voir console.');
@@ -1570,6 +1640,26 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
         renderCard(final);
         window.dispatchEvent(new CustomEvent('ecoride:profileAboutChanged', { detail: { about: final } }));
 
+        // tentative de sauvegarde côté backend (non bloquante)
+        if (window.apiPersist && typeof window.apiPersist.saveAbout === 'function') {
+          (async () => {
+            try {
+              const userId = window.apiPersist.getCurrentUserIdFallback ? window.apiPersist.getCurrentUserIdFallback() : null;
+              if (!userId) { console.warn('saveAbout: userId introuvable'); return; }
+              const resp = await window.apiPersist.saveAbout(userId, final);
+              console.log('saveAbout backend OK', resp);
+              if (resp && resp.user) {
+                try {
+                  localStorage.setItem('ecoride_user', JSON.stringify(resp.user));
+                  window.dispatchEvent(new CustomEvent('ecoride:userUpdated', { detail: { user: resp.user } }));
+                } catch(e){ console.warn('saveAbout: failed to sync ecoride_user', e); }
+              }
+            } catch (err) {
+              console.warn('saveAbout backend échoué (non bloquant)', err);
+            }
+          })();
+        }
+
         // feedback UX
         const prev = saveBtn.textContent;
         saveBtn.textContent = 'Enregistré ✓';
@@ -1652,7 +1742,7 @@ window.handleProfileSave = window.handleProfileSave || async function(btn) {
     function readSavedAvatar() {
       try {
         // priority : canonical avatar storage used by your profile form
-        const keys = ['ecoride.profileAvatar','ecoride_profileAvatar','ecoride.profileAvatar']; // keep candidates
+        const keys = ['ecoride.profileAvatar','ecoride_profileAvatar']; // keep candidates
         for (const k of keys) {
           const raw = localStorage.getItem(k);
           if (!raw) continue;

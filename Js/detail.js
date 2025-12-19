@@ -432,6 +432,7 @@ document.addEventListener("pageContentLoaded", async () => {
     }
 
     const DEFAULT_AVATAR = '/images/default-avatar.png'; // adapte le chemin
+    console.log('Avatar src utilisé:', computedSrc);
     photoElement.src = computedSrc || DEFAULT_AVATAR;
     photoElement.onerror = () => { photoElement.onerror = null; photoElement.src = DEFAULT_AVATAR; };
   }

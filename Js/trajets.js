@@ -1,5 +1,5 @@
 // trajets.js
-import { apiFetch } from '/assets/js/api.js';
+import { apiFetch, API_BASE } from '/assets/js/api.js';
 import { createCarIfNeeded, saveCarpoolApi, deleteCarpoolApi, carOwnedBy } from '/assets/js/trips-api.js';
 console.log('apiFetch typeof =', typeof apiFetch);
 // -------------------- Utilitaires & exports de base --------------------
@@ -11,12 +11,45 @@ export function genId() {
   return 'id_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
+const DEFAULT_LOCAL_AVATAR = '/images/default-avatar.png';
+
 export function resolveAvatarSrc(raw) {
-  if (!raw) return null;
+  if (!raw) return DEFAULT_LOCAL_AVATAR;
+
   raw = String(raw).trim();
-  if (!raw) return null;
-  if (raw.startsWith('data:') || raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('//')) return raw;
-  return raw.startsWith('/') ? raw : '/' + raw;
+  if (!raw) return DEFAULT_LOCAL_AVATAR;
+
+  // données déjà formatées (base64 / data URL)
+  if (raw.startsWith('data:')) return raw;
+
+  // URLs absolues — on les retourne telles quelles
+  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('//')) return raw;
+
+  // Si c'est un chemin relatif absolu commençant par /uploads (backend)
+  // => prefixer avec API_BASE pour viser le backend sur le port 8000
+  if (raw.startsWith('/uploads')) {
+    return `${API_BASE}${raw}`;
+  }
+
+  // Si c'est /images/... (image de l'UI front, p.ex. default-avatar)
+  // on retourne tel quel (servi par le serveur front)
+  if (raw.startsWith('/images')) {
+    return raw;
+  }
+
+  // Si c'est un chemin commençant par / (autre chemin backend), prefixer backend
+  if (raw.startsWith('/')) {
+    return `${API_BASE}${raw}`;
+  }
+
+  // Si c'est juste un nom de fichier ou 'uploads/avatars/xxx.jpg'
+  // on suppose qu'il s'agit d'un upload côté backend et on construit l'URL complète
+  if (raw.startsWith('uploads/')) {
+    return `${API_BASE}/${raw}`;
+  }
+
+  // dernier recours — considérer comme un fichier dans uploads/avatars
+  return `${API_BASE}/uploads/avatars/${raw}`;
 }
 
 export function getProfileAvatarFromStorage() {

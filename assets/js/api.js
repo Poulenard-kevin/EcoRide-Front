@@ -1,6 +1,6 @@
 // /assets/js/api.js
 
-const API_BASE = 'http://127.0.0.1:8000';
+export const API_BASE = 'http://127.0.0.1:8000';
 const API_PREFIX = '/api'; // préfixe automatique pour toutes les routes API Platform
 
 export function setToken(token) {

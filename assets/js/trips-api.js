@@ -1,6 +1,6 @@
 // assets/js/trips-api.js
 import { apiFetch } from './api.js';
-
+import { normalizeTypeKey } from './type-utils.js';
 
 const API_BASE = window.ecoConfig?.apiBase || 'http://localhost:8000';
 
@@ -50,11 +50,11 @@ export function carpoolFromApi(apiItem) {
   const formatTime = (value) => {
     if (!value) return '';
     const s = String(value);
-  
+
     // Extraire HH:MM depuis n'importe quel format (ISO, "10:00", "10:00:00")
     const m = s.match(/(\d{2}):(\d{2})(?::\d{2})?/);
     if (m) return `${m[1]}h${m[2]}`;
-  
+
     // Fallback si pas de match
     return '';
   };
@@ -98,8 +98,8 @@ export function carpoolFromApi(apiItem) {
   }
 
   const chauffeur = {
-    id: rawDriver.id || rawDriver.userId || null,         
-    email: driverEmail,                                      
+    id: rawDriver.id || rawDriver.userId || null,
+    email: driverEmail,
     pseudo: driverPseudo,
     photo: rawDriver.avatarUrl || rawDriver.avatar || rawDriver.photo || null,
     rating: driverRating ?? 0,
@@ -181,11 +181,14 @@ export function carpoolFromApi(apiItem) {
 
   // ---------- Véhicule ----------
   const vehicle = apiItem.car || apiItem.vehicle || {};
+  const vehicleTypeRaw = vehicle.fuelType || vehicle.type || vehicle.fuel || '';
+
   const vehicleNormalized = {
     marque: vehicle.brand || vehicle.marque || 'Non spécifié',
     model: vehicle.model || vehicle.modele || 'Non spécifié',
     color: vehicle.color || vehicle.couleur || 'Non spécifié',
-    type: vehicle.type || 'Économique',
+    // normaliser le type via normalizeTypeKey -> 'electrique'|'thermique'|'hybride'|'non-specifie'
+    type: normalizeTypeKey(vehicleTypeRaw || ''),
     places: vehicle.seats || vehicle.places || totalSeats,
     other: vehicle.other || vehicle.autre || ''
   };
@@ -219,6 +222,18 @@ export function carpoolFromApi(apiItem) {
   : [];
 
   // ---------- Retour normalisé ----------
+  // Déterminer le "type" principal à partir de plusieurs sources, normalisé via normalizeTypeKey.
+  const rawTypeCandidates = [
+    apiItem.fuelType,
+    apiItem.fuel_type,
+    apiItem.type,
+    apiItem.vehicle?.fuelType,
+    apiItem.vehicle?.type,
+    vehicleTypeRaw
+  ];
+  const chosenRawType = rawTypeCandidates.find(v => v !== undefined && v !== null && String(v).trim() !== '') || '';
+  const normalizedType = normalizeTypeKey(chosenRawType);
+
   return {
     id: apiItem.id || apiItem['@id']?.replace('/api/carpools/', ''),
     serverId: apiItem['@id'] || `/api/carpools/${apiItem.id}`,
@@ -230,7 +245,8 @@ export function carpoolFromApi(apiItem) {
     prix,
     places: availableSeats,
     capacity: totalSeats,
-    type: 'économique',
+    // type stocké sous forme de clé normalisée : 'electrique'|'thermique'|'hybride'|'non-specifie'
+    type: normalizedType,
     chauffeur,
     vehicle: vehicleNormalized,
     passagers,
@@ -248,22 +264,22 @@ export async function carpoolFromApiAsync(apiItem) {
       const carObj = await apiFetch(carRef.replace('/api', '')); // "/cars/1"
       if (carObj) {
         // fuelType vient de ton entité Car : "Électrique", "Thermique", "Hybride"
-        const fuelType = carObj.fuelType || '';
+        const fuelType = carObj.fuelType || carObj.fuel_type || carObj.type || '';
 
         // trip.type sert à ton <p class="type">${capitalize(trajet.type)}</p>
-        // On stocke en minuscule pour uniformiser
+        // On stocke en clé normalisée pour uniformiser
         if (fuelType) {
-          trip.type = fuelType.toLowerCase();    // "électrique", "thermique", "hybride"
+          trip.type = normalizeTypeKey(fuelType); // 'electrique'|'thermique'|'hybride'|'non-specifie'
         } else {
-          trip.type = (trip.type || 'économique').toLowerCase();
+          trip.type = normalizeTypeKey(trip.type || trip.vehicle?.type || '');
         }
 
+        // et pour vehicle.type :
         trip.vehicle = {
           marque: carObj.brand || carObj.marque || 'Non spécifié',
           model: carObj.model || carObj.modele || 'Non spécifié',
           color: carObj.color || carObj.couleur || 'Non spécifié',
-          // Pour la section "Véhicules"
-          type: fuelType || trip.vehicle?.type || 'Économique',
+          type: fuelType ? normalizeTypeKey(fuelType) : normalizeTypeKey(trip.vehicle?.type || ''),
           places: carObj.seats || carObj.places || trip.capacity || 4,
           other: carObj.otherPreferences || carObj.other || carObj.autre || ''
         };

@@ -34,45 +34,31 @@
     // Mapping helpers
     function vehicleFromApi(apiCar) {
       if (!apiCar) return null;
+      // robust fallback for possible field names returned by various API versions
+      const fuel = apiCar.fuelType ?? apiCar.type_energie ?? apiCar.type ?? apiCar.energyType ?? '';
       return {
         id: apiCar.id ?? null,
-        plate: apiCar.registration ?? '',
-        firstRegistration: apiCar.firstRegistration ?? apiCar.registrationDate ?? null,
-        marque: apiCar.brand ?? '',
-        model: apiCar.model ?? '',
-        color: apiCar.color ?? '',
-        type: apiCar.fuelType ?? '',
-        seats: apiCar.seats ?? null,
-        preferences: apiCar.driverPreferences ?? [],
-        other: apiCar.otherPreferences ?? '',
+        plate: apiCar.registration ?? apiCar.immatriculation ?? '',
+        firstRegistration: apiCar.firstRegistration ?? apiCar.registrationDate ?? apiCar.first_registration ?? null,
+        marque: apiCar.brand ?? apiCar.marque ?? '',
+        model: apiCar.model ?? apiCar.modele ?? '',
+        color: apiCar.color ?? apiCar.couleur ?? '',
+        type: fuel,
+        seats: apiCar.seats ?? apiCar.nb_places ?? null,
+        preferences: apiCar.driverPreferences ?? apiCar.preferences_chauffeur ?? [],
+        other: apiCar.otherPreferences ?? apiCar.autres_preferences ?? '',
         rawApi: apiCar
       };
     }
-  
-    // Mapping helpers
-    function vehicleFromApi(apiCar) {
-        if (!apiCar) return null;
-        return {
-          id: apiCar.id ?? null,
-          plate: apiCar.registration ?? '',
-          firstRegistration: apiCar.firstRegistration ?? apiCar.registrationDate ?? null,
-          marque: apiCar.brand ?? '',
-          model: apiCar.model ?? '',
-          color: apiCar.color ?? '',
-          type: apiCar.fuelType ?? '',
-          seats: apiCar.seats ?? null,
-          preferences: apiCar.driverPreferences ?? [],
-          other: apiCar.otherPreferences ?? '',
-          rawApi: apiCar
-        };
-      }
     
       function vehicleToApiPayload(v) {
+        const value = v.type ?? v.fuelType ?? '';
         const payload = {
           brand: v.marque ?? v.brand ?? '',
           model: v.model ?? '',
           color: v.color ?? '',
-          fuelType: v.type ?? v.fuelType ?? '',
+          fuelType: value,
+          type_energie: value, // fallback for APIs expecting this exact name
           registration: v.plate ?? v.registration ?? '',
           seats: v.seats ? Number(v.seats) : null,
           driverPreferences: Array.isArray(v.preferences) ? v.preferences : (v.driverPreferences || []),

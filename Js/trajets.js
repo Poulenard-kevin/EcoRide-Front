@@ -1,6 +1,8 @@
 // trajets.js
 import { apiFetch, API_BASE } from '/assets/js/api.js';
 import { createCarIfNeeded, saveCarpoolApi, deleteCarpoolApi, carOwnedBy } from '/assets/js/trips-api.js';
+import { normalizeTypeKey, labelFromTypeKey } from '/assets/js/type-utils.js';
+
 console.log('apiFetch typeof =', typeof apiFetch);
 // -------------------- Utilitaires & exports de base --------------------
 
@@ -1552,7 +1554,7 @@ function ajouterAuCovoiturage(trajetData) {
       rating: trajetData.chauffeur?.rating || 0,
       photo: trajetData.chauffeur?.photo || "images/default-avatar.png"
     },
-    type: (trajetData.vehicle ? (trajetData.vehicle.type || '') : ''),
+    type: normalizeTypeKey(trajetData.vehicle?.type || trajetData.type || ''),
     capacity,
     places: capacity,
     depart: trajetData.depart,

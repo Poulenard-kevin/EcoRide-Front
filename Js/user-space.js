@@ -660,8 +660,14 @@ function bindVehiclesFormHandlers() {
       marque: readField(form, 'vehicle-marque'),
       model: readField(form, 'vehicle-model'),
       color: readField(form, 'vehicle-color'),
-      type: readField(form, 'vehicle-type') || readField(form, 'vehicleType'),
-      seats: readField(form, 'seats'),
+      // Lecture robuste du type : priorise fuelType (name du select), fallback vers anciens noms
+      fuelType: readField(form, 'fuelType') || readField(form, 'vehicle-type') || readField(form, 'vehicleType') || '',
+      // seats : forcer Number (ou null si absent)
+      seats: (function(s){
+        const n = readField(form, 'seats') || s;
+        const v = (n === '' || n === null || typeof n === 'undefined') ? null : Number(n);
+        return Number.isFinite(v) ? v : null;
+      })(),
       preferences: Array.from(form.querySelectorAll('input[name="preferences"]:checked')).map(el => el.value),
       other: readField(form, 'other'),
     };
@@ -1037,7 +1043,7 @@ function showVehicleModal(vehicle) {
     <p><strong>Marque :</strong> ${vehicle.marque || "Non spécifiée"}</p>
     <p><strong>Modèle :</strong> ${vehicle.model || "Non spécifié"}</p>
     <p><strong>Couleur :</strong> ${vehicle.color || "Non spécifiée"}</p>
-    <p><strong>Type :</strong> ${vehicle.type || "Non spécifié"}</p>
+    <p><strong>Type :</strong> ${vehicle.fuelType || vehicle.type || "Non spécifié"}</p>
     <p><strong>Plaque :</strong> ${vehicle.id || vehicle.plate || "Non spécifiée"}</p>
     <p><strong>Date d'immatriculation :</strong> ${vehicle.registrationDate || "Non spécifiée"}</p>
     <p><strong>Nombre de places :</strong> ${vehicle.seats || "Non spécifié"}</p>
@@ -1212,9 +1218,10 @@ async function handleModifyClick(index) {
     setField(form, 'vehicle-marque', vehicle.marque || '');
     setField(form, 'vehicle-model', vehicle.model || '');
     setField(form, 'vehicle-color', vehicle.color || '');
-    // support id="vehicle-type" ou name="vehicleType"
-    setField(form, 'vehicle-type', vehicle.type || '');
-    setField(form, 'vehicleType', vehicle.type || '');
+    // support id="vehicle-type" ou name="vehicleType" / name="fuelType"
+    setField(form, 'vehicle-type', vehicle.fuelType ?? vehicle.type ?? '');
+    setField(form, 'vehicleType', vehicle.fuelType ?? vehicle.type ?? '');
+    setField(form, 'fuelType', vehicle.fuelType ?? vehicle.type ?? '');
     setField(form, 'seats', vehicle.seats || '');
     setField(form, 'other', vehicle.other || '');
   

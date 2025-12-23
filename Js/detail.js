@@ -1,5 +1,6 @@
 import { resolveAvatarSrc, getProfileAvatarFromStorage } from './trajets.js';
 import { carpoolFromApiAsync } from '/assets/js/trips-api.js';
+import { normalizeTypeKey, labelFromTypeKey, slugifyForClass } from '/assets/js/type-utils.js';
 
 console.log("🔍 detail.js chargé !");
 
@@ -37,6 +38,7 @@ function getProfileAboutFromStorage() {
   }
 }
 
+
 // S'assure qu'il existe un élément DOM pour afficher le about ; si non, il le crée sous le <h1> principal
 function ensureAboutEl() {
   let el = document.getElementById('driver-about-text') || document.querySelector('#profileAboutCard p') || document.querySelector('[data-ecoride-about]');
@@ -66,10 +68,20 @@ function ensureAboutEl() {
 function updateDriverAboutDom() {
   const el = ensureAboutEl();
   if (!el) return;
+
+  // Si le DOM contient déjà une description non vide et différente du message par défaut,
+  // on ne l'écrase pas.
+  const current = el.textContent ? String(el.textContent).trim() : '';
+  const NO_DESCRIPTION_MSG = 'Aucune description fournie.';
+  if (current && current !== NO_DESCRIPTION_MSG) {
+    console.log('updateDriverAboutDom: contenu existant détecté, on n\'écrase pas ->', current);
+    return;
+  }
+
   const about = getProfileAboutFromStorage();
-  const output = about && about.trim() ? about.trim() : 'Aucune description fournie.';
+  const output = about && about.trim() ? about.trim() : NO_DESCRIPTION_MSG;
   el.textContent = output;
-  if (output === 'Aucune description fournie.') el.classList.add('text-muted');
+  if (output === NO_DESCRIPTION_MSG) el.classList.add('text-muted');
   else el.classList.remove('text-muted');
 }
 
@@ -267,7 +279,7 @@ function renderActionButton(trajet) {
 
   } else if (isDriver) {
     // ----- Cas chauffeur : pas de bouton Réserver -----
-    const info = document.createElement('p');
+    const info = document.createElement('span');
     info.className = 'driver-info-message';
     info.textContent = "Vous êtes le conducteur de ce trajet. Vous ne pouvez pas réserver de place.";
     if (typeEl && typeEl.parentNode === actionsContainer) {
@@ -332,12 +344,17 @@ document.addEventListener("pageContentLoaded", async () => {
     const params = new URLSearchParams(window.location.search);
     const queryId = params.get('id');
     if (queryId && queryId.trim()) return queryId.trim();
-
+  
     const path = window.location.pathname || '';
     const parts = path.split('/').filter(Boolean); // ["detail","3"]
     if (parts.length >= 2 && parts[0] === 'detail' && parts[1]) {
-      return parts[1];
+      try {
+        return decodeURIComponent(parts[1]);
+      } catch (e) {
+        return parts[1];
+      }
     }
+  
     return null;
   }
 
@@ -366,6 +383,59 @@ document.addEventListener("pageContentLoaded", async () => {
       arrivalTime: data.arrivalTime
     });
     trajet = await carpoolFromApiAsync(data);
+    // Exposer pour debug
+    window.__debug_trajet = trajet;
+    console.log('DEBUG exposé sur window.__debug_trajet', window.__debug_trajet);
+
+    function waitForElement(selector, timeout = 5000) {
+      return new Promise((resolve, reject) => {
+        const el = document.querySelector(selector);
+        if (el) return resolve(el);
+        const obs = new MutationObserver((mutations, o) => {
+          const e = document.querySelector(selector);
+          if (e) { o.disconnect(); resolve(e); }
+        });
+        obs.observe(document.documentElement, { childList: true, subtree: true });
+        if (timeout) setTimeout(() => { obs.disconnect(); reject(new Error('timeout')); }, timeout);
+      });
+    }
+
+    async function applyFuelBadgeFromTrajet(trajetObj) {
+      const rawType = trajetObj ? (trajetObj.type || trajetObj.vehicle?.type || trajetObj.car?.type) : null;
+      const displayed = normalizeTypeKey(rawType);
+  
+      // Trouver l’élément cible
+      const selectors = ['#detail-type', '.type', '#type-trajet-select', '[data-ecoride-type]'];
+      let el = null;
+      for (const s of selectors) {
+        el = document.querySelector(s);
+        if (el) break;
+      }
+      if (!el) {
+        const container = document.querySelector('.detail-container') || document.querySelector('main') || document.body;
+        const h1 = container ? (container.querySelector('h1') || container.querySelector('header h1')) : null;
+        const wrapper = document.createElement('p');
+        wrapper.id = 'detail-type';
+        wrapper.className = 'type';
+        if (h1 && h1.parentNode) h1.parentNode.insertBefore(wrapper, h1.nextSibling);
+        else container.prepend(wrapper);
+        el = wrapper;
+      }
+  
+      // Nettoyer anciennes classes
+      Array.from(el.classList).forEach(c => {
+        if (c.startsWith('badge-') || c.startsWith('type-')) el.classList.remove(c);
+      });
+  
+      // Appliquer texte et classe
+      el.textContent = displayed.charAt(0).toUpperCase() + displayed.slice(1);
+      el.classList.add(`type-${displayed.replace(/\s+/g, '-')}`);
+  
+      console.log('applyFuelBadgeFromTrajet appliqué ->', { el, displayed });
+    }
+
+    // appeler la fonction (trajet est la variable existante)
+    applyFuelBadgeFromTrajet(window.__debug_trajet || trajet).catch(e => console.warn('Erreur applyFuelBadgeFromTrajet', e));
     console.log('DEBUG carpoolFromApi output date:', trajet.date);
     console.log('✅ Trajet chargé depuis l\'API :', trajet);
 
@@ -431,7 +501,6 @@ document.addEventListener("pageContentLoaded", async () => {
       computedSrc = getProfileAvatarFromStorage();
     }
 
-    const DEFAULT_AVATAR = '/images/default-avatar.png'; // adapte le chemin
     console.log('Avatar src utilisé:', computedSrc);
     photoElement.src = computedSrc || DEFAULT_AVATAR;
     photoElement.onerror = () => { photoElement.onerror = null; photoElement.src = DEFAULT_AVATAR; };
@@ -441,23 +510,52 @@ document.addEventListener("pageContentLoaded", async () => {
   if (pseudoElement) pseudoElement.textContent = trajet.chauffeur?.pseudo || "Inconnu";
 
   const ratingElement = document.getElementById("detail-rating");
-if (ratingElement) {
-  // ✅ Utilise averageRating au lieu de rating
-  const rating = trajet.chauffeur?.averageRating ?? 5.0;
+  if (ratingElement) {
+    // ✅ Utilise averageRating au lieu de rating
+    const rating = trajet.chauffeur?.averageRating ?? 5.0;
   
-  // Arrondi pour avoir un nombre entier d'étoiles
-  const fullStars = Math.round(rating);
+    // Arrondi pour avoir un nombre entier d'étoiles
+    const fullStars = Math.round(rating);
   
-  ratingElement.textContent = "★".repeat(fullStars) + "☆".repeat(5 - fullStars);
-}
+    ratingElement.textContent = "★".repeat(fullStars) + "☆".repeat(5 - fullStars);
+  }
 
-  const trajetTypeElement = document.getElementById("detail-type");
-  if (trajetTypeElement) {
-    trajetTypeElement.textContent = capitalize(trajet.type || "Économique");
-    trajetTypeElement.classList.forEach(cls => {
-      if (cls.startsWith("badge-") && cls !== "badge") trajetTypeElement.classList.remove(cls);
+  function renderTypeBadge(trajet, element) {
+    if (!element || !trajet) return;
+  
+    // Cherche la valeur brute dans plusieurs champs possibles
+    const rawCandidates = [
+      trajet.fuelType,
+      trajet.type,
+      trajet.vehicle?.fuelType,
+      trajet.vehicle?.type,
+      trajet.car?.fuelType,
+      trajet.car?.type,
+      trajet.vehicule?.fuelType,
+      trajet.vehicule?.type
+    ];
+  
+    const raw = rawCandidates.find(v => v !== undefined && v !== null && String(v).trim() !== '') || '';
+    const displayedKey = normalizeTypeKey(raw); // 'electrique' | 'thermique' | 'hybride' | 'non-specifie'
+    const label = labelFromTypeKey(displayedKey); // 'Électrique', etc.
+  
+  
+    const className = 'type-' + slugifyForClass(displayedKey);
+  
+    // Debug utile
+    console.debug('[renderTypeBadge] raw:', raw, '-> displayedKey:', displayedKey, 'class:', className);
+  
+    // Nettoyer anciennes classes de type/badge
+    Array.from(element.classList).forEach(cls => {
+      if (cls.startsWith('badge-') || cls.startsWith('type-')) element.classList.remove(cls);
     });
-    trajetTypeElement.classList.add(`type-${(trajet.type || "economique").toLowerCase()}`);
+  
+    // S'assurer d'avoir la classe badge pour le style pill (optionnel)
+    if (!element.classList.contains('badge')) element.classList.add('badge');
+  
+    // Appliquer la nouvelle classe et le texte
+    element.classList.add(className);
+    element.textContent = label;
   }
 
   const dateElement = document.getElementById("detail-date");
@@ -486,25 +584,7 @@ if (ratingElement) {
     dureeElement.textContent = `Durée : ${heures}h${minutes.toString().padStart(2, '0')}`;
   }
 
-  const placesElement = document.getElementById("detail-places");
-
-  function computeRemaining(trajetObj) {
-    const passagers = Array.isArray(trajetObj.passagers) ? trajetObj.passagers : [];
-    if (typeof trajetObj.places === 'number') return trajetObj.places;
-    if (typeof trajetObj.capacity === 'number') return Math.max(0, trajetObj.capacity - passagers.length);
-    if (trajetObj.vehicle?.places !== undefined) return Math.max(0, Number(trajetObj.vehicle.places) - passagers.length);
-    if (trajetObj.vehicule?.places !== undefined) return Math.max(0, Number(trajetObj.vehicule.places) - passagers.length);
-    return 0;
-  }
-
-  function renderPlaces() {
-    if (!placesElement) return;
-    const remaining = computeRemaining(trajet);
-    const pluriel = remaining > 1 ? "s" : "";
-    placesElement.textContent = `Place${pluriel} disponible${pluriel} : ${remaining}`;
-  }
-
-  renderPlaces();
+  renderPlaces(trajet);
   renderActionButton(trajet);
 
   const vehicleOther = (trajet.vehicle?.other ?? trajet.vehicule?.other ?? "").trim();
@@ -526,7 +606,7 @@ if (ratingElement) {
   console.log("🔎 trajet:", trajet);
   console.log("🔎 vehicle keys:", Object.keys(vehicle));
   console.log("🔎 vehicle raw:", vehicle);
-  
+
   const brandElement = document.getElementById("detail-vehicle-marque");
   if (brandElement) brandElement.textContent = vehicle.marque || "Marque non spécifiée";
 
@@ -536,20 +616,59 @@ if (ratingElement) {
   const colorElement = document.getElementById("detail-vehicle-color");
   if (colorElement) colorElement.textContent = vehicle.color || "Couleur non spécifiée";
 
+  // --- Type : normalisé et affichage lisible ---
   const typeElement = document.getElementById("detail-vehicle-type");
-  if (typeElement) typeElement.textContent = vehicle.type || "Non spécifié";
+  // rechercher le type dans plusieurs champs et normaliser la clé
+  const inferredTypeRaw = (
+    vehicle.type ||
+    vehicle.fuelType ||
+    trajet.type ||
+    trajet.fuelType ||
+    vehicle.typeRaw ||
+    ''
+  );
+  const typeKey = normalizeTypeKey(inferredTypeRaw); // 'electrique'|'thermique'|'hybride'|'non-specifie'
+  const typeLabel = labelFromTypeKey(typeKey);
+
+  if (typeElement) {
+    if (!typeKey || typeKey === 'non-specifie') {
+      // si tu préfères masquer la ligne quand non renseigné
+      typeElement.textContent = '';
+      typeElement.style.display = 'none';
+    } else {
+      typeElement.textContent = typeLabel;
+      typeElement.style.display = ''; // restore si précédemment caché
+    }
+  }
+
+  // trouver l'élément qui affichera le type (priorité id/detail -> .type -> typeElement)
+  const badgeEl = document.getElementById('detail-type') || document.querySelector('.type') || typeElement;
+
+  // Appeler le renderer de badge (fonction définie plus haut)
+  if (badgeEl) {
+    renderTypeBadge(trajet, badgeEl);
+  } else {
+    // si aucun élément n'existe, option : créer #detail-type sous le h1 (décommenter si souhaité)
+    // const container = document.querySelector('.detail-container') || document.querySelector('main') || document.body;
+    // const h1 = container ? (container.querySelector('h1') || container.querySelector('header h1')) : null;
+    // const p = document.createElement('p');
+    // p.id = 'detail-type';
+    // p.className = 'type';
+    // p.textContent = (trajet.type || trajet.vehicle?.type || 'Non spécifié');
+    // if (h1 && h1.parentNode) h1.parentNode.insertBefore(p, h1.nextSibling); else container.prepend(p);
+  }
 
   /* ---------- Insert "À propos du conducteur" next to <h1>Véhicule ---------- */
   function renderDriverAbout(trajetParam) {
     const NO_DESCRIPTION_MSG = 'Aucune description fournie.';
-  
+
     function looksLikeARoleString(s) {
       if (!s || typeof s !== 'string') return false;
       const norm = s.trim().toLowerCase();
       return ['chauffeur','passager','driver','passenger','both','les deux'].includes(norm)
         || (/^[a-z]{1,20}$/i.test(norm));
     }
-  
+
     function getDriverAboutFromTrajet(pTrajet) {
       try {
         const drv = pTrajet ? (pTrajet.chauffeur || pTrajet.driver || null) : null;
@@ -571,7 +690,7 @@ if (ratingElement) {
         return null;
       }
     }
-  
+
     function writeToDom(text) {
       const el = ensureAboutEl(); // ensureAboutEl doit être défini dans Helpers (créé si nécessaire)
       if (!el) {
@@ -583,22 +702,22 @@ if (ratingElement) {
       if (output === NO_DESCRIPTION_MSG) el.classList.add('text-muted');
       else el.classList.remove('text-muted');
     }
-  
+
     // priorités : trajet.chauffeur -> profil local (legacy/canonical) -> défaut
     const aboutFromTrajet = getDriverAboutFromTrajet(trajetParam);
     const aboutFromProfil = getProfileAboutFromStorage(); // doit gérer le JSON legacy
-  
+
     console.log('renderDriverAbout -> aboutFromTrajet:', aboutFromTrajet, 'aboutFromProfil:', aboutFromProfil);
-  
+
     if (trajetParam && typeof trajetParam === 'object') {
       const chosen = aboutFromTrajet || aboutFromProfil || '';
       writeToDom(chosen);
       return;
     }
-  
+
     // pas de trajet : afficher profil local ou message par défaut
     writeToDom(aboutFromProfil || '');
-  
+
     // installer un MutationObserver simple pour debug (idempotent)
     try {
       const tgt = document.getElementById('driver-about-text');
@@ -817,9 +936,3 @@ function reserverPlace(trajet, seats = 1) {
   // Redirection vers espace utilisateur avec onglet trajets ouvert
   window.location.href = "/espace-utilisateur?tab=trajets";
 }
-
-window.addEventListener('userUpdated', (ev) => {
-  const avatar = ev?.detail?.avatar || getProfileAvatarFromStorage();
-  const photoElement = document.getElementById("detail-photo");
-  if (photoElement) photoElement.src = avatar;
-});

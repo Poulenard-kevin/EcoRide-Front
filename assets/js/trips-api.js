@@ -256,38 +256,109 @@ export function carpoolFromApi(apiItem) {
 
 
 export async function carpoolFromApiAsync(apiItem) {
-  const trip = carpoolFromApi(apiItem);
+  const trip = carpoolFromApi(apiItem); // ton mapping actuel minimal
 
-  const carRef = apiItem?.car;
-  if (typeof carRef === 'string' && carRef.startsWith('/api/')) {
+  // helper pour formatage heure ISO -> "10h00"
+  function formatTime(isoString) {
     try {
-      const carObj = await apiFetch(carRef.replace('/api', '')); // "/cars/1"
-      if (carObj) {
-        // fuelType vient de ton entité Car : "Électrique", "Thermique", "Hybride"
-        const fuelType = carObj.fuelType || carObj.fuel_type || carObj.type || '';
-
-        // trip.type sert à ton <p class="type">${capitalize(trajet.type)}</p>
-        // On stocke en clé normalisée pour uniformiser
-        if (fuelType) {
-          trip.type = normalizeTypeKey(fuelType); // 'electrique'|'thermique'|'hybride'|'non-specifie'
-        } else {
-          trip.type = normalizeTypeKey(trip.type || trip.vehicle?.type || '');
-        }
-
-        // et pour vehicle.type :
-        trip.vehicle = {
-          marque: carObj.brand || carObj.marque || 'Non spécifié',
-          model: carObj.model || carObj.modele || 'Non spécifié',
-          color: carObj.color || carObj.couleur || 'Non spécifié',
-          type: fuelType ? normalizeTypeKey(fuelType) : normalizeTypeKey(trip.vehicle?.type || ''),
-          places: carObj.seats || carObj.places || trip.capacity || 4,
-          other: carObj.otherPreferences || carObj.other || carObj.autre || ''
-        };
-      }
-    } catch (e) {
-      console.warn('[carpoolFromApiAsync] impossible de charger le véhicule', carRef, e);
+      const d = new Date(isoString);
+      const h = String(d.getHours()).padStart(2, '0');
+      const m = String(d.getMinutes()).padStart(2, '0');
+      return `${h}h${m}`;
+    } catch {
+      return '';
     }
   }
+
+  // Récupération/normalisation du car object (peut être string -> fetch ou objet)
+  let carObj = null;
+  const carRef = apiItem?.car;
+
+  if (!carRef) {
+    carObj = null;
+  } else if (typeof carRef === 'string' && carRef.startsWith('/api/')) {
+    try {
+      carObj = await apiFetch(carRef.replace('/api', '')); // "/cars/1"
+    } catch (e) {
+      console.warn('[carpoolFromApiAsync] impossible de charger le véhicule', carRef, e);
+      carObj = null;
+    }
+  } else if (typeof carRef === 'object') {
+    carObj = carRef;
+  }
+
+  // Récupérer fuelType en cherchant dans plusieurs clés possibles
+  const fuelTypeRaw = (carObj && (carObj.fuelType || carObj.fuel_type || carObj.type))
+    || apiItem.fuelType || apiItem.fuel_type || apiItem.type || '';
+
+  const normalizedType = fuelTypeRaw ? normalizeTypeKey(fuelTypeRaw) : normalizeTypeKey(trip.type || (trip.vehicle && trip.vehicle.type) || '');
+
+  // Construire l'objet "car" (nouveau) et "vehicle" (compat)
+  const carData = {
+    marque: (carObj && (carObj.brand || carObj.marque)) || carObj?.brand || carObj?.marque || trip.vehicle?.marque || '',
+    model: (carObj && (carObj.model || carObj.modele)) || trip.vehicle?.model || '',
+    color: (carObj && (carObj.color || carObj.couleur)) || trip.vehicle?.color || '',
+    type: normalizedType,
+    places: (carObj && (carObj.seats || carObj.places)) || apiItem.availableSeats || apiItem.nbPlacesTotal || trip.capacity || trip.places || 4,
+    other: (carObj && (carObj.otherPreferences || carObj.other || carObj.autre)) || apiItem.otherPreferences || apiItem.otherPreferences || '',
+    driverPreferences: (carObj && (carObj.driverPreferences || carObj.driver_preferences)) || apiItem.driverPreferences || apiItem.driver_preferences || []
+  };
+
+  // s'assurer que driverPreferences est tableau
+  if (!Array.isArray(carData.driverPreferences) && typeof carData.driverPreferences === 'string' && carData.driverPreferences.trim()) {
+    // si c'est une string, on tente de scinder par virgule
+    carData.driverPreferences = carData.driverPreferences.split(',').map(s => s.trim()).filter(Boolean);
+  } else if (!Array.isArray(carData.driverPreferences)) {
+    carData.driverPreferences = [];
+  }
+
+  // Appliquer sur trip pour compat (vehicle + car)
+  trip.car = carData;
+  trip.vehicle = trip.vehicle ? { ...trip.vehicle, ...carData } : { ...carData };
+
+  // Normaliser type sur trip.type aussi (pour affichage)
+  trip.type = normalizedType;
+
+  // Places / capacity
+  trip.places = Number(apiItem.availableSeats ?? apiItem.nbPlacesTotal ?? carData.places ?? trip.places ?? 0);
+  trip.capacity = trip.places;
+
+  // Prix
+  trip.prix = Number(apiItem.pricePerSeat ?? apiItem.pricePerSeat ?? apiItem.price ?? trip.prix ?? 0);
+
+  // Driver mapping (compatibilité driver / chauffeur)
+  const driverRaw = apiItem.driver || apiItem.chauffeur || apiItem.user || apiItem.owner || null;
+  const driver = {
+    id: driverRaw?.id ?? apiItem.driverId ?? null,
+    email: driverRaw?.email || driverRaw?.mail || '',
+    pseudo: driverRaw?.pseudo || driverRaw?.firstName || driverRaw?.first_name || driverRaw?.name || `${driverRaw?.firstName || ''} ${driverRaw?.lastName || ''}`.trim(),
+    photo: driverRaw?.avatar || driverRaw?.photo || driverRaw?.profilePicture || '',
+    about: driverRaw?.about || driverRaw?.bio || '',
+    rating: driverRaw?.rating ?? (driverRaw && driverRaw.receivedReviews ? driverRaw.receivedReviews.length : 0),
+    reviews: driverRaw?.receivedReviews || driverRaw?.reviews || []
+  };
+  trip.driver = driver;
+  trip.chauffeur = driver; // compat
+
+  // Preferences globaux
+  trip.preferences = Array.isArray(apiItem.preferences) ? apiItem.preferences
+    : (Array.isArray(apiItem.driverPreferences) ? apiItem.driverPreferences
+      : (trip.car.driverPreferences && trip.car.driverPreferences.length ? trip.car.driverPreferences : undefined));
+
+  // autres prefs textuelles
+  trip.otherPreferences = trip.car.other || apiItem.otherPreferences || apiItem.other_preferences || '';
+
+  // Dates / heures formatées (conserver champs originaux si besoin)
+  try {
+    trip.date = apiItem.departureDate ? apiItem.departureDate.slice(0, 10) : trip.date || '';
+  } catch (e) { /* ignore */ }
+  if (!trip.heureDepart) trip.heureDepart = apiItem.departureTime ? formatTime(apiItem.departureTime) : trip.heureDepart || '';
+  if (!trip.heureArrivee) trip.heureArrivee = apiItem.arrivalTime ? formatTime(apiItem.arrivalTime) : trip.heureArrivee || '';
+
+  // Expose quelques logs utiles pour debug (tu peux les retirer plus tard)
+  console.debug('[carpoolFromApiAsync] carData:', carData);
+  console.debug('[carpoolFromApiAsync] driver:', driver);
+  console.debug('[carpoolFromApiAsync] preferences resolved:', trip.preferences, 'otherPreferences:', trip.otherPreferences);
 
   return trip;
 }

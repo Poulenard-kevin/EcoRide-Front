@@ -1,6 +1,6 @@
 import { resolveAvatarSrc, getProfileAvatarFromStorage } from './trajets.js';
 import { carpoolFromApiAsync } from '/assets/js/trips-api.js';
-import { normalizeTypeKey, labelFromTypeKey, slugifyForClass } from '/assets/js/type-utils.js';
+import { updatePlacesFromVehicle, renderPreferences, applyVehicleTypeToElement, normalizeTypeKey, labelFromTypeKey, slugifyForClass } from '/assets/js/type-utils.js';
 
 console.log("🔍 detail.js chargé !");
 
@@ -376,34 +376,92 @@ document.addEventListener("pageContentLoaded", async () => {
   try {
     // 🔹 Utilise apiFetch pour bénéficier du token / cookie
     const data = await apiFetch(`/carpools/${id}`);
-    console.log('DEBUG API raw carpool:', {
-      departureDate: data.departureDate,
-      departureTime: data.departureTime,
-      arrivalDate: data.arrivalDate,
-      arrivalTime: data.arrivalTime
-    });
+    console.log('Réponse API brute:', data);
+
+    // Normaliser / enrichir
     trajet = await carpoolFromApiAsync(data);
+    console.log('Trajet normalisé:', trajet);
+
+    // Mettre à jour places / capacité avant rendu
+    try {
+      updatePlacesFromVehicle(trajet);
+    } catch (e) {
+      console.warn('updatePlacesFromVehicle a échoué', e);
+    }
+    try {
+      renderPlaces(trajet);
+    } catch (e) {
+      console.warn('renderPlaces a échoué', e);
+    }
+
+    // Debug détaillé des préférences (avant rendu)
+    console.log('Preferences à afficher:', {
+      basePreferences: trajet.preferences,
+      vehicleOther: trajet.car?.other ?? trajet.vehicle?.other ?? '',
+      autresPrefs: trajet.autres_preferences_chauffeur ?? trajet.autresPreferencesChauffeur ?? trajet.otherPreferences ?? trajet.driverPreferences ?? trajet.car?.driverPreferences
+    });
+    console.log('DEBUG trajet complet:', trajet);
+    console.log('DEBUG basePreferences:', trajet.preferences, trajet.car?.driverPreferences, trajet.driverPreferences);
+    console.log('DEBUG autresPrefsRaw:', trajet.autres_preferences_chauffeur, trajet.autresPreferencesChauffeur, trajet.otherPreferences, trajet.driverPreferences);
+    console.log('DEBUG vehicleOther:', trajet.car?.other ?? trajet.vehicle?.other);
+
+    // Rendu des preferences (une seule fois)
+    try {
+      renderPreferences(trajet);
+    } catch (e) {
+      console.warn('renderPreferences a échoué', e);
+    }
+
+    // Badge / type
+    const badgeEl = document.getElementById('detail-type') || document.querySelector('.type') || document.getElementById('detail-vehicle-type');
+    try {
+      applyVehicleTypeToElement(trajet, badgeEl);
+    } catch (e) {
+      console.warn('applyVehicleTypeToElement a échoué', e);
+    }
+
+    // Mettre à jour la ligne véhicule (marque/model/color/type) en vérifiant l'existence des éléments
+    const elMarque = document.getElementById('detail-vehicle-marque');
+    if (elMarque) elMarque.textContent = trajet.car?.marque || trajet.vehicle?.marque || 'Marque non spécifiée';
+
+    const elModel = document.getElementById('detail-vehicle-model');
+    if (elModel) elModel.textContent = trajet.car?.model || trajet.vehicle?.model || 'Modèle non spécifié';
+
+    const elColor = document.getElementById('detail-vehicle-color');
+    if (elColor) elColor.textContent = trajet.car?.color || trajet.vehicle?.color || 'Couleur non spécifiée';
+
+    // champ de type détaillé (optionnel)
+    const typeElement = document.getElementById('detail-vehicle-type');
+    if (typeElement) {
+      try {
+        const { label, key } = applyVehicleTypeToElement(trajet, typeElement) || {};
+        if (key === 'non-specifie') {
+          typeElement.style.display = 'none';
+        } else {
+          typeElement.style.display = '';
+          typeElement.textContent = label || (trajet.type ? capitalize(trajet.type) : '');
+        }
+      } catch (e) {
+        // fallback simple
+        const inferred = trajet.car?.type || trajet.vehicle?.type || trajet.type || '';
+        if (!inferred) {
+          typeElement.style.display = 'none';
+        } else {
+          typeElement.style.display = '';
+          typeElement.textContent = capitalize(inferred);
+        }
+      }
+    }
+
     // Exposer pour debug
     window.__debug_trajet = trajet;
     console.log('DEBUG exposé sur window.__debug_trajet', window.__debug_trajet);
 
-    function waitForElement(selector, timeout = 5000) {
-      return new Promise((resolve, reject) => {
-        const el = document.querySelector(selector);
-        if (el) return resolve(el);
-        const obs = new MutationObserver((mutations, o) => {
-          const e = document.querySelector(selector);
-          if (e) { o.disconnect(); resolve(e); }
-        });
-        obs.observe(document.documentElement, { childList: true, subtree: true });
-        if (timeout) setTimeout(() => { obs.disconnect(); reject(new Error('timeout')); }, timeout);
-      });
-    }
-
+    // Fonction interne pour appliquer le badge de carburant / type (avec fallback car/vehicle)
     async function applyFuelBadgeFromTrajet(trajetObj) {
       const rawType = trajetObj ? (trajetObj.type || trajetObj.vehicle?.type || trajetObj.car?.type) : null;
       const displayed = normalizeTypeKey(rawType);
-  
+
       // Trouver l’élément cible
       const selectors = ['#detail-type', '.type', '#type-trajet-select', '[data-ecoride-type]'];
       let el = null;
@@ -418,33 +476,36 @@ document.addEventListener("pageContentLoaded", async () => {
         wrapper.id = 'detail-type';
         wrapper.className = 'type';
         if (h1 && h1.parentNode) h1.parentNode.insertBefore(wrapper, h1.nextSibling);
-        else container.prepend(wrapper);
+        else if (container) container.prepend(wrapper);
         el = wrapper;
       }
-  
+
       // Nettoyer anciennes classes
       Array.from(el.classList).forEach(c => {
         if (c.startsWith('badge-') || c.startsWith('type-')) el.classList.remove(c);
       });
-  
-      // Appliquer texte et classe
-      el.textContent = displayed.charAt(0).toUpperCase() + displayed.slice(1);
-      el.classList.add(`type-${displayed.replace(/\s+/g, '-')}`);
-  
+
+      // Appliquer texte et classe (utilise une classe custom si besoin)
+      const text = (displayed || '').charAt(0).toUpperCase() + (displayed || '').slice(1);
+      el.textContent = text || '';
+      if (displayed) el.classList.add(`type-${String(displayed).replace(/\s+/g, '-')}`);
+
       console.log('applyFuelBadgeFromTrajet appliqué ->', { el, displayed });
     }
 
     // appeler la fonction (trajet est la variable existante)
     applyFuelBadgeFromTrajet(window.__debug_trajet || trajet).catch(e => console.warn('Erreur applyFuelBadgeFromTrajet', e));
+
     console.log('DEBUG carpoolFromApi output date:', trajet.date);
     console.log('✅ Trajet chargé depuis l\'API :', trajet);
 
+    // Logs additionnels (me vs driver/chauffeur)
     try {
       const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
       console.log('[detail] me =', me);
-      console.log('[detail] trajet.chauffeur =', trajet?.chauffeur);
+      console.log('[detail] trajet.driver/chauffeur =', trajet?.driver ?? trajet?.chauffeur);
     } catch (e) {
-      console.warn('[detail] erreur log me/chauffeur', e);
+      console.warn('[detail] erreur log me/driver', e);
     }
 
   } catch (e) {
@@ -463,6 +524,10 @@ document.addEventListener("pageContentLoaded", async () => {
       trajet = trajetsSauvegardes.find(t => String(t.id) === String(id));
       if (trajet) {
         console.log('✅ Trajet trouvé dans localStorage (nouveauxTrajets)');
+        // Si trouvée en local, on rend quand même les éléments essentiels
+        try { renderPlaces(trajet); } catch (err) { console.warn('renderPlaces fallback failed', err); }
+        try { renderPreferences(trajet); } catch (err) { console.warn('renderPreferences fallback failed', err); }
+        window.__debug_trajet = trajet;
       }
     } catch (localErr) {
       console.error('Erreur lors du fallback localStorage', localErr);
@@ -586,21 +651,11 @@ document.addEventListener("pageContentLoaded", async () => {
 
   renderPlaces(trajet);
   renderActionButton(trajet);
-
-  const vehicleOther = (trajet.vehicle?.other ?? trajet.vehicule?.other ?? "").trim();
-  const basePreferences = trajet.preferences || ['Non-fumeur', 'Animaux acceptés', 'Musique'];
-
-  const preferences = vehicleOther
-    ? [...basePreferences, vehicleOther]
-    : basePreferences;
-
-  ['detail-pref1', 'detail-pref2', 'detail-pref3', 'detail-pref4'].forEach((id, index) => {
-    const prefElement = document.getElementById(id);
-    if (prefElement) {
-      prefElement.textContent = preferences[index] || "";
-      prefElement.style.display = preferences[index] ? "block" : "none";
-    }
-  });
+  console.log('DEBUG trajet complet:', trajet);
+  console.log('DEBUG basePreferences:', trajet.preferences, trajet.vehicle?.preferences, trajet.driverPreferences);
+  console.log('DEBUG autresPrefsRaw:', trajet.autres_preferences_chauffeur, trajet.autresPreferencesChauffeur, trajet.otherPreferences, trajet.driverPreferences);
+  console.log('DEBUG vehicleOther:', trajet.vehicle?.other);
+  renderPreferences(trajet);
 
   const vehicle = trajet.vehicle || {};
   console.log("🔎 trajet:", trajet);

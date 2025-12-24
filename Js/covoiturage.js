@@ -2,7 +2,7 @@
 import { resolveAvatarSrc, getProfileAvatarFromStorage, getCurrentUser, enrichTrajetWithCurrentUser, genId, formatDateJJMMAAAA } from './trajets.js';
 import { apiFetch } from '/assets/js/api.js';
 import { carpoolFromApiAsync } from '/assets/js/trips-api.js';
-import { normalizeTypeKey, labelFromTypeKey } from '/assets/js/type-utils.js';
+import { normalizeTypeKey, labelFromTypeKey, updatePlacesFromVehicle } from '/assets/js/type-utils.js';
 
 console.log('[covoiturage] script chargé');
 
@@ -322,6 +322,7 @@ document.addEventListener('pageContentLoaded', async () => {
 
   // Ajoute la durée calculée à chaque trajet
   trajets.forEach(trajet => {
+    updatePlacesFromVehicle(trajet);
     trajet.duree = calculerDureeEnHeures(trajet.heureDepart, trajet.heureArrivee);
   });
 
@@ -334,6 +335,7 @@ document.addEventListener('pageContentLoaded', async () => {
       return;
     }
     filteredTrajets.forEach(trajet => {
+      updatePlacesFromVehicle(trajet);
       const card = createTrajetCard(trajet);
       resultsContainer.appendChild(card);
     });

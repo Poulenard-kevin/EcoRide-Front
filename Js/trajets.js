@@ -1638,9 +1638,49 @@ export function renderTrajetsInProgress() {
 
   updatePlacesReservees();
 
+  // --- Fonction helper pour vérifier si le trajet appartient à l'utilisateur connecté ---
+  function isUserDriverOf(trajet) {
+    try {
+      const me = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+      if (!me) return false;
+      const driver = trajet.driver ?? (trajet.raw && trajet.raw.driver) ?? null;
+      if (!driver) return false;
+      if (typeof driver === 'object' && driver.id) return String(driver.id) === String(me.id);
+      if (typeof driver === 'string') {
+        return driver === `/api/users/${me.id}` || driver.endsWith('/' + me.id) || driver === String(me.id);
+      }
+      return String(driver) === String(me.id);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // --- Filtrage : n'afficher la carte chauffeur QUE pour le chauffeur connecté ---
+  const filteredEnCours = enCours.filter((t) => {
+    const role = String(t.role || '').toLowerCase().trim();
+
+    if (role === 'chauffeur') {
+      return isUserDriverOf(t);
+    }
+
+    if (role === 'passager') {
+      const covoId = t.covoId || t.detailId || t.serverId || t.id || null;
+      if (!covoId) return false;
+      const covoIdStr = String(covoId);
+      const trajetChauffeur = trajets.find(tr =>
+        String(tr.serverId) === covoIdStr ||
+        String(tr.id) === covoIdStr ||
+        (tr.serverId && tr.serverId.endsWith('/' + covoIdStr))
+      );
+      return !!trajetChauffeur;
+    }
+
+    return true;
+  });
+
   let html = '';
 
-  console.log('renderTrajetsInProgress — enCours:', enCours);
+  console.log('renderTrajetsInProgress — filteredEnCours:', filteredEnCours);
 
   function pickFirst(obj, keys) {
     for (const k of keys) {
@@ -1684,10 +1724,7 @@ export function renderTrajetsInProgress() {
     return m ? m[1] : s;
   }
 
-  // -------------------------
-  // NOUVEAU : helper pour calculer places réservées
-  // - pour un trajet chauffeur : somme des bookings (booking.seats, reservedSeats, nb_places_reservees)
-  // - pour un passager : cherche la réservation correspondante (dans t ou dans trajetRef.bookings) et renvoie seats
+  // Helper pour calculer places réservées
   function getBookingSeatsFromBooking(b) {
     if (!b) return 0;
     return Number(b.seats ?? b.reservedSeats ?? b.nb_places_reservees ?? 0) || 0;
@@ -1698,7 +1735,6 @@ export function renderTrajetsInProgress() {
     return trajetRef.bookings.find(b => {
       const pass = b.passenger ?? b.user ?? b.passengerIri ?? null;
       if (!pass) return false;
-      // passenger can be object or IRI or id
       if (typeof pass === 'object' && pass.id) return String(pass.id) === String(passengerIdOrIri);
       if (typeof pass === 'string') return pass === passengerIdOrIri || pass.endsWith('/' + passengerIdOrIri);
       return String(pass) === String(passengerIdOrIri);
@@ -1709,69 +1745,34 @@ export function renderTrajetsInProgress() {
   const myIdOrIri = me ? (me.id ?? `/api/users/${me.id}`) : null;
 
   function computePlacesReservees(t, trajetRef) {
-    console.log('computePlacesReservees called for trajet id:', t.id, 'role:', t.role);
-  
     if (t.placesReservees != null) {
-      console.log('Using t.placesReservees:', t.placesReservees);
       return Number(t.placesReservees) || 0;
     }
     if (t.seats != null) {
-      console.log('Using t.seats:', t.seats);
       return Number(t.seats) || 0;
     }
     if (t.reservedSeats != null) {
-      console.log('Using t.reservedSeats:', t.reservedSeats);
       return Number(t.reservedSeats) || 0;
     }
-  
+
     if (t.role === 'chauffeur' || (trajetRef && t.role !== 'passager')) {
       const bList = trajetRef?.bookings ?? [];
-      const sum = bList.reduce((sum, b) => {
-        const seats = getBookingSeatsFromBooking(b);
-        console.log('Booking seats:', seats, 'for booking id:', b.id);
-        return sum + seats;
-      }, 0);
-      console.log('Sum of booking seats for chauffeur:', sum);
-      return sum;
+      return bList.reduce((sum, b) => sum + getBookingSeatsFromBooking(b), 0);
     }
-  
+
     if (t.role === 'passager') {
       if (Array.isArray(t.bookings) && t.bookings.length > 0) {
-        const seats = getBookingSeatsFromBooking(t.bookings[0]);
-        console.log('Passager booking seats from t.bookings:', seats);
-        return seats;
+        return getBookingSeatsFromBooking(t.bookings[0]);
       }
       const found = myIdOrIri ? findMyBookingOnTrajet(trajetRef, myIdOrIri) : null;
       if (found) {
-        const seats = getBookingSeatsFromBooking(found);
-        console.log('Passager booking seats from trajetRef:', seats);
-        return seats;
+        return getBookingSeatsFromBooking(found);
       }
-      console.log('Passager fallback to 1 seat');
       return 1;
     }
-  
-    console.log('No seats found, returning 0');
+
     return 0;
   }
-
-  // -------------------------
-
-  console.log('Contenu complet de trajets avant rendu:', trajets);
-
-  // Filtrer enCours pour ne pas afficher la carte chauffeur si un passager existe pour le même covo
-  const filteredEnCours = enCours.filter((t, idx, arr) => {
-    if (t.role === 'chauffeur') {
-      // vérifier si un passager existe pour ce covo (même id ou serverId)
-      const covoId = t.serverId ?? t.id ?? '';
-      const hasPassenger = arr.some(other =>
-        other.role === 'passager' &&
-        (other.covoId === covoId || other.detailId === covoId || other.serverId === covoId || other.id === covoId)
-      );
-      return !hasPassenger; // on exclut le chauffeur si passager existe
-    }
-    return true; // garder les passagers
-  });
 
   filteredEnCours.forEach((t, i) => {
     if (!t) {
@@ -1779,18 +1780,14 @@ export function renderTrajetsInProgress() {
       return;
     }
 
-    let bgClass = "trajet-card"; // classe de base garantie
+    let bgClass = "trajet-card";
     let actionHtml = "";
-
-    // debug utile pour comprendre pourquoi bgClass était vide
-    console.log('renderTrajetsInProgress: trajet id=', t?.id, 'role=', t?.role, 'status=', t?.status);
 
     // Pour passager, récupérer les infos du trajet chauffeur lié
     let trajetRef = t;
     if (t.role === 'passager') {
       const covoId = t.covoId || t.detailId || t.serverId || t.id || null;
       if (covoId) {
-        // on accepte covoId numérique ou IRI
         const covoIdStr = String(covoId);
         const trajetChauffeur = trajets.find(tr => String(tr.serverId) === covoIdStr || String(tr.id) === covoIdStr || (tr.serverId && tr.serverId.endsWith('/' + covoIdStr)));
         if (trajetChauffeur) {
@@ -1816,14 +1813,11 @@ export function renderTrajetsInProgress() {
     const heureArrivee = t.heureArrivee || trajetRef.heureArrivee || '';
     const prix = t.prix ?? trajetRef.prix ?? 0;
 
-    // UTILISER LA NOUVELLE FONCTION ROBUSTE
     const placesReservees = computePlacesReservees(t, trajetRef);
 
-    // normalisation robuste
     const role = String(t.role || '').toLowerCase().trim() || (t.driver ? 'chauffeur' : (t.role === undefined && t.covoId ? 'passager' : 'chauffeur'));
     const status = String(t.status || t.raw?.status || t.raw?.statut || 'ajoute').toLowerCase().trim();
 
-    // logique role/status (inchangée)
     if (role === "chauffeur") {
       if (status === "ajoute") {
         bgClass += " actif";
@@ -1858,7 +1852,6 @@ export function renderTrajetsInProgress() {
       }
     }
 
-    // GARDER une structure HTML proche de l'original pour éviter de casser les styles
     const placeLabel = placesReservees > 1 ? 'places réservées' : 'place réservée';
     html += `
       <div class="${bgClass}" data-id="${stableId}">

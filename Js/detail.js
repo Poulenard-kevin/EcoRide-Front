@@ -142,7 +142,15 @@ function normalizeCovoId(raw) {
 }
 
 function getCapacity(trajet) {
-  return Number(trajet?.vehicle?.seats ?? trajet?.totalSeats ?? trajet?.places ?? trajet?.capacity ?? 4) || 4;
+  // Retourne le nombre total de places (tel que fourni par l'API dans vehicle)
+  // Ne PAS utiliser trajet.places qui peut contenir les places restantes.
+  return Number(
+    trajet?.vehicle?.places ??
+    trajet?.vehicle?.seats ??
+    trajet?.totalSeats ??
+    trajet?.capacity ??
+    4
+  ) || 4;
 }
 
 function getOccupiedFromPassagersArray(trajet) {
@@ -156,37 +164,26 @@ function computeRemaining(trajetObj) {
 
     const capacity = getCapacity(trajetObj);
 
-    // 1) si on a déjà une liste passagers sur l'objet (ex: nouveauxTrajets), on s'appuie dessus
-    const occupiedFromArray = getOccupiedFromPassagersArray(trajetObj);
-    if (occupiedFromArray > 0) {
-      return Math.max(0, capacity - occupiedFromArray);
+    const passagersArray = Array.isArray(trajetObj.passagers) ? trajetObj.passagers : [];
+    const occupiedFromPassagers = passagersArray.reduce((s, p) => s + (Number(p.places ?? p.seats) || 1), 0);
+
+    let occupiedFromBookings = 0;
+    if (Array.isArray(trajetObj.bookings) && trajetObj.bookings.length > 0) {
+      occupiedFromBookings = trajetObj.bookings.reduce((s, b) => s + (Number(b.seats ?? b.reservedSeats ?? b.nb_places_reservees) || 1), 0);
     }
 
-    // 2) sinon on agrège les réservations locales (ecoride_trajets)
-    let occupied = 0;
-    try {
-      const all = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
-      if (Array.isArray(all) && all.length > 0) {
-        const covoId = normalizeCovoId(trajetObj?.serverId ?? trajetObj?.id ?? trajetObj?.['@id'] ?? trajetObj?.detailId ?? trajetObj?.covoId ?? '');
-        occupied = all
-          .filter(r => r && r.role === 'passager')
-          .reduce((sum, r) => {
-            const rCovo = normalizeCovoId(r.serverId ?? r.covoId ?? r.detailId ?? r.covoiturageId ?? r.tripId ?? '');
-            const matches = covoId ? (String(rCovo) === String(covoId)) : false;
-            const fallbackMatch = !matches && (String(trajetObj?.id) && (String(r.covoId) === String(trajetObj.id)));
-            if (matches || fallbackMatch) {
-              const p = Number(r.placesReservees ?? r.places ?? r.seats ?? 1) || 1;
-              return sum + p;
-            }
-            return sum;
-          }, 0);
-      }
-    } catch (e) {
-      console.warn('computeRemaining: erreur lecture localStorage', e);
-      occupied = 0;
-    }
+    const occupiedBase = Math.max(occupiedFromPassagers, occupiedFromBookings);
 
-    return Math.max(0, capacity - (Number(occupied) || 0));
+    // On ignore occupiedLocal car pas de réservations locales à gérer
+    const occupied = occupiedBase;
+
+    const remaining = Math.max(0, capacity - occupied);
+
+    console.debug('[computeRemaining] capacity, occupiedFromPassagers, occupiedFromBookings, occupied, remaining', {
+      capacity, occupiedFromPassagers, occupiedFromBookings, occupied, remaining, trajetId: trajetObj.id
+    });
+
+    return remaining;
   } catch (err) {
     console.warn('computeRemaining error', err);
     return 0;

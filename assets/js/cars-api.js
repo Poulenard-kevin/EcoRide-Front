@@ -214,7 +214,7 @@
     const api = {
       setApiBase,
       getApiBase: () => API_BASE,
-      getAuthToken,
+      getAuthToken: getAuthToken,
       vehicleFromApi,
       vehicleToApiPayload,
       apiGetCars,

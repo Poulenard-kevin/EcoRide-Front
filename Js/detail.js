@@ -1,10 +1,43 @@
 import { resolveAvatarSrc, getProfileAvatarFromStorage } from './trajets.js';
 import { carpoolFromApiAsync } from '/assets/js/trips-api.js';
 import { updatePlacesFromVehicle, renderPreferences, applyVehicleTypeToElement, normalizeTypeKey, labelFromTypeKey, slugifyForClass } from '/assets/js/type-utils.js';
+import { createBooking, reloadCarpoolAndNotify } from '/assets/js/bookings-api.js';
+import { apiFetch } from '/assets/js/api.js';
 
 console.log("🔍 detail.js chargé !");
 
+let trajet = null;
+
 // =================== Helpers ===================
+
+if (!window.location.pathname.startsWith('/detail')) {
+  // Ne rien faire si on n'est pas sur la page détail
+  console.log('Page non détail, skip driver-about-text');
+} else {
+  // Appeler ensureAboutEl() et autres fonctions liées
+  updateDriverAboutDom();
+}
+
+// --- ensureAboutEl : défini au niveau module, accessible à toutes les fonctions du fichier
+function ensureAboutEl() {
+  if (!window.location.pathname.startsWith('/detail')) {
+    return null; // ne rien faire hors page détail
+  }
+  let el = document.getElementById('driver-about-text');
+  if (!el) {
+    const container = document.querySelector('.detail-container') || document.querySelector('main') || document.body;
+    const h1 = container ? (container.querySelector('h1') || container.querySelector('header h1')) : null;
+    el = document.createElement('p');
+    el.id = 'driver-about-text';
+    el.className = 'driver-about-text text-muted';
+    if (h1 && h1.parentNode) h1.parentNode.insertBefore(el, h1.nextSibling);
+    else if (container) container.prepend(el);
+  }
+  return el;
+}
+
+// Optionnel : exposer pour test rapide depuis la console
+window.ensureAboutEl = ensureAboutEl;
 
 // Renvoie la description de profil (legacy ou canonical)
 function getProfileAboutFromStorage() {
@@ -38,31 +71,6 @@ function getProfileAboutFromStorage() {
   }
 }
 
-
-// S'assure qu'il existe un élément DOM pour afficher le about ; si non, il le crée sous le <h1> principal
-function ensureAboutEl() {
-  let el = document.getElementById('driver-about-text') || document.querySelector('#profileAboutCard p') || document.querySelector('[data-ecoride-about]');
-  if (el) return el;
-
-  // trouver un point d'insertion raisonnable : .detail-container, main ou premier <h1>
-  const container = document.querySelector('.detail-container') || document.querySelector('main') || document.body;
-  const h1 = container.querySelector('h1') || container.querySelector('header h1');
-
-  // créer wrapper si absent
-  const wrapper = document.createElement('div');
-  wrapper.id = 'profileAboutCard';
-  wrapper.style.margin = '1rem 0';
-  wrapper.innerHTML = `<p id="driver-about-text" class="text-muted"></p>`;
-
-  if (h1 && h1.parentNode) {
-    h1.parentNode.insertBefore(wrapper, h1.nextSibling);
-  } else {
-    // sinon append en tête du container
-    container.prepend(wrapper);
-  }
-
-  return document.getElementById('driver-about-text');
-}
 
 // update DOM pour le texte "À propos"
 function updateDriverAboutDom() {
@@ -120,6 +128,78 @@ function getCovoId(item) {
 function getUserReservationForCovoiturage(covoiturageId) {
   const reservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
   return reservations.find(r => getCovoId(r) === covoiturageId && r.role === 'passager' && r.status === 'reserve') || null;
+}
+
+// helper local : normalise un identifiant / IRI en id numérique ou chaine courte
+function normalizeCovoId(raw) {
+  if (raw === null || raw === undefined) return '';
+  const s = String(raw);
+  const m = s.match(/\/api\/carpools\/(\d+)$/);
+  if (m) return m[1];
+  const m2 = s.match(/\/api\/carpools\/(.+)$/);
+  if (m2) return m2[1];
+  return s.replace(/^\/api\/carpools\//, '').replace(/^\/+/, '');
+}
+
+function getCapacity(trajet) {
+  return Number(trajet?.vehicle?.seats ?? trajet?.totalSeats ?? trajet?.places ?? trajet?.capacity ?? 4) || 4;
+}
+
+function getOccupiedFromPassagersArray(trajet) {
+  if (!Array.isArray(trajet?.passagers) || trajet.passagers.length === 0) return 0;
+  return trajet.passagers.reduce((s, p) => s + (Number(p.places) || 1), 0);
+}
+
+function computeRemaining(trajetObj) {
+  try {
+    if (!trajetObj) return 0;
+
+    const capacity = getCapacity(trajetObj);
+
+    // 1) si on a déjà une liste passagers sur l'objet (ex: nouveauxTrajets), on s'appuie dessus
+    const occupiedFromArray = getOccupiedFromPassagersArray(trajetObj);
+    if (occupiedFromArray > 0) {
+      return Math.max(0, capacity - occupiedFromArray);
+    }
+
+    // 2) sinon on agrège les réservations locales (ecoride_trajets)
+    let occupied = 0;
+    try {
+      const all = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+      if (Array.isArray(all) && all.length > 0) {
+        const covoId = normalizeCovoId(trajetObj?.serverId ?? trajetObj?.id ?? trajetObj?.['@id'] ?? trajetObj?.detailId ?? trajetObj?.covoId ?? '');
+        occupied = all
+          .filter(r => r && r.role === 'passager')
+          .reduce((sum, r) => {
+            const rCovo = normalizeCovoId(r.serverId ?? r.covoId ?? r.detailId ?? r.covoiturageId ?? r.tripId ?? '');
+            const matches = covoId ? (String(rCovo) === String(covoId)) : false;
+            const fallbackMatch = !matches && (String(trajetObj?.id) && (String(r.covoId) === String(trajetObj.id)));
+            if (matches || fallbackMatch) {
+              const p = Number(r.placesReservees ?? r.places ?? r.seats ?? 1) || 1;
+              return sum + p;
+            }
+            return sum;
+          }, 0);
+      }
+    } catch (e) {
+      console.warn('computeRemaining: erreur lecture localStorage', e);
+      occupied = 0;
+    }
+
+    return Math.max(0, capacity - (Number(occupied) || 0));
+  } catch (err) {
+    console.warn('computeRemaining error', err);
+    return 0;
+  }
+}
+
+function renderPlaces(trajetObj) {
+  const placesElement = document.getElementById("detail-places");
+  if (!placesElement) return;
+
+  const remaining = computeRemaining(trajetObj);
+  const pluriel = remaining > 1 ? "s" : "";
+  placesElement.textContent = `Place${pluriel} disponible${pluriel} : ${remaining}`;
 }
 
 function cancelReservationById(reservationId) {
@@ -316,45 +396,44 @@ function renderActionButton(trajet) {
   }
 }
 
-// ======= Helpers globaux (placer en haut du fichier) =======
-function computeRemaining(trajetObj) {
-  if (!trajetObj) return 0;
-  const passagers = Array.isArray(trajetObj.passagers) ? trajetObj.passagers : [];
-  if (typeof trajetObj.places === 'number') return trajetObj.places;
-  if (typeof trajetObj.capacity === 'number') return Math.max(0, trajetObj.capacity - passagers.length);
-  if (trajetObj.vehicle?.places !== undefined) return Math.max(0, Number(trajetObj.vehicle.places) - passagers.length);
-  if (trajetObj.vehicule?.places !== undefined) return Math.max(0, Number(trajetObj.vehicule.places) - passagers.length);
-  return 0;
-}
-
-function renderPlaces(trajetObj) {
-  const placesElement = document.getElementById("detail-places");
-  if (!placesElement) return;
-  const remaining = computeRemaining(trajetObj);
-  const pluriel = remaining > 1 ? "s" : "";
-  placesElement.textContent = `Place${pluriel} disponible${pluriel} : ${remaining}`;
-}
-
 // =================== Main ===================
 
 document.addEventListener("pageContentLoaded", async () => {
+  const path = window.location.pathname || '';
+  const qs = window.location.search || '';
+
+  const looksLikeDetailPath = /^\/detail(\/|$)/.test(path);
+  const hasIdQuery = /\bid=/.test(qs);
+
+  if (!looksLikeDetailPath && !hasIdQuery) {
+    // silent return (inutile d'afficher un warning ici)
+    return;
+  }
+
   console.log("🎯 pageContentLoaded dans detail.js");
 
   function getCarpoolIdFromLocation() {
     const params = new URLSearchParams(window.location.search);
     const queryId = params.get('id');
-    if (queryId && queryId.trim()) return queryId.trim();
+    if (queryId && queryId.trim()) {
+      console.log('ID extrait de query string:', queryId.trim());
+      return queryId.trim();
+    }
   
     const path = window.location.pathname || '';
-    const parts = path.split('/').filter(Boolean); // ["detail","3"]
+    const parts = path.split('/').filter(Boolean); // ["detail","6"]
     if (parts.length >= 2 && parts[0] === 'detail' && parts[1]) {
       try {
-        return decodeURIComponent(parts[1]);
+        const decoded = decodeURIComponent(parts[1]);
+        console.log('ID extrait du pathname:', decoded);
+        return decoded;
       } catch (e) {
+        console.log('ID extrait du pathname (pas décodé):', parts[1]);
         return parts[1];
       }
     }
   
+    console.log('Aucun ID trouvé');
     return null;
   }
 
@@ -363,8 +442,7 @@ document.addEventListener("pageContentLoaded", async () => {
 
   // 🚫 Ne plus faire de history.push/replace/popstate ici
   if (!id) {
-    console.warn('Aucun ID de covoiturage valide, rien à afficher dans detail.js');
-    // On sort simplement, le router décidera quoi faire
+    console.debug('Aucun ID trouvé — handler detail ignoré');
     return;
   }
 
@@ -372,7 +450,6 @@ document.addEventListener("pageContentLoaded", async () => {
 
 
   // Charger le trajet depuis l'API
-  let trajet = null;
   try {
     // 🔹 Utilise apiFetch pour bénéficier du token / cookie
     const data = await apiFetch(`/carpools/${id}`);
@@ -538,6 +615,62 @@ document.addEventListener("pageContentLoaded", async () => {
     console.warn('Trajet introuvable côté API, navigation simple vers /covoiturage');
     window.location.href = '/covoiturage';
     return;
+  }
+
+  // Installer une seule fois le listener reservationCreated pour la page détail
+  if (!window.__ecoride_reservationCreated_listener_installed) {
+    window.__ecoride_reservationCreated_listener_installed = true;
+
+    window.addEventListener('ecoride:reservationCreated', async (ev) => {
+      try {
+        const detail = ev?.detail || {};
+        // chercher plusieurs chemins possibles vers l'id du trajet
+        const ridRaw = detail.trajetId
+          || detail.reservation?.covoId
+          || detail.reservation?.detailId
+          || detail.reservation?.tripId
+          || detail.reservation?.['@id']
+          || detail.booking?.tripId
+          || null;
+
+        if (!ridRaw) return;
+
+        const rid = normalizeCovoId(ridRaw);
+        const targetId = normalizeCovoId(trajet?.id ?? trajet?.serverId ?? trajet?.['@id'] ?? trajet?.detailId ?? '');
+
+        if (!rid || !targetId) return;
+        if (String(rid) !== String(targetId)) return;
+
+        // Optionnel : recharger depuis le serveur pour avoir l'état canonique
+        // const updated = await reloadCarpoolAndNotify(trajet.id);
+        // if (updated) { trajet = { ...trajet, ...updated }; window.__debug_trajet = trajet; }
+
+        // Mettre à jour l'objet local si l'event inclut la réservation
+        if (detail.reservation) {
+          // merge prudente : n'écrase pas des champs non présents
+          trajet.passagers = Array.isArray(trajet.passagers) ? trajet.passagers : [];
+          // si reservation contient pseudo/places, on l'ajoute localement (dédup si besoin)
+          try {
+            const r = detail.reservation;
+            const pseudo = r.pseudo || (JSON.parse(localStorage.getItem('ecoride_user')||'null')||{}).pseudo || 'Moi';
+            const places = Number(r.placesReservees ?? r.places ?? r.seats ?? 1) || 1;
+            // évite doublons simples par id
+            const exists = trajet.passagers.some(p => (p.id && r.id && String(p.id) === String(r.id)) || (p.pseudo && p.pseudo === pseudo && p.places === places));
+            if (!exists) trajet.passagers.push({ id: r.id, pseudo, places });
+          } catch (e) { /* ignore */ }
+        }
+
+        // Recalculer places et rerender
+        try { renderPlaces(trajet); } catch (e) { console.warn('renderPlaces error', e); }
+        try { renderActionButton(trajet); } catch (e) { console.warn('renderActionButton error', e); }
+
+        // exposer pour debug
+        window.__debug_trajet = trajet;
+        console.log('[detail.js] reservationCreated handled for trajet', targetId);
+      } catch (err) {
+        console.warn('listener reservationCreated error', err);
+      }
+    });
   }
 
   // =================== Injection des données dans le HTML ===================
@@ -713,7 +846,6 @@ document.addEventListener("pageContentLoaded", async () => {
     // if (h1 && h1.parentNode) h1.parentNode.insertBefore(p, h1.nextSibling); else container.prepend(p);
   }
 
-  /* ---------- Insert "À propos du conducteur" next to <h1>Véhicule ---------- */
   function renderDriverAbout(trajetParam) {
     const NO_DESCRIPTION_MSG = 'Aucune description fournie.';
 
@@ -747,9 +879,9 @@ document.addEventListener("pageContentLoaded", async () => {
     }
 
     function writeToDom(text) {
-      const el = ensureAboutEl(); // ensureAboutEl doit être défini dans Helpers (créé si nécessaire)
+      const el = ensureAboutEl();
       if (!el) {
-        console.warn('renderDriverAbout: élément cible introuvable/après ensureAboutEl');
+        console.warn('renderDriverAbout: élément cible introuvable');
         return;
       }
       const output = (text && String(text).trim()) ? String(text).trim() : NO_DESCRIPTION_MSG;
@@ -758,9 +890,8 @@ document.addEventListener("pageContentLoaded", async () => {
       else el.classList.remove('text-muted');
     }
 
-    // priorités : trajet.chauffeur -> profil local (legacy/canonical) -> défaut
     const aboutFromTrajet = getDriverAboutFromTrajet(trajetParam);
-    const aboutFromProfil = getProfileAboutFromStorage(); // doit gérer le JSON legacy
+    const aboutFromProfil = getProfileAboutFromStorage ? getProfileAboutFromStorage() : '';
 
     console.log('renderDriverAbout -> aboutFromTrajet:', aboutFromTrajet, 'aboutFromProfil:', aboutFromProfil);
 
@@ -770,7 +901,6 @@ document.addEventListener("pageContentLoaded", async () => {
       return;
     }
 
-    // pas de trajet : afficher profil local ou message par défaut
     writeToDom(aboutFromProfil || '');
 
     // installer un MutationObserver simple pour debug (idempotent)
@@ -786,9 +916,9 @@ document.addEventListener("pageContentLoaded", async () => {
     } catch (e) { /* ignore */ }
   }
 
-// appel : juste après que `trajet` soit défini dans ton code
-renderDriverAbout(trajet);
-updateDriverAboutDom();
+  // appel : juste après que `trajet` soit défini dans ton code
+  renderDriverAbout(trajet);
+  updateDriverAboutDom();
 
     const reviews = trajet.reviews || ["Aucun avis disponible pour ce conducteur.", "", ""];
     ['detail-review1', 'detail-review2', 'detail-review3'].forEach((id, index) => {
@@ -799,6 +929,49 @@ updateDriverAboutDom();
       }
     });
 
+    // ========== Listener pour mises à jour venant d'ailleurs ==========
+    if (!window.__ecoride_detail_carpoolUpdated_installed) {
+      window.__ecoride_detail_carpoolUpdated_installed = true;
+
+      window.addEventListener('ecoride:carpoolUpdated', (ev) => {
+        const d = ev.detail || {};
+        let id = d.id || (d.updated && (d.updated.id || d.updated['@id']));
+        if (!id && d.updated && typeof d.updated['@id'] === 'string') {
+          const parts = d.updated['@id'].split('/').filter(Boolean);
+          id = parts[parts.length - 1];
+        }
+        if (!id) return;
+        id = String(id);
+      
+        if (id === String(trajet.id)) {
+          console.log('[detail.js] carpoolUpdated reçu pour le trajet affiché', id);
+      
+          // Met à jour l'objet trajet avec les nouvelles données
+          trajet = { ...trajet, ...d.updated };
+      
+          // Recalcule les places restantes
+          const reserved = Array.isArray(trajet.passagers)
+            ? trajet.passagers.reduce((s, p) => s + (Number(p.places) || Number(p.seats) || 1), 0)
+            : 0;
+          const cap = Number(
+            trajet.capacity ??
+            trajet.places ??
+            trajet.vehicle?.places ??
+            trajet.car?.places ??
+            0
+          );
+          trajet.remainingPlaces = Math.max(0, cap - reserved);
+      
+          // Mets à jour l'affichage du détail
+          renderPlaces(trajet);
+          renderActionButton(trajet);
+          renderPreferences(trajet);
+      
+          // Si tu as d'autres fonctions de rendu, appelle-les ici aussi
+        }
+      });
+    }
+
     console.log("✅ Page détail chargée et remplie pour le trajet:", trajet.id);
 
     // Révèle le contenu maintenant que tout est rempli
@@ -806,7 +979,56 @@ updateDriverAboutDom();
     if (detailContainer) {
       detailContainer.classList.add('loaded');
     }
+});
+
+// Installer le listener pour l'event dispatché par reloadCarpoolAndNotify
+if (!window.__ecoride_detail_covoiturageReloaded_installed) {
+  window.__ecoride_detail_covoiturageReloaded_installed = true;
+
+  window.addEventListener('ecoride:covoiturageReloaded', (ev) => {
+    try {
+      const newTrajet = ev?.detail?.trajet;
+      if (!newTrajet) return;
+
+      // Mettre à jour la variable globale trajet
+      trajet = newTrajet;
+      window.__debug_trajet = trajet;
+
+      // Mettre à jour le DOM avec les nouvelles places disponibles
+      const remaining = (typeof trajet.availableSeats === 'number')
+        ? Math.max(0, trajet.availableSeats)
+        : computeRemaining(trajet);
+
+      const placesEl = document.getElementById('detail-places');
+      if (placesEl) {
+        placesEl.textContent = `Place${remaining > 1 ? 's' : ''} disponible${remaining > 1 ? 's' : ''} : ${remaining}`;
+      }
+
+      // Mettre à jour les boutons, préférences, etc. (si les fonctions existent)
+      try {
+        if (typeof renderActionButton === 'function') renderActionButton(trajet);
+      } catch (e) {
+        console.warn('renderActionButton failed on covoiturageReloaded', e);
+      }
+
+      try {
+        if (typeof renderPreferences === 'function') renderPreferences(trajet);
+      } catch (e) {
+        console.warn('renderPreferences failed on covoiturageReloaded', e);
+      }
+
+      // Notifier aussi les autres listeners (history / map / liste)
+      try {
+        window.dispatchEvent(new CustomEvent('ecoride:carpoolUpdated', { detail: { id: trajet.id, updated: newTrajet } }));
+      } catch (e) {
+        console.warn('Failed to dispatch ecoride:carpoolUpdated', e);
+      }
+
+    } catch (err) {
+      console.error('Error handling ecoride:covoiturageReloaded', err);
+    }
   });
+}
 
 // =================== Fonctions utilitaires ===================
 
@@ -908,8 +1130,8 @@ function showSeatSelector(max) {
 }
 
 // =================== Fonction de réservation ===================
-function reserverPlace(trajet, seats = 1) {
-  // 🚫 Sécurité : le conducteur ne peut pas réserver
+
+async function reserverPlace(trajet, seats = 1) {
   if (isCurrentUserDriver(trajet)) {
     alert("Vous êtes le conducteur de ce trajet, vous ne pouvez pas réserver de place.");
     return;
@@ -918,76 +1140,128 @@ function reserverPlace(trajet, seats = 1) {
   seats = Number(seats) || 1;
   if (seats <= 0) seats = 1;
 
-  const reservation = {
-    id: crypto.randomUUID(),
-    detailId: trajet.id,
-    depart: trajet.depart,
-    arrivee: trajet.arrivee,
-    date: trajet.date,
-    heureDepart: trajet.heureDepart,
-    heureArrivee: trajet.heureArrivee,
-    prix: trajet.prix,
-    chauffeur: trajet.chauffeur?.pseudo || "Inconnu",
-    role: "passager",
-    status: "reserve",
-    placesReservees: seats
-  };
+  if (!confirm(`Confirmer la réservation de ${seats} place${seats > 1 ? 's' : ''} ?`)) return;
 
-  // Sauvegarder dans ecoride_trajets (utilisateur)
-  let trajetsUtilisateur = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
-  trajetsUtilisateur.push(reservation);
-  localStorage.setItem('ecoride_trajets', JSON.stringify(trajetsUtilisateur));
-  window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
-
-  // Notifier les autres vues (Admin, Espace employé, etc.)
-  window.dispatchEvent(new CustomEvent('ecoride:reservationAdded', { detail: reservation }));
-  window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
- 
-  // Mettre à jour nouveauxTrajets (ajout passager + recalcul places)
-  let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
-  const trajetIndex = trajetsCovoiturage.findIndex(t => t.id === trajet.id);
-
-  let userPseudo = "Moi";
   try {
-    const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
-    if (me && me.pseudo) userPseudo = me.pseudo;
-  } catch(e) {}
+    const result = await createBooking(trajet.id, seats);
 
-  if (trajetIndex !== -1) {
-    const target = trajetsCovoiturage[trajetIndex];
-    target.passagers = Array.isArray(target.passagers) ? target.passagers : [];
+    if (!result.ok) {
+      if (result.unauthorized) {
+        alert('Vous devez vous connecter pour réserver.');
+        window.location.href = '/login'; // adapte selon ta route login
+        return;
+      }
 
-    const alreadyIndex = target.passagers.findIndex(p => p.pseudo === userPseudo);
-    if (alreadyIndex !== -1) {
-      alert("⚠️ Vous avez déjà une réservation sur ce trajet.");
+      // Affiche un message d’erreur détaillé si disponible
+      let msg = 'Erreur lors de la réservation.';
+      if (result.body) {
+        if (result.body['hydra:description']) msg = result.body['hydra:description'];
+        else if (result.body.detail) msg = result.body.detail;
+        else if (typeof result.body === 'string') msg = result.body;
+        else if (result.body.violations && Array.isArray(result.body.violations)) {
+          msg = result.body.violations.map(v => `${v.propertyPath}: ${v.message}`).join('\n');
+        }
+      }
+      alert(msg);
+      console.error('createBooking error:', result);
       return;
     }
 
-    target.passagers.push({ pseudo: userPseudo, places: seats });
+    // Succès — Option A : utiliser la réponse de reloadCarpoolAndNotify (évite double requête)
+    const updatedTrajet = await reloadCarpoolAndNotify(trajet.id);
+    if (updatedTrajet) {
+      // Merge les données serveur dans l'objet local
+      trajet = { ...trajet, ...updatedTrajet };
+      window.__debug_trajet = trajet;
 
-    const vehiclePlaces = target.vehicle?.places ?? target.vehicule?.places ?? null;
-    target.capacity = (typeof target.capacity === 'number')
-      ? target.capacity
-      : (vehiclePlaces !== null ? Number(vehiclePlaces) : (typeof target.places === 'number' ? Number(target.places) : 4));
+      // 1) Construire un objet local de réservation cohérent avec ce que
+      //    trajets.js attend (role/passager/status/places...)
+      try {
+        const bookingData = result?.data || null;
+        const localReservation = {
+          id: bookingData?.id || bookingData?.['@id'] || (`local_res_${Date.now()}`),
+          // clé qui référence le covoiturage côté front (utilisée par getCovoId)
+          covoId: trajet.id,
+          // rendre aussi compatible avec getCovoId qui regarde detailId/covoiturageId/id
+          detailId: trajet.id,
+          placesReservees: Number(seats) || 1,
+          userId: (JSON.parse(localStorage.getItem('ecoride_user') || 'null') || {}).id || null,
+          role: 'passager',
+          status: 'reserve',
+          createdAt: new Date().toISOString(),
 
-    const totalOccupied = target.passagers.reduce((sum, p) => sum + (p.places || 1), 0);
+          // champs pratiques pour affichage rapide dans "Mes trajets"
+          depart: trajet.depart,
+          arrivee: trajet.arrivee,
+          date: trajet.date,
+          heureDepart: trajet.heureDepart,
+          heureArrivee: trajet.heureArrivee,
+          prix: trajet.prix
+        };
 
-    target.places = Math.max(0, Number(target.capacity) - totalOccupied);
-    trajetsCovoiturage[trajetIndex] = target;
+        // 2) Sauvegarder dans ecoride_trajets (localStorage)
+        try {
+          const stored = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+          stored.push(localReservation);
+          localStorage.setItem('ecoride_trajets', JSON.stringify(stored));
+        } catch (err) {
+          console.warn('detail: impossible de sauvegarder reservation localement', err);
+        }
 
-    localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
-    window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+        // 3) Mettre à jour 'nouveauxTrajets' (passagers + places disponibles)
+        try {
+          const key = 'nouveauxTrajets';
+          const covos = JSON.parse(localStorage.getItem(key) || '[]');
+          const idx = covos.findIndex(c => String(c.id) === String(trajet.id));
+          if (idx !== -1) {
+            const covo = covos[idx];
+            covo.passagers = Array.isArray(covo.passagers) ? covo.passagers : [];
+            covo.passagers.push({ pseudo: (JSON.parse(localStorage.getItem('ecoride_user') || 'null') || {}).pseudo || 'Moi', places: Number(seats) || 1 });
+            const occupied = covo.passagers.reduce((s,p) => s + (Number(p.places)||1), 0);
+            const capacity = Number(covo.capacity ?? covo.vehicle?.places ?? covo.places ?? 4);
+            covo.places = Math.max(0, capacity - occupied);
+            covos[idx] = covo;
+            localStorage.setItem(key, JSON.stringify(covos));
+          }
+        } catch (err) {
+          console.warn('detail: impossible de mettre à jour nouveauxTrajets', err);
+        }
 
-    // refléter localement pour l'affichage en cours
-    trajet.passagers = target.passagers;
-    trajet.capacity = target.capacity;
-    trajet.places = target.places;
+        // 4) Dispatcher des events pour avertir les autres modules (trajets.js écoutera ecoride:reservationCreated)
+        window.dispatchEvent(new CustomEvent('ecoride:reservationCreated', { detail: { trajetId: trajet.id, reservation: localReservation, booking: bookingData } }));
+        window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+        window.dispatchEvent(new CustomEvent('ecoride:reservationCreated:ui', { detail: { trajetId: trajet.id, reservation: localReservation } }));
+
+      } catch (err) {
+        console.warn('detail: échec patch réservation locale', err);
+      }
+
+      // Si le serveur fournit availableSeats, on l'utilise en priorité
+      if (typeof updatedTrajet.availableSeats === 'number') {
+        trajet.availableSeats = updatedTrajet.availableSeats;
+      } else {
+        // Sinon on met à jour la liste des passagers si fournie
+        trajet.passagers = Array.isArray(updatedTrajet.passagers) ? updatedTrajet.passagers : trajet.passagers;
+      }
+
+      // Mettre à jour capacité / places au besoin
+      trajet.capacity = updatedTrajet.capacity ?? updatedTrajet.places ?? updatedTrajet.vehicle?.places ?? trajet.capacity;
+      trajet.places = updatedTrajet.places ?? trajet.places;
+
+      // Mettre à jour l'UI — renderPlaces utilisera availableSeats si présent
+      try { renderPlaces(trajet); } catch (e) { console.warn('renderPlaces error', e); }
+      try { renderActionButton(trajet); } catch (e) { console.warn('renderActionButton error', e); }
+      try { renderPreferences(trajet); } catch (e) { /* ignore */ }
+
+      // Notifier les autres parties de l'app (liste, cartes, etc.)
+      window.dispatchEvent(new CustomEvent('ecoride:carpoolUpdated', { detail: { id: trajet.id, updated: updatedTrajet } }));
+    }
+
+    // Confirmation et navigation
+    alert(`✅ Réservation confirmée : ${seats} place${seats > 1 ? 's' : ''}.`);
+    window.location.href = "/espace-utilisateur?tab=trajets";
+  } catch (e) {
+    console.error('Erreur reserverPlace:', e);
+    alert('Erreur inattendue lors de la réservation (voir console).');
   }
-
-  try { renderPlaces(trajet); } catch(e) {}
-
-  alert(`✅ Réservation confirmée : ${seats} place${seats > 1 ? 's' : ''}. Vous pouvez voir vos trajets dans votre espace utilisateur.`);
-
-  // Redirection vers espace utilisateur avec onglet trajets ouvert
-  window.location.href = "/espace-utilisateur?tab=trajets";
 }

@@ -119,6 +119,7 @@ function createTrajetCard(trajet) {
         console.warn('Trajet sans id, impossible d ouvrir le detail', trajet);
         return;
       }
+      console.log('Navigation vers détail trajet id=', trajet.id);
       const newPath = `/detail/${trajet.id}`;
       window.history.pushState({}, "", newPath);
       window.dispatchEvent(new Event("popstate"));
@@ -286,7 +287,8 @@ document.addEventListener('pageContentLoaded', async () => {
   }
 
   // 3️⃣ Pas de fusion : on n’utilise que les trajets API pour l’affichage
-  trajets = [...trajetsFromApi];
+  trajets.splice(0, trajets.length, ...trajetsFromApi);
+
   
   // --- Normalisation : calculer remainingPlaces et forcer type normalisé ---
   trajets = trajets.map(t => {
@@ -576,6 +578,58 @@ document.addEventListener('pageContentLoaded', async () => {
     me = getCurrentUser();      // recharge l'objet utilisateur
     updateAllAvatars();         // met à jour les images visibles
   });
+
+  // Installer le listener une seule fois (évite doublons dans un contexte SPA)
+  if (!window.__ecoride_carpoolUpdated_listener_installed) {
+    window.__ecoride_carpoolUpdated_listener_installed = true;
+
+    window.addEventListener('ecoride:carpoolUpdated', (ev) => {
+      const d = ev.detail || {};
+
+      // id possible dans d.id, d.updated.id, d.updated['@id'] ou uri "/api/carpools/6"
+      let id = d.id || (d.updated && (d.updated.id || d.updated['@id']));
+      if (!id && d.updated && typeof d.updated['@id'] === 'string') {
+        const parts = d.updated['@id'].split('/').filter(Boolean);
+        id = parts[parts.length - 1];
+      }
+      if (!id) return;
+      id = String(id);
+
+      // Debug léger — commente si trop verbeux
+      console.log('[ecoride] carpoolUpdated received for id=', id, 'detail=', d.updated || d);
+
+      // Mettre à jour l'objet trajets en mémoire si présent
+      const idx = trajets.findIndex(t => String(t.id) === id);
+      if (idx === -1 || !d.updated) return;
+
+      // Merge léger (préserve champs calculés déjà présents)
+      trajets[idx] = { ...trajets[idx], ...d.updated };
+
+      // recalcul remaining de façon sûre (somme seats/places)
+      const reserved = Array.isArray(trajets[idx].passagers)
+        ? trajets[idx].passagers.reduce((s, p) => s + (Number(p.places) || Number(p.seats) || 1), 0)
+        : 0;
+      const cap = Number(
+        trajets[idx].capacity ??
+        trajets[idx].places ??
+        trajets[idx].vehicle?.places ??
+        trajets[idx].car?.places ??
+        0
+      );
+      trajets[idx].remainingPlaces = Math.max(0, cap - reserved);
+
+      // Mettre à jour la card DOM si visible
+      const card = document.querySelector(`.result-card[data-id="${id}"]`);
+      if (card) {
+        const placesEl = card.querySelector('.places');
+        const remaining = trajets[idx].remainingPlaces ?? 0;
+        if (placesEl) placesEl.textContent = `${remaining} place${remaining > 1 ? 's' : ''} disponible${remaining > 1 ? 's' : ''}`;
+      }
+
+      // Optionnel : notifier localement d'autres modules
+      window.dispatchEvent(new CustomEvent('ecoride:carpoolUpdatedLocal', { detail: { id, updated: trajets[idx] } }));
+    });
+  }
 
   // Affiche tous les trajets au départ
   displayTrajets(trajets);

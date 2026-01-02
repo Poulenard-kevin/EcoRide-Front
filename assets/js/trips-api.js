@@ -360,6 +360,15 @@ export async function carpoolFromApiAsync(apiItem) {
   console.debug('[carpoolFromApiAsync] driver:', driver);
   console.debug('[carpoolFromApiAsync] preferences resolved:', trip.preferences, 'otherPreferences:', trip.otherPreferences);
 
+  // Exposer les bookings bruts si l'API les fournit (utile pour actions serveur)
+  trip.bookings = Array.isArray(apiItem.bookings) ? apiItem.bookings
+  : Array.isArray(apiItem.reservations) ? apiItem.reservations
+  : Array.isArray(apiItem.bookingsHydra) ? apiItem.bookingsHydra
+  : [];
+
+  // Garde aussi une référence brute si nécessaire
+  trip.rawBookings = apiItem.bookings ?? apiItem.reservations ?? apiItem.bookingsHydra ?? null;
+
   return trip;
 }
 

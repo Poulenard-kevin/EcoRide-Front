@@ -70,7 +70,7 @@ export async function apiFetch(path, { method = 'GET', body, headers = {}, useAp
   }
 
   // Mode credentials : par défaut 'same-origin'
-  const credentials = 'same-origin';
+  const credentials = 'include'; 
 
   const res = await fetch(url, {
     method,

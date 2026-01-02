@@ -302,13 +302,102 @@ function isCurrentUserDriver(trajet) {
   }
 }
 
+// ---------- Helpers : détecter réservation serveur ----------
+function extractIdFromAny(value) {
+  if (value === null || value === undefined) return null;
+  const s = String(value);
+  const m = s.match(/\/(\d+)$/);
+  return m ? m[1] : s;
+}
+
+function findMyBooking(trajetObj) {
+  try {
+    const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
+    if (!me || !trajetObj) return null;
+
+    const myId = me.id ? String(me.id) : null;
+    const myPseudo = (me.pseudo || '').toString().trim();
+
+    // Collecte candidates depuis plusieurs clés possibles
+    const candidates = []
+      .concat(Array.isArray(trajetObj.bookings) ? trajetObj.bookings : [])
+      .concat(Array.isArray(trajetObj.rawBookings) ? trajetObj.rawBookings : [])
+      .concat(Array.isArray(trajetObj.reservations) ? trajetObj.reservations : []);
+
+    // 1) Tentative par passenger.id / passenger['@id']
+    for (const b of candidates) {
+      if (!b) continue;
+      const passenger = b.passenger ?? b.user ?? b.passager ?? null;
+      if (!passenger) continue;
+      const pid = extractIdFromAny(passenger.id ?? passenger['@id'] ?? passenger);
+      if (pid && myId && String(pid) === String(myId)) return b;
+    }
+
+    // 2) Fallback : recherche dans passagers (array simple) par pseudo / places
+    if (Array.isArray(trajetObj.passagers) && myPseudo) {
+      const found = trajetObj.passagers.find(p => {
+        if (!p) return false;
+        // p peut être un objet {pseudo, places} ou une string "Pseudo x2"
+        if (typeof p === 'object') {
+          if (p.pseudo && String(p.pseudo).trim() === myPseudo) return true;
+          // parfois user id stocké
+          if (p.id && String(p.id) === myId) return true;
+        }
+        if (typeof p === 'string') {
+          if (p.startsWith(myPseudo) || p.startsWith('Moi')) return true;
+        }
+        return false;
+      });
+      if (found) {
+        // Normaliser un petit objet booking pour usage côté UI
+        return {
+          id: found.id ?? null,
+          passenger: { id: myId },
+          seats: found.places ?? found.seats ?? 1,
+          _inferredFromPassagers: true,
+          raw: found
+        };
+      }
+    }
+
+    // 3) Rien trouvé
+    return null;
+  } catch (err) {
+    console.warn('findMyBooking error', err);
+    return null;
+  }
+}
+
+// helper util pour extraire id numérique / id simple depuis IRI ou objet
+function normalizeEntityId(raw) {
+  if (!raw && raw !== 0) return null;
+  const s = String(raw);
+  const m = s.match(/\/(\d+)$/);
+  if (m) return m[1];
+  return s;
+}
+
 function renderActionButton(trajet) {
-  const reservation = getUserReservationForCovoiturage(trajet.id);
+  try {
+    console.log('--- renderActionButton debug ---');
+    console.log('trajet (id):', trajet?.id);
+    console.log('trajet.bookings:', trajet.bookings);
+    console.log('trajet.rawBookings:', trajet.rawBookings);
+    console.log('trajet.passagers:', trajet.passagers);
+  } catch (e) {
+    console.warn('renderActionButton debug failed', e);
+  }
+  const localReservation = getUserReservationForCovoiturage(trajet.id);
+  console.log('trajet.bookings:', trajet.bookings);
+  const serverBooking = findMyBooking(trajet);
+  const reservation = localReservation || serverBooking;
   const actionsContainer = document.querySelector('.actions');
   if (!actionsContainer) {
     console.warn('Conteneur .actions introuvable');
     return;
   }
+
+  console.log('Insertion bouton dans container:', actionsContainer);
 
   // Supprimer d'éventuels boutons existants
   const oldReserve = actionsContainer.querySelector('#detail-reserver');
@@ -343,14 +432,84 @@ function renderActionButton(trajet) {
       cancelBtn.style.removeProperty('color');
     });
 
-    cancelBtn.addEventListener('click', () => {
+    cancelBtn.addEventListener('click', async () => {
       if (!confirm("Voulez-vous vraiment annuler cette réservation ?")) return;
-      const ok = cancelReservationById(reservation.id);
-      if (ok) {
-        alert("✅ Réservation annulée.");
-        window.location.href = "/covoiturage";
-      } else {
-        alert("⚠️ Échec lors de l'annulation.");
+    
+      // Extraire id de réservation (déjà présent dans ton code)
+      const raw = serverBooking.id ?? serverBooking['@id'] ?? serverBooking.id ?? serverBooking['@id'] ?? null;
+      const bookingId = normalizeEntityId(raw);
+      if (!bookingId) {
+        alert("Impossible d'identifier la réservation à annuler.");
+        return;
+      }
+    
+      // Désactiver bouton et afficher feedback
+      cancelBtn.disabled = true;
+      const originalText = cancelBtn.textContent;
+      cancelBtn.textContent = 'Annulation en cours...';
+    
+      try {
+        // Appel DELETE via apiFetch (ton utilitaire)
+        await apiFetch(`/bookings/${bookingId}`, { method: 'DELETE' });
+    
+        // Si on arrive ici, suppression côté serveur OK (204 ou 200)
+        try {
+          const updated = await reloadCarpoolAndNotify(trajet.id);
+          if (updated) {
+            trajet = { ...trajet, ...updated };
+            window.__debug_trajet = trajet;
+          }
+        } catch (e) {
+          console.warn('reloadCarpoolAndNotify failed after delete', e);
+          // continue, on fera les mises à jour locales ci-dessous
+        }
+    
+        // Mettre à jour localStorage / UI
+        cancelReservationById(bookingId);
+        alert('✅ Réservation annulée.');
+        renderPlaces(trajet);
+        renderActionButton(trajet);
+        // Redirection optionnelle
+        window.location.href = "/espace-utilisateur?tab=trajets";
+        return;
+      } catch (err) {
+        // apiFetch devrait throw ; on inspecte les erreurs courantes
+        const status = err?.status || err?.response?.status || (err?.body && err.body.status) || null;
+        console.error('Erreur suppression réservation', { err, status });
+    
+        if (status === 404) {
+          // Déjà supprimé côté serveur — faire cleanup local et informer
+          cancelReservationById(bookingId);
+          alert('La réservation était déjà supprimée côté serveur. Nettoyage local effectué.');
+          renderPlaces(trajet);
+          renderActionButton(trajet);
+          return;
+        }
+    
+        if (status === 401 || status === 403) {
+          alert('Échec : vous n\'êtes pas autorisé(e) à annuler cette réservation. Vérifiez votre connexion.');
+          // option : rediriger vers login
+          // window.location.href = '/connexion';
+          cancelBtn.disabled = false;
+          cancelBtn.textContent = originalText;
+          return;
+        }
+    
+        // cas générique d'erreur réseau / serveur
+        let msg = 'Échec de l\'annulation (erreur serveur). Réessayez plus tard.';
+        if (err?.body?.detail) msg = err.body.detail;
+        if (err?.body?.['hydra:description']) msg = err.body['hydra:description'];
+    
+        alert(msg);
+        cancelBtn.disabled = false;
+        cancelBtn.textContent = originalText;
+        return;
+      } finally {
+        // re-enable if still in DOM and not already redirected
+        if (document.body.contains(cancelBtn) && !cancelBtn.disabled) {
+          cancelBtn.disabled = false;
+          cancelBtn.textContent = originalText;
+        }
       }
     });
 

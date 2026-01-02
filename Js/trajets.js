@@ -1081,6 +1081,108 @@ export async function reserverPlace(trajetId, placesDemandees = 1) {
   }
 }
 
+// Ajoute ceci près de reserverPlace / helpers API
+async function deleteBookingApi(bookingOrIri, covoId = null) {
+  if (!bookingOrIri && !covoId) throw new Error('No booking id or covoId provided');
+
+  const token = localStorage.getItem('api_token') || '';
+
+  // helper pour extraire uniquement le numéro d'un string (res-23, /api/bookings/23, 23, etc.)
+  const extractNum = (s) => {
+    if (!s) return null;
+    const m = String(s).match(/(\d+)$/);
+    return m ? m[1] : null;
+  };
+
+  const candidateIds = new Set();
+
+  // Si bookingOrIri ressemble à une IRI /api/bookings/NN
+  if (typeof bookingOrIri === 'string') {
+    if (bookingOrIri.includes('/api/bookings')) {
+      candidateIds.add({ type: 'iri', url: bookingOrIri });
+    }
+    const num = extractNum(bookingOrIri);
+    if (num) candidateIds.add({ type: 'id', id: num });
+  }
+
+  // si on a covoId et booking id, essayer endpoint carpool-specific
+  const covoNum = extractNum(covoId);
+  if (covoNum) {
+    // si bookingOrIri contient un id
+    const bnum = extractNum(bookingOrIri);
+    if (bnum) candidateIds.add({ type: 'covo-book', covoId: covoNum, bookingId: bnum });
+  }
+
+  // si on n'a rien d'autre, mais bookingOrIri est numérique, ajouter it
+  const plainNum = extractNum(bookingOrIri);
+  if (plainNum) candidateIds.add({ type: 'id', id: plainNum });
+
+  // ordre d'essai: IRI /api/bookings/{id} -> /api/bookings/{id} (full url) -> /api/carpools/{covo}/book/{booking} -> fallback numeric /api/bookings/{id}
+  const tried = [];
+  for (const c of candidateIds) {
+    try {
+      let url;
+      if (c.type === 'iri') {
+        url = c.url;
+      } else if (c.type === 'id') {
+        url = `/api/bookings/${c.id}`;
+      } else if (c.type === 'covo-book') {
+        url = `/api/carpools/${c.covoId}/book/${c.bookingId}`;
+      } else {
+        continue;
+      }
+
+      // Construire URL complète
+      const fullUrl = url.startsWith('/api/') ? `${API_BASE}${url}` : (url.startsWith('http') ? url : `${API_BASE}/${url.replace(/^\//,'')}`);
+
+      console.log('[deleteBookingApi] trying DELETE', fullUrl);
+
+      // essayer apiFetch si disponible (gère token & erreurs)
+      try {
+        const r = await apiFetch(url, { method: 'DELETE' });
+        // si apiFetch ne jette pas, on considère réussi (souvent undefined ou objet)
+        console.log('[deleteBookingApi] apiFetch OK for', url, r);
+        return { status: 204, ok: true, via: 'apiFetch', url, raw: r };
+      } catch (err) {
+        // apiFetch peut renvoyer une erreur object avec status
+        console.warn('[deleteBookingApi] apiFetch failed for', url, err);
+        if (err && err.status && (err.status === 204 || err.status === 200 || err.status === 404)) {
+          return { status: err.status, ok: err.status === 200 || err.status === 204, via: 'apiFetch-error', url, raw: err };
+        }
+        // sinon on tentera fetch
+      }
+
+      // fallback direct fetch (plus verbeux)
+      const res = await fetch(fullUrl, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+
+      const text = await res.text().catch(() => '');
+      console.log('[deleteBookingApi] fetch result', fullUrl, res.status, text);
+
+      if (res.ok || res.status === 204 || res.status === 404) {
+        return { status: res.status, ok: res.ok || res.status === 204, via: 'fetch', url: fullUrl, body: text };
+      } else {
+        const err = new Error(`HTTP ${res.status} ${text}`);
+        err.status = res.status;
+        throw err;
+      }
+    } catch (e) {
+      tried.push({ candidate: c, error: (e && (e.message || e.status)) || e });
+      // essayer le suivant
+    }
+  }
+
+  // si on arrive ici, tout a échoué
+  const err = new Error('All endpoints tried and failed: ' + JSON.stringify(tried));
+  err.tried = tried;
+  throw err;
+}
+
 // -------------------- Actions globales --------------------
 
 function tryUntilExists(fn, maxAttempts = 8, intervalMs = 80) {
@@ -1409,81 +1511,107 @@ async function handleTrajetActions(e) {
     }
   }
 
-  // close (valide)
-  if (target.classList.contains('trajet-close-btn')) {
-    const id = target.dataset.id;
-    const trajet = trajets.find(t => t.id === id);
-    if (trajet && trajet.role === 'chauffeur') {
-      trajet.status = 'valide';
-      saveTrajets();
-      updatePlacesReservees();
-
-      let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
-      trajetsCovoiturage = trajetsCovoiturage.filter(t => t.id !== id);
-      localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
-      window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
-
-      renderTrajetsInProgress();
-      renderHistorique();
-    }
-  }
-
   // cancel (passager)
   if (target.classList.contains('trajet-cancel-btn')) {
+    e.preventDefault();
+    e.stopPropagation();
+    
     const id = target.dataset.id;
-    const index = trajets.findIndex(t => t.id === id);
+    const index = trajets.findIndex(t => String(t.id) === String(id) || String(t.serverId) === String(id));
     if (index === -1) return;
     const trajet = trajets[index];
     if (!trajet || trajet.role !== 'passager') return;
     if (!confirm("Voulez-vous annuler cette réservation ?")) return;
 
-    trajets.splice(index, 1);
-    saveTrajets();
+    // récupérer booking server IRI ou booking id depuis l'objet
+    const bookingCandidate =
+      trajet.serverId
+      || (Array.isArray(trajet.bookings) && trajet.bookings[0] && (trajet.bookings[0]['@id'] || (trajet.bookings[0].id ? `/api/bookings/${trajet.bookings[0].id}` : null)))
+      || (trajet.raw && Array.isArray(trajet.raw.bookings) && trajet.raw.bookings[0] && (trajet.raw.bookings[0]['@id'] || trajet.raw.bookings[0].id))
+      || null;
 
-    let userReservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
-    userReservations = userReservations.filter(r => r.id !== id);
-    localStorage.setItem('ecoride_trajets', JSON.stringify(userReservations));
-    window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
+    const covoId = getCovoId(trajet) || trajet.covoId || trajet.detailId || null;
 
-    // mise à jour du covo
-    let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
-    const refId = getCovoId(trajet);
-    if (refId) {
-      const covoIndex = trajetsCovoiturage.findIndex(t => t.id === refId);
-      if (covoIndex !== -1) {
-        const covo = trajetsCovoiturage[covoIndex];
-        const mePseudo = getCurrentUserPseudo();
+    const doLocalRemoval = () => {
+      trajets.splice(index, 1);
+      saveTrajets();
 
-        covo.passagers = (Array.isArray(covo.passagers) ? covo.passagers : [])
-          .filter(p => {
-            if (!p) return false;
-            if (typeof p === 'object' && p.pseudo) return p.pseudo !== mePseudo;
-            if (typeof p === 'string') return !(p.startsWith(mePseudo) || p.startsWith('Moi'));
-            return true;
-          }).map(p => {
-            if (typeof p === 'object' && p.pseudo) return { pseudo: p.pseudo, places: Number(p.places || 1) };
-            if (typeof p === 'string') {
-              const m = p.match(/^(.+?)\s*x(\d+)$/i);
-              return m ? { pseudo: m[1].trim(), places: Number(m[2]) } : { pseudo: p.trim(), places: 1 };
-            }
-            return null;
-          }).filter(Boolean);
+      let userReservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+      userReservations = userReservations.filter(r => String(r.id) !== String(id));
+      localStorage.setItem('ecoride_trajets', JSON.stringify(userReservations));
+      window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
 
-        const occupied = covo.passagers.reduce((s, p) => s + (Number(p.places) || 1), 0);
-        const capacity = Number(covo.capacity ?? covo.vehicle?.places ?? covo.places ?? 4);
-        covo.places = Math.max(0, capacity - occupied);
+      try {
+        let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+        const refId = getCovoId(trajet);
+        if (refId) {
+          const covoIndex = trajetsCovoiturage.findIndex(t => String(t.id) === String(refId));
+          if (covoIndex !== -1) {
+            const covo = trajetsCovoiturage[covoIndex];
+            const mePseudo = getCurrentUserPseudo();
+            covo.passagers = (Array.isArray(covo.passagers) ? covo.passagers : [])
+              .filter(p => {
+                if (!p) return false;
+                if (typeof p === 'object' && p.pseudo) return p.pseudo !== mePseudo;
+                if (typeof p === 'string') return !(p.startsWith(mePseudo) || p.startsWith('Moi'));
+                return true;
+              }).map(p => {
+                if (typeof p === 'object' && p.pseudo) return { pseudo: p.pseudo, places: Number(p.places || 1) };
+                if (typeof p === 'string') {
+                  const m = p.match(/^(.+?)\s*x(\d+)$/i);
+                  return m ? { pseudo: m[1].trim(), places: Number(m[2]) } : { pseudo: p.trim(), places: 1 };
+                }
+                return null;
+              }).filter(Boolean);
 
-        trajetsCovoiturage[covoIndex] = covo;
-        localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
-        window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+            const occupied = covo.passagers.reduce((s, p) => s + (Number(p.places) || 1), 0);
+            const capacity = Number(covo.capacity ?? covo.vehicle?.places ?? covo.places ?? 4);
+            covo.places = Math.max(0, capacity - occupied);
+
+            trajetsCovoiturage[covoIndex] = covo;
+            localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
+            window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+          }
+        }
+      } catch (err) {
+        console.warn('Erreur mise à jour nouveauxTrajets lors suppression locale', err);
       }
+
+      updatePlacesReservees();
+      renderTrajetsInProgress();
+      renderHistorique();
+      window.dispatchEvent(new CustomEvent('ecoride:reservationCancelled', { detail: { id } }));
+      alert("Réservation annulée.");
+    };
+
+    // si pas d'info serveur => suppression locale
+    if (!bookingCandidate && !covoId) {
+      doLocalRemoval();
+      return;
     }
 
-    updatePlacesReservees();
-    renderTrajetsInProgress();
-    renderHistorique();
-    window.dispatchEvent(new CustomEvent('ecoride:reservationCancelled', { detail: { id } }));
-    alert("Réservation annulée.");
+    try {
+      const res = await deleteBookingApi(bookingCandidate || '', covoId);
+      console.log('[handle cancel] deleteBookingApi returned', res);
+
+      // accepter 200/204/404 comme OK
+      if (res && (res.status === 200 || res.status === 204 || res.status === 404)) {
+        try { removeLocalTrajetByServerId(bookingCandidate || covoId || id, id); } catch (e) { console.warn('removeLocalTrajetByServerId failed', e); }
+        doLocalRemoval();
+        return;
+      }
+
+      // sinon fallback: proposer suppression locale
+      throw new Error('Suppression serveur non confirmée: ' + JSON.stringify(res));
+    } catch (err) {
+      console.error('[handle cancel] deletion failed', err);
+      if (confirm('Impossible d\'annuler côté serveur (' + (err.status || err.message || '') + '). Supprimer localement quand même ?')) {
+        try { removeLocalTrajetByServerId(bookingCandidate || covoId || id, id); } catch (e) { console.warn(e); }
+        doLocalRemoval();
+      } else {
+        alert('Annulation abandonnée. La réservation est toujours active sur le serveur.');
+      }
+    }
   }
 
   // validate (passager valide son trajet)
@@ -1808,6 +1936,7 @@ export function renderTrajetsInProgress() {
 
     const stableIdRaw = t.serverId ?? t.id ?? t['@id'] ?? '';
     const stableId = extractId(stableIdRaw);
+    const dataIdForAttr = (t.id ?? t.serverId ?? stableIdRaw);
 
     const heureDepart = t.heureDepart || trajetRef.heureDepart || '';
     const heureArrivee = t.heureArrivee || trajetRef.heureArrivee || '';
@@ -1839,8 +1968,8 @@ export function renderTrajetsInProgress() {
         const refId = getCovoId(t) || t.covoId || t.detailId || '';
         actionHtml = `
           <button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>
-          <button class="btn-trajet trajet-cancel-btn" data-id="${stableId}">Annuler</button>
-          <button class="btn-trajet trajet-signaler-btn" data-id="${stableId}" data-covo-id="${refId}">⚠ Signaler</button>
+          <button class="btn-trajet trajet-cancel-btn" data-id="${dataIdForAttr}">Annuler</button>
+          <button class="btn-trajet trajet-signaler-btn" data-id="${dataIdForAttr}" data-covo-id="${refId}">⚠ Signaler</button>
         `;
       } else if (status === "a_valider") {
         bgClass += " attente";

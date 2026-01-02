@@ -572,20 +572,61 @@ document.addEventListener("pageContentLoaded", async () => {
     const params = new URLSearchParams(window.location.search);
     const queryId = params.get('id');
     if (queryId && queryId.trim()) {
-      console.log('ID extrait de query string:', queryId.trim());
-      return queryId.trim();
+      // Nettoyer l'ID s'il contient une URI
+      const cleanId = queryId.trim().replace(/^.*\/(\d+)$/, '$1');
+      console.log('ID extrait de query string:', cleanId);
+      return cleanId;
     }
   
     const path = window.location.pathname || '';
-    const parts = path.split('/').filter(Boolean); // ["detail","6"]
-    if (parts.length >= 2 && parts[0] === 'detail' && parts[1]) {
+    const pathParts = path.split('/').filter(Boolean);
+
+    const detailContainer = document.querySelector('.detail-container');
+    if (detailContainer) {
+      detailContainer.classList.add('loaded');
+      setTimeout(() => {
+        const targetPosition = detailContainer.offsetTop - 20; // 20px de marge
+        const startPosition = window.pageYOffset;
+        const distance = targetPosition - startPosition;
+        const duration = 1000; // 1 seconde
+        let start = null;
+
+        function animation(currentTime) {
+          if (start === null) start = currentTime;
+          const timeElapsed = currentTime - start;
+          const run = ease(timeElapsed, startPosition, distance, duration);
+          window.scrollTo(0, run);
+          if (timeElapsed < duration) requestAnimationFrame(animation);
+        }
+
+        function ease(t, b, c, d) {
+          t /= d / 2;
+          if (t < 1) return c / 2 * t * t + b;
+          t--;
+          return -c / 2 * (t * (t - 2) - 1) + b;
+        }
+
+        requestAnimationFrame(animation);
+      }, 500);
+    }
+    
+    if (pathParts.length >= 2 && pathParts[0] === 'detail' && pathParts[1]) {
       try {
-        const decoded = decodeURIComponent(parts[1]);
+        const decoded = decodeURIComponent(pathParts[1]);
         console.log('ID extrait du pathname:', decoded);
+        
+        // Extraire l'ID numérique de n'importe quel format
+        const idMatch = decoded.match(/(?:\/|^)(\d+)(?:\/|$)/);
+        if (idMatch) {
+          return idMatch[1];
+        }
+        
         return decoded;
       } catch (e) {
-        console.log('ID extrait du pathname (pas décodé):', parts[1]);
-        return parts[1];
+        console.log('ID extrait du pathname (pas décodé):', pathParts[1]);
+        // Extraire l'ID numérique même en cas d'erreur
+        const idMatch = pathParts[1].match(/(?:\/|^)(\d+)(?:\/|$)/);
+        return idMatch ? idMatch[1] : pathParts[1];
       }
     }
   

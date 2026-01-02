@@ -24,11 +24,25 @@ const getRouteByUrl = (url) => {
 
 const getRouteByPathname = (pathname) => {
   if (!pathname || pathname === "") pathname = "/";
+  
+  // Recherche exacte d'abord
   const exact = allRoutes.find(r => r.url === pathname);
   if (exact) return exact;
+  
+  // Gestion spécifique pour les routes /detail/{id}
+  if (pathname.startsWith('/detail/') && pathname.length > 8) {
+    const detailRoute = allRoutes.find(r => r.url === "/detail");
+    if (detailRoute) {
+      console.log('Route detail avec ID détectée:', pathname);
+      return detailRoute;
+    }
+  }
+  
+  // Gestion des autres sous-routes
   for (const r of allRoutes) {
     if (r.url !== "/" && pathname.startsWith(r.url + "/")) return r;
   }
+  
   return route404;
 };
 
@@ -45,10 +59,28 @@ const attachDetailBtnListeners = () => {
     a.addEventListener('click', (e) => {
       e.preventDefault();
       const href = a.getAttribute('href');
-      const u = new URL(href, window.location.origin);
-      window.history.pushState({}, "", u.pathname + u.search);
-      LoadContentPage();
+      if (href) {
+        const u = new URL(href, window.location.origin);
+        window.history.pushState({}, "", u.pathname + u.search);
+        LoadContentPage();
+      }
     });
+  });
+  
+  // Ajouter aussi les liens normaux qui commencent par /detail
+  document.querySelectorAll('a[href^="/detail/"]').forEach(a => {
+    if (!a.hasAttribute('data-link')) {
+      a.setAttribute('data-link', '');
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const href = a.getAttribute('href');
+        if (href) {
+          const u = new URL(href, window.location.origin);
+          window.history.pushState({}, "", u.pathname + u.search);
+          LoadContentPage();
+        }
+      });
+    }
   });
 };
 
@@ -87,10 +119,14 @@ const LoadContentPage = async () => {
   if (pathname === '/detail' || pathname === '/detail/') {
     console.warn('Route /detail sans ID, redirection vers /covoiturage côté router');
     window.history.replaceState({}, '', '/covoiturage');
-    // On rappelle LoadContentPage pour charger la bonne page
-    // ⚠️ on sort tout de suite pour éviter d'enchaîner le reste
     setTimeout(() => LoadContentPage(), 0);
     return;
+  }
+
+  // ✅ Permettre les routes /detail/{id}
+  if (pathname.startsWith('/detail/') && pathname.length > 8) {
+    // C'est une route detail avec ID, on continue normalement
+    console.log('Route detail avec ID acceptée:', pathname);
   }
 
   const route = (typeof getRouteByPathname === 'function')

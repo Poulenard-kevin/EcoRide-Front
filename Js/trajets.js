@@ -1515,7 +1515,7 @@ async function handleTrajetActions(e) {
   if (target.classList.contains('trajet-cancel-btn')) {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const id = target.dataset.id;
     const index = trajets.findIndex(t => String(t.id) === String(id) || String(t.serverId) === String(id));
     if (index === -1) return;
@@ -2019,8 +2019,9 @@ export function renderTrajetsInProgress() {
         if (!covoId) return;
         const newPath = `/detail/${encodeURIComponent(covoId)}`;
         try {
-          history.pushState({ id: covoId }, '', newPath);
-          window.dispatchEvent(new PopStateEvent('popstate', { state: { id: covoId } }));
+          // ✅ Utiliser le système de routage existant
+          window.history.pushState({}, '', newPath);
+          LoadContentPage(); // ✅ Charger la page via ton système
         } catch (err) {
           window.location.href = newPath;
         }

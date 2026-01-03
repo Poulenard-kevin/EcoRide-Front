@@ -741,6 +741,12 @@ async function handleTrajetSubmit(e) {
 
   enrichTrajetWithCurrentUser(trajetData);
 
+  const me = getCurrentUser();
+
+  if (me) {
+    trajetData.driver = trajetData.driver || { id: me.id };
+  }
+
   if (editingIndex !== null && trajets[editingIndex]) {
     trajetData.status = trajets[editingIndex].status;
     trajetData.serverId = trajets[editingIndex].serverId ?? trajetData.serverId;
@@ -751,8 +757,6 @@ async function handleTrajetSubmit(e) {
   } else {
     trajets.push(trajetData);
   }
-
-  trajetData.synced = false;
   
   // Persiste immédiatement l'ajout pour que loadTrajetsFromApi (ou d'autres logiques)
   // qui lisent localStorage voient le trajet optimiste.
@@ -1288,7 +1292,10 @@ async function handleTrajetActions(e) {
 
       const setIf = (selector, value) => {
         const el = form.querySelector(selector);
-        if (!el) return;
+        if (!el) {
+          console.warn('setIf: élément introuvable pour', selector);
+          return;
+        }
         el.value = value ?? '';
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1298,28 +1305,54 @@ async function handleTrajetActions(e) {
       setIf('[name="depart"]', trajet.depart);
       setIf('[name="arrivee"]', trajet.arrivee);
 
-      // ✅ dates au bon format
+      // ✅ dates au bon format (IMPORTANT : utiliser les bonnes propriétés)
       setIf('[name="date"]', toYMD(trajet.date));
-      setIf('[name="date-arrivee"]', toYMD(trajet.dateArrivee));
+      
+      // ✅ FIX : date d'arrivée (chercher dans plusieurs propriétés possibles)
+      setIf('[name="date-arrivee"]', toYMD(trajet.date || ''));
 
       setIf('[name="heure-depart"]', trajet.heureDepart);
       setIf('[name="heure-arrivee"]', trajet.heureArrivee);
       setIf('[name="prix"]', trajet.prix);
 
-      // ✅ véhicule : ton select utilise la plaque comme value
+      // ✅ FIX : véhicule (améliorer le matching)
       const vehicles = JSON.parse(localStorage.getItem('ecoride_vehicles') || '[]');
 
-      const carId = trajet.carId || (trajet.carIri ? Number(String(trajet.carIri).split('/').pop()) : null);
+      // Récupérer l'ID de la voiture depuis plusieurs sources possibles
+      const carId = trajet.carId 
+        || (trajet.vehicle?.id) 
+        || (trajet.vehicle?.serverId)
+        || (trajet.carIri ? Number(String(trajet.carIri).split('/').pop()) : null)
+        || (trajet.raw?.car?.id)
+        || null;
 
+      console.log('🚗 Recherche véhicule pour carId:', carId, 'dans', vehicles);
+
+      // Chercher le véhicule correspondant
       const matched = vehicles.find(v => {
         const vId = v.id ?? v.serverId ?? null;
-        return carId && vId && Number(vId) === Number(carId);
+        const vPlate = v.plate || v.immatriculation || v.licencePlate || '';
+        
+        // Match par ID
+        if (carId && vId && Number(vId) === Number(carId)) return true;
+        
+        // Match par plaque si disponible dans trajet.vehicle
+        if (trajet.vehicle?.plate && vPlate && vPlate === trajet.vehicle.plate) return true;
+        
+        return false;
       }) || null;
 
       const plate = matched?.plate || matched?.immatriculation || matched?.licencePlate || '';
 
-      // ton champ s'appelle "vehicle" et l'id est "#vehicle"
+      console.log('🚗 Véhicule trouvé:', matched, 'plaque:', plate);
+
+      // Pré-remplir le select
       setIf('[name="vehicle"]', plate);
+      
+      // Si le véhicule n'est pas trouvé, afficher un warning
+      if (!plate && carId) {
+        console.warn('⚠️ Véhicule non trouvé dans la liste pour carId:', carId);
+      }
 
       // placeholders "empty"
       form.querySelectorAll('input[type="date"], input[type="time"], input, select').forEach(input => {
@@ -1771,7 +1804,7 @@ export function renderTrajetsInProgress() {
     try {
       const me = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
       if (!me) return false;
-      const driver = trajet.driver ?? (trajet.raw && trajet.raw.driver) ?? null;
+      const driver = trajet.driver ?? trajet.chauffeur ?? (trajet.raw && trajet.raw.driver) ?? null;
       if (!driver) return false;
       if (typeof driver === 'object' && driver.id) return String(driver.id) === String(me.id);
       if (typeof driver === 'string') {

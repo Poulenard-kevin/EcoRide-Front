@@ -581,3 +581,23 @@ export async function createCarIfNeeded(vehicle, options = {}) {
   }
   return res?.id ?? null;
 }
+
+// dans trips-api.js (remplacer l'actuelle updateBookingStatus)
+export async function updateBookingStatus(bookingId, newStatus) {
+  if (!bookingId) throw new Error('bookingId requis');
+
+  // construire le chemin attendu par apiFetch
+  const path = String(bookingId).startsWith('/api/') ? bookingId.replace(/^\/api/, '') : `/bookings/${String(bookingId).replace(/^\/api\/bookings\//, '')}`;
+
+  try {
+    const res = await apiFetch(`/api${path}`.replace('//','/'), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/merge-patch+json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+    return res;
+  } catch (err) {
+    console.error('updateBookingStatus failed', err);
+    throw err;
+  }
+}

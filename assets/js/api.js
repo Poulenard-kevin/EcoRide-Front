@@ -49,8 +49,7 @@ export async function apiFetch(path, { method = 'GET', body, headers = {}, useAp
     ? normalizedPath 
     : `${API_BASE}${normalizedPath}`;
 
-  console.debug('[apiFetch]', method, url); // log pour debug
-
+  
   const h = { Accept: 'application/json', ...headers };
 
   // Si body est un objet JS, on le stringifie et on ajoute Content-Type

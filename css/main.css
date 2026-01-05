@@ -14766,6 +14766,28 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   font-style: italic;
   font-size: 16px;
 }
+#trajets-en-cours .trajet-card.demarre {
+  background: #CACFAA;
+  color: #1F4924 !important;
+}
+#trajets-en-cours .trajet-card.demarre .trajet-info strong,
+#trajets-en-cours .trajet-card.demarre .trajet-price,
+#trajets-en-cours .trajet-card.demarre .details,
+#trajets-en-cours .trajet-card.demarre .trajet-status {
+  color: #1F4924;
+}
+#trajets-en-cours .trajet-card.demarre .btn-trajet {
+  background-color: #4B8A47;
+  color: #F1E7D1;
+  transition: background 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
+#trajets-en-cours .trajet-card.demarre .btn-trajet:hover {
+  background-color: #1F4924;
+  color: #F1E7D1;
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
+}
 #trajets-en-cours .trajet-card.actif {
   background: #4B8A47;
   color: #F1E7D1;
@@ -14777,7 +14799,7 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   color: #F1E7D1;
 }
 #trajets-en-cours .trajet-card.actif .btn-trajet {
-  background: #F1E7D1;
+  background-color: #F1E7D1;
   color: #1F4924;
   transition: background 0.3s ease, transform 0.3s ease;
   box-shadow: 0 6px 8px rgba(74, 122, 63, 0.5);
@@ -14791,8 +14813,16 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #trajets-en-cours .trajet-card.termine {
   background: #CACFAA;
 }
+#trajets-en-cours .trajet-card.termine .trajet-status {
+  color: #1F4924;
+  font-weight: 500;
+}
 #trajets-en-cours .trajet-card.attente {
   background: #F8F0E5;
+}
+#trajets-en-cours .trajet-card.attente .trajet-status {
+  color: #1F4924;
+  font-style: italic;
 }
 #trajets-en-cours .trajet-card.reserve {
   background: #F8F0E5;

@@ -355,10 +355,18 @@ export async function carpoolFromApiAsync(apiItem) {
   if (!trip.heureDepart) trip.heureDepart = apiItem.departureTime ? formatTime(apiItem.departureTime) : trip.heureDepart || '';
   if (!trip.heureArrivee) trip.heureArrivee = apiItem.arrivalTime ? formatTime(apiItem.arrivalTime) : trip.heureArrivee || '';
 
+  // ---------- Status normalisé (exposé pour le front) ----------
+  const rawStatus = apiItem.status ?? apiItem.statut ?? apiItem.state ?? apiItem.progress ?? apiItem.statusRaw ?? (apiItem.raw && apiItem.raw.status) ?? null;
+  const statusNormalized = rawStatus ? String(rawStatus).toLowerCase().trim() : '';
+
+  trip.status = statusNormalized;
+  trip.rawStatus = rawStatus;
+
   // Expose quelques logs utiles pour debug (tu peux les retirer plus tard)
   console.debug('[carpoolFromApiAsync] carData:', carData);
   console.debug('[carpoolFromApiAsync] driver:', driver);
   console.debug('[carpoolFromApiAsync] preferences resolved:', trip.preferences, 'otherPreferences:', trip.otherPreferences);
+  console.debug('[carpoolFromApiAsync] status:', trip.status);
 
   // Exposer les bookings bruts si l'API les fournit (utile pour actions serveur)
   trip.bookings = Array.isArray(apiItem.bookings) ? apiItem.bookings

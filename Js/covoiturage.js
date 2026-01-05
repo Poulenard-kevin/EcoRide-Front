@@ -6,6 +6,28 @@ import { normalizeTypeKey, labelFromTypeKey, updatePlacesFromVehicle } from '/as
 
 console.log('[covoiturage] script chargé');
 
+// -------------------- Helper statut --------------------
+function isTripActive(trip) {
+  if (!trip) return false;
+  const s = String(trip.status ?? trip.statut ?? trip.rawStatus ?? '').toLowerCase().trim();
+
+  // Statuts considérés comme actifs (affichables)
+  const activeStatuses = new Set([
+    'en cours', 'encours', 'démarré', 'demarre', 'started', 'ongoing', 'confirmé', 'confirmed', 'à venir', 'a venir', 'upcoming', 'pending'
+  ]);
+
+  // Statuts considérés comme inactifs (non affichables)
+  const inactiveStatuses = new Set([
+    'terminé', 'termine', 'archivé', 'archive', 'validé', 'valide', 'historique', 'canceled', 'annulé', 'annule', 'cancelled', 'finished', 'completed'
+  ]);
+
+  if (inactiveStatuses.has(s)) return false;
+  if (activeStatuses.has(s)) return true;
+
+  // Par défaut, si statut inconnu, on considère actif (ou adapte selon ton besoin)
+  return true;
+}
+
 // utilisation :
 if (!enrichTrajetWithCurrentUser) {
   console.warn('enrichTrajetWithCurrentUser non importé — vérifier chemin');
@@ -119,6 +141,16 @@ function createTrajetCard(trajet) {
         console.warn('Trajet sans id, impossible d ouvrir le detail', trajet);
         return;
       }
+
+      // Bloquer l'ouverture si le trajet est démarré
+      if (!isTripActive(trajet)) {
+        // comportement: alerte + redirection possible vers historique
+        alert("Ce trajet a déjà démarré et n'est plus consultable ici.");
+        // option : rediriger vers la page historique
+        // window.location.href = '/user/history';
+        return;
+      }
+
       console.log('Navigation vers détail trajet id=', trajet.id);
       const newPath = `/detail/${trajet.id}`;
       window.history.pushState({}, "", newPath);
@@ -256,6 +288,14 @@ document.addEventListener('pageContentLoaded', async () => {
       (Array.isArray(items) ? items : []).map((it) => carpoolFromApiAsync(it))
     );
 
+    trajetsFromApi = trajetsFromApi.filter(t => {
+      if (!isTripActive(t)) {
+        console.debug('[covoiturage] exclu trajet inactif (front) id=', t.id, 'status=', t.status ?? t.rawStatus);
+        return false;
+      }
+      return true;
+    });
+
     console.log('DEBUG mapped first 3 dates:', trajetsFromApi.slice(0,3).map(t => ({
       id: t.id,
       date: t.date,
@@ -332,14 +372,16 @@ document.addEventListener('pageContentLoaded', async () => {
   // Affiche les trajets dans le container
   function displayTrajets(filteredTrajets) {
     resultsContainer.innerHTML = '';
-    if (filteredTrajets.length === 0) {
+    // supprimer les trajets démarrés par sécurité
+    const visible = (filteredTrajets || []).filter(t => isTripActive(t));
+    if (visible.length === 0) {
       resultsContainer.innerHTML = '<p>Aucun trajet ne correspond à votre recherche.</p>';
       return;
     }
-    filteredTrajets.forEach(trajet => {
+    visible.forEach(trajet => {
       updatePlacesFromVehicle(trajet);
       const card = createTrajetCard(trajet);
-      resultsContainer.appendChild(card);
+      if (card) resultsContainer.appendChild(card);
     });
   }
 
@@ -585,7 +627,7 @@ document.addEventListener('pageContentLoaded', async () => {
 
     window.addEventListener('ecoride:carpoolUpdated', (ev) => {
       const d = ev.detail || {};
-
+    
       // id possible dans d.id, d.updated.id, d.updated['@id'] ou uri "/api/carpools/6"
       let id = d.id || (d.updated && (d.updated.id || d.updated['@id']));
       if (!id && d.updated && typeof d.updated['@id'] === 'string') {
@@ -594,17 +636,31 @@ document.addEventListener('pageContentLoaded', async () => {
       }
       if (!id) return;
       id = String(id);
-
-      // Debug léger — commente si trop verbeux
+    
       console.log('[ecoride] carpoolUpdated received for id=', id, 'detail=', d.updated || d);
-
-      // Mettre à jour l'objet trajets en mémoire si présent
+    
       const idx = trajets.findIndex(t => String(t.id) === id);
-      if (idx === -1 || !d.updated) return;
-
+    
+      // si pas d.updated -> rien à faire
+      if (!d.updated) return;
+    
+      // si l'objet n'est pas en mémoire mais il y a une card DOM, on la met à jour/supprime selon le statut
+      const existingCard = document.querySelector(`.result-card[data-id="${id}"]`);
+    
+      if (idx === -1) {
+        // si la card existe et que le trajet est désormais démarré -> la supprimer
+        const temp = { ...(d.updated) }; // normaliser pour !isTripActive
+        if (!isTripActive(temp)) {
+          if (existingCard) existingCard.remove();
+          window.dispatchEvent(new CustomEvent('ecoride:carpoolRemovedLocal', { detail: { id } }));
+          filterBySearchAndFilters();
+        }
+        return;
+      }
+    
       // Merge léger (préserve champs calculés déjà présents)
       trajets[idx] = { ...trajets[idx], ...d.updated };
-
+    
       // recalcul remaining de façon sûre (somme seats/places)
       const reserved = Array.isArray(trajets[idx].passagers)
         ? trajets[idx].passagers.reduce((s, p) => s + (Number(p.places) || Number(p.seats) || 1), 0)
@@ -617,15 +673,28 @@ document.addEventListener('pageContentLoaded', async () => {
         0
       );
       trajets[idx].remainingPlaces = Math.max(0, cap - reserved);
-
+    
       // Mettre à jour la card DOM si visible
-      const card = document.querySelector(`.result-card[data-id="${id}"]`);
-      if (card) {
-        const placesEl = card.querySelector('.places');
+      if (existingCard) {
+        const placesEl = existingCard.querySelector('.places');
         const remaining = trajets[idx].remainingPlaces ?? 0;
         if (placesEl) placesEl.textContent = `${remaining} place${remaining > 1 ? 's' : ''} disponible${remaining > 1 ? 's' : ''}`;
       }
-
+    
+      // Si le trajet devient démarré, retirer la card et l'objet de la liste
+      if (!isTripActive(trajets[idx])) {
+        console.debug('[covoiturage] trajet passé en état démarré -> suppression front id=', id, trajets[idx].status ?? trajets[idx].rawStatus);
+        // retirer de la liste en mémoire
+        trajets.splice(idx, 1);
+        // retirer la card DOM si présente
+        if (existingCard) existingCard.remove();
+        // notifier éventuellement d'autres modules
+        window.dispatchEvent(new CustomEvent('ecoride:carpoolRemovedLocal', { detail: { id } }));
+        // rafraîchir l'affichage
+        filterBySearchAndFilters();
+        return; // on a déjà traité la suppression
+      }
+    
       // Optionnel : notifier localement d'autres modules
       window.dispatchEvent(new CustomEvent('ecoride:carpoolUpdatedLocal', { detail: { id, updated: trajets[idx] } }));
     });

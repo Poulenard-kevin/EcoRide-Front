@@ -16379,6 +16379,13 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   min-height: 75px;
   max-height: 250px;
 }
+.employee-space-section.container .avis-card .date {
+  font-size: 20px;
+  font-family: "Roboto", sans-serif;
+  font-weight: 500;
+  margin-top: 4px;
+  color: #1F4924;
+}
 .employee-space-section.container .actions {
   margin-top: 10px;
 }

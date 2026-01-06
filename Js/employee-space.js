@@ -1,3 +1,8 @@
+import { apiFetch, setToken } from '/assets/js/api.js';
+
+// Après login réussi : setToken(response.token);
+// setToken('<TON_TOKEN_ICI>');
+
 // Ajoute ici ta fonction shortId
 function shortId(id) {
   if (id === null || id === undefined) return '';
@@ -9,13 +14,36 @@ function shortId(id) {
   // Mock API helpers (à remplacer par tes endpoints réels)
   const api = {
     validateAvis: async (id) => {
-      // await fetch(`/api/avis/${id}/valider`, { method: 'POST' })
-      await new Promise(r => setTimeout(r, 500)); // simule latence
-      return { ok: true };
+      try {
+        await apiFetch(`/reviews/${id}/validate`, { method: 'POST' });
+        return { ok: true };
+      } catch (err) {
+        // err.status et err.body fournis par handleResponse
+        console.error('validateAvis error', err);
+        return { ok: false, status: err.status, body: err.body };
+      }
     },
+  
     refuseAvis: async (id) => {
-      await new Promise(r => setTimeout(r, 500));
-      return { ok: true };
+      try {
+        await apiFetch(`/reviews/${id}/refuse`, { method: 'POST' });
+        return { ok: true };
+      } catch (err) {
+        console.error('refuseAvis error', err);
+        return { ok: false, status: err.status, body: err.body };
+      }
+    },
+  
+    // Exemple : récupérer les avis en attente (API Platform => hydra)
+    fetchPendingReviews: async () => {
+      try {
+        const data = await apiFetch(`/reviews?status=${encodeURIComponent('PENDING')}`, { method: 'GET' });
+        // si API Platform, la liste est dans data['hydra:member']
+        return Array.isArray(data) ? data : (data?.['hydra:member'] || []);
+      } catch (err) {
+        console.error('fetchPendingReviews error', err);
+        return [];
+      }
     }
   };
 
@@ -128,16 +156,21 @@ function shortId(id) {
   // render avis list
   function renderAvisList(data) {
     if (!avisListEl) return;
-    // construit fragment performant
     const frag = document.createDocumentFragment();
     data.forEach(a => {
+      const date = a.date ? new Date(a.date).toLocaleDateString() : '';
+      const pseudo = a.author ? `${a.author.firstName} ${a.author.lastName}` : 'Anonyme';
+      const note = a.rating || 0;
+      const texte = a.comment || '';
+  
       const card = document.createElement('div');
       card.className = 'avis-card';
       card.dataset.id = a.id;
       card.innerHTML = `
-        <h3 class="pseudo">${escapeHtml(a.pseudo)}</h3>
-        <div class="stars" aria-hidden="true">${'★'.repeat(a.note)}${'☆'.repeat(5 - a.note)}</div>
-        <p class="avis-text">${escapeHtml(a.texte)}</p>
+        <small class="date">${escapeHtml(date)}</small>
+        <h3 class="pseudo">${escapeHtml(pseudo)}</h3>
+        <div class="stars" aria-hidden="true">${'★'.repeat(note)}${'☆'.repeat(5 - note)}</div>
+        <p class="avis-text">${escapeHtml(texte)}</p>
         <div class="actions">
           <button type="button" class="btn valider" data-action="validate">Valider</button>
           <button type="button" class="btn refuser" data-action="refuse">Refuser</button>
@@ -145,7 +178,6 @@ function shortId(id) {
       `;
       frag.appendChild(card);
     });
-    // vider et append
     avisListEl.innerHTML = '';
     avisListEl.appendChild(frag);
   }
@@ -207,39 +239,87 @@ function shortId(id) {
       const card = btn.closest('.avis-card');
       if (!card) return;
       const id = card.dataset.id;
+      if (!id) return;
 
-      // Bloquer double clic / état loading
-      if (btn.disabled) return;
-      btn.disabled = true;
-      const origText = btn.textContent;
+      // désactive tous les boutons de la carte pour éviter les clics multiples
+      const actionButtons = Array.from(card.querySelectorAll('button[data-action]'));
+      actionButtons.forEach(b => b.disabled = true);
+
+      // état UI temporaire
+      const origTexts = new Map(actionButtons.map(b => [b, b.textContent]));
       btn.textContent = action === 'validate' ? 'Validation...' : 'Refus...';
+      card.style.opacity = '0.6';
+      card.classList.add('loading');
 
       try {
+        // appel API selon l'action
+        let res;
         if (action === 'validate') {
-          // optimistic update : retirer la carte immédiatement
-          card.style.opacity = '0.6';
-          const res = await api.validateAvis(id);
-          if (!res.ok) throw new Error('Erreur serveur');
-          // retirer du DOM + état local
-          avisData = avisData.filter(a => String(a.id) !== String(id));
-          localStorage.setItem('ecoride_avis', JSON.stringify(avisData));  // <-- mise à jour localStorage
-          card.remove();
-          toastContainer.show(`Avis ${id} validé`);
+          res = await api.validateAvis(id);
         } else if (action === 'refuse') {
-          const res = await api.refuseAvis(id);
-          if (!res.ok) throw new Error('Erreur serveur');
-          // on peut supprimer ou marquer "refusé"
-          avisData = avisData.filter(a => String(a.id) !== String(id));
-          localStorage.setItem('ecoride_avis', JSON.stringify(avisData));  // <-- mise à jour localStorage
-          card.remove();
-          toastContainer.show(`Avis ${id} refusé`, 'info');
+          res = await api.refuseAvis(id);
+        } else {
+          throw new Error('Action inconnue');
         }
+
+        // gestion erreurs remontées par api.* (structure { ok, status, body } attendue)
+        if (!res || !res.ok) {
+          const status = res?.status;
+          if (status === 401) {
+            setToken(null);
+            toastContainer.show('Session expirée, veuillez vous reconnecter', 'error', 4000);
+            throw new Error('Unauthorized');
+          }
+          if (status === 403) {
+            toastContainer.show('Accès refusé', 'error', 4000);
+            throw new Error('Forbidden');
+          }
+          throw new Error('Erreur serveur');
+        }
+
+        // --- Succès ---
+        // Optimistic: retirer immédiatement la carte / état local
+        avisData = avisData.filter(a => String(a.id) !== String(id));
+        localStorage.setItem('ecoride_avis', JSON.stringify(avisData));
+        card.remove();
+        toastContainer.show(action === 'validate' ? `Avis ${id} validé` : `Avis ${id} refusé`);
+
+        console.log('avisData après suppression (optimistic):', avisData);
+
+        // Tenter de resynchroniser avec le serveur pour garantir la consistance
+        try {
+          const remote = await api.fetchPendingReviews();
+          const normalizedRemote = Array.isArray(remote) ? remote : (remote?.['hydra:member'] || []);
+          avisData = normalizedRemote;
+          localStorage.setItem('ecoride_avis', JSON.stringify(avisData));
+          renderAvisList(avisData);
+          console.log('avisData synchronisé depuis le serveur:', avisData);
+        } catch (syncErr) {
+          console.warn('Impossible de rafraîchir la liste depuis le serveur après action:', syncErr);
+          // on ne rollback pas l'optimistic removal ici, mais on loggue.
+          // Si tu veux forcer un rollback si le serveur indique que l'avis est toujours PENDING,
+          // il faudrait analyser la réponse `normalizedRemote` et remettre l'avis si présent.
+        }
+
       } catch (err) {
-        console.error(err);
-        toastContainer.show('Une erreur est survenue', 'error', 4000);
-        btn.disabled = false;
-        btn.textContent = origText;
+        console.error('Erreur lors de la validation/refus d\'avis:', err);
+
+        // rollback UI : ré-activer boutons, restaurer textes et opacité
+        actionButtons.forEach(b => {
+          b.disabled = false;
+          b.textContent = origTexts.get(b) || b.textContent;
+        });
         card.style.opacity = '1';
+        card.classList.remove('loading');
+
+        // messages d'erreur utilisateur
+        if (err.message === 'Unauthorized') {
+          // redirection optionnelle : window.location.href = '/login';
+        } else if (err.message === 'Forbidden') {
+          // déjà notifié par toast
+        } else {
+          toastContainer.show('Une erreur est survenue', 'error', 4000);
+        }
       }
     });
   }
@@ -280,12 +360,17 @@ function shortId(id) {
   let currentModalTrajet = null;
 
   function openTrajetModal(id) {
-    console.log('openTrajetModal called with id:', id);
     currentModalTrajet = trajetsData.find(t => String(t.id) === String(id));
     if (!currentModalTrajet) {
       console.warn('Trajet non trouvé pour id:', id);
       return;
-    }      
+    }
+  
+    const modal = document.getElementById('trajet-modal');
+    if (!modal) {
+      console.warn('Modal element not found');
+      return;
+    }    
       
     document.getElementById("modal-id").innerText = currentModalTrajet.id;
     document.getElementById("modal-chauffeur").innerText = currentModalTrajet.chauffeur;
@@ -302,12 +387,14 @@ function shortId(id) {
   
     modal.style.display = 'block';
     console.log('Modal affiché');
-  
+
     const closeBtn = modal.querySelector('.close-btn');
     if (closeBtn) closeBtn.focus();
   }
 
-  document.getElementById('btn-repondre-passager').addEventListener('click', () => {
+  const btnRepondrePassager = document.getElementById('btn-repondre-passager');
+if (btnRepondrePassager) {
+  btnRepondrePassager.addEventListener('click', () => {
     if (!currentModalTrajet) return;
     const email = currentModalTrajet.passagerMail;
     if (!email) {
@@ -318,8 +405,11 @@ function shortId(id) {
     const corps = encodeURIComponent("Bonjour,\n\nJe vous contacte au sujet du trajet signalé.\n\nCordialement,\nL'équipe EcoRide");
     window.location.href = `mailto:${email}?subject=${sujet}&body=${corps}`;
   });
-  
-  document.getElementById('btn-repondre-chauffeur').addEventListener('click', () => {
+}
+
+const btnRepondreChauffeur = document.getElementById('btn-repondre-chauffeur');
+if (btnRepondreChauffeur) {
+  btnRepondreChauffeur.addEventListener('click', () => {
     if (!currentModalTrajet) return;
     const email = currentModalTrajet.chauffeurMail;
     if (!email) {
@@ -330,26 +420,29 @@ function shortId(id) {
     const corps = encodeURIComponent("Bonjour,\n\nJe vous contacte au sujet du trajet signalé.\n\nCordialement,\nL'équipe EcoRide");
     window.location.href = `mailto:${email}?subject=${sujet}&body=${corps}`;
   });
+}
 
-  document.getElementById('btn-supprimer').addEventListener('click', () => {
+const btnSupprimer = document.getElementById('btn-supprimer');
+if (btnSupprimer) {
+  btnSupprimer.addEventListener('click', () => {
     if (!currentModalTrajet) return;
-  
+
     // Exemple : supprimer le trajet de la liste
     trajetsData = trajetsData.filter(t => t.id !== currentModalTrajet.id);
-  
+
     // Mettre à jour le localStorage
     localStorage.setItem('ecoride_trajets_signales', JSON.stringify(trajetsData));
-  
+
     // Re-render le tableau
     renderTrajetsTable(trajetsData);
-  
+
     // Fermer le modal
     modal.style.display = 'none';
-  
+
     // Afficher un toast de confirmation
     toastContainer.show(`Trajet ${shortId(currentModalTrajet.id)} supprimé`, 'info', 3000);
   });
-
+}
   // modal close handlers
   (function modalInit() {
     const closeBtn = document.querySelector(".close-btn");
@@ -364,7 +457,7 @@ function shortId(id) {
   })();
 
   // ---------- Initialisation : charger (mock) et render ----------
-  function initFromServer(mock = true) {
+  async function initFromServer(mock = true) {
     // 1) charger les avis depuis localStorage (source de vérité locale)
     const stored = (() => {
       try {
@@ -476,9 +569,16 @@ function shortId(id) {
 
     renderTrajetsTable(trajetsData);
   
-    // Si mock === false : appeler API réel (exemple)
     if (!mock) {
-      // fetch('/api/avis/pending').then(...).then(remote => { merge remote similarly })
+      try {
+        const remote = await api.fetchPendingReviews();
+        avisData = remote;
+        localStorage.setItem('ecoride_avis', JSON.stringify(avisData));
+        renderAvisList(avisData);
+      } catch (e) {
+        console.error('Erreur chargement avis depuis API', e);
+        // Optionnel : afficher un message d’erreur ou fallback
+      }
     }
 
     console.log("Données trajets reçues pour affichage :", trajetsData);
@@ -486,8 +586,8 @@ function shortId(id) {
 
   }
 
-  // start
-  initFromServer(true);
+  // start en mode réel (appelle l'API)
+  initFromServer(false);
 
   // réception des avis soumis depuis le modal (trajets.js)
   window.addEventListener('ecoride:avisSubmitted', (e) => {

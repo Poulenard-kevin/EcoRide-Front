@@ -2,7 +2,7 @@ import { resolveAvatarSrc, getProfileAvatarFromStorage } from './trajets.js';
 import { carpoolFromApiAsync } from '/assets/js/trips-api.js';
 import { updatePlacesFromVehicle, renderPreferences, applyVehicleTypeToElement, normalizeTypeKey, labelFromTypeKey, slugifyForClass } from '/assets/js/type-utils.js';
 import { createBooking, reloadCarpoolAndNotify } from '/assets/js/bookings-api.js';
-import { apiFetch } from '/assets/js/api.js';
+import { apiFetch, getToken } from '/assets/js/api.js';
 
 console.log("🔍 detail.js chargé !");
 
@@ -654,6 +654,61 @@ document.addEventListener("pageContentLoaded", async () => {
 
     // Normaliser / enrichir
     trajet = await carpoolFromApiAsync(data);
+
+    // --- Chargement des avis : fallback immédiat + refresh asynchrone depuis l'API
+    (async () => {
+      const container = document.getElementById('driver-reviews');
+      if (!container) {
+        console.debug('Pas de container #driver-reviews, skip chargement avis');
+        return;
+      }
+
+      // Fallback immédiat : utiliser éventuels avis déjà fournis dans trajet.reviews
+      try {
+        const local = Array.isArray(trajet?.reviews) ? trajet.reviews.slice(-3).reverse() : null;
+        if (local && local.length > 0) {
+          for (let i = 0; i < 3; i++) {
+            const el = container.querySelector(`#detail-review${i + 1}`);
+            if (!el) continue;
+            // supporte soit un string soit un objet { review/comment/... }
+            const rv = local[i];
+            const txt = rv
+              ? (typeof rv === 'string' ? rv : (rv.review || rv.comment || rv.commentaire || rv.content || rv.message || rv.text || ''))
+              : '';
+            if (txt && String(txt).trim()) {
+              el.textContent = String(txt).trim();
+              el.style.display = '';
+            } else {
+              el.textContent = '';
+              el.style.display = 'none';
+            }
+          }
+        }
+      } catch (err) {
+        console.debug('fallback local reviews failed', err);
+      }
+
+      // Extraire l'id du conducteur depuis trajet et charger les avis depuis l'API
+      const driver = trajet?.chauffeur || trajet?.driver || null;
+      let driverId = null;
+      if (driver) {
+        driverId = driver.id
+          || (typeof driver === 'string' ? (driver.match(/\/(\d+)$/) || [])[1] : null)
+          || (driver['@id'] ? (String(driver['@id']).match(/\/(\d+)$/) || [])[1] : null);
+      }
+      if (!driverId) {
+        console.debug('Impossible d\'extraire driverId depuis trajet, chargement avis annulé');
+        return;
+      }
+
+      console.debug('Chargement des avis pour driverId:', driverId);
+      try {
+        await loadDriverReviews(String(driverId), container);
+      } catch (e) {
+        console.warn('Erreur chargement avis conducteur:', e);
+      }
+    })();
+
     console.log('Trajet normalisé:', trajet);
 
     // Mettre à jour places / capacité avant rendu
@@ -1117,14 +1172,14 @@ document.addEventListener("pageContentLoaded", async () => {
   renderDriverAbout(trajet);
   updateDriverAboutDom();
 
-    const reviews = trajet.reviews || ["Aucun avis disponible pour ce conducteur.", "", ""];
+    /*const reviews = trajet.reviews || ["Aucun avis disponible pour ce conducteur.", "", ""];
     ['detail-review1', 'detail-review2', 'detail-review3'].forEach((id, index) => {
       const reviewElement = document.getElementById(id);
       if (reviewElement) {
         reviewElement.textContent = reviews[index] || "";
         reviewElement.style.display = reviews[index] ? "block" : "none";
       }
-    });
+    });*/
 
     // ========== Listener pour mises à jour venant d'ailleurs ==========
     if (!window.__ecoride_detail_carpoolUpdated_installed) {
@@ -1462,3 +1517,171 @@ async function reserverPlace(trajet, seats = 1) {
     alert('Erreur inattendue lors de la réservation (voir console).');
   }
 }
+
+// =================== Chargement et affichage des avis conducteur ===================
+
+// helper safe escape
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function formatDateNice(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
+  return d.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+// wrapper pour récupérer JSON — utilise l'apiFetch importé si disponible, sinon window.apiFetch, sinon fetch native
+async function fetchJson(url, opts = {}) {
+  try {
+    // Priorité : apiFetch importé dans ce module
+    if (typeof apiFetch === 'function') {
+      console.debug('fetchJson -> using imported apiFetch for', url);
+      return await apiFetch(url, { method: 'GET', ...opts });
+    }
+
+    // Seconde priorité : window.apiFetch (compatibilité)
+    if (window.apiFetch && typeof window.apiFetch === 'function') {
+      console.debug('fetchJson -> using window.apiFetch for', url);
+      return await window.apiFetch(url, { method: 'GET', ...opts });
+    }
+
+    // Fallback : fetch natif (envoie les cookies si nécessaire)
+    console.debug('fetchJson -> using native fetch for', url);
+    const res = await fetch(url, {
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      credentials: 'include',
+      ...opts,
+    });
+    console.debug('fetch response status for', url, res.status);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error('fetchJson error for', url, err);
+    throw err;
+  }
+}
+
+async function getCurrentUserId() {
+  try {
+    const me = await fetchJson('/api/me');
+    // supporte formats : { id: 7 } ou { "@id": "/api/users/7" } ou { '@id': ... }
+    if (me.id) return String(me.id);
+    const iri = me['@id'] || me['@id'] || me['@id'];
+    if (iri) {
+      const m = iri.match(/\/api\/users\/(\d+)/);
+      if (m) return m[1];
+    }
+    // fallback : maybe me['@id'] = "/api/users/7"
+    return null;
+  } catch (err) {
+    console.warn('Impossible de récupérer /api/me :', err);
+    return null;
+  }
+}
+
+// version courte : utilise apiFetch (gère base + token)
+async function loadDriverReviews(driverId, containerEl = document.getElementById('driver-reviews')) {
+  if (!containerEl || !driverId) return;
+  const loading = containerEl.querySelector('.reviews-loading');
+  if (loading) loading.remove();
+
+  try {
+    // apiFetch doit faire la requête vers http://localhost:8000/api/...
+    const data = await apiFetch(`/users/${driverId}/reviews`, { method: 'GET' });
+
+    const reviewsArray = Array.isArray(data) ? data : (data && data['hydra:member'] ? data['hydra:member'] : []);
+    if (!Array.isArray(reviewsArray) || reviewsArray.length === 0) {
+      // afficher message "Aucun avis pour le moment" dans le premier emplacement et masquer les autres
+      const first = containerEl.querySelector('#detail-review1');
+      if (first) {
+        first.textContent = 'Aucun avis pour le moment';
+        first.style.display = '';
+      }
+      ['#detail-review2', '#detail-review3'].forEach(id => {
+        const e = containerEl.querySelector(id);
+        if (e) { e.textContent = ''; e.style.display = 'none'; }
+      });
+      return;
+    }
+
+    const lastThree = reviewsArray.slice(-3).reverse();
+
+    const extractText = r => (r && (r.comment || r.review || r.content || r.message || r.text)) ? String(r.comment || r.review || r.content || r.message || r.text) : '';
+
+    for (let i = 0; i < 3; i++) {
+      const el = containerEl.querySelector(`#detail-review${i + 1}`);
+      if (!el) continue;
+      const rv = lastThree[i];
+      const txt = rv ? extractText(rv).trim() : '';
+      if (txt) { el.textContent = txt; el.style.display = ''; }
+      else { el.textContent = ''; el.style.display = 'none'; }
+    }
+  } catch (err) {
+    console.error('Erreur chargement avis conducteur', err);
+    const first = containerEl.querySelector('#detail-review1');
+    if (first) { first.textContent = 'Erreur lors du chargement des avis.'; first.style.display = ''; }
+    ['#detail-review2','#detail-review3'].forEach(id => {
+      const e = containerEl.querySelector(id);
+      if (e) { e.textContent = ''; e.style.display = 'none'; }
+    });
+  }
+}
+
+// =================== Chargement et affichage des avis conducteur (init robuste) ===================
+
+/*async function initDriverReviews() {
+  try {
+    // Eviter double initialisation
+    if (window.__ecoride_driver_reviews_initialized) {
+      console.debug('initDriverReviews: déjà initialisé');
+      return;
+    }
+    window.__ecoride_driver_reviews_initialized = true;
+
+    const container = document.getElementById('driver-reviews');
+    console.debug('initDriverReviews: container trouvé?', !!container, container);
+
+    if (!container) {
+      console.debug('initDriverReviews: aucun container #driver-reviews présent — skip');
+      return;
+    }
+
+    let driverId = container.dataset.driverId;
+    console.debug('initDriverReviews: data-driver-id raw =', driverId);
+
+    if (!driverId || driverId === 'me') {
+      // Récupérer l'id courant via /api/me
+      const meId = await getCurrentUserId();
+      console.debug('initDriverReviews: meId from /api/me =', meId);
+      if (!meId) {
+        container.innerHTML = '<p class="no-reviews">Impossible de déterminer l\'utilisateur connecté.</p>';
+        return;
+      }
+      driverId = meId;
+    }
+
+    console.debug('initDriverReviews: final driverId =', driverId);
+    // Appel effectif (await pour voir les erreurs dans la console)
+    await loadDriverReviews(driverId, container);
+
+  } catch (err) {
+    console.error('initDriverReviews error:', err);
+    const container = document.getElementById('driver-reviews');
+    if (container) container.innerHTML = '<p class="error">Impossible d\'initialiser les avis.</p>';
+  }
+}
+
+// Lancer l'init au bon moment pour SPA + page normale
+document.addEventListener('pageContentLoaded', initDriverReviews);
+document.addEventListener('DOMContentLoaded', initDriverReviews);
+// Si le DOM est déjà prêt (script chargé tard), appeler tout de suite
+if (document.readyState !== 'loading') {
+  initDriverReviews().catch(err => console.warn('initDriverReviews immediate call failed', err));
+}*/

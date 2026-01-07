@@ -13738,7 +13738,8 @@ body.spa-ready #main-page {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   font-family: "Roboto", sans-serif;
   font-weight: 400;
-  font-size: 20px;
+  font-size: 24px;
+  text-align: center;
   margin-bottom: 1.5rem;
 }
 @media (max-width: 990px) {

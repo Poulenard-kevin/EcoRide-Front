@@ -3,6 +3,7 @@ import { carpoolFromApiAsync } from '/assets/js/trips-api.js';
 import { updatePlacesFromVehicle, renderPreferences, applyVehicleTypeToElement, normalizeTypeKey, labelFromTypeKey, slugifyForClass } from '/assets/js/type-utils.js';
 import { createBooking, reloadCarpoolAndNotify } from '/assets/js/bookings-api.js';
 import { apiFetch, getToken } from '/assets/js/api.js';
+import { addPendingReview, retryPendingReviews, getPendingReviewsSorted, migratePendingReviews } from './pending-reviews.js';
 
 console.log("🔍 detail.js chargé !");
 
@@ -129,6 +130,24 @@ function getUserReservationForCovoiturage(covoiturageId) {
   const reservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
   return reservations.find(r => getCovoId(r) === covoiturageId && r.role === 'passager' && r.status === 'reserve') || null;
 }
+
+// expose pour debug si besoin
+window.addPendingReview = addPendingReview;
+window.retryPendingReviews = retryPendingReviews;
+
+// Installer retry automatique : au chargement de la page et au retour online
+document.addEventListener('pageContentLoaded', () => {
+  // Attendre quelques secondes pour laisser la stack réseau / auth se stabiliser
+  setTimeout(() => {
+    retryPendingReviews({ delayBetween: 400 }).catch(e => console.warn('retryPendingReviews init failed', e));
+  }, 2000);
+});
+
+// Retenter quand l'utilisateur revient en ligne
+window.addEventListener('online', () => {
+  console.info('navigator.onLine: online — retry pending reviews');
+  retryPendingReviews({ delayBetween: 400 }).catch(e => console.warn('retryPendingReviews online failed', e));
+});
 
 // helper local : normalise un identifiant / IRI en id numérique ou chaine courte
 function normalizeCovoId(raw) {
@@ -1586,19 +1605,111 @@ async function getCurrentUserId() {
   }
 }
 
-// version courte : utilise apiFetch (gère base + token)
 async function loadDriverReviews(driverId, containerEl = document.getElementById('driver-reviews')) {
   if (!containerEl || !driverId) return;
   const loading = containerEl.querySelector('.reviews-loading');
   if (loading) loading.remove();
 
-  try {
-    // apiFetch doit faire la requête vers http://localhost:8000/api/...
-    const data = await apiFetch(`/users/${driverId}/reviews`, { method: 'GET' });
+  // helpers
+  const extractText = r => {
+    if (!r) return '';
+    return String(r.comment || r.review || r.content || r.message || r.text || r.body || '').trim();
+  };
+  const extractDate = r => {
+    if (!r) return null;
+    // plusieurs champs possibles : createdAt, created_at, date, publishedAt, published_at
+    const d = r.createdAt || r.created_at || r.date || r.publishedAt || r.published_at || r.timestamp || r.ts || null;
+    if (!d) return null;
+    const parsed = new Date(d);
+    if (!isNaN(parsed)) return parsed;
+    // tenter un parse plus permissif
+    const parsed2 = new Date(String(d).replace(/Z$/, ''));
+    return isNaN(parsed2) ? null : parsed2;
+  };
 
-    const reviewsArray = Array.isArray(data) ? data : (data && data['hydra:member'] ? data['hydra:member'] : []);
-    if (!Array.isArray(reviewsArray) || reviewsArray.length === 0) {
-      // afficher message "Aucun avis pour le moment" dans le premier emplacement et masquer les autres
+  try {
+    // 1) Récupérer les avis serveur
+    let serverData;
+    try {
+      serverData = await apiFetch(`/users/${driverId}/reviews`, { method: 'GET' });
+    } catch (err) {
+      console.warn('loadDriverReviews: erreur apiFetch reviews', err);
+      serverData = null;
+    }
+
+    let serverArray = [];
+    if (Array.isArray(serverData)) serverArray = serverData;
+    else if (serverData && Array.isArray(serverData['hydra:member'])) serverArray = serverData['hydra:member'];
+    else if (serverData && Array.isArray(serverData.items)) serverArray = serverData.items;
+    // else rester vide
+
+    // 2) Récupérer les avis locaux en attente (si disponible)
+    let pending = [];
+    try {
+      // getPendingReviewsSorted peut accepter un booléen pour tri descendant dans ton util — on essaye les deux
+      pending = typeof getPendingReviewsSorted === 'function'
+        ? (getPendingReviewsSorted(true) || getPendingReviewsSorted()) // essaye avec arg true sinon fallback
+        : [];
+      if (!Array.isArray(pending)) pending = [];
+    } catch (err) {
+      console.warn('loadDriverReviews: getPendingReviewsSorted failed', err);
+      pending = [];
+    }
+
+    // 3) Normaliser les objets reviews (mettre un id si possible, texte, date)
+    const normalize = (r, source = 'server') => {
+      return {
+        _source: source,
+        _raw: r,
+        id: r && (r.id || r['@id'] || r['@id'] || r.uuid || null),
+        text: extractText(r),
+        date: extractDate(r),
+      };
+    };
+
+    const normalizedServer = serverArray.map(r => normalize(r, 'server'));
+    const normalizedPending = pending.map(r => normalize(r, 'pending'));
+
+    // 4) Concaténer, dédupliquer (par id ou par texte+date) et trier par date descendante
+    const combined = normalizedPending.concat(normalizedServer);
+
+    const seen = new Set();
+    const deduped = [];
+    for (const item of combined) {
+      // clé de déduplication : id si présent, sinon texte+timestamp
+      const key = item.id ? String(item.id) : (item.text ? `${item.text}::${item.date ? +item.date : 'nodate'}` : JSON.stringify(item._raw));
+      if (seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(item);
+    }
+
+    // Sort: items with a real date first (desc), then items without date
+    deduped.sort((a, b) => {
+      if (a.date && b.date) return b.date - a.date;
+      if (a.date && !b.date) return -1;
+      if (!a.date && b.date) return 1;
+      return 0;
+    });
+
+    const topThree = deduped.slice(0, 3);
+
+    // 5) Afficher dans les slots #detail-review1 .. #detail-review3
+    for (let i = 0; i < 3; i++) {
+      const el = containerEl.querySelector(`#detail-review${i + 1}`);
+      if (!el) continue;
+      const r = topThree[i];
+      if (!r || !r.text) {
+        el.textContent = '';
+        el.style.display = 'none';
+      } else {
+        // afficher uniquement le texte (textContent) — safe contre XSS
+        el.textContent = r.text;
+        el.style.display = '';
+      }
+    }
+
+    // Si aucun avis trouvé -> message dans le premier slot
+    if (topThree.length === 0) {
       const first = containerEl.querySelector('#detail-review1');
       if (first) {
         first.textContent = 'Aucun avis pour le moment';
@@ -1608,23 +1719,9 @@ async function loadDriverReviews(driverId, containerEl = document.getElementById
         const e = containerEl.querySelector(id);
         if (e) { e.textContent = ''; e.style.display = 'none'; }
       });
-      return;
-    }
-
-    const lastThree = reviewsArray.slice(-3).reverse();
-
-    const extractText = r => (r && (r.comment || r.review || r.content || r.message || r.text)) ? String(r.comment || r.review || r.content || r.message || r.text) : '';
-
-    for (let i = 0; i < 3; i++) {
-      const el = containerEl.querySelector(`#detail-review${i + 1}`);
-      if (!el) continue;
-      const rv = lastThree[i];
-      const txt = rv ? extractText(rv).trim() : '';
-      if (txt) { el.textContent = txt; el.style.display = ''; }
-      else { el.textContent = ''; el.style.display = 'none'; }
     }
   } catch (err) {
-    console.error('Erreur chargement avis conducteur', err);
+    console.error('Erreur chargement avis conducteur (enhanced)', err);
     const first = containerEl.querySelector('#detail-review1');
     if (first) { first.textContent = 'Erreur lors du chargement des avis.'; first.style.display = ''; }
     ['#detail-review2','#detail-review3'].forEach(id => {

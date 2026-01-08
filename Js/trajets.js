@@ -2,6 +2,7 @@
 import { apiFetch, API_BASE } from '/assets/js/api.js';
 import { createCarIfNeeded, saveCarpoolApi, deleteCarpoolApi, carOwnedBy, updateBookingStatus } from '/assets/js/trips-api.js';
 import { normalizeTypeKey, labelFromTypeKey } from '/assets/js/type-utils.js';
+import { addPendingReview } from './pending-reviews.js';
 
 
 console.log('apiFetch typeof =', typeof apiFetch);
@@ -251,20 +252,59 @@ export function normalizeStatus(raw) {
 async function fetchReservationsForDriver() {
   try {
     const token = localStorage.getItem('ecoride_token');
+    console.log('[fetchReservationsForDriver] token:', token ? 'OK' : 'absent');
+
     const resp = await fetch('/api/driver/reservations', {
       headers: {
         'Accept': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       }
     });
+
+    console.log('[fetchReservationsForDriver] status:', resp.status, 'content-type:', resp.headers.get('content-type'));
+
     if (!resp.ok) {
-      console.error('Erreur fetchReservationsForDriver', resp.status);
+      // lire le corps pour plus de détails
+      const txt = await resp.text().catch(() => '<no body>');
+      console.error('Erreur fetchReservationsForDriver', resp.status, txt);
       return;
     }
-    const list = await resp.json();
+
+    const contentType = (resp.headers.get('content-type') || '').toLowerCase();
+    let list;
+    if (contentType.includes('application/json')) {
+      try {
+        list = await resp.json();
+      } catch (err) {
+        // JSON invalide — logue le texte brut
+        const text = await resp.text().catch(() => '<no body>');
+        console.error('JSON parse failed, raw body:', text, err);
+        return;
+      }
+    } else {
+      // réponse non JSON (debug)
+      const text = await resp.text().catch(() => '<no body>');
+      console.warn('fetchReservationsForDriver: expected JSON, got:', contentType, text);
+      return;
+    }
+
     console.log('Données chauffeur mises à jour:', list);
-    // mettre à jour localStorage et notifier UI chauffeur
-    localStorage.setItem('ecoride_trajets_driver', JSON.stringify(list));
+
+    // Eviter erreur si list n'est pas sérialisable (circular ref) :
+    let serialized;
+    try {
+      serialized = JSON.stringify(list);
+    } catch (err) {
+      console.error('JSON.stringify failed (circular?)', err);
+      return;
+    }
+
+    // Utiliser une clé qui inclut l'id utilisateur/role si besoin pour éviter override inter-pages
+    const userId = localStorage.getItem('ecoride_user_id') || 'anon';
+    const key = `ecoride_trajets_driver_${userId}`;
+    localStorage.setItem(key, serialized);
+
+    // Dispatch local uniquement — attention : cela n'affecte pas les autres onglets
     window.dispatchEvent(new CustomEvent('ecoride:driver-reservations-updated', { detail: list }));
   } catch (e) {
     console.error('fetchReservationsForDriver error', e);
@@ -1200,6 +1240,137 @@ export async function reserverPlace(trajetId, placesDemandees = 1) {
   }
 }
 
+// fallback safe pour showToast — utilise la fonction existante si elle est définie,
+// sinon affiche dans la console / via alert (ou dispatch d'un event custom)
+const safeShowToast = (msg) => {
+  try {
+    if (typeof showToast === 'function') return showToast(msg);
+    if (typeof window !== 'undefined' && typeof window.showToast === 'function') return window.showToast(msg);
+  } catch (e) {
+    // ignore
+  }
+  // fallback minimal
+  if (typeof console !== 'undefined') console.log('TOAST:', msg);
+  try { alert(msg); } catch (e) { /* no-op */ }
+};
+
+// crée un avis côté backend en essayant plusieurs fallbacks pour trouver les IRIs nécessaires
+async function createReviewApi({ reservationObj, rating, comment } = {}) {
+  const buildIri = (type, idOrIri) => {
+    if (!idOrIri) return null;
+    const s = String(idOrIri);
+    if (s.startsWith('/api/')) return s;
+    const m = s.match(/(\d+)$/);
+    const id = m ? m[1] : s;
+    return `/api/${type}/${id}`;
+  };
+
+  let bookingIri = reservationObj?.serverId || reservationObj?.bookingIri || reservationObj?.['@id'] || null;
+  if (bookingIri && !String(bookingIri).startsWith('/api/')) bookingIri = buildIri('bookings', bookingIri);
+
+  const covoRaw = reservationObj?.covoId || reservationObj?.covo || reservationObj?.serverId || reservationObj?.covoIdLocal || null;
+  let carpoolIri = null;
+  if (covoRaw) {
+    if (String(covoRaw).includes('/api/carpools')) carpoolIri = String(covoRaw);
+    else carpoolIri = buildIri('carpools', covoRaw);
+  }
+
+  let targetIri = null;
+  try {
+    const allCarpools = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
+    const found = Array.isArray(allCarpools) && allCarpools.find(c => String(c.id) === String(covoRaw) || String(c.serverId || '') === String(covoRaw));
+    if (found && found.chauffeur) {
+      if (found.chauffeur.id) targetIri = buildIri('users', found.chauffeur.id);
+      else if (found.chauffeur.userId) targetIri = buildIri('users', found.chauffeur.userId);
+    }
+
+    if (!targetIri) {
+      const globalTrajets = (typeof window !== 'undefined' && Array.isArray(window.trajets)) ? window.trajets : [];
+      if (Array.isArray(globalTrajets)) {
+        const t = globalTrajets.find(x => {
+          return String(x.serverId || x.id || x.covoId || x.detailId) === String(covoRaw) ||
+                 (x.serverId && x.serverId.endsWith('/' + covoRaw));
+        });
+        if (t && t.driver) {
+          if (typeof t.driver === 'object' && t.driver.id) targetIri = buildIri('users', t.driver.id);
+          else if (typeof t.driver === 'string') targetIri = (String(t.driver).startsWith('/api/users') ? t.driver : buildIri('users', t.driver));
+        } else if (t && t.chauffeur && t.chauffeur.id) {
+          targetIri = buildIri('users', t.chauffeur.id);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('createReviewApi: erreur recherche chauffeur local', e);
+  }
+
+  // Si nécessaire, fetch booking pour extraire relations
+  if ((!targetIri || !carpoolIri) && bookingIri) {
+    try {
+      // normaliser pour apiFetch : enlever leading /api si apiFetch attend '/resource'
+      let bookingPath = String(bookingIri);
+      if (bookingPath.startsWith('/api/')) bookingPath = bookingPath.replace(/^\/api/, '');
+      if (!bookingPath.startsWith('/')) bookingPath = '/' + bookingPath.replace(/^\/+/, '');
+
+      const booking = await apiFetch(bookingPath); // ex: '/bookings/123'
+      if (!carpoolIri && booking?.carpool) {
+        carpoolIri = (typeof booking.carpool === 'string') ? booking.carpool : (booking.carpool['@id'] || (booking.carpool.id ? `/api/carpools/${booking.carpool.id}` : null));
+      }
+      if (!targetIri) {
+        if (booking?.carpool && booking.carpool?.driver) {
+          const d = booking.carpool.driver;
+          targetIri = (typeof d === 'string') ? d : (d['@id'] || (d.id ? `/api/users/${d.id}` : null));
+        }
+      }
+    } catch (e) {
+      console.warn('createReviewApi: impossible de fetch booking pour extraire carpool/driver', e);
+    }
+  }
+
+  if (!carpoolIri && covoRaw) carpoolIri = buildIri('carpools', covoRaw);
+
+  const payload = {
+    rating: Number(rating) || 0,
+    comment: comment || null,
+    booking: bookingIri || null,
+    carpool: carpoolIri || null,
+    target: targetIri || null
+  };
+  Object.keys(payload).forEach(k => payload[k] === null && delete payload[k]);
+
+  try {
+    const created = await apiFetch('/reviews', {
+      method: 'POST',
+      body: payload
+    });
+    return created;
+  } catch (err) {
+    console.warn('createReviewApi apiFetch failed, fallback fetch', err);
+    const token = localStorage.getItem('api_token') || localStorage.getItem('ecoride_token') || null;
+    const API_BASE = (typeof window !== 'undefined' && window.API_BASE) ? window.API_BASE.replace(/\/+$/,'') : '';
+    const fullUrl = API_BASE ? `${API_BASE}/api/reviews` : '/api/reviews';
+
+    const res = await fetch(fullUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const text = await res.text().catch(() => '');
+    if (!res.ok) {
+      const err2 = new Error('HTTP ' + res.status + ' ' + text);
+      err2.status = res.status;
+      err2.body = text;
+      throw err2;
+    }
+    try { return JSON.parse(text); } catch (e) { return text; }
+  }
+}
+
+window.createReviewApi = createReviewApi;
+
 // Ajoute ceci près de reserverPlace / helpers API
 async function deleteBookingApi(bookingOrIri, covoId = null) {
   if (!bookingOrIri && !covoId) throw new Error('No booking id or covoId provided');
@@ -1943,12 +2114,12 @@ async function handleTrajetActions(e) {
         try {
           // 1) Appeler updateBookingStatus pour changer le statut côté serveur
           await updateBookingStatus(reservationId, 'confirmed'); // ou 'valide' selon ta logique
-  
+      
           // 2) Mettre à jour localStorage et UI comme tu le fais déjà
           let reservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
           const idx = reservations.findIndex(r => String(r.id) === String(reservationId));
           if (idx === -1) { alert('Réservation introuvable.'); return; }
-  
+      
           reservations[idx].status = 'valide';
           reservations[idx].rating = rating;
           reservations[idx].review = review;
@@ -1958,14 +2129,85 @@ async function handleTrajetActions(e) {
             flagged: !!flagged,
             submittedAt: new Date().toISOString()
           };
-  
+      
+          // Persist local optimistically
           localStorage.setItem('ecoride_trajets', JSON.stringify(reservations));
           window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
-  
-          // Mettre à jour la variable globale trajets aussi
+      
+          // 3) Créer l'avis côté backend (essayer), en fournissant l'objet reservation pour construire IRIs
+          try {
+            // createReviewApi lève en cas d'erreur HTTP
+            const created = await createReviewApi({ reservationObj: reservations[idx], rating, comment: review });
+            console.log('Avis créé côté serveur :', created);
+          
+            // Mettre à jour la reservation locale avec l'IRI ou l'id retourné par le serveur
+            reservations[idx].reviewServer = created?.['@id'] || created?.id || null;
+            // Marque localement que l'avis a bien été envoyé
+            reservations[idx].reviewLocal = {
+              rating,
+              comment: review,
+              pending: false,
+              sentAt: new Date().toISOString(),
+              serverRef: reservations[idx].reviewServer
+            };
+          
+            localStorage.setItem('ecoride_trajets', JSON.stringify(reservations));
+            window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
+            safeShowToast('Merci — ton avis a bien été envoyé et est en attente de validation.');
+          } catch (err) {
+            console.warn('createReviewApi failed', err);
+          
+            // Construire l'objet pending review (garder uniquement les champs nécessaires)
+            const pending = {
+              reservationId: reservations[idx]?.id || reservations[idx]?.reservationId || null,
+              reservationObjSnapshot: {
+                // évite de stocker trop de données : id, covoiturage, conducteur, date...
+                id: reservations[idx]?.id,
+                covoiturage: reservations[idx]?.covoiturage || reservations[idx]?.carpoolId,
+                date: reservations[idx]?.date
+              },
+              rating,
+              comment: review,
+              flagged: !!flagged,
+              dateCreated: new Date().toISOString(),
+              lastAttempt: new Date().toISOString(),
+              attemptCount: 1
+            };
+          
+            // Si addPendingReview existe, utilise-la (importée depuis ton util), sinon fallback vers localStorage
+            try {
+              if (typeof addPendingReview === 'function') {
+                addPendingReview(pending);
+              } else {
+                // fallback : empiler dans localStorage sous ecoride_reviews_pending
+                const key = 'ecoride_reviews_pending';
+                const existing = JSON.parse(localStorage.getItem(key) || '[]');
+                existing.push(pending);
+                localStorage.setItem(key, JSON.stringify(existing));
+                console.log('Pending review saved to localStorage under', key);
+              }
+            } catch (saveErr) {
+              console.error('Failed to save pending review', saveErr);
+            }
+          
+            // Mettre à jour la reservation locale pour montrer visuellement que l'avis est "en attente"
+            reservations[idx].reviewLocal = {
+              rating,
+              comment: review,
+              pending: true,
+              savedAt: new Date().toISOString()
+            };
+            localStorage.setItem('ecoride_trajets', JSON.stringify(reservations));
+            window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
+          
+            safeShowToast('Ton avis a bien été pris en compte localement, l’envoi au serveur a échoué. Il sera retenté plus tard.');
+          }
+      
+          // ... le reste de ton code de mise à jour UI (trajets, covo, etc.) reste identique ...
+          // mise à jour variable globale trajets etc.
           const localIdx = trajets.findIndex(t => t.id === reservationId);
           if (localIdx !== -1) trajets[localIdx] = { ...trajets[localIdx], ...reservations[idx] };
-
+      
           // mise à jour covo
           let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
           const covoId = getCovoId(reservations[idx]);

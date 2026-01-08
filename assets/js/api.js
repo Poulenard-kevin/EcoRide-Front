@@ -15,23 +15,17 @@ export function getToken() {
 export async function handleResponse(res) {
   const status = res.status;
   let body = null;
-
   if (status !== 204) {
     const text = await res.text().catch(() => '');
-    try {
-      body = text ? JSON.parse(text) : null;
-    } catch (e) {
-      body = null;
-    }
+    try { body = text ? JSON.parse(text) : null; } catch(e) { body = text; }
   }
-
   if (!res.ok) {
+    console.error('API error response:', status, body);
     const err = new Error(`HTTP ${status}`);
     err.status = status;
     err.body = body;
     throw err;
   }
-
   return body;
 }
 

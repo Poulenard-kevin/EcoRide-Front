@@ -4,6 +4,7 @@ import { updatePlacesFromVehicle, renderPreferences, applyVehicleTypeToElement, 
 import { createBooking, reloadCarpoolAndNotify } from '/assets/js/bookings-api.js';
 import { apiFetch, getToken } from '/assets/js/api.js';
 import { addPendingReview, retryPendingReviews, getPendingReviewsSorted, migratePendingReviews } from './pending-reviews.js';
+import { computeAverageRating, updateUserRatingUI } from './rating-utils.js';
 
 console.log("🔍 detail.js chargé !");
 
@@ -1661,9 +1662,10 @@ async function loadDriverReviews(driverId, containerEl = document.getElementById
       return {
         _source: source,
         _raw: r,
-        id: r && (r.id || r['@id'] || r['@id'] || r.uuid || null),
+        id: r && (r.id || r['@id'] || r.uuid || null),
         text: extractText(r),
         date: extractDate(r),
+        rating: r && (r.rating || r.stars || r.note || r.score || null) 
       };
     };
 
@@ -1692,6 +1694,20 @@ async function loadDriverReviews(driverId, containerEl = document.getElementById
     });
 
     const topThree = deduped.slice(0, 3);
+
+    // Filtrer les items avec une valeur de rating valide (non null/undefined/'')
+    const ratingItems = deduped
+    .map(r => r.rating)
+    .filter(v => v !== null && v !== undefined && v !== '');
+
+    // Normaliser en objets {rating: <number>} pour computeAverageRating
+    const ratingObjects = ratingItems.map(v => ({ rating: Number(v) }));
+
+    // Calculer la moyenne (computeAverageRating doit ignorer NaN si tu l'as implémenté)
+    const average = computeAverageRating(ratingObjects);
+
+    // Mettre à jour l'affichage de la note du conducteur
+    updateUserRatingUI(String(driverId), average);
 
     // 5) Afficher dans les slots #detail-review1 .. #detail-review3
     for (let i = 0; i < 3; i++) {

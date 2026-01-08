@@ -3,6 +3,7 @@ import { resolveAvatarSrc, getProfileAvatarFromStorage, getCurrentUser, enrichTr
 import { apiFetch } from '/assets/js/api.js';
 import { carpoolFromApiAsync } from '/assets/js/trips-api.js';
 import { normalizeTypeKey, labelFromTypeKey, updatePlacesFromVehicle } from '/assets/js/type-utils.js';
+import { computeAverageRating, updateUserRatingUI } from './rating-utils.js';
 
 console.log('[covoiturage] script chargé');
 
@@ -66,15 +67,26 @@ return `${dayName} ${dayNum} ${month}`.toLowerCase();
 function capitalizeFirst(s) {
   return s && s.length ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 }
+
+// utilitaire étoiles (arrondit à l'entier le plus proche, clamp [0..5])
+function renderStars(rating, max = 5) {
+  if (rating === null || rating === undefined || rating === '') return '☆'.repeat(max);
+  const n = Number(rating);
+  if (!Number.isFinite(n)) return '☆'.repeat(max);
+  const rounded = Math.round(n);
+  const clamped = Math.max(0, Math.min(max, rounded));
+  return '★'.repeat(clamped) + '☆'.repeat(max - clamped);
+}
+
 // --- Fin utilitaires ---
 
 function createTrajetCard(trajet) {
+  console.log('[covoiturage] createTrajetCard id=', trajet?.id, 'chauffeur=', trajet?.chauffeur, 'averageRating=', trajet?.chauffeur?.averageRating, 'rating=', trajet?.rating);
   const card = document.createElement('div');
   card.classList.add('result-card');
   card.dataset.id = trajet.id;
 
   const remaining = (typeof trajet.remainingPlaces === 'number') ? trajet.remainingPlaces : 0;
-
   const placesText = `${remaining} place${remaining > 1 ? 's' : ''} disponible${remaining > 1 ? 's' : ''}`;
 
   // avatar
@@ -95,7 +107,25 @@ function createTrajetCard(trajet) {
   const typeKey = normalizeTypeKey(raw);
   const label = labelFromTypeKey(typeKey);
 
-  // Construire innerHTML (utilise typeKey et label)
+  // Determine driver id (try object id, '@id' IRI, or fallbacks)
+  const driverRaw = trajet.chauffeur || trajet.driver || null;
+  let driverId = '';
+  if (driverRaw) {
+    if (typeof driverRaw === 'object') {
+      driverId = driverRaw.id || (driverRaw['@id'] ? (String(driverRaw['@id']).match(/\/(\d+)$/) || [])[1] : '') || driverRaw.email || driverRaw.pseudo || '';
+    } else if (typeof driverRaw === 'string') {
+      const m = driverRaw.match(/\/(\d+)$/);
+      driverId = m ? m[1] : driverRaw;
+    }
+  }
+
+  // build rating value safely (may be blank)
+  const ratingValue = trajet.chauffeur?.averageRating ?? trajet.chauffeur?.rating ?? trajet.rating ?? trajet.chauffeurAverageRatingFallback ?? '';
+  const ratingTitle = ratingValue ? `${Number(ratingValue).toFixed(1)} / 5` : 'Pas de note';
+
+  // set dataset driver id on card (useful for updateUserRatingUI selectors or later DOM updates)
+  if (driverId) card.dataset.driverId = String(driverId);
+
   card.innerHTML = `
     <div class="result-header">
       <p class="date">${capitalizeFirst(formatFullFrDay(trajet.date))}</p>
@@ -104,8 +134,10 @@ function createTrajetCard(trajet) {
       <div class="profile-column">
         <img src="${avatarSrc}" alt="Profil ${trajet.chauffeur?.pseudo || ''}" class="profile-photo" onerror="this.onerror=null;this.src='/images/default-avatar.png'">
         <div class="pseudo-rating">
-          <p class="pseudo">${trajet.chauffeur?.pseudo || 'Inconnu'}</p>
-          <p class="rating">${'★'.repeat(Math.round(trajet.chauffeur?.averageRating ?? 5))}${'☆'.repeat(5 - Math.round(trajet.chauffeur?.averageRating ?? 5))}</p>
+          <p class="pseudo" ${driverId ? `data-user-id="${driverId}"` : ''}>${trajet.chauffeur?.pseudo || 'Inconnu'}</p>
+          <p class="rating" ${driverId ? `data-driver-id="${driverId}"` : ''} aria-hidden="true" title="${ratingTitle}">
+            ${renderStars(ratingValue)}
+          </p>
         </div>
         <div class="column">
           <p class="type type-${typeKey}">${label}</p>
@@ -312,6 +344,9 @@ document.addEventListener('pageContentLoaded', async () => {
     );
   }
 
+  console.log('[covoiturage] trajetsFromApi.length =', trajetsFromApi.length);
+  console.log('[covoiturage] exemple trajet[0] =', trajetsFromApi[0]);
+
   // 2️⃣ (optionnel) Charger trajets locaux pour debug, mais ne plus les fusionner
   const trajetsSauvegardes = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
   let trajetsLocaux = [];
@@ -346,6 +381,65 @@ document.addEventListener('pageContentLoaded', async () => {
       type: normalizeTypeKey(t.type || t.fuelType || t.vehicle?.type || '')
     };
   });
+
+  // --- Inject averages for drivers in the list (fetch reviews per driver and update UI)
+async function loadAndInjectAveragesForList(trajetsList) {
+  if (!Array.isArray(trajetsList) || trajetsList.length === 0) return;
+
+  // Extraire ids uniques
+  const ids = Array.from(new Set(trajetsList.map(t => {
+    const d = t.chauffeur || t.driver || null;
+    if (!d) return null;
+    if (typeof d === 'object') return d.id || (d['@id'] ? (String(d['@id']).match(/\/(\d+)$/) || [])[1] : null) || d.email || d.pseudo;
+    if (typeof d === 'string') {
+      const m = d.match(/\/(\d+)$/); return m ? m[1] : d;
+    }
+    return null;
+  }).filter(Boolean)));
+
+  // Faire les fetchs en parallèle (attention à la charge si beaucoup d'ids)
+  await Promise.all(ids.map(async (id) => {
+    try {
+      // Essaie de récupérer reviews via /users/{id}/reviews (même logique qu'en detail.js)
+      const reviewsData = await apiFetch(`/users/${id}/reviews`);
+      let arr = [];
+      if (Array.isArray(reviewsData)) arr = reviewsData;
+      else if (reviewsData && Array.isArray(reviewsData['hydra:member'])) arr = reviewsData['hydra:member'];
+      else if (reviewsData && Array.isArray(reviewsData.items)) arr = reviewsData.items;
+
+      // Normaliser en objets {rating}
+      const ratingObjects = arr
+        .map(r => ({ rating: Number(r.rating ?? r.stars ?? r.note ?? NaN) }))
+        .filter(o => Number.isFinite(o.rating));
+
+      const avg = computeAverageRating(ratingObjects);
+
+      // Met à jour la liste d'objets trajets (pour futurs rerenders)
+      trajetsList.forEach(t => {
+        const drv = t.chauffeur || t.driver || null;
+        let tid = '';
+        if (drv) {
+          if (typeof drv === 'object') tid = drv.id || (drv['@id'] ? (String(drv['@id']).match(/\/(\d+)$/)||[])[1] : '') || drv.email || drv.pseudo;
+          else if (typeof drv === 'string') tid = (drv.match(/\/(\d+)$/) || [])[1] || drv;
+        }
+        if (tid && String(tid) === String(id)) {
+          if (typeof t.chauffeur === 'object') t.chauffeur.averageRating = avg;
+          else t.chauffeurAverageRatingFallback = avg;
+        }
+      });
+
+      // Met à jour l'UI (mettra à jour tous les .rating matching data-driver-id/data-user-id)
+      updateUserRatingUI(String(id), avg);
+
+    } catch (err) {
+      console.warn('[covoiturage] loadAndInjectAveragesForList failed for', id, err);
+      // fallback: si tu as window.avisData global, tu pourrais calculer la moyenne localement
+    }
+  }));
+}
+
+// Appel après avoir construit `trajets`
+await loadAndInjectAveragesForList(trajets);
 
   // Convertit "HHhMM" en minutes
   function timeStringToMinutes(timeStr) {

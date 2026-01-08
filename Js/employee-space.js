@@ -92,6 +92,21 @@ function shortId(id) {
     return dateStr.replace(/\//g, '-');
   }
 
+  // utilitaires étoiles
+  function renderStars(rating, max = 5) {
+    const n = Math.round(Number(rating));
+    if (!Number.isFinite(n)) return '☆'.repeat(max);
+    const clamped = Math.max(0, Math.min(max, n));
+    return '★'.repeat(clamped) + '☆'.repeat(max - clamped);
+  }
+
+  function computeAverageFromReviewsFor(chauffeurIdentifier) {
+    const reviews = avisData.filter(r => String(r.chauffeurId ?? r.authorId ?? r.author?.id) === String(chauffeurIdentifier));
+    const vals = reviews.map(r => Number(r.rating ?? r.note ?? r.stars)).filter(v => Number.isFinite(v));
+    if (vals.length === 0) return 0;
+    return Math.round(vals.reduce((a,b) => a+b, 0) / vals.length);
+  }
+
 
   // ---------- Utilitaires UI ----------
   const toastContainer = (() => {
@@ -160,7 +175,8 @@ function shortId(id) {
     data.forEach(a => {
       const date = a.date ? new Date(a.date).toLocaleDateString() : '';
       const pseudo = a.author ? `${a.author.firstName} ${a.author.lastName}` : 'Anonyme';
-      const note = a.rating || 0;
+      const rawNote = a.note ?? a.rating ?? a.stars ?? 0;
+      const note = Number.isFinite(Number(rawNote)) ? Math.max(0, Math.min(5, Number(rawNote))) : 0;
       const texte = a.comment || '';
   
       const card = document.createElement('div');
@@ -169,7 +185,7 @@ function shortId(id) {
       card.innerHTML = `
         <small class="date">${escapeHtml(date)}</small>
         <h3 class="pseudo">${escapeHtml(pseudo)}</h3>
-        <div class="stars" aria-hidden="true">${'★'.repeat(note)}${'☆'.repeat(5 - note)}</div>
+        <div class="stars" aria-hidden="true">${renderStars(note)}</div>
         <p class="avis-text">${escapeHtml(texte)}</p>
         <div class="actions">
           <button type="button" class="btn valider" data-action="validate">Valider</button>
@@ -184,6 +200,16 @@ function shortId(id) {
 
   console.log(trajetsData)
 
+  trajetsData.forEach(t => {
+    if (!t.chauffeur) return;
+    // si backend n'a pas fourni averageRating, tenter fallback depuis avisData
+    if (t.chauffeur && t.chauffeur.averageRating == null) {
+      // il faut que tu aies un identifiant liant trajet.chauffeur ↔ avis.author (email/id)
+      t.chauffeur = t.chauffeur || {};
+      t.chauffeur.averageRating = computeAverageFromReviewsFor(t.chauffeurId ?? t.chauffeurEmail ?? t.chauffeur);
+    }
+  });
+
   // render trajets table
   function renderTrajetsTable(data) {
     if (!trajetsTbodyEl) return;
@@ -197,11 +223,20 @@ function shortId(id) {
   
       // Génère la classe CSS selon le statut
       const statutClass = `statut-${statut.replace(/\s/g, '-').toLowerCase()}`;
+
+      // calcul de la note du chauffeur : priorise t.chauffeur.averageRating, fallback à t.chauffeurNote ou 0
+      const chauffeurName = t.chauffeur || '—';
+      const chauffeurRating = t.chauffeur?.averageRating ?? t.chauffeurNote ?? t.averageRating ?? 0;
   
       return `
         <tr data-id="${idComplet}" tabindex="0" role="button" aria-label="Voir détails trajet ${idComplet}">
           <td>${escapeHtml(idAffiche)}</td>
-          <td>${escapeHtml(t.chauffeur)}</td>
+          <td>
+            ${escapeHtml(chauffeurName)}
+            <div class="small-rating" aria-hidden="true" title="Note moyenne">
+              ${renderStars(chauffeurRating)}
+            </div>
+          </td>
           <td>${escapeHtml(t.passager)}</td>
           <td>${escapeHtml(dateFormatted)}</td>
           <td>${escapeHtml(heureDepart)}</td>

@@ -1,17 +1,15 @@
 // assets/js/type-utils.js
 
 export function normalizeTypeKey(raw) {
-    if (!raw) return 'non-specifie';
-    const normalized = String(raw)
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/\p{Diacritic}/gu, '')
-      .trim();
+  if (!raw || raw === '' || raw === 'tous' || raw === 'all') return '';
   
-    if (normalized === 'electrique') return 'electrique';
-    if (normalized === 'thermique') return 'thermique';
-    if (normalized === 'hybride') return 'hybride';
-    return 'non-specifie';
+  const s = String(raw).toLowerCase().trim();
+  
+  if (s.includes('elec') || s === 'electric') return 'electrique';
+  if (s.includes('hybr')) return 'hybride';
+  if (s.includes('therm') || s.includes('essence') || s.includes('diesel')) return 'thermique';
+  
+  return ''; // ← au lieu de 'non-specifie'
 }
   
 export function labelFromTypeKey(key) {

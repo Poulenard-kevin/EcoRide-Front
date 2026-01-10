@@ -31,8 +31,8 @@
             step="1"
         />
 
-        <select class="search-input" id="type-trajet-select" name="typeTrajet" required>
-            <option value="" disabled selected hidden>-- Type du trajet --</option>
+        <select class="search-input" id="type-trajet-select" name="typeTrajet">
+            <option value="">Tous types</option>
             <option value="electrique">Électrique</option>
             <option value="hybride">Hybride</option>
             <option value="thermique">Thermique</option>
@@ -44,6 +44,14 @@
 
 <section class="covoiturage-results">
     <h1 class="results-title">Liste de covoiturage</h1>
+
+    <!-- LOADER : positionné en dehors du container des résultats pour ne pas être supprimé -->
+    <div id="carpool-loader" class="text-center my-4" style="display: flex; flex-direction: column; align-items:center;">
+        <div class="spinner-border text-success" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Chargement...</span>
+        </div>
+        <p class="mt-2 text-muted" id="carpool-loader-text">Recherche des trajets disponibles…</p>
+    </div>
 
     <!-- Bouton "Filtres" pour les petits écrans -->
     <button class="btn btn-primary filters-toggle" type="button" data-bs-toggle="offcanvas" data-bs-target="#filtersOffcanvas" aria-controls="filtersOffcanvas">

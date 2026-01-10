@@ -8,6 +8,25 @@ import { computeAverageRating, updateUserRatingUI } from './rating-utils.js';
 console.log('[covoiturage] script chargé');
 
 // -------------------- Helper statut --------------------
+
+function normalizeTimeToMinutes(timeStr) {
+  if (!timeStr) return null;
+
+  // "10:00" → 600
+  if (/^\d{2}:\d{2}$/.test(timeStr)) {
+    const [h, m] = timeStr.split(':').map(Number);
+    return h * 60 + m;
+  }
+
+  // "10h00" → 600
+  if (/^\d{2}h\d{2}$/.test(timeStr)) {
+    const [h, m] = timeStr.split('h').map(Number);
+    return h * 60 + m;
+  }
+
+  return null;
+}
+
 function isTripActive(trip) {
   if (!trip) return false;
   const s = String(trip.status ?? trip.statut ?? trip.rawStatus ?? '').toLowerCase().trim();
@@ -196,8 +215,20 @@ function createTrajetCard(trajet) {
 // -------------------- Helpers --------------------
 document.addEventListener('pageContentLoaded', async () => {
   const resultsContainer = document.getElementById('results-container');
-  if (!resultsContainer) {
-    return; // 🚪 sort si pas sur la page covoiturage
+  if (!resultsContainer) return;
+
+  const loader = document.getElementById('carpool-loader');
+  const loaderText = document.getElementById('carpool-loader-text');
+
+  // helper pour afficher / cacher le loader
+  function showLoader(text) {
+    if (!loader) return;
+    if (text && loaderText) loaderText.textContent = text;
+    loader.style.display = 'flex';
+  }
+  function hideLoader() {
+    if (!loader) return;
+    loader.style.display = 'none';
   }
 
   // charger une fois l'utilisateur courant
@@ -300,26 +331,27 @@ document.addEventListener('pageContentLoaded', async () => {
   let trajetsFromApi = [];
   try {
     console.log('🔎 Appel API GET /api/carpools via apiFetch');
-
-    // Tu peux passer '/carpools' ou '/api/carpools' :
-    // apiFetch va normaliser en http://127.0.0.1:8000/api/carpools
+  
+    // Affiche le loader avant l'appel réseau
+    showLoader('Chargement des trajets…');
+  
     const data = await apiFetch('/carpools');
     console.log('📦 JSON brut /api/carpools :', data);
-
+  
     const itemsDebug = (data['hydra:member'] || data || []).slice?.(0, 3) || [];
     console.log('DEBUG raw first 3 dates:', itemsDebug.map(c => ({
       id: c['@id'] || c.id,
       departureDate: c.departureDate,
       departureTime: c.departureTime
     })));
-
+  
     const items = data['hydra:member'] || data;
-
+  
     // ✅ Utilise carpoolFromApiAsync pour récupérer le type de fuel
     trajetsFromApi = await Promise.all(
       (Array.isArray(items) ? items : []).map((it) => carpoolFromApiAsync(it))
     );
-
+  
     trajetsFromApi = trajetsFromApi.filter(t => {
       if (!isTripActive(t)) {
         console.debug('[covoiturage] exclu trajet inactif (front) id=', t.id, 'status=', t.status ?? t.rawStatus);
@@ -327,21 +359,22 @@ document.addEventListener('pageContentLoaded', async () => {
       }
       return true;
     });
-
+  
     console.log('DEBUG mapped first 3 dates:', trajetsFromApi.slice(0,3).map(t => ({
       id: t.id,
       date: t.date,
       heureDepart: t.heureDepart,
       type: t.type
     })));
-
+  
     console.log('🚗 Trajets chargés depuis l’API (normalisés) :', trajetsFromApi);
+  
   } catch (err) {
-    console.warn(
-      '⚠️ Erreur chargement trajets API',
-      err.status,
-      err.body || err.message
-    );
+    console.warn('⚠️ Erreur chargement trajets API', err);
+    resultsContainer.innerHTML = '<p class="text-danger text-center">Erreur lors du chargement des trajets.</p>';
+    // Assure-toi de cacher le loader en erreur et d'arrêter la suite
+    hideLoader();
+    return;
   }
 
   console.log('[covoiturage] trajetsFromApi.length =', trajetsFromApi.length);
@@ -382,64 +415,133 @@ document.addEventListener('pageContentLoaded', async () => {
     };
   });
 
-  // --- Inject averages for drivers in the list (fetch reviews per driver and update UI)
-async function loadAndInjectAveragesForList(trajetsList) {
-  if (!Array.isArray(trajetsList) || trajetsList.length === 0) return;
+  // Cache en mémoire (SPA-friendly). Si tu veux persister: localStorage, etc.
+  const __driverAvgCache = new Map(); // key: driverId(string) -> avg(number)
 
-  // Extraire ids uniques
-  const ids = Array.from(new Set(trajetsList.map(t => {
-    const d = t.chauffeur || t.driver || null;
+  function extractDriverId(trip) {
+    const d = trip?.chauffeur || trip?.driver || null;
     if (!d) return null;
-    if (typeof d === 'object') return d.id || (d['@id'] ? (String(d['@id']).match(/\/(\d+)$/) || [])[1] : null) || d.email || d.pseudo;
+
+    // object form
+    if (typeof d === 'object') {
+      // id direct
+      if (d.id != null) return String(d.id);
+
+      // IRI @id: "/api/users/3"
+      const iri = d['@id'];
+      if (typeof iri === 'string') {
+        const m = iri.match(/\/(\d+)\s*$/);
+        if (m) return m[1];
+      }
+
+      // fallback (moins idéal, mais mieux que rien)
+      if (d.email) return String(d.email);
+      if (d.pseudo) return String(d.pseudo);
+      return null;
+    }
+
+    // string form: "/api/users/3" ou "3"
     if (typeof d === 'string') {
-      const m = d.match(/\/(\d+)$/); return m ? m[1] : d;
+      const m = d.match(/\/(\d+)\s*$/);
+      return m ? m[1] : String(d);
     }
+
     return null;
-  }).filter(Boolean)));
+  }
 
-  // Faire les fetchs en parallèle (attention à la charge si beaucoup d'ids)
-  await Promise.all(ids.map(async (id) => {
-    try {
-      // Essaie de récupérer reviews via /users/{id}/reviews (même logique qu'en detail.js)
-      const reviewsData = await apiFetch(`/users/${id}/reviews`);
-      let arr = [];
-      if (Array.isArray(reviewsData)) arr = reviewsData;
-      else if (reviewsData && Array.isArray(reviewsData['hydra:member'])) arr = reviewsData['hydra:member'];
-      else if (reviewsData && Array.isArray(reviewsData.items)) arr = reviewsData.items;
+  // Petit helper de "pool" pour limiter la concurrence
+  async function runWithConcurrency(items, limit, worker) {
+    const results = new Array(items.length);
+    let idx = 0;
 
-      // Normaliser en objets {rating}
-      const ratingObjects = arr
-        .map(r => ({ rating: Number(r.rating ?? r.stars ?? r.note ?? NaN) }))
-        .filter(o => Number.isFinite(o.rating));
-
-      const avg = computeAverageRating(ratingObjects);
-
-      // Met à jour la liste d'objets trajets (pour futurs rerenders)
-      trajetsList.forEach(t => {
-        const drv = t.chauffeur || t.driver || null;
-        let tid = '';
-        if (drv) {
-          if (typeof drv === 'object') tid = drv.id || (drv['@id'] ? (String(drv['@id']).match(/\/(\d+)$/)||[])[1] : '') || drv.email || drv.pseudo;
-          else if (typeof drv === 'string') tid = (drv.match(/\/(\d+)$/) || [])[1] || drv;
-        }
-        if (tid && String(tid) === String(id)) {
-          if (typeof t.chauffeur === 'object') t.chauffeur.averageRating = avg;
-          else t.chauffeurAverageRatingFallback = avg;
-        }
-      });
-
-      // Met à jour l'UI (mettra à jour tous les .rating matching data-driver-id/data-user-id)
-      updateUserRatingUI(String(id), avg);
-
-    } catch (err) {
-      console.warn('[covoiturage] loadAndInjectAveragesForList failed for', id, err);
-      // fallback: si tu as window.avisData global, tu pourrais calculer la moyenne localement
+    async function runner() {
+      while (idx < items.length) {
+        const current = idx++;
+        results[current] = await worker(items[current], current);
+      }
     }
-  }));
-}
 
-// Appel après avoir construit `trajets`
-await loadAndInjectAveragesForList(trajets);
+    const n = Math.max(1, Math.min(limit, items.length));
+    await Promise.all(Array.from({ length: n }, runner));
+    return results;
+  }
+
+  async function loadAndInjectAveragesForList(trajetsList, { concurrency = 5, useCache = true } = {}) {
+    if (!Array.isArray(trajetsList) || trajetsList.length === 0) return;
+
+    // 1) Groupe les trajets par driverId (évite de rescanner tout trajetsList pour chaque id)
+    const tripsByDriverId = new Map(); // driverId -> [trip, trip, ...]
+    for (const t of trajetsList) {
+      const id = extractDriverId(t);
+      if (!id) continue;
+      if (!tripsByDriverId.has(id)) tripsByDriverId.set(id, []);
+      tripsByDriverId.get(id).push(t);
+    }
+
+    const driverIds = Array.from(tripsByDriverId.keys());
+    if (driverIds.length === 0) return;
+
+    // 2) Worker: fetch reviews -> compute avg -> inject into trips + update UI
+    async function fetchAndInject(id) {
+      try {
+        if (useCache && __driverAvgCache.has(id)) {
+          const cachedAvg = __driverAvgCache.get(id);
+          // inject + update UI
+          for (const trip of tripsByDriverId.get(id) || []) {
+            if (trip?.chauffeur && typeof trip.chauffeur === 'object') trip.chauffeur.averageRating = cachedAvg;
+            else trip.chauffeurAverageRatingFallback = cachedAvg;
+          }
+          updateUserRatingUI(String(id), cachedAvg);
+          return;
+        }
+
+        const reviewsData = await apiFetch(`/users/${id}/reviews`);
+
+        let arr = [];
+        if (Array.isArray(reviewsData)) arr = reviewsData;
+        else if (reviewsData && Array.isArray(reviewsData['hydra:member'])) arr = reviewsData['hydra:member'];
+        else if (reviewsData && Array.isArray(reviewsData.items)) arr = reviewsData.items;
+
+        const ratings = arr
+          .map(r => Number(r?.rating ?? r?.stars ?? r?.note ?? NaN))
+          .filter(n => Number.isFinite(n));
+
+        const avg = computeAverageRating(ratings.map(r => ({ rating: r })));
+
+        if (useCache) __driverAvgCache.set(id, avg);
+
+        // inject avg sur tous les trajets de ce driver
+        for (const trip of tripsByDriverId.get(id) || []) {
+          if (trip?.chauffeur && typeof trip.chauffeur === 'object') trip.chauffeur.averageRating = avg;
+          else trip.chauffeurAverageRatingFallback = avg;
+        }
+
+        updateUserRatingUI(String(id), avg);
+      } catch (err) {
+        console.warn('[covoiturage] loadAndInjectAveragesForList failed for', id, err);
+      }
+    }
+
+    // 3) Exécute avec concurrence limitée (plus stable que batch + Promise.all)
+    await runWithConcurrency(driverIds, concurrency, fetchAndInject);
+  }
+
+  // Appel après avoir construit `trajets`
+  showLoader('Calcul des notes conducteurs…');
+  await loadAndInjectAveragesForList(trajets);
+
+  // Ajoute la durée calculée à chaque trajet
+  trajets.forEach(trajet => {
+    updatePlacesFromVehicle(trajet);
+    trajet.duree = calculerDureeEnHeures(trajet.heureDepart, trajet.heureArrivee);
+  });
+
+  // après tous les await et traitements (ex: après loadAndInjectAveragesForList)
+  console.log('[covoiturage] trajetsFromApi.length =', trajetsFromApi.length);
+
+  // Puis affichage final
+  displayTrajets(trajets);
+  hideLoader();
 
   // Convertit "HHhMM" en minutes
   function timeStringToMinutes(timeStr) {
@@ -461,7 +563,6 @@ await loadAndInjectAveragesForList(trajets);
     updatePlacesFromVehicle(trajet);
     trajet.duree = calculerDureeEnHeures(trajet.heureDepart, trajet.heureArrivee);
   });
-
 
   // Affiche les trajets dans le container
   function displayTrajets(filteredTrajets) {
@@ -523,6 +624,12 @@ await loadAndInjectAveragesForList(trajets);
     };
   }
 
+  function includesWord(haystack, needle) {
+    if (!haystack || !needle) return false;
+    const words = haystack.split(/\s+/);
+    return words.some(w => w === needle);
+  }
+
   function formatDateISOToDayMonth(isoDate) {
     if (!isoDate) return '';
     const s = String(isoDate).trim();
@@ -548,43 +655,95 @@ await loadAndInjectAveragesForList(trajets);
 
   // Fonction de filtrage combiné recherche + filtres desktop
   function filterBySearchAndFilters() {
-    // valeurs issues des inputs (récupérées à chaque appel)
-    const departVal = (inputDepart?.value || '').trim().toLowerCase();
-    const arriveeVal = (inputArrivee?.value || '').trim().toLowerCase();
-    const dateVal = formatDateISOToDayMonth(inputDate?.value || '');
-    const heureVal = formatTimeISOToCustom(inputHeure?.value || '');
-    const passagersVal = parseInt(inputPassagers?.value) || 0;
-    const typeVal = normalizeTypeKey(selectType?.value || '');
+    console.log('🔍 === DÉBUT FILTRAGE ===');
+    console.log('📊 Nombre total de trajets:', trajets.length);
+    console.log('📊 Premier trajet:', trajets[0]);
+    
+    // Logs des inputs
+    console.log('🔎 INPUT depart:', inputDepart?.value);
+    console.log('🔎 INPUT arrivee:', inputArrivee?.value);
+    console.log('🔎 INPUT date:', inputDate?.value);
+    console.log('🔎 INPUT heure:', inputHeure?.value);
+    console.log('🔎 INPUT passagers:', inputPassagers?.value);
+    console.log('🔎 INPUT type:', selectType?.value);
+  
+    showLoader('Application des filtres…');
+  
+    // --- Préparation des inputs ---
+    const iDepart = normalizeStr(inputDepart?.value || '');
+    const iArrivee = normalizeStr(inputArrivee?.value || '');
+    const iDate = (inputDate?.value || '').trim();
+    const iHeure = normalizeTimeToMinutes(inputHeure?.value);
+    const iPassagers = parseInt(inputPassagers?.value) || 0;
+    const iType = normalizeTypeKey(selectType?.value || '');
+  
+    console.log('✅ NORMALISÉS:');
+    console.log('  iDepart:', iDepart);
+    console.log('  iArrivee:', iArrivee);
+    console.log('  iDate:', iDate);
+    console.log('  iHeure:', iHeure);
+    console.log('  iPassagers:', iPassagers);
+    console.log('  iType:', iType);
   
     const { checkedTypes, prixMax, dureeMax, noteMini } = getDesktopFilters();
+    console.log('🎛️ Filtres desktop:', { checkedTypes, prixMax, dureeMax, noteMini });
+  
+    function normalizeStr(s) {
+      return s ? s.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
+    }
   
     const filtered = trajets.filter(trajet => {
-      // sécuriser les champs du trajet
-      const trajetDepart = String(trajet.depart || '').toLowerCase().trim();
-      const trajetArrivee = String(trajet.arrivee || '').toLowerCase().trim();
-      const trajetDate = String(trajet.date || '').toLowerCase();
-      const trajetHeure = String(trajet.heureDepart || '').toLowerCase();
-      const trajetType = normalizeTypeKey(trajet.type || trajet.fuelType || trajet.vehicle?.type || '');
-      const trajetPlaces = typeof trajet.remainingPlaces === 'number' ? trajet.remainingPlaces : Number(trajet.places || trajet.capacity || 0);
+      console.log('🧪 Test trajet ID:', trajet.id);
+      
+      // --- Extraction des données du trajet ---
+      const tDepart = normalizeStr(trajet.depart || trajet.departure || '');
+      const tArrivee = normalizeStr(trajet.arrivee || trajet.arrival || '');
+      const tDate = (trajet.date || trajet.departureDate || '').trim();
+      const tHeure = normalizeTimeToMinutes(trajet.heureDepart || trajet.departureTime);
+      const tType = normalizeTypeKey(trajet.type || trajet.fuelType || trajet.vehicle?.type || '');
   
-      const departOk = departVal === '' || trajetDepart.includes(departVal);
-      const arriveeOk = arriveeVal === '' || trajetArrivee.includes(arriveeVal);
-      const dateOk = dateVal === '' || trajetDate.includes(dateVal);
-      const heureOk = heureVal === '' || trajetHeure.includes(heureVal);
-      const placesOk = passagersVal === 0 || trajetPlaces >= passagersVal;
-      const typeRechercheOk = typeVal === '' || trajetType === typeVal;
+      console.log('  📍 tDepart:', tDepart, '| tArrivee:', tArrivee);
+      console.log('  📅 tDate:', tDate, '| tHeure:', tHeure);
+      console.log('  🚗 tType:', tType);
   
-      const typeFilterOk = checkedTypes.length === 0 || checkedTypes.includes(trajetType);
+      const tPlaces = (typeof trajet.remainingPlaces === 'number')
+        ? trajet.remainingPlaces
+        : Number(trajet.places ?? trajet.capacity ?? trajet.vehicle?.places ?? trajet.car?.places) || 0;
+  
+      // --- Filtres de recherche ---
+      const departOk = !iDepart || tDepart.includes(iDepart);
+      const arriveeOk = !iArrivee || tArrivee.includes(iArrivee);
+      const dateOk = !iDate || tDate === iDate;
+      const heureOk = !iHeure || (tHeure !== null && tHeure >= iHeure);
+      const placesOk = iPassagers === 0 || tPlaces >= iPassagers;
+      const typeRechercheOk = !iType || iType === 'non-specifie' || tType === iType;
+  
+      console.log('  ✅ departOk:', departOk, '| arriveeOk:', arriveeOk);
+      console.log('  ✅ dateOk:', dateOk, '| heureOk:', heureOk);
+      console.log('  ✅ placesOk:', placesOk, '| typeRechercheOk:', typeRechercheOk);
+  
+      // --- Filtres latéraux ---
+      const typeFilterOk = (checkedTypes.length === 0) || checkedTypes.includes(tType);
       const prixOk = (typeof trajet.prix === 'number' ? trajet.prix : Number(trajet.prix || Infinity)) <= prixMax;
       const dureeOk = (typeof trajet.duree === 'number' ? trajet.duree : Infinity) <= dureeMax;
-      const noteOk = (typeof trajet.rating === 'number' ? trajet.rating : 0) >= noteMini;
+      const noteOk = (typeof trajet.rating === 'number' ? trajet.rating : (trajet.chauffeur?.averageRating || 0)) >= noteMini;
   
-      return departOk && arriveeOk && dateOk && heureOk && placesOk && typeRechercheOk &&
+      console.log('  ✅ typeFilterOk:', typeFilterOk, '| prixOk:', prixOk);
+      console.log('  ✅ dureeOk:', dureeOk, '| noteOk:', noteOk);
+  
+      const accept = departOk && arriveeOk && dateOk && heureOk && placesOk && typeRechercheOk &&
         typeFilterOk && prixOk && dureeOk && noteOk;
+  
+      console.log('  🎯 RÉSULTAT:', accept ? '✅ ACCEPTÉ' : '❌ REJETÉ');
+  
+      return accept;
     });
   
-    console.log('Trajets filtrés:', filtered.map(t => t.id));
+    console.log('🏁 Trajets filtrés:', filtered.length, 'sur', trajets.length);
+    console.log('🏁 IDs filtrés:', filtered.map(t => t.id));
+    
     displayTrajets(filtered);
+    hideLoader();
   }
 
   // Copie desktop -> offcanvas (au chargement et à l'ouverture de l'offcanvas)
@@ -694,6 +853,62 @@ await loadAndInjectAveragesForList(trajets);
     });
   }
 
+  // try attach to multiple selectors and log what we found
+  const selectorsToTry = [
+    '.search-btn.reserve-btn',
+    'button#search',                // id possible
+    'button.search-btn',
+    'button[type="submit"].search-btn',
+    '.search-btn',
+    '#search-button',
+  ];
+
+  let bound = false;
+  for (const sel of selectorsToTry) {
+    const el = document.querySelector(sel);
+    console.log('[DEBUG selector test] trying', sel, '->', !!el);
+    if (el && !bound) {
+      el.addEventListener('click', (ev) => {
+        console.log('[DEBUG] Recherche button clicked (selector:', sel, ')', ev);
+        // Empêche le submit si le bouton est dans un <form>
+        if (ev && ev.preventDefault) ev.preventDefault();
+        filterBySearchAndFilters();
+      });
+      bound = true;
+      console.log('[DEBUG] Bound filterBySearchAndFilters to', sel);
+    }
+  }
+
+  if (!bound) {
+    // fallback: bind to the first <button> with text 'Recherche'
+    const btnText = Array.from(document.querySelectorAll('button')).find(b => b.textContent && b.textContent.trim().toLowerCase().includes('recherche'));
+    if (btnText) {
+      btnText.addEventListener('click', (ev) => {
+        console.log('[DEBUG] Recherche button clicked (fallback by text)');
+        ev.preventDefault();
+        filterBySearchAndFilters();
+      });
+      console.log('[DEBUG] Bound filterBySearchAndFilters to button found by text "Recherche".');
+      bound = true;
+    }
+  }
+
+  if (!bound) {
+    console.warn('[DEBUG] Aucun bouton Recherche trouvé — ouvre l\'inspecteur et vérifie le sélecteur ou fournis le HTML du bouton.');
+  }
+
+  // si le bouton est effectivement submit, intercepte le submit du form parent
+  document.querySelectorAll('form').forEach(form => {
+    form.addEventListener('submit', (ev) => {
+      const submitBtnText = (ev.submitter && ev.submitter.textContent) ? ev.submitter.textContent.toLowerCase() : '';
+      if (submitBtnText.includes('recherche') || submitBtnText.includes('chercher')) {
+        console.log('[DEBUG] form submit intercepte par texte du submiter:', submitBtnText);
+        ev.preventDefault();
+        filterBySearchAndFilters();
+      }
+    });
+  });
+
   // helper pour recalculer src d'un avatar à partir d'un trajet
   function getAvatarForTrajet(trajet) {
     return resolveAvatarSrc(trajet.chauffeur?.photo || me?.photo || '/images/default-avatar.png');
@@ -793,7 +1008,4 @@ await loadAndInjectAveragesForList(trajets);
       window.dispatchEvent(new CustomEvent('ecoride:carpoolUpdatedLocal', { detail: { id, updated: trajets[idx] } }));
     });
   }
-
-  // Affiche tous les trajets au départ
-  displayTrajets(trajets);
 });

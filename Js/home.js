@@ -1,10 +1,17 @@
 document.getElementById('btnRechercheAccueil').addEventListener('click', () => {
-  const depart = encodeURIComponent(document.getElementById('inputDepartAccueil').value.trim());
-  const arrivee = encodeURIComponent(document.getElementById('inputArriveeAccueil').value.trim());
+  const depart = document.getElementById('inputDepartAccueil').value.trim();
+  const arrivee = document.getElementById('inputArriveeAccueil').value.trim();
 
-  if (depart && arrivee) {
-    window.location.href = `/covoiturage?depart=${depart}&arrivee=${arrivee}`;
-  } else {
-    alert('Veuillez saisir un lieu de départ et un lieu d\'arrivée.');
+  // ✅ Accepte si AU MOINS un champ est rempli
+  if (!depart && !arrivee) {
+    alert('Veuillez saisir au moins un lieu de départ ou d\'arrivée.');
+    return;
   }
+
+  // ✅ Construction de l'URL avec le paramètre "from=home"
+  const params = new URLSearchParams({ from: 'home' });
+  if (depart) params.set('depart', encodeURIComponent(depart));
+  if (arrivee) params.set('arrivee', encodeURIComponent(arrivee));
+
+  window.location.href = `/covoiturage?${params.toString()}`;
 });

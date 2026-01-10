@@ -2288,7 +2288,6 @@ function updatePlacesReservees() {
     console.log('updatePlacesReservees - trajets:', trajets);
 
     trajets.forEach(t => {
-      console.log(`Trajet ${t.id} - placesReservees: ${t.placesReservees}, availableSeats: ${t.availableSeats}`);
       // id stable du covo
       const covoId = getCovoId(t) || (t.serverId ?? t.id ?? '');
       // capacité : pref vehicle.seats, sinon t.places / t.totalSeats / fallback 4
@@ -2361,10 +2360,6 @@ export function renderTrajetsInProgress() {
       return false;
     }
   }
-
-  // Filtrage
-  console.log('DEBUG renderTrajetsInProgress — tous trajets (count):', trajets.length);
-  trajets.forEach(t => console.log('  ->', t.id, 'role=', t.role, 'status=', t.status, 'serverId=', t.serverId, 'covoId=', getCovoId(t)));
 
   const validStatuses = {
     chauffeur: [STATUS.CHAUFFEUR.DRAFT, STATUS.CHAUFFEUR.ACTIVE, STATUS.CHAUFFEUR.STARTED, STATUS.CHAUFFEUR.COMPLETED],

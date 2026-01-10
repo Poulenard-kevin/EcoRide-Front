@@ -9,6 +9,10 @@ console.log('[covoiturage] script chargé');
 
 // -------------------- Helper statut --------------------
 
+function getQueryParams() {
+  return Object.fromEntries(new URLSearchParams(window.location.search));
+}
+
 function normalizeTimeToMinutes(timeStr) {
   if (!timeStr) return null;
 
@@ -263,66 +267,6 @@ document.addEventListener('pageContentLoaded', async () => {
     input.addEventListener('change', toggleClass);
   });
 
-  // Données des trajets
-  /*let trajets = [
-    {
-      id: 'trajet1',
-      date: 'Vendredi 16 septembre',
-      chauffeur: { pseudo: 'Jean', rating: 4, photo: 'images/profil4m.png' },
-      type: 'economique',
-      places: 2,
-      depart: 'Paris',
-      arrivee: 'Lyon',
-      heureDepart: '16h00',
-      heureArrivee: '20h30',
-      prix: 30,
-      rating: 4,
-      passagers: ['Alice', 'Bob'],
-    },
-    {
-      id: 'trajet2',
-      date: 'Samedi 17 septembre',
-      chauffeur: { pseudo: 'Marie', rating: 5, photo: 'images/profil1.png' },
-      type: 'hybride',
-      places: 3,
-      depart: 'Marseille',
-      arrivee: 'Nice',
-      heureDepart: '10h00',
-      heureArrivee: '13h00',
-      prix: 25,
-      rating: 5,
-      passagers: ['Paul', 'Sophie'],
-    },
-    {
-      id: 'trajet3',
-      date: 'Dimanche 18 septembre',
-      chauffeur: { pseudo: 'Luc', rating: 3, photo: 'images/profil3m.png' },
-      type: 'thermique',
-      places: 1,
-      depart: 'Lille',
-      arrivee: 'Bruxelles',
-      heureDepart: '09h30',
-      heureArrivee: '12h00',
-      prix: 20,
-      rating: 3,
-      passagers: ['Emma'],
-    },
-    {
-      id: 'trajet4',
-      date: 'Lundi 19 septembre',
-      chauffeur: { pseudo: 'Sophie', rating: 4, photo: 'images/profil2w.png' },
-      type: 'electrique',
-      places: 4,
-      depart: 'Bordeaux',
-      arrivee: 'Toulouse',
-      heureDepart: '14h00',
-      heureArrivee: '17h00',
-      prix: 35,
-      rating: 4,
-      passagers: ['Marc', 'Julie', 'Nina'],
-    },
-  ];*/
-
   let trajets = [];
 
   // =================== 🔄 Charger les trajets depuis l'API + localStorage ===================
@@ -367,7 +311,7 @@ document.addEventListener('pageContentLoaded', async () => {
       type: t.type
     })));
   
-    console.log('🚗 Trajets chargés depuis l’API (normalisés) :', trajetsFromApi);
+    console.log('Trajets chargés depuis l\'API (normalisés) :', trajetsFromApi);
   
   } catch (err) {
     console.warn('⚠️ Erreur chargement trajets API', err);
@@ -394,11 +338,10 @@ document.addEventListener('pageContentLoaded', async () => {
     console.log("🚗 Trajets locaux normalisés (DEV) :", trajetsLocaux);
   }
 
-  // 3️⃣ Pas de fusion : on n’utilise que les trajets API pour l’affichage
+  // 3️⃣ Pas de fusion : on n'utilise que les trajets API pour l'affichage
   trajets.splice(0, trajets.length, ...trajetsFromApi);
 
-  
-  // --- Normalisation : calculer remainingPlaces et forcer type normalisé ---
+  // ✅ NORMALISATION IMMÉDIATE (avant affichage)
   trajets = trajets.map(t => {
     const passagersArray = Array.isArray(t.passagers) ? t.passagers : [];
     const remaining = (typeof t.places === 'number')
@@ -410,10 +353,187 @@ document.addEventListener('pageContentLoaded', async () => {
     return {
       ...t,
       remainingPlaces: remaining,
-      // garde une valeur type normalisée au cas où carpoolFromApiAsync ne l'a pas fait
       type: normalizeTypeKey(t.type || t.fuelType || t.vehicle?.type || '')
     };
   });
+
+  // ✅ Convertit "HHhMM" en minutes
+  function timeStringToMinutes(timeStr) {
+    const [hours, minutes] = timeStr.split('h').map(Number);
+    return hours * 60 + (minutes || 0);
+  }
+
+  // ✅ Calcule la durée en heures décimales
+  function calculerDureeEnHeures(heureDepart, heureArrivee) {
+    const departMinutes = timeStringToMinutes(heureDepart);
+    const arriveeMinutes = timeStringToMinutes(heureArrivee);
+    let dureeMinutes = arriveeMinutes - departMinutes;
+    if (dureeMinutes < 0) dureeMinutes += 24 * 60;
+    return dureeMinutes / 60;
+  }
+
+  // ✅ Ajoute la durée calculée à chaque trajet
+  trajets.forEach(trajet => {
+    updatePlacesFromVehicle(trajet);
+    trajet.duree = calculerDureeEnHeures(trajet.heureDepart, trajet.heureArrivee);
+  });
+
+  // ✅ Affiche les trajets dans le container
+  function displayTrajets(filteredTrajets) {
+    resultsContainer.innerHTML = '';
+    const visible = (filteredTrajets || []).filter(t => isTripActive(t));
+    if (visible.length === 0) {
+      resultsContainer.innerHTML = '<p>Aucun trajet ne correspond à votre recherche.</p>';
+      return;
+    }
+    visible.forEach(trajet => {
+      updatePlacesFromVehicle(trajet);
+      const card = createTrajetCard(trajet);
+      if (card) resultsContainer.appendChild(card);
+    });
+  }
+
+  // ✅ Récupère les valeurs des filtres desktop
+  function getDesktopFilters() {
+    const desktopCheckboxes = Array.from(document.querySelectorAll('.filters input[type="checkbox"]:checked'))
+      .map(cb => normalizeTypeKey(cb.value));
+
+    const prixMaxDesktop = document.getElementById('prix-max')?.value;
+    const dureeMaxDesktop = document.getElementById('duree-max')?.value;
+    const noteMiniDesktop = document.getElementById('note-mini')?.value;
+
+    return {
+      checkedTypes: desktopCheckboxes,
+      prixMax: prixMaxDesktop ? parseFloat(prixMaxDesktop) : Infinity,
+      dureeMax: dureeMaxDesktop ? parseFloat(dureeMaxDesktop) : Infinity,
+      noteMini: noteMiniDesktop ? parseInt(noteMiniDesktop) : 1,
+    };
+  }
+
+  function includesWord(haystack, needle) {
+    if (!haystack || !needle) return false;
+    const words = haystack.split(/\s+/);
+    return words.some(w => w === needle);
+  }
+
+  function formatDateISOToDayMonth(isoDate) {
+    if (!isoDate) return '';
+    const s = String(isoDate).trim();
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return '';
+
+    const yyyy = Number(m[1]);
+    const mm = Number(m[2]);
+    const dd = Number(m[3]);
+
+    // ✅ Date construite en local, pas via parsing UTC
+    const d = new Date(yyyy, mm - 1, dd);
+
+    const options = { day: 'numeric', month: 'long' };
+    return d.toLocaleDateString('fr-FR', options).toLowerCase();
+  }
+
+  // Convertit une heure ISO (HH:MM) en format "HHhMM", ex: "16:00" -> "16h00"
+  function formatTimeISOToCustom(timeStr) {
+    if (!timeStr) return '';
+    return timeStr.replace(':', 'h');
+  }
+
+  // ✅ Fonction de filtrage combiné
+  function filterBySearchAndFilters() {
+    showLoader('Application des filtres…');
+  
+    function normalizeStr(s) {
+      return s ? s.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
+    }
+
+    // --- Préparation des inputs ---
+    const iDepart = normalizeStr(inputDepart?.value || '');
+    const iArrivee = normalizeStr(inputArrivee?.value || '');
+    const iDate = (inputDate?.value || '').trim();
+    const iHeure = normalizeTimeToMinutes(inputHeure?.value);
+    const iPassagers = parseInt(inputPassagers?.value) || 0;
+    const iType = normalizeTypeKey(selectType?.value || '');
+  
+    const { checkedTypes, prixMax, dureeMax, noteMini } = getDesktopFilters();
+  
+    const filtered = trajets.filter(trajet => {
+      
+      // --- Extraction des données du trajet ---
+      const tDepart = normalizeStr(trajet.depart || trajet.departure || '');
+      const tArrivee = normalizeStr(trajet.arrivee || trajet.arrival || '');
+      const tDate = (trajet.date || trajet.departureDate || '').trim();
+      const tHeure = normalizeTimeToMinutes(trajet.heureDepart || trajet.departureTime);
+      const tType = normalizeTypeKey(trajet.type || trajet.fuelType || trajet.vehicle?.type || '');
+  
+      const tPlaces = (typeof trajet.remainingPlaces === 'number')
+        ? trajet.remainingPlaces
+        : Number(trajet.places ?? trajet.capacity ?? trajet.vehicle?.places ?? trajet.car?.places) || 0;
+  
+      // --- Filtres de recherche ---
+      const departOk = !iDepart || tDepart.includes(iDepart);
+      const arriveeOk = !iArrivee || tArrivee.includes(iArrivee);
+      const dateOk = !iDate || tDate === iDate;
+      const heureOk = !iHeure || (tHeure !== null && tHeure >= iHeure);
+      const placesOk = iPassagers === 0 || tPlaces >= iPassagers;
+      const typeRechercheOk = !iType || iType === 'non-specifie' || tType === iType;
+  
+  
+      // --- Filtres latéraux ---
+      const typeFilterOk = (checkedTypes.length === 0) || checkedTypes.includes(tType);
+      const prixOk = (typeof trajet.prix === 'number' ? trajet.prix : Number(trajet.prix || Infinity)) <= prixMax;
+      const dureeOk = (typeof trajet.duree === 'number' ? trajet.duree : Infinity) <= dureeMax;
+      const noteOk = (typeof trajet.rating === 'number' ? trajet.rating : (trajet.chauffeur?.averageRating || 0)) >= noteMini;
+  
+      const accept = departOk && arriveeOk && dateOk && heureOk && placesOk && typeRechercheOk &&
+        typeFilterOk && prixOk && dureeOk && noteOk;
+  
+      console.log('  🎯 RÉSULTAT:', accept ? '✅ ACCEPTÉ' : '❌ REJETÉ');
+  
+      return accept;
+    });
+  
+    console.log('🏁 Trajets filtrés:', filtered.length, 'sur', trajets.length);
+    console.log('🏁 IDs filtrés:', filtered.map(t => t.id));
+    
+    displayTrajets(filtered);
+    hideLoader();
+  }
+
+  // 1. Récupérer les éléments DOM immédiatement
+  const inputDepart = document.getElementById('inputDepartCovoiturage');
+  const inputArrivee = document.getElementById('inputArriveeCovoiturage');
+  const inputDate = document.getElementById('date-depart-input');
+  const inputHeure = document.getElementById('heure-depart-input');
+  const inputPassagers = document.getElementById('nombre-passagers-input');
+  const selectType = document.getElementById('type-trajet-select');
+
+  // 2. Récupérer les paramètres URL
+  const params = getQueryParams();
+  const cameFromHome = params.from === 'home';
+  const hasSearchParams = params.depart || params.arrivee;
+
+  // 3. Remplir les inputs TOUT DE SUITE
+  if (hasSearchParams) {
+    if (params.depart && inputDepart) {
+      inputDepart.value = decodeURIComponent(params.depart);
+      inputDepart.classList.remove('empty');
+    }
+    if (params.arrivee && inputArrivee) {
+      inputArrivee.value = decodeURIComponent(params.arrivee);
+      inputArrivee.classList.remove('empty');
+    }
+  }
+
+  // 4. Lancer la recherche SANS ATTENDRE les notes
+  if (cameFromHome && hasSearchParams) {
+    console.log('🚀 Recherche automatique instantanée');
+    filterBySearchAndFilters();
+  } else {
+    displayTrajets(trajets);
+  }
+  
+  hideLoader();
 
   // Cache en mémoire (SPA-friendly). Si tu veux persister: localStorage, etc.
   const __driverAvgCache = new Map(); // key: driverId(string) -> avg(number)
@@ -526,225 +646,10 @@ document.addEventListener('pageContentLoaded', async () => {
     await runWithConcurrency(driverIds, concurrency, fetchAndInject);
   }
 
-  // Appel après avoir construit `trajets`
-  showLoader('Calcul des notes conducteurs…');
+  // ⏳ Chargement des notes en tâche de fond
+  console.log('⏳ Chargement des notes en arrière-plan...');
   await loadAndInjectAveragesForList(trajets);
-
-  // Ajoute la durée calculée à chaque trajet
-  trajets.forEach(trajet => {
-    updatePlacesFromVehicle(trajet);
-    trajet.duree = calculerDureeEnHeures(trajet.heureDepart, trajet.heureArrivee);
-  });
-
-  // après tous les await et traitements (ex: après loadAndInjectAveragesForList)
-  console.log('[covoiturage] trajetsFromApi.length =', trajetsFromApi.length);
-
-  // Puis affichage final
-  displayTrajets(trajets);
-  hideLoader();
-
-  // Convertit "HHhMM" en minutes
-  function timeStringToMinutes(timeStr) {
-    const [hours, minutes] = timeStr.split('h').map(Number);
-    return hours * 60 + (minutes || 0);
-  }
-
-  // Calcule la durée en heures décimales
-  function calculerDureeEnHeures(heureDepart, heureArrivee) {
-    const departMinutes = timeStringToMinutes(heureDepart);
-    const arriveeMinutes = timeStringToMinutes(heureArrivee);
-    let dureeMinutes = arriveeMinutes - departMinutes;
-    if (dureeMinutes < 0) dureeMinutes += 24 * 60;
-    return dureeMinutes / 60;
-  }
-
-  // Ajoute la durée calculée à chaque trajet
-  trajets.forEach(trajet => {
-    updatePlacesFromVehicle(trajet);
-    trajet.duree = calculerDureeEnHeures(trajet.heureDepart, trajet.heureArrivee);
-  });
-
-  // Affiche les trajets dans le container
-  function displayTrajets(filteredTrajets) {
-    resultsContainer.innerHTML = '';
-    // supprimer les trajets démarrés par sécurité
-    const visible = (filteredTrajets || []).filter(t => isTripActive(t));
-    if (visible.length === 0) {
-      resultsContainer.innerHTML = '<p>Aucun trajet ne correspond à votre recherche.</p>';
-      return;
-    }
-    visible.forEach(trajet => {
-      updatePlacesFromVehicle(trajet);
-      const card = createTrajetCard(trajet);
-      if (card) resultsContainer.appendChild(card);
-    });
-  }
-
-  // Récupération des éléments de la barre de recherche avec id
-  const inputDepart = document.getElementById('inputDepartCovoiturage');
-  const inputArrivee = document.getElementById('inputArriveeCovoiturage');
-  const inputDate = document.getElementById('date-depart-input');
-  const inputHeure = document.getElementById('heure-depart-input');
-  const inputPassagers = document.getElementById('nombre-passagers-input');
-  const selectType = document.getElementById('type-trajet-select');
-
-  // Fonction pour récupérer les paramètres URL
-  function getQueryParams() {
-    const params = {};
-    window.location.search.substring(1).split('&').forEach(pair => {
-      const [key, value] = pair.split('=');
-      if (key) params[decodeURIComponent(key)] = decodeURIComponent(value || '');
-    });
-    return params;
-  }
-
-  // Récupération des paramètres et pré-remplissage des inputs
-  const params = getQueryParams();
-  if (params.depart && inputDepart) {
-    inputDepart.value = params.depart;
-  }
-  if (params.arrivee && inputArrivee) {
-    inputArrivee.value = params.arrivee;
-  }
-
-  // Récupère les valeurs des filtres desktop uniquement (pour filtrer)
-  function getDesktopFilters() {
-    const desktopCheckboxes = Array.from(document.querySelectorAll('.filters input[type="checkbox"]:checked'))
-      .map(cb => normalizeTypeKey(cb.value));
-
-    const prixMaxDesktop = document.getElementById('prix-max')?.value;
-    const dureeMaxDesktop = document.getElementById('duree-max')?.value;
-    const noteMiniDesktop = document.getElementById('note-mini')?.value;
-
-    return {
-      checkedTypes: desktopCheckboxes,
-      prixMax: prixMaxDesktop ? parseFloat(prixMaxDesktop) : Infinity,
-      dureeMax: dureeMaxDesktop ? parseFloat(dureeMaxDesktop) : Infinity,
-      noteMini: noteMiniDesktop ? parseInt(noteMiniDesktop) : 1,
-    };
-  }
-
-  function includesWord(haystack, needle) {
-    if (!haystack || !needle) return false;
-    const words = haystack.split(/\s+/);
-    return words.some(w => w === needle);
-  }
-
-  function formatDateISOToDayMonth(isoDate) {
-    if (!isoDate) return '';
-    const s = String(isoDate).trim();
-    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (!m) return '';
-
-    const yyyy = Number(m[1]);
-    const mm = Number(m[2]);
-    const dd = Number(m[3]);
-
-    // ✅ Date construite en local, pas via parsing UTC
-    const d = new Date(yyyy, mm - 1, dd);
-
-    const options = { day: 'numeric', month: 'long' };
-    return d.toLocaleDateString('fr-FR', options).toLowerCase();
-  }
-
-  // Convertit une heure ISO (HH:MM) en format "HHhMM", ex: "16:00" -> "16h00"
-  function formatTimeISOToCustom(timeStr) {
-    if (!timeStr) return '';
-    return timeStr.replace(':', 'h');
-  }
-
-  // Fonction de filtrage combiné recherche + filtres desktop
-  function filterBySearchAndFilters() {
-    console.log('🔍 === DÉBUT FILTRAGE ===');
-    console.log('📊 Nombre total de trajets:', trajets.length);
-    console.log('📊 Premier trajet:', trajets[0]);
-    
-    // Logs des inputs
-    console.log('🔎 INPUT depart:', inputDepart?.value);
-    console.log('🔎 INPUT arrivee:', inputArrivee?.value);
-    console.log('🔎 INPUT date:', inputDate?.value);
-    console.log('🔎 INPUT heure:', inputHeure?.value);
-    console.log('🔎 INPUT passagers:', inputPassagers?.value);
-    console.log('🔎 INPUT type:', selectType?.value);
-  
-    showLoader('Application des filtres…');
-  
-    // --- Préparation des inputs ---
-    const iDepart = normalizeStr(inputDepart?.value || '');
-    const iArrivee = normalizeStr(inputArrivee?.value || '');
-    const iDate = (inputDate?.value || '').trim();
-    const iHeure = normalizeTimeToMinutes(inputHeure?.value);
-    const iPassagers = parseInt(inputPassagers?.value) || 0;
-    const iType = normalizeTypeKey(selectType?.value || '');
-  
-    console.log('✅ NORMALISÉS:');
-    console.log('  iDepart:', iDepart);
-    console.log('  iArrivee:', iArrivee);
-    console.log('  iDate:', iDate);
-    console.log('  iHeure:', iHeure);
-    console.log('  iPassagers:', iPassagers);
-    console.log('  iType:', iType);
-  
-    const { checkedTypes, prixMax, dureeMax, noteMini } = getDesktopFilters();
-    console.log('🎛️ Filtres desktop:', { checkedTypes, prixMax, dureeMax, noteMini });
-  
-    function normalizeStr(s) {
-      return s ? s.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
-    }
-  
-    const filtered = trajets.filter(trajet => {
-      console.log('🧪 Test trajet ID:', trajet.id);
-      
-      // --- Extraction des données du trajet ---
-      const tDepart = normalizeStr(trajet.depart || trajet.departure || '');
-      const tArrivee = normalizeStr(trajet.arrivee || trajet.arrival || '');
-      const tDate = (trajet.date || trajet.departureDate || '').trim();
-      const tHeure = normalizeTimeToMinutes(trajet.heureDepart || trajet.departureTime);
-      const tType = normalizeTypeKey(trajet.type || trajet.fuelType || trajet.vehicle?.type || '');
-  
-      console.log('  📍 tDepart:', tDepart, '| tArrivee:', tArrivee);
-      console.log('  📅 tDate:', tDate, '| tHeure:', tHeure);
-      console.log('  🚗 tType:', tType);
-  
-      const tPlaces = (typeof trajet.remainingPlaces === 'number')
-        ? trajet.remainingPlaces
-        : Number(trajet.places ?? trajet.capacity ?? trajet.vehicle?.places ?? trajet.car?.places) || 0;
-  
-      // --- Filtres de recherche ---
-      const departOk = !iDepart || tDepart.includes(iDepart);
-      const arriveeOk = !iArrivee || tArrivee.includes(iArrivee);
-      const dateOk = !iDate || tDate === iDate;
-      const heureOk = !iHeure || (tHeure !== null && tHeure >= iHeure);
-      const placesOk = iPassagers === 0 || tPlaces >= iPassagers;
-      const typeRechercheOk = !iType || iType === 'non-specifie' || tType === iType;
-  
-      console.log('  ✅ departOk:', departOk, '| arriveeOk:', arriveeOk);
-      console.log('  ✅ dateOk:', dateOk, '| heureOk:', heureOk);
-      console.log('  ✅ placesOk:', placesOk, '| typeRechercheOk:', typeRechercheOk);
-  
-      // --- Filtres latéraux ---
-      const typeFilterOk = (checkedTypes.length === 0) || checkedTypes.includes(tType);
-      const prixOk = (typeof trajet.prix === 'number' ? trajet.prix : Number(trajet.prix || Infinity)) <= prixMax;
-      const dureeOk = (typeof trajet.duree === 'number' ? trajet.duree : Infinity) <= dureeMax;
-      const noteOk = (typeof trajet.rating === 'number' ? trajet.rating : (trajet.chauffeur?.averageRating || 0)) >= noteMini;
-  
-      console.log('  ✅ typeFilterOk:', typeFilterOk, '| prixOk:', prixOk);
-      console.log('  ✅ dureeOk:', dureeOk, '| noteOk:', noteOk);
-  
-      const accept = departOk && arriveeOk && dateOk && heureOk && placesOk && typeRechercheOk &&
-        typeFilterOk && prixOk && dureeOk && noteOk;
-  
-      console.log('  🎯 RÉSULTAT:', accept ? '✅ ACCEPTÉ' : '❌ REJETÉ');
-  
-      return accept;
-    });
-  
-    console.log('🏁 Trajets filtrés:', filtered.length, 'sur', trajets.length);
-    console.log('🏁 IDs filtrés:', filtered.map(t => t.id));
-    
-    displayTrajets(filtered);
-    hideLoader();
-  }
+  console.log('✅ Notes chargées');
 
   // Copie desktop -> offcanvas (au chargement et à l'ouverture de l'offcanvas)
   function copyDesktopToOffcanvas() {

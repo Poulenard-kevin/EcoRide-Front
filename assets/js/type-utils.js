@@ -3,7 +3,12 @@
 export function normalizeTypeKey(raw) {
   if (!raw || raw === '' || raw === 'tous' || raw === 'all') return '';
   
-  const s = String(raw).toLowerCase().trim();
+  // ✅ Normaliser : minuscules + retirer accents
+  const s = String(raw)
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')                    // décompose les caractères accentués
+    .replace(/[\u0300-\u036f]/g, '');    // retire les accents
   
   if (s.includes('elec') || s === 'electric') return 'electrique';
   if (s.includes('hybr')) return 'hybride';

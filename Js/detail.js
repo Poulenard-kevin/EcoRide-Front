@@ -563,11 +563,15 @@ function renderActionButton(trajet) {
         alert("❌ Aucune place disponible.");
         return;
       }
+    
       const seats = await showSeatSelector(remaining);
       if (!seats) return;
-      if (confirm(`Confirmer la réservation de ${seats} place${seats > 1 ? 's' : ''} ?`)) {
-        reserverPlace(trajet, seats);
-      }
+    
+      // ✅ On garde cette forme qui est plus propre (Early Return)
+      if (!confirm(`Confirmer la réservation de ${seats} place${seats > 1 ? 's' : ''} ?`)) return;
+    
+      // ✅ On exécute l'action
+      reserverPlace(trajet, seats);
     });
   }
 }
@@ -1412,8 +1416,6 @@ async function reserverPlace(trajet, seats = 1) {
   seats = Number(seats) || 1;
   if (seats <= 0) seats = 1;
 
-  if (!confirm(`Confirmer la réservation de ${seats} place${seats > 1 ? 's' : ''} ?`)) return;
-
   try {
     const result = await createBooking(trajet.id, seats);
 
@@ -1590,18 +1592,28 @@ async function fetchJson(url, opts = {}) {
 
 async function getCurrentUserId() {
   try {
-    const me = await fetchJson('/api/me');
-    // supporte formats : { id: 7 } ou { "@id": "/api/users/7" } ou { '@id': ... }
-    if (me.id) return String(me.id);
-    const iri = me['@id'] || me['@id'] || me['@id'];
-    if (iri) {
-      const m = iri.match(/\/api\/users\/(\d+)/);
-      if (m) return m[1];
+    const userStr = localStorage.getItem('ecoride_user');
+    if (!userStr) {
+      console.warn('⚠️ Aucun utilisateur dans localStorage');
+      return null;
     }
-    // fallback : maybe me['@id'] = "/api/users/7"
+    
+    const user = JSON.parse(userStr);
+    
+    // Supporte plusieurs formats
+    if (user.id) return String(user.id);
+    
+    // Format API Platform avec @id
+    const iri = user['@id'];
+    if (iri) {
+      const match = iri.match(/\/api\/users\/(\d+)/);
+      if (match) return match[1];
+    }
+    
+    console.warn('⚠️ Format utilisateur non reconnu:', user);
     return null;
   } catch (err) {
-    console.warn('Impossible de récupérer /api/me :', err);
+    console.error('❌ Erreur lors de la récupération de l\'ID utilisateur:', err);
     return null;
   }
 }

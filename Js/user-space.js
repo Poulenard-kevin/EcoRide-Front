@@ -259,6 +259,13 @@ export async function initUserSpace() {
 
   await loadHTMLContent();
 
+  if (window.location.search.includes('tab=historique')) {
+    setTimeout(() => {
+      switchToTab('user-history-form');
+      if (typeof renderHistorique === 'function') renderHistorique();
+    }, 50);
+  }
+
   // -- Important : setupTabs avant d'éventuelles injections qui modifient le DOM
   try {
     if (typeof setupTabs === 'function') {

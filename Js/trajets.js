@@ -1068,6 +1068,10 @@ async function handleTrajetSubmit(e) {
 
   if (!trajetData.date || !trajetData.dateArrivee || !trajetData.depart || !trajetData.arrivee || !trajetData.vehicle || prix < 5) {
     alert('Veuillez remplir tous les champs obligatoires correctement.');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = submitBtn.dataset.origText || 'Publier';
+    }
     return;
   }
 
@@ -1187,6 +1191,10 @@ async function handleTrajetSubmit(e) {
       renderTrajetsInProgress();
       renderHistorique();
       alert('La voiture sélectionnée ne vous appartient pas.');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = submitBtn.dataset.origText || 'Publier';
+      }
       return;
     }
   } catch (err) {
@@ -3242,21 +3250,29 @@ if (typeof window !== 'undefined') {
 retryPendingSyncs().catch(() => {});
 setInterval(retryPendingSyncs, SYNC_RETRY_INTERVAL_MS);
 
-// -------------------- Démarrage automatique --------------------
+// -------------------- Démarrage automatique sécurisé --------------------
 if (typeof window !== 'undefined') {
-  // Démarrage au chargement de la page
+  // On ne démarre le polling QUE si on est sur la page des trajets
+  const shouldStartPolling = () => {
+    return !!document.querySelector('#trajets-en-cours') || !!document.querySelector('.trajets-list');
+  };
+
+  const initSafePolling = () => {
+    stopTrajetsPolling(); // On arrête toute instance précédente
+    if (shouldStartPolling()) {
+      // On démarre avec un intervalle plus long (10s au lieu de 5s) pour tester
+      startTrajetsPolling(10000); 
+    }
+  };
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      startTrajetsPolling(5000);
-    });
+    document.addEventListener('DOMContentLoaded', initSafePolling);
   } else {
-    startTrajetsPolling(5000);
+    initSafePolling();
   }
 
-  // Arrêt propre avant fermeture
-  window.addEventListener('beforeunload', () => {
-    stopTrajetsPolling();
-  });
+  // Arrêt propre
+  window.addEventListener('beforeunload', stopTrajetsPolling);
 }
 
 try { renderHistorique(); } catch(e) { /* ignore si pas le bon moment */ }

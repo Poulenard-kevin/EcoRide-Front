@@ -512,26 +512,20 @@ export async function saveCarpoolApi(trajetData, options = {}) {
 // Normalize owner check (owner can be IRI string or object)
 export function carOwnedBy(carJson, currentUser) {
   if (!carJson || !currentUser) return false;
-
-  // Normalize current user id/IRI
   const userIdNum = currentUser.id ?? null;
   const userIri = currentUser['@id'] ?? (userIdNum ? `/api/users/${userIdNum}` : null);
-
   const owner = carJson.owner ?? carJson.user ?? carJson.ownerId ?? null;
+  console.log('carOwnedBy check:', { owner, userIdNum, userIri });
   if (!owner) return false;
-
   if (typeof owner === 'string') {
-    // owner is an IRI string like "/api/users/33"
     if (userIri && owner === userIri) return true;
     if (userIdNum && owner.endsWith(`/users/${userIdNum}`)) return true;
     return false;
   }
-
   if (typeof owner === 'object') {
     if ('id' in owner && userIdNum) return Number(owner.id) === Number(userIdNum);
     if ('@id' in owner && userIri) return owner['@id'] === userIri;
   }
-
   return false;
 }
 

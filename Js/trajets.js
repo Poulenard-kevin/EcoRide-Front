@@ -3,6 +3,7 @@ import { apiFetch, API_BASE } from '/assets/js/api.js';
 import { createCarIfNeeded, saveCarpoolApi, deleteCarpoolApi, carOwnedBy, updateBookingStatus } from '/assets/js/trips-api.js';
 import { normalizeTypeKey, labelFromTypeKey } from '/assets/js/type-utils.js';
 import { addPendingReview } from './pending-reviews.js';
+import { saveReviewDoubleStorage } from './reviews-mongo-api.js';
 
 // -------------------- Config debug polling --------------------
 if (typeof window !== 'undefined' && window.__TRAJETS_POLLING_DEBUG === undefined) {
@@ -2319,19 +2320,19 @@ async function handleTrajetActions(e) {
     e.stopPropagation();
     const reservationId = target.dataset.id;
     if (!reservationId) return;
-  
+
     openRatingModal({
       reservationId,
       onSubmit: async ({ rating, review, flagged }) => {
         try {
           // 1) Appeler updateBookingStatus pour changer le statut côté serveur
           await updateBookingStatus(reservationId, 'confirmed');
-      
+
           // 2) Mettre à jour localStorage
           let reservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
           const idx = reservations.findIndex(r => String(r.id) === String(reservationId));
           if (idx === -1) { alert('Réservation introuvable.'); return; }
-      
+
           reservations[idx].status = 'valide';
           reservations[idx].rating = rating;
           reservations[idx].review = review;
@@ -2341,46 +2342,60 @@ async function handleTrajetActions(e) {
             flagged: !!flagged,
             submittedAt: new Date().toISOString()
           };
-      
+
           localStorage.setItem('ecoride_trajets', JSON.stringify(reservations));
           window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
-      
-          // 3) Créer l'avis côté backend
+
+          // 3) Créer l'avis côté backend (SQL + Mongo)
           try {
-            const created = await createReviewApi({ reservationObj: reservations[idx], rating, comment: review });
-            console.log('Avis créé côté serveur :', created);
-          
-            reservations[idx].reviewServer = created?.['@id'] || created?.id || null;
-            reservations[idx].reviewLocal = {
+            const me = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+            const userId = me?.id || reservations[idx]?.userId || null;
+            const currentTrajet = reservations[idx];
+            const carpoolId = currentTrajet.covoiturageId || 
+                              currentTrajet.carpoolId || 
+                              (currentTrajet.covoiturage && currentTrajet.covoiturage.id) ||
+                              (currentTrajet.carpool && currentTrajet.carpool.id);
+            
+            const res = await saveReviewDoubleStorage({
+              reservationId: currentTrajet.id,
+              reservationObj: currentTrajet,   // <<< passe l'objet complet pour permettre les résolutions locales
+              // carpoolId: optional override
               rating,
               comment: review,
-              pending: false,
-              sentAt: new Date().toISOString(),
-              serverRef: reservations[idx].reviewServer
-            };
-          
-            localStorage.setItem('ecoride_trajets', JSON.stringify(reservations));
-            window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
-            safeShowToast('Merci — ton avis a bien été envoyé et est en attente de validation.');
-          } catch (err) {
-            console.warn('createReviewApi failed', err);
-          
-            const pending = {
-              reservationId: reservations[idx]?.id || reservations[idx]?.reservationId || null,
-              reservationObjSnapshot: {
-                id: reservations[idx]?.id,
-                covoiturage: reservations[idx]?.covoiturage || reservations[idx]?.carpoolId,
-                date: reservations[idx]?.date
-              },
-              rating,
-              comment: review,
-              flagged: !!flagged,
-              dateCreated: new Date().toISOString(),
-              lastAttempt: new Date().toISOString(),
-              attemptCount: 1
-            };
-          
-            try {
+              userId
+            });
+
+            // Si SQL OK
+            if (res.sql && res.sql.ok) {
+              const createdSql = res.sql.json;
+              reservations[idx].reviewServer = createdSql?.['@id'] || createdSql?.id || null;
+              reservations[idx].reviewLocal = {
+                rating,
+                comment: review,
+                pending: false,
+                sentAt: new Date().toISOString(),
+                serverRef: reservations[idx].reviewServer
+              };
+              safeShowToast('Merci — ton avis a bien été envoyé et est en attente de validation.');
+            } else {
+              // SQL Échec -> Fallback local "pending"
+              console.warn('SQL part failed, saving to pending reviews', res.sql?.errorBody);
+              
+              const pending = {
+                reservationId: reservations[idx]?.id || reservations[idx]?.reservationId || null,
+                reservationObjSnapshot: {
+                  id: reservations[idx]?.id,
+                  covoiturage: reservations[idx]?.covoiturage || reservations[idx]?.carpoolId,
+                  date: reservations[idx]?.date
+                },
+                rating,
+                comment: review,
+                flagged: !!flagged,
+                dateCreated: new Date().toISOString(),
+                lastAttempt: new Date().toISOString(),
+                attemptCount: 1
+              };
+
               if (typeof addPendingReview === 'function') {
                 addPendingReview(pending);
               } else {
@@ -2389,69 +2404,40 @@ async function handleTrajetActions(e) {
                 existing.push(pending);
                 localStorage.setItem(key, JSON.stringify(existing));
               }
-            } catch (saveErr) {
-              console.error('Failed to save pending review', saveErr);
+
+              reservations[idx].reviewLocal = {
+                rating,
+                comment: review,
+                pending: true,
+                savedAt: new Date().toISOString()
+              };
+              safeShowToast('Avis enregistré localement (échec serveur SQL). Il sera renvoyé plus tard.');
             }
-          
-            reservations[idx].reviewLocal = {
-              rating,
-              comment: review,
-              pending: true,
-              savedAt: new Date().toISOString()
-            };
+
+            // Log Mongo pour info
+            if (res.mongo && res.mongo.ok) {
+              console.log('Mongo save success:', res.mongo.json);
+            }
+
             localStorage.setItem('ecoride_trajets', JSON.stringify(reservations));
             window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
-          
-            safeShowToast('Ton avis a bien été pris en compte localement, l\'envoi au serveur a échoué. Il sera retenté plus tard.');
+
+          } catch (err) {
+            console.error('saveReviewDoubleStorage critical error:', err);
+            safeShowToast('Erreur lors de l\'envoi de l\'avis.');
           }
-      
-          // Mise à jour variable globale trajets
-          const localIdx = trajets.findIndex(t => t.id === reservationId);
-          if (localIdx !== -1) trajets[localIdx] = { ...trajets[localIdx], ...reservations[idx] };
-      
-          // Mise à jour covo
-          let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
-          const covoId = getCovoId(reservations[idx]);
-          const covoIndex = trajetsCovoiturage.findIndex(t => t.id === covoId);
-          if (covoIndex !== -1) {
-            const covo = trajetsCovoiturage[covoIndex];
-            const mePseudo = getCurrentUserPseudo();
-            covo.passagers = (Array.isArray(covo.passagers) ? covo.passagers : [])
-              .filter(p => {
-                if (!p) return false;
-                if (typeof p === 'object' && p.pseudo) return p.pseudo !== mePseudo;
-                if (typeof p === 'string') return !(p.startsWith(mePseudo) || p.startsWith('Moi'));
-                return true;
-              }).map(p => {
-                if (typeof p === 'object' && p.pseudo) return { pseudo: p.pseudo, places: Number(p.places || 1) };
-                if (typeof p === 'string') {
-                  const m = p.match(/^(.+?)\s*x(\d+)$/i);
-                  return m ? { pseudo: m[1].trim(), places: Number(m[2]) } : { pseudo: p.trim(), places: 1 };
-                }
-                return null;
-              }).filter(Boolean);
-  
-            const occupied = covo.passagers.reduce((s, p) => s + (Number(p.places) || 1), 0);
-            const capacity = Number(covo.capacity ?? covo.vehicle?.places ?? covo.places ?? 4);
-            covo.places = Math.max(0, capacity - occupied);
-            trajetsCovoiturage[covoIndex] = covo;
-            localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
-            window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
-          }
-  
-          // ✅ NOUVEAU : Actualiser + basculer sur l'onglet historique
+
+          // 4) Mise à jour UI et bascule onglet
           const stored = getTrajets();
           trajets.splice(0, trajets.length, ...stored);
           saveTrajets();
           updatePlacesReservees();
           renderTrajetsInProgress();
-          renderHistorique(); // ← actualise l'historique
-  
+          renderHistorique();
+
           await fetchReservationsForDriver();
-  
-          // ✅ Basculer sur l'onglet "Mon historique"
           activateHistoryTab();
-  
+
           alert('Validation enregistrée. Merci !');
         } catch (err) {
           console.error('Erreur validation trajet :', err);

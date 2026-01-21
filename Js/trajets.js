@@ -5,6 +5,222 @@ import { normalizeTypeKey, labelFromTypeKey } from '/assets/js/type-utils.js';
 import { addPendingReview } from './pending-reviews.js';
 import { saveReviewDoubleStorage } from './reviews-mongo-api.js';
 
+const departCandidates  = ['departureLocation', 'departure', 'depart', 'from', 'startLocation'];
+const arriveeCandidates = ['arrivalLocation', 'arrival', 'arrivee', 'to', 'endLocation'];
+const dateCandidates    = ['departureDate', 'date', 'jour', 'departure_at', 'departure'];
+
+// declaration hoistée, doit être en haut pour éviter ReferenceError
+async function getMe() {
+  try {
+    return await apiFetch('/me'); // ou '/api/me' selon ta config d'apiFetch
+  } catch (err) {
+    const local = localStorage.getItem('ecoride_user');
+    return local ? JSON.parse(local) : null;
+  }
+}
+
+// retourne l'IRI canonique '/api/carpools/123' ou la chaîne numérique '123'
+function canonicalCarpoolId(v) {
+  if (v == null) return '';
+  const s = String(v).trim();
+  // si forme IRI
+  const m = s.match(/\/api\/carpools\/(\d+)$/);
+  if (m) return `/api/carpools/${m[1]}`;
+  const m2 = s.match(/(\d+)$/);
+  if (m2) return `/api/carpools/${m2[1]}`;
+  return s;
+}
+function canonicalCarpoolNum(v) {
+  const iri = canonicalCarpoolId(v);
+  const m = String(iri).match(/(\d+)$/);
+  return m ? m[1] : String(iri);
+}
+function getCurrentUserIdStr() {
+  try {
+    const me = (typeof getCurrentUser === 'function') ? getCurrentUser() : (window.currentUser || null);
+    if (!me) return null;
+    const id = me.id ?? me['@id'] ?? me;
+    return id ? String(id).split('/').pop() : null;
+  } catch (e) { return null; }
+}
+
+// Rôle calculé en priorité : si l'utilisateur courant est présent dans bookings => "passager",
+// sinon si le driver correspond à l'utilisateur courant => "chauffeur",
+// sinon utiliser t.role ou detectRole fallback.
+function roleForCurrentUser(t) {
+  const meId = getCurrentUserIdStr();
+  // check bookings
+  const bookings = Array.isArray(t.bookings) ? t.bookings : (Array.isArray(t.raw?.bookings) ? t.raw.bookings : []);
+  if (meId && Array.isArray(bookings) && bookings.length) {
+    for (const b of bookings) {
+      const p = b.passenger ?? b.user ?? b.passengerIri ?? b.userIri ?? b.userId ?? null;
+      if (!p) continue;
+      const pid = (typeof p === 'object') ? (String(p.id ?? p['@id'] ?? '').split('/').pop()) : String(p).split('/').pop();
+      if (pid === meId) return 'passager';
+    }
+  }
+  // check driver
+  const driver = t.driver ?? t.chauffeur ?? t.raw?.driver ?? t.raw?.chauffeur ?? t.driverIri ?? null;
+  if (driver) {
+    const did = (typeof driver === 'object') ? (String(driver.id ?? driver['@id'] ?? '').split('/').pop()) : String(driver).split('/').pop();
+    if (did && did === meId) return 'chauffeur';
+  }
+  // explicit role field
+  if (t.role) {
+    const r = String(t.role).toLowerCase();
+    if (r.includes('chauff')) return 'chauffeur';
+    if (r.includes('pass')) return 'passager';
+  }
+  // fallback to existing detectRole if present
+  if (typeof detectRole === 'function') {
+    try {
+      const dr = detectRole(t);
+      if (dr) return String(dr).toLowerCase();
+    } catch (e) { /* ignore */ }
+  }
+  return 'passager';
+}
+
+function pickFirst(obj, candidates = []) {
+  if (!obj || !Array.isArray(candidates)) return undefined;
+  for (const key of candidates) {
+    // valeur directe
+    const v1 = obj[key];
+    if (v1 !== undefined && v1 !== null && v1 !== '') return v1;
+    // champ dans raw (API hydra)
+    if (obj.raw && obj.raw[key] !== undefined && obj.raw[key] !== null && obj.raw[key] !== '') return obj.raw[key];
+    // champ dans bookings[0].carpool (parfois)
+    if (Array.isArray(obj.bookings) && obj.bookings[0] && obj.bookings[0].carpool && obj.bookings[0].carpool[key] !== undefined && obj.bookings[0].carpool[key] !== null && obj.bookings[0].carpool[key] !== '') {
+      return obj.bookings[0].carpool[key];
+    }
+    // champ dans nested carpool sur l'objet
+    if (obj.carpool && obj.carpool[key] !== undefined && obj.carpool[key] !== null && obj.carpool[key] !== '') return obj.carpool[key];
+  }
+  return undefined;
+}
+
+async function fetchMissingCarpoolData(covoIdStr) {
+  if (!covoIdStr) return null;
+
+  // 1. Normalisation de l'ID (extraire le chiffre de l'IRI)
+  let id = covoIdStr;
+  if (typeof covoIdStr === 'string' && covoIdStr.includes('/api/')) {
+    const parts = covoIdStr.split('/');
+    id = parts.filter(Boolean).pop();
+  }
+
+  console.debug('fetchMissingCarpoolData via apiFetch', { id });
+
+  try {
+    // 2. Utiliser apiFetch au lieu de fetch brut
+    // apiFetch ajoute automatiquement le header Authorization: Bearer ...
+    const data = await apiFetch(`/carpools/${encodeURIComponent(id)}`, {
+      method: 'GET'
+    });
+
+    if (data && typeof data === 'object') {
+      console.debug('fetchMissingCarpoolData SUCCESS', { id });
+      return data;
+    }
+    return null;
+  } catch (err) {
+    // Si apiFetch échoue (ex: 401), il jettera une erreur
+    console.error('fetchMissingCarpoolData FAILED', { id, status: err.status, message: err.message });
+    return null;
+  }
+}
+
+// Normalise le driver pour toujours retourner un objet { id, '@id' } si possible
+function normalizeDriver(driver) {
+  if (!driver) return null;
+  if (typeof driver === 'object') {
+    const id = driver.id ?? driver.userId ?? (driver['@id'] ? String(driver['@id']).split('/').pop() : null);
+    const atId = driver['@id'] ?? (id ? `/api/users/${id}` : null);
+    // ensure id is string when present
+    return { ...driver, id: id != null ? String(id) : undefined, ['@id']: atId };
+  }
+  if (typeof driver === 'string') {
+    const parts = driver.split('/');
+    const id = parts[parts.length - 1] || null;
+    return { id: id != null ? String(id) : undefined, ['@id']: driver };
+  }
+  return null;
+}
+
+function extractIdFromDriver(d) {
+  const norm = normalizeDriver(d);
+  if (!norm) return null;
+  return norm.id ?? (norm['@id'] ? String(norm['@id']).split('/').pop() : null);
+}
+// ---------- loadAllUserTrajets (fusion carpools créés + bookings passager) ----------
+let isLoadingTrajets = false;
+
+async function loadAllUserTrajets() {
+  try {
+    const user = await getMe();
+    if (!user || !user.id) return [];
+
+    // 1. Charger les trajets où l'utilisateur est CHAUFFEUR
+    const driverCarpools = await apiFetch(`/carpools?driver=${user.id}`);
+    const driverEntries = (driverCarpools['hydra:member'] || []).map(c => ({
+      ...c,
+      role: 'chauffeur',
+      serverId: c['@id'],
+      id: extractId(c['@id'])
+    }));
+
+    // 2. Charger les réservations où l'utilisateur est PASSAGER
+    // IMPORTANT: On vérifie si l'API peut nous donner le carpool avec
+    const passengerBookings = await apiFetch(`/bookings?passenger=${user.id}`);
+    const bookings = passengerBookings['hydra:member'] || [];
+
+    const passengerEntries = bookings.map(b => {
+      // On cherche le covoiturage dans 'carpool' ou 'covoiturage'
+      const covoiture = b.carpool || b.covoiturage || null;
+      
+      // Si covoiture est juste une chaîne (IRI), on n'a pas les détails
+      const hasDetails = covoiture && typeof covoiture === 'object';
+
+      return {
+        role: 'passager',
+        bookingId: extractId(b['@id']),
+        serverId: b['@id'],
+        status: b.status || b.statut,
+        // On stocke l'IRI pour le fetch de secours si besoin
+        covoId: hasDetails ? covoiture['@id'] : (typeof covoiture === 'string' ? covoiture : b.carpoolIri),
+        
+        // Données extraites si présentes
+        depart: hasDetails ? (covoiture.departureLocation || covoiture.depart) : '',
+        arrivee: hasDetails ? (covoiture.arrivalLocation || covoiture.arrivee) : '',
+        heureDepart: hasDetails ? covoiture.departureTime : '',
+        prix: hasDetails ? covoiture.price : 0,
+        
+        raw: b // On garde tout pour le debug
+      };
+    });
+
+    const combined = [...driverEntries, ...passengerEntries];
+    saveTrajets(combined);
+    return combined;
+  } catch (err) {
+    console.error("Erreur loadAllUserTrajets:", err);
+    return getTrajets();
+  }
+}
+
+export default loadAllUserTrajets;
+
+function extractServerId(s) {
+  if (!s) return null;
+  const str = String(s).trim();
+  // Cas 1: IRI complète /api/carpools/123
+  const m = str.match(/\/api\/carpools\/(\d+)$/);
+  if (m) return m[1];
+  // Cas 2: Juste le nombre à la fin (ex: "res-123" ou "123")
+  const mm = str.match(/(\d+)$/);
+  return mm ? mm[1] : null; 
+}
+
 // -------------------- Config debug polling --------------------
 if (typeof window !== 'undefined' && window.__TRAJETS_POLLING_DEBUG === undefined) {
   window.__TRAJETS_POLLING_DEBUG = false; // par défaut pas de spam
@@ -85,13 +301,87 @@ export function getProfileAvatarFromStorage() {
   return '/images/default-avatar.png';
 }
 
+// Remplace l'actuelle export function getCurrentUser() par ceci :
 export function getCurrentUser() {
   try {
-    return JSON.parse(localStorage.getItem('ecoride_user') || 'null');
+    // priorité localStorage
+    const rawUser = localStorage.getItem('ecoride_user') || localStorage.getItem('user_data') || localStorage.getItem('ecoride_me') || localStorage.getItem('ecoride_me_local');
+    if (rawUser) {
+      try {
+        const parsed = JSON.parse(rawUser);
+        if (parsed && (parsed.id || parsed['@id'])) return parsed;
+        // si c'est juste une string représentant l'IRI, normaliser en objet
+        if (typeof parsed === 'string' && parsed.includes('/api/users')) {
+          const id = parsed.split('/').pop();
+          return { id, ['@id']: parsed };
+        }
+        return parsed;
+      } catch(e) {
+        // si c'est une string simple
+        const s = rawUser;
+        if (s && s.includes('/api/users')) {
+          const id = s.split('/').pop();
+          return { id, ['@id']: s };
+        }
+        return null;
+      }
+    }
+
+    // fallback sessionStorage (Safari privé parfois)
+    const rawSess = sessionStorage.getItem('ecoride_user') || sessionStorage.getItem('user_data');
+    if (rawSess) {
+      try {
+        const parsed = JSON.parse(rawSess);
+        if (parsed && (parsed.id || parsed['@id'])) return parsed;
+      } catch(e) { /* ignore */ }
+    }
+
+    // fallback window.ecoAuth.user
+    if (window.ecoAuth && window.ecoAuth.user) return window.ecoAuth.user;
+
+    return null;
   } catch (e) {
-    console.warn('getCurrentUser parse error', e);
+    console.error('[getCurrentUser] Erreur parsing/storage', e);
     return null;
   }
+}
+
+// Ajoute ensuite (top-level helper) cette fonction detectRole :
+export function detectRole(trajet) {
+  if (!trajet) return null;
+  const me = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  if (!me || !me.id) return null;
+
+  // On force l'ID actuel en string propre (ex: "1")
+  const myId = String(me.id).split('/').pop().trim();
+  
+  // On récupère l'ID du chauffeur
+  const driverData = trajet.driver ?? trajet.chauffeur ?? (trajet.raw ? trajet.raw.driver : null);
+  let driverId = '';
+  
+  if (driverData) {
+      driverId = (typeof driverData === 'object') 
+          ? String(driverData.id ?? driverData.userId ?? '') 
+          : String(driverData).split('/').pop();
+  }
+
+  if (driverId.trim() === myId) {
+      return 'chauffeur';
+  }
+
+  // Si pas chauffeur, on vérifie si on est dans les bookings
+  const bookings = trajet.bookings ?? (trajet.raw ? trajet.raw.bookings : []);
+  if (Array.isArray(bookings)) {
+      const isPass = bookings.some(b => {
+          const p = b.passenger ?? b.user;
+          if (!p) return false;
+          const pId = (typeof p === 'object') ? String(p.id) : String(p).split('/').pop();
+          return pId.trim() === myId;
+      });
+      if (isPass) return 'passager';
+  }
+
+  return null;
 }
 
 export function getCurrentUserPseudo() {
@@ -330,6 +620,35 @@ const STATUS_MAP = {
   'validé': STATUS.PASSAGER.VALIDATED
 };
 
+// --- Pont entre tes statuts et les classes CSS ---
+const STATUS_TO_CLASS = {
+  // Chauffeur
+  [STATUS.CHAUFFEUR.DRAFT]: 'status-draft',
+  [STATUS.CHAUFFEUR.ACTIVE]: 'status-active',
+  [STATUS.CHAUFFEUR.STARTED]: 'status-started',
+  [STATUS.CHAUFFEUR.COMPLETED]: 'status-completed',
+  [STATUS.CHAUFFEUR.CANCELLED]: 'status-cancelled',
+  
+  // Passager
+  [STATUS.PASSAGER.RESERVED]: 'status-reserved',
+  [STATUS.PASSAGER.PENDING]: 'status-pending',
+  [STATUS.PASSAGER.A_VALIDATE]: 'status-pending',
+  [STATUS.PASSAGER.VALIDATED]: 'status-valid'
+};
+
+// Optionnel : si ton code cherche aussi STATUS_LABELS pour le texte
+const STATUS_LABELS = {
+  [STATUS.CHAUFFEUR.DRAFT]: 'Ajouté',
+  [STATUS.CHAUFFEUR.ACTIVE]: 'En cours',
+  [STATUS.CHAUFFEUR.STARTED]: 'Démarré',
+  [STATUS.CHAUFFEUR.COMPLETED]: 'Terminé',
+  [STATUS.CHAUFFEUR.CANCELLED]: 'Annulé',
+  [STATUS.PASSAGER.RESERVED]: 'Réservé',
+  [STATUS.PASSAGER.PENDING]: 'En attente',
+  [STATUS.PASSAGER.A_VALIDATE]: 'À valider',
+  [STATUS.PASSAGER.VALIDATED]: 'Confirmé'
+};
+
 // normalizeStatus: prend une chaîne quelconque et renvoie la valeur canonique (lowercase)
 export function normalizeStatus(raw) {
   if (!raw && raw !== 0) return '';
@@ -353,7 +672,7 @@ export function normalizeStatus(raw) {
  * Récupère les réservations de l'utilisateur connecté (passager)
  */
 async function fetchReservationsForDriver() {
-  const token = localStorage.getItem('ecoride_auth_token');
+  const token = localStorage.getItem('api_token') || localStorage.getItem('ecoride_auth_token') || '';
   if (!token) {
     console.log('ℹ️ Pas de token → skip fetchReservationsForDriver');
     return;
@@ -373,11 +692,15 @@ async function fetchReservationsForDriver() {
       return;
     }
 
-    const bookings = await response.json();
-    console.log('✅ Réservations serveur récupérées:', bookings);
-
-    // ✅ Synchronisation allégée
-    syncBookingsWithLocalStorage(bookings);
+    const text = await response.text();
+    try {
+      const bookings = JSON.parse(text);
+      console.log('✅ Réservations serveur récupérées:', bookings);
+      syncBookingsWithLocalStorage(bookings);
+    } catch (e) {
+      console.error('❌ Erreur parsing JSON:', e);
+      console.log('Réponse brute:', text);
+    }
 
   } catch (err) {
     console.error('❌ Erreur fetchReservationsForDriver:', err);
@@ -385,10 +708,11 @@ async function fetchReservationsForDriver() {
 }
 
 function allPassengersValidated(trip) {
-  if (!trip.bookings || !Array.isArray(trip.bookings)) return false;
-  return trip.bookings.every(b => {
-    const status = normalizeStatus(b.status ?? b.statut ?? '');
-    return status === STATUS.PASSAGER.VALIDATED;
+  const bks = trip.bookings || (trip.raw ? trip.raw.bookings : []);
+  if (!bks || bks.length === 0) return false; 
+  return bks.every(b => {
+    const s = normalizeStatus(b.status ?? b.statut ?? '');
+    return (s === 'valide' || s === 'validated');
   });
 }
 
@@ -621,36 +945,43 @@ function cleanupOldTrajets() {
  */
 function syncBookingsWithLocalStorage(serverBookings) {
   const localKey = 'ecoride_trajets';
-  
-  // On transforme les données serveur en format "Light"
-  const lightBookings = serverBookings.map(b => ({
-    id: b.id,
-    status: b.status,
-    date: b.carpool?.departureTime || b.date,
-    depart: b.carpool?.departure,
-    arrivee: b.carpool?.arrival,
-    prix: b.carpool?.price,
-    driver: b.carpool?.driver?.pseudo || 'Conducteur',
-    hasReview: !!(b.review || b.rating),
-    // ✅ Ajoute les champs nécessaires pour renderHistorique
-    heureDepart: b.carpool?.departureTime ? new Date(b.carpool.departureTime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '',
-    heureArrivee: b.carpool?.arrivalTime ? new Date(b.carpool.arrivalTime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '',
-    placesReservees: b.seats || 1,
-    role: 'passager',
-    serverId: b['@id'] || `/api/bookings/${b.id}`,
-    covoId: b.carpool?.['@id'] || b.carpool?.id
-  }));
+  try {
+    // existing list
+    const existing = JSON.parse(localStorage.getItem(localKey) || '[]');
 
-  localStorage.setItem(localKey, JSON.stringify(lightBookings));
-  
-  // ✅ Réhydrater l'état mémoire
-  reloadTrajetsFromLocalStorage();
+    // transform serverBookings -> lightBookings (comme tu as déjà)
+    const lightBookings = serverBookings.map(b => ({
+      id: b.id ? String(b.id) : genId(),
+      status: normalizeStatus(b.status ?? b.statut ?? 'reserve'),
+      date: b.carpool?.departureDate || b.date,
+      depart: b.carpool?.departure || '',
+      arrivee: b.carpool?.arrival || '',
+      prix: b.carpool?.price ?? 0,
+      heureDepart: b.carpool?.departureTime ? new Date(b.carpool.departureTime).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '',
+      heureArrivee: b.carpool?.arrivalTime ? new Date(b.carpool.arrivalTime).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '',
+      placesReservees: Number(b.seats ?? b.reservedSeats ?? 1),
+      role: 'passager',
+      serverId: b['@id'] || `/api/bookings/${b.id}`,
+      covoId: b.carpool?.['@id'] || b.carpool?.id,
+      bookings: [b],
+      raw: b
+    }));
 
-  window.dispatchEvent(new CustomEvent('trajets:changed', {
-    detail: { source: 'syncBookingsWithLocalStorage' }
-  }));
+    // remove existing passenger entries that correspond to same booking/serverId
+    const cleaned = existing.filter(e => !(e && e.role === 'passager' && e.serverId && lightBookings.some(lb => String(lb.serverId) === String(e.serverId))));
 
-  console.log(`✅ Sync terminée : ${lightBookings.length} trajets en cache léger.`);
+    // merge: carpools remain, new light bookings appended (avoid duplicates)
+    const merged = cleaned.concat(lightBookings.filter(lb => !cleaned.some(c => String(c.serverId) === String(lb.serverId))));
+
+    localStorage.setItem(localKey, JSON.stringify(merged));
+    // réhydrater état mémoire
+    reloadTrajetsFromLocalStorage();
+    normalizeAndPersistRoles();
+    window.dispatchEvent(new CustomEvent('trajets:changed', { detail: { source: 'syncBookingsWithLocalStorage' } }));
+    console.log(`✅ Sync terminée : ${lightBookings.length} trajets synchronisés (merge).`);
+  } catch (e) {
+    console.warn('syncBookingsWithLocalStorage error', e);
+  }
 }
 
 // -------------------- Persistance --------------------
@@ -699,17 +1030,22 @@ export function removeLocalTrajetByServerId(serverId, localId = null) {
   const removeFromKey = (key) => {
     try {
       const list = JSON.parse(localStorage.getItem(key) || '[]');
+  
+      // normaliser les comparateurs externes (si sid/lid sont des variables externes)
+      const sidNorm = (typeof sid !== 'undefined') ? extractServerId(sid) : null;
+      const lidNorm = (typeof lid !== 'undefined') ? extractServerId(lid) : null;
+  
       const filtered = list.filter(t => {
-        // récupérer identifiants connus sur l'objet
         const tServerRaw = t.serverId ?? t['@id'] ?? t.carserverId ?? t.covoServerId ?? '';
-        const tServer = normalize(tServerRaw);
+        const tServer = extractServerId(tServerRaw);
         const tLocal = t._localId ?? t.id ?? t.detailId ?? t.covoId ?? null;
-
-        if (lid && tLocal && String(tLocal) === lid) return false;
-        if (sid && tServer && (tServer === sid || String(tServer).endsWith(String(sid)))) return false;
-
+  
+        if (lidNorm && tLocal && String(tLocal) === String(lidNorm)) return false;
+        if (sidNorm && tServer && String(tServer) === String(sidNorm)) return false;
+  
         return true;
       });
+  
       if (filtered.length !== list.length) {
         localStorage.setItem(key, JSON.stringify(filtered));
       }
@@ -754,34 +1090,33 @@ export async function initTrajets() {
   // ✅ 0. NETTOYAGE AUTOMATIQUE DU LOCALSTORAGE
   cleanupOldTrajets();
 
-  // ✅ 1. CHARGER L'UTILISATEUR COURANT EN PRIORITÉ
+  // ✅ 1. CHARGER L'UTILISATEUR COURANT (Version Sécurisée)
   const token = localStorage.getItem('api_token');
+  
   if (token) {
-    const cachedUser = localStorage.getItem('ecoride_user');
-    
-    // Si pas d'utilisateur en cache OU si le cache est vieux (optionnel)
-    if (!cachedUser) {
-      try {
-        const me = await apiFetch('/me');
-        if (me) {
-          localStorage.setItem('ecoride_user', JSON.stringify(me));
-          console.log('✅ Utilisateur courant récupéré et stocké');
-        }
-      } catch (e) {
-        console.warn('⚠ Impossible de récupérer /me au démarrage :', e);
+    try {
+      // On appelle TOUJOURS /api/me au démarrage pour être certain de l'identité
+      // Le cache ne sert que de fallback si le serveur est injoignable
+      const me = await apiFetch('/me'); 
+      
+      if (me && me.id) {
+        const serverId = String(me.id).split('/').pop();
+        localStorage.setItem('ecoride_user', JSON.stringify(me));
+        localStorage.setItem('ecoride_user_ts', Date.now());
+        console.log('✅ Identité confirmée par le serveur. ID:', serverId);
       }
-    } else {
-      console.log('✅ Utilisateur déjà en cache');
+    } catch (e) {
+      console.warn('⚠ Serveur injoignable, utilisation du cache local');
     }
   } else {
-    console.warn('⚠️ Aucun token API, l\'utilisateur ne sera pas identifié');
+    // Si pas de token, on vide TOUT le cache utilisateur pour éviter les mélanges
+    localStorage.removeItem('ecoride_user');
+    localStorage.removeItem('ecoride_user_ts');
+    console.warn('⚠️ Aucun token : Cache utilisateur vidé.');
   }
 
-  // ✅ 2. SYNCHRONISATION AVEC LE SERVEUR (réservations)
-  await loadTrajetsFromApi();
-
-  // charger depuis l'API ; la fonction mutera déjà le tableau `trajets`
-  await fetchReservationsForDriver();
+  // ✅ 2. SYNCHRONISATION AVEC LE SERVEUR (carpools + mes réservations)
+  await loadAllUserTrajets();
 
   // activer polling si l'utilisateur a des trajets en cours (économie de requêtes)
   try {
@@ -837,20 +1172,26 @@ let lastTrajetsHash = null;
 
 /**
  * Charge les carpools depuis l'API et les fusionne avec les données locales
+ * @param {Object} options
+ * @param {boolean} options.modeAll - Si false, ne charge que les carpools où l'utilisateur est chauffeur
  * @returns {Promise<Array>} Liste des trajets (chauffeur + passager)
  */
 export async function loadTrajetsFromApi({ modeAll = true } = {}) {
-  const me = getCurrentUser();
+  const me = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
 
   try {
     const raw = await apiFetch('/carpools');
 
-    // ✅ GARDE-FOU 1 : Calculer un hash pour détecter si les données ont changé
-    const newHash = JSON.stringify(
-      Array.isArray(raw) 
-        ? raw.map(r => r.id).sort() 
-        : (raw['hydra:member'] || []).map(r => r.id).sort()
-    );
+    // === Guard hydra/member avant hash ===
+    let membersForHash = [];
+    if (Array.isArray(raw)) {
+      membersForHash = raw;
+    } else if (raw && typeof raw === 'object' && Array.isArray(raw['hydra:member'])) {
+      membersForHash = raw['hydra:member'];
+    } else {
+      membersForHash = [];
+    }
+    const newHash = JSON.stringify(membersForHash.map(r => r && r.id ? r.id : '').sort());
 
     if (newHash === lastTrajetsHash) {
       console.debug('⏭️ [loadTrajetsFromApi] skip (aucun changement détecté)');
@@ -877,14 +1218,12 @@ export async function loadTrajetsFromApi({ modeAll = true } = {}) {
     let carpools = items;
 
     if (!modeAll) {
-      // modeAll=false -> conserver uniquement les carpools où je suis chauffeur
       if (!me || !me.id) {
         console.warn('[loadTrajetsFromApi] modeAll=false mais utilisateur non connecté, fallback local');
         return getTrajets();
       }
       carpools = items.filter(c => {
         const driver = c?.driver;
-        // driver peut être objet {id:..} ou IRI '/api/users/1'
         const driverId = driver && typeof driver === 'object' ? driver.id : driver;
         return String(driverId) === String(me.id) || String(driverId) === `/api/users/${me.id}`;
       });
@@ -892,19 +1231,17 @@ export async function loadTrajetsFromApi({ modeAll = true } = {}) {
 
     // Normalisation commune
     const mapped = carpools.map(c => {
-      // serverId -> toujours IRI si disponible
       const serverId = c['@id'] ?? (c.id ? `/api/carpools/${c.id}` : null);
-      // idLocal -> number or string (préférer number quand possible)
       const numericId = c.id ?? (serverId ? parseInt(String(serverId).split('/').pop(), 10) : null);
       const id = numericId != null && !Number.isNaN(numericId) ? String(numericId) : (serverId ?? null);
 
-      // bookings normalisés si présents
       const bookings = Array.isArray(c.bookings) ? c.bookings.map(b => ({
         id: b.id ?? null,
+        '@id': b['@id'] ?? (b.id ? `/api/bookings/${b.id}` : null),
         seats: b.reservedSeats ?? b.nb_places_reservees ?? b.seats ?? 1,
         status: normalizeStatus(b.status ?? b.statut ?? null),
         passenger: b.passenger ?? b.user ?? null,
-        carpoolIri: (typeof b.carpool === 'string') ? b.carpool : (b.carpool?.['@id'] ?? null)
+        carpoolIri: (typeof b.carpool === 'string') ? b.carpool : (b.carpool?.['@id'] ?? serverId)
       })) : [];
 
       const carIri = (c.car && typeof c.car === 'string') ? c.car : (c.car?.['@id'] ?? null);
@@ -922,7 +1259,8 @@ export async function loadTrajetsFromApi({ modeAll = true } = {}) {
         places: c.nbPlacesTotal ?? c.totalSeats ?? c.nb_places_total ?? c.places ?? (carObj?.seats ?? 4),
         totalSeats: c.nbPlacesTotal ?? c.totalSeats ?? c.places ?? (carObj?.seats ?? 4),
         availableSeats: c.availableSeats ?? c.nb_places_dispo ?? c.available ?? null,
-        driver: c.driver ? (typeof c.driver === 'object' ? c.driver : { id: c.driver }) : null,
+        // normaliser driver (toujours un objet si possible)
+        driver: normalizeDriver(c.driver ?? c.raw?.driver ?? null),
         bookings,
         carIri,
         vehicle: carObj ? {
@@ -933,77 +1271,93 @@ export async function loadTrajetsFromApi({ modeAll = true } = {}) {
           type: carObj.fuelType ?? carObj.type ?? ''
         } : null,
         raw: c,
-      
-        role: 'chauffeur',                             
-        status: normalizeStatus(c.status ?? c.statut ?? 'ajoute'),   
+        role: 'chauffeur',
+        status: normalizeStatus(c.status ?? c.statut ?? 'ajoute'),
         placesReservees: bookings.reduce((s,b) => s + (Number(b.seats ?? b.reservedSeats ?? b.nb_places_reservees) || 0), 0)
       };
     });
 
-    // --- Générer aussi des entrées "passager" à partir des bookings si je suis passager ---
+    // --- Générer des entrées "passager" à partir des bookings normalisés ---
     const passengerEntries = [];
-    try {
-      mapped.forEach((poolMapped, idx) => {
-        const originalPool = carpools[idx]; // l'objet brut renvoyé par l'API
-        if (!originalPool || !Array.isArray(originalPool.bookings)) return;
-
-        originalPool.bookings.forEach(b => {
-          // identifier le passager dans la réservation
+    for (const pool of (mapped || [])) {
+      for (const b of (pool.bookings || [])) {
+        try {
           const pass = b.passenger ?? b.user ?? b.passengerIri ?? null;
           let isMe = false;
           if (pass && me) {
             if (typeof pass === 'object' && pass.id) isMe = String(pass.id) === String(me.id);
-            else if (typeof pass === 'string') {
-              isMe = (pass === `/api/users/${me.id}`) || pass.endsWith('/' + me.id);
-            } else {
-              isMe = String(pass) === String(me.id);
-            }
+            else if (typeof pass === 'string') isMe = (pass === `/api/users/${me.id}`) || pass.endsWith('/' + me.id);
+            else isMe = String(pass) === String(me.id);
           }
-          if (!isMe) return;
+          if (!isMe) continue;
 
-          // construire un id local stable pour la réservation
+          // bookingServerId separate, serverId MUST refer to carpool IRI (pool.serverId)
+          const bookingServerId = b['@id'] ?? (b.id ? `/api/bookings/${b.id}` : null);
           const resLocalId = b.id ? String(b.id) : genId();
-          const covoId = poolMapped.serverId ?? poolMapped.id ?? (poolMapped.serverId || null);
 
-          // éviter doublons : si mapped contient déjà un élément avec ce id -> skip
-          const exists = mapped.some(m => String(m.id) === String(resLocalId) || String(m.serverId) === String(b['@id'] || b.serverId || ''));
-          if (exists) return;
+          // éviter doublons par booking
+          const bookingNorm = extractServerId(bookingServerId) || (b.id ? String(b.id) : null);
+          const already = passengerEntries.some(pe => {
+            const peBooking = extractServerId(pe.bookingServerId || pe.serverId || pe.id || '') || pe.id;
+            return peBooking && bookingNorm && String(peBooking) === String(bookingNorm);
+          });
+          if (already) continue;
 
           passengerEntries.push({
             id: resLocalId,
-            serverId: b['@id'] ?? (b.id ? `/api/bookings/${b.id}` : null),
-            covoId: covoId,
-            depart: poolMapped.depart,
-            arrivee: poolMapped.arrivee,
-            date: poolMapped.date,
-            heureDepart: poolMapped.heureDepart,
-            heureArrivee: poolMapped.heureArrivee,
-            prix: poolMapped.prix,
-            // places réservées selon la réservation
-            placesReservees: Number(b.reservedSeats ?? b.nb_places_reservees ?? b.seats ?? 1),
+            serverId: pool.serverId || pool.id || pool.covoId || null,
+            covoId: pool.serverId || pool.id || pool.covoId || null,
+            bookingServerId: bookingServerId,
+            bookingId: b.id ?? null,
+            depart: pool.depart || '',
+            arrivee: pool.arrivee || pool.arrival || pool.arrivalLocation || '',
+            date: pool.date || null,
+            heureDepart: pool.heureDepart || pool.departureTime || '',
+            heureArrivee: pool.heureArrivee || pool.arrivalTime || '',
+            prix: pool.prix ?? pool.pricePerSeat ?? 0,
+            placesReservees: Number(b.seats ?? b.reservedSeats ?? b.nb_places_reservees ?? 1),
             role: 'passager',
-            status: normalizeStatus(b.status ?? b.statut ?? 'reserve'),
-            // garder la réservation brute pour permettre computePlacesReservees/findMyBooking
+            status: normalizeStatus(b.status ?? b.statut ?? 'pending'),
             bookings: [b],
+            // normaliser driver : toujours un objet { id, '@id' } si possible
+            driver: normalizeDriver(pool.driver ?? pool.raw?.driver ?? null),
             raw: b
           });
-        });
-      });
-    } catch (e) {
-      console.warn('[loadTrajetsFromApi] erreur génération entrées passager :', e);
+        } catch (err) {
+          console.warn('[loadTrajetsFromApi] skip booking build', err);
+        }
+      }
     }
 
-    // fusionner chauffeurs + passagers (les passagers après pour recherche plus simple)
-    const combined = mapped.concat(passengerEntries);
+    // Construire un Set des IDs déjà présents dans mapped
+    const mappedIds = new Set((mapped || []).map(t => extractServerId(t.serverId ?? t.id ?? '')));
 
-    // muter le tableau global et persister
-    trajets.splice(0, trajets.length, ...combined);
+    // Filtrer passengerEntries pour exclure les doublons
+    const filteredPassengerEntries = passengerEntries.filter(pe => {
+      const peId = extractServerId(pe.serverId ?? pe.id ?? '');
+      const peCovoId = extractServerId(pe.covoId ?? '');
+      if (peId && mappedIds.has(peId)) return false;
+      if (peCovoId && mappedIds.has(peCovoId)) return false;
+      return true;
+    });
+
+    // Fusionner avec les entrées filtrées
+    const combined = (mapped || []).concat(filteredPassengerEntries);
+
+    // Mettre à jour trajets et rendre
+    if (Array.isArray(trajets)) {
+      trajets.splice(0, trajets.length, ...combined);
+    } else {
+      // créer si absent
+      window.trajets = combined.slice();
+    }
     saveTrajets();
+    if (typeof renderTrajetsInProgress === 'function') renderTrajetsInProgress();
 
-    // Debug : détecter bookings orphelines (référence à un covo absent)
-    const allServerIds = new Set(trajets.map(t => String(t.serverId)));
+    // --- Debug / détection bookings orphelines (à exécuter AVANT le return) ---
+    const allServerIds = new Set((trajets || []).map(t => String(t.serverId)));
     const orphans = [];
-    trajets.forEach(t => {
+    (trajets || []).forEach(t => {
       (t.bookings || []).forEach(b => {
         const ref = b.carpoolIri || b.carpool || null;
         if (ref && !allServerIds.has(String(ref))) {
@@ -1011,15 +1365,19 @@ export async function loadTrajetsFromApi({ modeAll = true } = {}) {
         }
       });
     });
-
     if (orphans.length > 0) {
       console.warn('[loadTrajetsFromApi] bookings référencent des carpools absents:', orphans);
     } else {
       console.debug('[loadTrajetsFromApi] aucune réservation orpheline détectée');
     }
 
-    console.debug('[loadTrajetsFromApi] trajets count =', trajets.length);
-    return trajets;
+    if (typeof normalizeAndPersistRoles === 'function') {
+      normalizeAndPersistRoles();
+    }
+
+    console.debug('[loadTrajetsFromApi] combined count =', combined.length, 'drivers=', (mapped || []).length, 'passengers=', passengerEntries.length);
+
+    return combined;
   } catch (err) {
     console.error('[loadTrajetsFromApi] erreur', err);
     return getTrajets();
@@ -1713,12 +2071,9 @@ async function handleTrajetActions(e) {
     const idAttr = target.dataset.id;
     const dataServerId = target.dataset.serverId || target.getAttribute('data-server-id') || null;
 
-    // trouver le trajet local (priorité serverId puis id)
+    // trouver le trajet local (priorité serverId puis id) - on normalise avec extractServerId
     const trajet = trajets.find(t =>
-      (t.serverId && String(t.serverId) === String(dataServerId)) ||
-      String(t.serverId) === `/api/carpools/${String(idAttr)}` ||
-      String(t.id) === String(idAttr) ||
-      String(t.id) === String(dataServerId)
+      extractServerId(t.serverId ?? t['@id'] ?? t.id) === extractServerId(dataServerId ?? idAttr)
     );
 
     if (!trajet || trajet.role !== 'chauffeur') return;
@@ -1735,15 +2090,11 @@ async function handleTrajetActions(e) {
 
     (async () => {
       try {
-        // helper extract last numeric id from IRI or string
-        const extractNum = (s) => {
-          if (!s) return null;
-          const m = String(s).match(/(\d+)$/);
-          return m ? m[1] : null;
-        };
+        // récupérer et normaliser l'id serveur sous forme de string numérique
+        const serverNumStr = extractServerId(dataServerId || trajet.serverId || trajet['@id'] || idAttr);
+        const serverNum = (serverNumStr !== null && serverNumStr !== '') ? parseInt(serverNumStr, 10) : null;
 
-        const serverNum = extractNum(dataServerId || trajet.serverId || trajet['@id'] || idAttr);
-        if (!serverNum) {
+        if (serverNum === null || Number.isNaN(serverNum)) {
           // pas d'ID serveur : garder l'état local et marquer non-synchronisé
           trajet.synced = false;
           trajet.syncError = 'no-server-id';
@@ -1752,54 +2103,78 @@ async function handleTrajetActions(e) {
           return;
         }
 
-        const payload = JSON.stringify({ status: 'demarre' });
+        const payload = { status: 'demarre' };
 
         console.log('[trajet-start] PATCH /carpools/' + serverNum, payload);
 
-        // Appel API (merge-patch utilisé ailleurs)
         const resp = await apiFetch(`/carpools/${serverNum}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/merge-patch+json' },
-          body: payload
+          headers: {
+            'Content-Type': 'application/merge-patch+json',
+            'Accept': 'application/json'
+            // Authorization: `Bearer ${token}` // si nécessaire et si apiFetch ne le gère pas
+          },
+          body: JSON.stringify(payload)
         });
 
-        // apiFetch peut retourner l'objet JSON directement, ou Response-like.
-        let updatedTrajet = null;
-        if (resp && typeof resp === 'object' && typeof resp.json === 'function') {
-          // improbable si apiFetch renvoie déjà JSON mais on tente
-          try { updatedTrajet = await resp.json(); } catch(e){ updatedTrajet = resp; }
-        } else {
-          updatedTrajet = resp;
+        // gérer response non-ok
+        if (!resp || (typeof resp.ok !== 'undefined' && !resp.ok)) {
+          // tenter de lire un message d'erreur pour debug
+          let errText = null;
+          try { errText = await resp.text(); } catch (e) { /* ignore */ }
+
+          trajet.synced = false;
+          trajet.syncError = resp && resp.status ? `http:${resp.status}` : 'http:error';
+          saveTrajets();
+          console.warn(`[trajet-start] PATCH failed ${resp && resp.status}`, errText);
+          return;
         }
 
-        // Si on a un JSON contenant le covoiturage mis à jour, remplacer localement
+        // essayer d'extraire un JSON si renvoyé
+        let updatedTrajet = null;
+        try {
+          // certains apiFetch renvoient déjà l'objet JSON ; d'autres une Response
+          if (resp && typeof resp.json === 'function') {
+            updatedTrajet = await resp.json();
+          } else {
+            updatedTrajet = resp;
+          }
+        } catch (e) {
+          // pas de JSON
+          updatedTrajet = null;
+        }
+
         if (updatedTrajet && typeof updatedTrajet === 'object') {
-          // Normaliser le format (si backend renvoie @id/id, on garde ce qu'on a)
+          // normaliser serverId depuis la réponse
           const serverIdFromResp = updatedTrajet['@id'] ?? (updatedTrajet.id ? `/api/carpools/${updatedTrajet.id}` : null);
-          // construire un objet compatible avec ta structure locale si nécessaire
-          // => nous remplaçons l'élément local par l'objet renvoyé (ou une version adaptée)
-          const idx = trajets.findIndex(t => String(t.id) === String(trajet.id) || String(t.serverId) === String(serverIdFromResp) || String(t.serverId) === String(trajet.serverId));
+
+          // remplacer/mettre à jour l'élément local correspondant
+          const idx = trajets.findIndex(t =>
+            extractServerId(t.serverId ?? t['@id'] ?? t.id) === extractServerId(serverIdFromResp ?? trajet.serverId ?? trajet.id)
+          );
+
           if (idx !== -1) {
-            // si le backend renvoie la ressource complète (hydra/member) tu devras mapper comme dans loadTrajetsFromApi
-            // pour simplicité, on conserve les champs essentiels si absents côté serveur
             const kept = { ...trajets[idx] };
             trajets[idx] = Object.assign(kept, updatedTrajet);
+            // garantir champs essentiels
+            trajets[idx].synced = true;
+            delete trajets[idx].syncError;
           } else {
             // pas trouvé -> insérer en tête
-            trajets.unshift(updatedTrajet);
+            const itemToInsert = Object.assign({}, updatedTrajet, { synced: true });
+            trajets.unshift(itemToInsert);
           }
-          // marquer sync ok
-          trajets.forEach(t => { if (String(t.id) === String(trajet.id)) { t.synced = true; delete t.syncError; } });
-          saveTrajets(trajets);
-          // recharger de l'API pour être sûr d'avoir les bookings/passagers synchronisés (optionnel)
-          try { await loadTrajetsFromApi(); } catch(e){ /* non critique */ }
+
+          saveTrajets();
+          // optional: recharger depuis l'API pour bookings si nécessaire
+          try { await loadTrajetsFromApi(); } catch (e) { /* non critique */ }
           updatePlacesReservees();
           renderTrajetsInProgress();
           renderHistorique();
           return;
         }
 
-        // Cas où apiFetch retourne 204 / pas de JSON : forcer un reload centralisé
+        // cas 204 / pas de JSON retourné : forcer un reload depuis l'API (approche conservative)
         console.log('[trajet-start] réponse sans JSON (204 ?) - rechargement depuis l\'API');
         try {
           await loadTrajetsFromApi();
@@ -1812,10 +2187,9 @@ async function handleTrajetActions(e) {
 
       } catch (err) {
         console.warn('Erreur sync start -> serveur :', err);
-        // conserver l'update locale et marquer syncError si besoin
         if (trajet) {
           trajet.synced = false;
-          trajet.syncError = err.message || String(err);
+          trajet.syncError = err && err.message ? err.message : String(err);
           saveTrajets();
         }
       } finally {
@@ -1934,9 +2308,8 @@ async function handleTrajetActions(e) {
     const rawId = target.dataset.id;
 
     const trajet =
-      trajets.find(x => String(x.serverId) === String(rawId)) ||
-      trajets.find(x => String(x.id) === String(rawId)) ||
-      trajets.find(x => String(x.serverId) === `/api/carpools/${rawId}`);
+    trajets.find(x => extractServerId(x.serverId) === extractServerId(rawId)) ||
+    trajets.find(x => extractServerId(x.id) === extractServerId(rawId));
 
     if (!trajet || trajet.role !== 'chauffeur') return;
 
@@ -2112,9 +2485,8 @@ async function handleTrajetActions(e) {
 
     // chercher l'index en acceptant serverId, id ou IRI
     const index = trajets.findIndex(t =>
-      String(t.id) === String(id) ||
-      String(t.serverId) === String(id) ||
-      String(t.serverId) === `/api/carpools/${String(id).replace(/^\/api\/carpools\//, '')}`
+      extractServerId(t.id) === extractServerId(id) ||
+      extractServerId(t.serverId) === extractServerId(id)
     );
 
     if (index === -1) {
@@ -2124,7 +2496,7 @@ async function handleTrajetActions(e) {
 
     const removed = trajets[index];
     const serverId = removed?.serverId || removed?.['@id'] || null;
-    const deleteKey = serverId || id;
+    const deleteKey = extractServerId(serverId) || extractServerId(id) || String(id);
 
     // protège contre double-click / requêtes concurrentes
     console.log('[delete] deleting set contient:', Array.from(deleting));
@@ -2504,7 +2876,91 @@ function updatePlacesReservees() {
 
 console.log('Trajets après réservation:', trajets);
 
+async function ensureCarpoolIriFromBooking(t) {
+  if (!t) return null;
+
+  // 1) Si l'objet contient déjà le carpool (sous plusieurs formes possibles)
+  const maybeCp = t.carpool || t.raw?.carpool || t.covoiturage || t.raw?.covoiturage;
+  if (maybeCp) {
+    if (typeof maybeCp === 'string') return maybeCp;
+    if (maybeCp['@id']) return maybeCp['@id'];
+    if (maybeCp.id) return `/api/carpools/${maybeCp.id}`;
+    // sinon on continue (improbable)
+  }
+
+  // 2) Construire une IRI/chemin pour la réservation (booking)
+  const bookingIriCandidates = [
+    t.bookingServerId,
+    t.bookingIri,
+    t.booking,
+    t.serverId,
+    t['@id'],
+    t.id ? `/api/bookings/${t.id}` : null,
+    t.bookingId ? `/api/bookings/${t.bookingId}` : null
+  ].filter(Boolean);
+
+  if (bookingIriCandidates.length === 0) return null;
+
+  // On prend la première candidate valide
+  let bookingIriRaw = String(bookingIriCandidates[0]);
+
+  // Normaliser : enlever le host si présent, retirer /api prefix pour passer à apiFetch
+  bookingIriRaw = bookingIriRaw.replace(/^https?:\/\/[^/]+\/api/, '');
+  bookingIriRaw = bookingIriRaw.replace(/^\/api/, '');
+  if (!bookingIriRaw.startsWith('/')) bookingIriRaw = '/' + bookingIriRaw;
+
+  // bookingKey unique (id numérique ou path)
+  const bookingId = String(t.bookingId || t.id || bookingIriRaw).split('/').pop();
+  const bookingKey = `booking:${bookingId}`;
+
+  // 3) cache des promesses en vol pour éviter les fetchs concurrents
+  window._bookingFetchPromises = window._bookingFetchPromises || new Map();
+  if (window._bookingFetchPromises.has(bookingKey)) {
+    return window._bookingFetchPromises.get(bookingKey);
+  }
+
+  const promise = (async () => {
+    try {
+      // On délègue les headers/token à apiFetch (ton apiFetch injecte getToken())
+      // On demande JSON-LD si tu veux les relations complètes
+      const headers = { Accept: 'application/ld+json' };
+
+      // Appel : apiFetch attend un path sans host ni /api prefix (ton apiFetch normalise)
+      // bookingIriRaw ici commence par '/bookings/22' -> ok
+      const fullBooking = await apiFetch(bookingIriRaw, { headers, method: 'GET' });
+
+      // Chercher la relation carpool dans plusieurs clés possibles
+      const bcp = fullBooking?.carpool || fullBooking?.covoiturage || fullBooking?.carPool || fullBooking?.ride || null;
+      if (!bcp) {
+        console.debug('ensureCarpoolIriFromBooking: booking chargé mais carpool absent', bookingIriRaw);
+        return null;
+      }
+
+      if (typeof bcp === 'string') return bcp;
+      if (bcp['@id']) return bcp['@id'];
+      if (bcp.id) return `/api/carpools/${bcp.id}`;
+
+      return null;
+    } catch (err) {
+      console.warn('ensureCarpoolIriFromBooking: erreur fetch', bookingIriRaw, err);
+      return null;
+    } finally {
+      window._bookingFetchPromises.delete(bookingKey);
+    }
+  })();
+
+  window._bookingFetchPromises.set(bookingKey, promise);
+  return promise;
+}
+
 export function renderTrajetsInProgress() {
+  if ((!Array.isArray(trajets) || trajets.length === 0) && typeof loadTrajetsFromApi === 'function') {
+    // lancer un préfetch asynchrone et re-render ensuite (une seule tentative)
+    loadTrajetsFromApi().then(() => {
+      try { renderTrajetsInProgress(); } catch (e) { console.warn('Rerender failed', e); }
+    }).catch(e => { console.warn('loadTrajetsFromApi prefetch failed', e); });
+    return; // sortir maintenant, on re-rendra après le préfetch
+  }
   if (typeof window !== 'undefined') {
     window.loadTrajetsFromApi = loadTrajetsFromApi;
     window.renderTrajetsInProgress = renderTrajetsInProgress;
@@ -2512,92 +2968,606 @@ export function renderTrajetsInProgress() {
   const container = document.querySelector('#trajets-en-cours .trajets-list');
   if (!container) return;
 
-  const enCours = Array.isArray(trajets) ? trajets.filter(t => normalizeStatus(t.status ?? t.raw?.status ?? '') !== STATUS.PASSAGER.VALIDATED) : [];
-  if (enCours.length === 0) {
-    container.innerHTML = `<p>Aucun trajet en cours</p>`;
-    return;
+  const allActive = Array.isArray(trajets) ? trajets : [];
+
+  // ----------------------
+  // Helpers: ID canonical, user id, role resolution
+  // ----------------------
+  function canonicalCarpoolId(v) {
+    if (v == null) return '';
+    const s = String(v).trim();
+    const m = s.match(/\/api\/carpools\/(\d+)$/);
+    if (m) return `/api/carpools/${m[1]}`;
+    const m2 = s.match(/(\d+)$/);
+    if (m2) return `/api/carpools/${m2[1]}`;
+    return s;
   }
-
-  updatePlacesReservees();
-
-  // Mapping status -> classe CSS (centralisé)
-  const STATUS_TO_CLASS = {
-    'ajoute': 'actif',
-    'en_cours': 'actif',
-    'demarre': 'demarre',
-    'termine': 'termine',
-    'annule': 'attente',
-    'archive': 'archive',
-    'reserve': 'reserve',
-    'reserved': 'reserve',
-    'a_valider': 'attente',
-    'pending': 'reserve',     
-    'valide': 'valide'
-  };
-
-  function isUserDriverOf(trajet) {
+  function canonicalCarpoolNum(v) {
+    const iri = canonicalCarpoolId(v);
+    const m = String(iri).match(/(\d+)$/);
+    return m ? m[1] : String(iri);
+  }
+  function getCurrentUserIdStr() {
     try {
-      const me = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
-      if (!me) return false;
-      const driver = trajet.driver ?? trajet.chauffeur ?? (trajet.raw && trajet.raw.driver) ?? null;
-      if (!driver) return false;
-      if (typeof driver === 'object' && driver.id) return String(driver.id) === String(me.id);
-      if (typeof driver === 'string') {
-        return driver === `/api/users/${me.id}` || driver.endsWith('/' + me.id) || driver === String(me.id);
-      }
-      return String(driver) === String(me.id);
-    } catch (e) {
-      return false;
-    }
+      const me = (typeof getCurrentUser === 'function') ? getCurrentUser() : (window.currentUser || null);
+      if (!me) return null;
+      const id = me.id ?? me['@id'] ?? me;
+      return id ? String(id).split('/').pop() : null;
+    } catch (e) { return null; }
   }
 
-  const validStatuses = {
-    chauffeur: [STATUS.CHAUFFEUR.DRAFT, STATUS.CHAUFFEUR.ACTIVE, STATUS.CHAUFFEUR.STARTED, STATUS.CHAUFFEUR.COMPLETED],
-    passager: [STATUS.PASSAGER.RESERVED, STATUS.PASSAGER.PENDING, STATUS.PASSAGER.A_VALIDATE]
+  // Rôle calculé en priorité : bookings -> driver -> t.role -> detectRole
+  function roleForCurrentUser(t) {
+    const meId = getCurrentUserIdStr();
+    // bookings check
+    const bookings = Array.isArray(t.bookings) ? t.bookings : (Array.isArray(t.raw?.bookings) ? t.raw.bookings : []);
+    if (meId && Array.isArray(bookings) && bookings.length) {
+      for (const b of bookings) {
+        const p = b.passenger ?? b.user ?? b.passengerIri ?? b.userIri ?? b.userId ?? null;
+        if (!p) continue;
+        const pid = (typeof p === 'object') ? (String(p.id ?? p['@id'] ?? '').split('/').pop()) : String(p).split('/').pop();
+        if (pid === meId) return 'passager';
+      }
+    }
+    // driver check
+    const driver = t.driver ?? t.chauffeur ?? t.raw?.driver ?? t.raw?.chauffeur ?? t.driverIri ?? null;
+    if (driver) {
+      const did = (typeof driver === 'object') ? (String(driver.id ?? driver['@id'] ?? '').split('/').pop()) : String(driver).split('/').pop();
+      if (did && did === meId) return 'chauffeur';
+    }
+    // explicit role field
+    if (t.role) {
+      const r = String(t.role).toLowerCase();
+      if (r.includes('chauff')) return 'chauffeur';
+      if (r.includes('pass')) return 'passager';
+    }
+    // fallback to detectRole if present
+    if (typeof detectRole === 'function') {
+      try {
+        const dr = detectRole(t);
+        if (dr) return String(dr).toLowerCase();
+      } catch (e) { /* ignore */ }
+    }
+    return 'passager';
+  }
+
+  // small legacy helpers (kept for compatibility)
+  const extractId = (val) => {
+    if (val == null) return '';
+    const s = String(val);
+    const m = s.match(/(\d+)$/);
+    return m ? m[1] : s;
+  };
+  const extractServerId = (val) => extractId(val);
+
+  // ----------------------
+  // Dé-duplication avec clé canonique + préférences (passager vs chauffeur / bookings)
+  // ----------------------
+  const dedupMap = new Map();
+  const meId = getCurrentUserIdStr();
+
+  for (const t of allActive) {
+    const keyNum = canonicalCarpoolNum(t.serverId ?? t['@id'] ?? t.covoId ?? t.id ?? t.covoId);
+    const key = keyNum || (typeof genId === 'function' ? genId() : JSON.stringify(t));
+    const existing = dedupMap.get(key);
+
+    const roleThis = roleForCurrentUser(t);
+
+    if (!existing) {
+      dedupMap.set(key, Object.assign({}, t, { _resolvedRole: roleThis }));
+      continue;
+    }
+
+    const roleExisting = existing._resolvedRole || roleForCurrentUser(existing);
+
+    const existingHasBookings = Array.isArray(existing.bookings) && existing.bookings.length > 0;
+    const newHasBookings = Array.isArray(t.bookings) && t.bookings.length > 0;
+    if (newHasBookings && !existingHasBookings) {
+      dedupMap.set(key, Object.assign({}, t, { _resolvedRole: roleThis }));
+      continue;
+    }
+    if (existingHasBookings && !newHasBookings) {
+      continue;
+    }
+
+    // prefer passenger view for current user
+    if (roleThis === 'passager' && roleExisting !== 'passager') {
+      dedupMap.set(key, Object.assign({}, t, { _resolvedRole: roleThis }));
+      continue;
+    }
+    if (roleExisting === 'passager' && roleThis !== 'passager') {
+      continue;
+    }
+
+    // prefer chauffeur view for current user
+    if (roleThis === 'chauffeur' && roleExisting !== 'chauffeur') {
+      dedupMap.set(key, Object.assign({}, t, { _resolvedRole: roleThis }));
+      continue;
+    }
+    if (roleExisting === 'chauffeur' && roleThis !== 'chauffeur') {
+      continue;
+    }
+
+    // fallback: prefer latest (overwrite)
+    dedupMap.set(key, Object.assign({}, t, { _resolvedRole: roleThis }));
+  }
+
+  const deDupedList = Array.from(dedupMap.values());
+
+  // ----------------------
+  // Filtrage : on retire les passagers validés + archives/annules etc.
+  // ----------------------
+  const enCours = deDupedList.filter(t => {
+    const s = normalizeStatus(t.status ?? t.raw?.status ?? '');
+    if (s === (STATUS?.PASSAGER?.VALIDATED ?? 'validated')) return false;
+    return true;
+  });
+
+  if (typeof updatePlacesReservees === 'function') updatePlacesReservees();
+
+  // ----------------------
+  // Recherche maître (reste identique mais utilise deDupedList)
+  // ----------------------
+  const findMasterTrajetByCovoId = (covoIdStr) => {
+    if (!covoIdStr) return null;
+    const target = extractServerId(covoIdStr);
+
+    const matchFn = (tr) => {
+      const sid = extractServerId(tr.serverId) || extractServerId(tr.id) || '';
+      return sid === target;
+    };
+
+    let found = deDupedList.find(tr => matchFn(tr) && Array.isArray(tr.bookings) && tr.bookings.length > 0);
+    if (found) return found;
+    found = deDupedList.find(tr => matchFn(tr));
+    if (found) return found;
+
+    if (Array.isArray(trajets) && trajets.length > 0) {
+      found = trajets.find(tr => matchFn(tr) && Array.isArray(tr.bookings) && tr.bookings.length > 0);
+      if (found) return found;
+      found = trajets.find(tr => matchFn(tr));
+      if (found) return found;
+    }
+
+    try {
+      const store = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+      if (Array.isArray(store) && store.length) {
+        found = store.find(tr => {
+          const sid = extractServerId(tr.serverId) || extractServerId(tr.id) || '';
+          return sid === target;
+        });
+        if (found) return found;
+      }
+    } catch (e) {
+      // ignore parse errors
+    }
+
+    return null;
   };
 
-  const filteredEnCours = enCours.filter(t => {
-    const roleNorm = String(t.role || '').toLowerCase().trim() || (t.driver ? 'chauffeur' : (t.role === undefined && t.covoId ? 'passager' : 'chauffeur'));
-    const statusNorm = normalizeStatus(t.status ?? t.raw?.status ?? t.raw?.statut ?? '');
-  
-    if (roleNorm === 'chauffeur') {
-      // Exclure les trajets terminés avec tous passagers validés
-      if (statusNorm === STATUS.CHAUFFEUR.COMPLETED && allPassengersValidated(t)) {
-        return false; // ne pas afficher dans la liste en cours
+  // ----------------------
+  // computePlacesReservees (inchangé)
+  // ----------------------
+  function computePlacesReservees(t, trajetRef, currentUser) {
+    const me = currentUser ?? ((typeof getCurrentUser === 'function') ? getCurrentUser() : null);
+    const myIdStr = me && me.id ? String(me.id).split('/').pop().trim() : null;
+
+    const seatsFromBooking = (b) => {
+      if (!b) return 0;
+      const candidates = [
+        b.seats,
+        b.reservedSeats,
+        b.nb_places_reservees,
+        b.quantity,
+        b.count,
+        b.nbPlaces,
+        b.nb_places
+      ];
+      for (const c of candidates) {
+        if (c !== undefined && c !== null && c !== '') {
+          const n = Number(c);
+          if (!isNaN(n)) return n;
+        }
       }
-      return isUserDriverOf(t);
+      return 0;
+    };
+
+    const src = trajetRef || t || {};
+    const bookings = Array.isArray(src.bookings) ? src.bookings : (Array.isArray(src.raw?.bookings) ? src.raw.bookings : []);
+
+    if (Array.isArray(bookings) && bookings.length > 0) {
+      const total = bookings.reduce((sum, b) => sum + seatsFromBooking(b), 0);
+      return Number(total) || 0;
     }
+
+    const tryFindMyBooking = () => {
+      const searchLists = [];
+      if (Array.isArray(trajetRef?.bookings)) searchLists.push(trajetRef.bookings);
+      if (Array.isArray(t?.bookings)) searchLists.push(t.bookings);
+      if (Array.isArray(t?.raw?.bookings)) searchLists.push(t.raw.bookings);
+
+      for (const list of searchLists) {
+        const found = list.find(b => {
+          const p = b.passenger ?? b.user ?? b.passengerIri ?? b.userIri ?? null;
+          if (!p) return false;
+          if (typeof p === 'object' && (p.id || p['@id'])) {
+            const pid = String(p.id ?? p['@id']).split('/').pop();
+            return myIdStr ? pid === myIdStr : false;
+          }
+          const pidStr = String(p).split('/').pop();
+          return myIdStr ? pidStr === myIdStr : false;
+        });
+        if (found) return seatsFromBooking(found);
+      }
+      return null;
+    };
+
+    const myBookingSeats = tryFindMyBooking();
+    if (myBookingSeats !== null) {
+      return myBookingSeats;
+    }
+
+    const explicitCandidates = [
+      t?.placesReservees,
+      t?.reservedSeats,
+      t?.nb_places_reservees,
+      t?.places_reserved,
+      t?.reserved_count
+    ];
+    for (const val of explicitCandidates) {
+      if (val !== undefined && val !== null && val !== '') {
+        const n = Number(val);
+        if (!isNaN(n)) {
+          return n;
+        }
+      }
+    }
+
+    return 0;
+  }
+
+  // ----------------------
+  // Filtrage final selon rôle et status (utilise roleForCurrentUser)
+  // ----------------------
+  const filteredEnCours = enCours.filter(t => {
+    const roleNorm = roleForCurrentUser(t);
+    const statusNorm = normalizeStatus(t.status ?? (t.raw ? t.raw.status : ''));
+
+    if (['archive', 'annule', 'archived', 'cancelled'].includes(statusNorm)) return false;
+
+    if (roleNorm === 'chauffeur') {
+      if (statusNorm === 'termine' || statusNorm === 'completed') {
+        return !allPassengersValidated(t);
+      }
+      return true;
+    }
+
     if (roleNorm === 'passager') {
-      const covoId = t.covoId || t.detailId || t.serverId || t.id || null;
-      if (!covoId) return false;
-      const covoIdStr = String(covoId);
-      const trajetChauffeur = trajets.find(tr =>
-        String(tr.serverId) === covoIdStr ||
-        String(tr.id) === covoIdStr ||
-        (tr.serverId && tr.serverId.endsWith('/' + covoIdStr))
-      );
-      return !!trajetChauffeur;
+      if (statusNorm === 'valide' || statusNorm === 'validated') return false;
+      if (statusNorm === 'termine' || statusNorm === 'completed') return false;
+      return true;
     }
+
     return false;
   });
 
-  console.log('DEBUG filteredEnCours:', filteredEnCours.map(t => ({ id: t.id, role: t.role, status: t.status })));
+  container.innerHTML = ''; // vider le container avant
+
+  // initialisation protection fetchs
+  window._fetchingCarpools = window._fetchingCarpools || new Set();
+  const enrichPromises = []; // collection de promesses d'enrichissement
+
+  // helper : merge sécurisé — n'écrase PAS les clés sensibles
+  function safeAssign(target, source, allowedKeys = []) {
+    allowedKeys.forEach(k => {
+      if (source && source[k] !== undefined) target[k] = source[k];
+    });
+  }
 
   let html = '';
-  console.log('renderTrajetsInProgress — filteredEnCours:', filteredEnCours);
 
-  function pickFirst(obj, keys) {
-    for (const k of keys) {
-      if (!k) continue;
-      const parts = k.split('.');
-      let cur = obj;
-      for (const p of parts) {
-        if (cur == null) { cur = undefined; break; }
-        cur = cur[p];
+  // Map normalised status -> CSS class that matches ton SCSS (ajout 'actif')
+  function mapStatusToCssClass(role, normalizedStatus) {
+    const s = String(normalizedStatus || '').toLowerCase();
+  
+    if (role === 'chauffeur') {
+      // Ajout de 'ajoute' ici pour qu'il soit considéré comme 'actif'
+      if (['active', 'actif', 'published', 'open', 'created', 'enabled', 'available', 'ajoute'].includes(s)) {
+        return 'actif';
       }
-      if (cur !== undefined && cur !== null && String(cur).trim() !== '') return cur;
+      if (['started', 'in_progress', 'demarre', 'active_drive', 'ongoing', 'running'].includes(s)) {
+        return 'demarre';
+      }
+      if (['awaiting_validation', 'awaiting_confirmation', 'attente', 'pending', 'waiting'].includes(s)) {
+        return 'attente';
+      }
+      if (['finished', 'completed', 'termine', 'done', 'archived'].includes(s)) {
+        return 'termine';
+      }
+      return 'attente';
     }
-    return undefined;
+  
+    return 'reserve';
+  }
+
+  // ----------------------
+  // Rendu
+  // ----------------------
+  filteredEnCours.forEach((t, i) => {
+    console.log(i, 'serverId:', t.serverId, 'covoId:', t.covoId, 'raw.carpool:', t.raw?.carpool);
+    // DEBUG: voir status réels et mapping pour chaque trajet (affiche dans la console)
+    try {
+      if (!t) return;
+
+      // résout le rôle propre à l'utilisateur courant
+      const role = roleForCurrentUser(t);
+
+      // --- SOURCE DE DONNÉES (lecture seulement) ---
+      const covoData = t.raw?.carpool || t.carpool || null;
+      let source = (role === 'passager' && covoData) ? covoData : t;
+
+      // si on a un covoId, chercher le trajet maître (lecture seule)
+      const covoIdStr = extractServerId(t.covoId || t.serverId);
+      if (covoIdStr) {
+        const found = findMasterTrajetByCovoId(covoIdStr);
+        if (found) source = found;
+      }
+
+      // après avoir calculé covoIdStr et source
+      if (covoIdStr && (!Array.isArray(source.bookings) || source.bookings.length === 0)) {
+        const fetchKey = `cp:${covoIdStr}`;
+        if (!window._fetchingCarpools.has(fetchKey)) {
+          window._fetchingCarpools.add(fetchKey);
+          const p = (async () => {
+            try {
+              const full = await fetchMissingCarpoolData(covoIdStr);
+              if (full) {
+                safeAssign(t, {
+                  depart: full.departureLocation ?? full.depart,
+                  arrivee: full.arrivalLocation ?? full.arrivee,
+                  heureDepart: full.departureTime ?? full.heureDepart,
+                  heureArrivee: full.arrivalTime ?? full.heureArrivee,
+                  prix: full.price ?? full.prix,
+                  nbPlacesTotal: full.nbPlacesTotal ?? full.places ?? full.totalSeats,
+                  driver: full.driver ?? full.chauffeur ?? t.driver,
+                  bookings: full.bookings ?? full.reservations ?? t.bookings
+                }, ['depart','arrivee','heureDepart','heureArrivee','prix','nbPlacesTotal','driver','bookings']);
+              }
+            } catch (e) {
+              console.warn('enrich fetch failed for', covoIdStr, e);
+            } finally {
+              window._fetchingCarpools.delete(fetchKey);
+            }
+          })();
+          enrichPromises.push(p);
+        }
+      }
+
+      // --- EXTRACTION DES INFOS POUR AFFICHAGE ---
+      const depart = t.depart || source.departureLocation || source.depart || '—';
+      const arrivee = t.arrivee || source.arrivalLocation || source.arrivee || '—';
+      const prix = (t.prix ?? source.price ?? source.prix ?? 0);
+      const rawDate = source.departureDate || source.date || t.date;
+      const dateText = safeFormatDate(rawDate) || '';
+
+      const hD = source.departureTime || source.heureDepart || '';
+      const hA = source.arrivalTime || source.heureArrivee || '';
+      const horaireText = (hD && hA) ? `${hD} → ${hA}` : (hD || hA || '');
+      const placesOccupees = computePlacesReservees(t, source);
+      const placesTotales = Number(t.nbPlacesTotal ?? source.nbPlacesTotal ?? 0) || 0;
+
+      const placesLabelText = (role === 'chauffeur')
+        ? `${placesOccupees} / ${placesTotales}`
+        : (t.seats || t.placesReservees || 1);
+
+      const placesWord = (role === 'chauffeur')
+        ? (placesOccupees === 1 ? 'place réservée' : 'places réservées')
+        : ( (Number(placesLabelText) === 1) ? 'place réservée' : 'places réservées' );
+
+      // --- STATUS → CLASSE (utiliser status de la source pertinente) ---
+      const rawStatusSource = role === 'passager' ? (t.status ?? t.raw?.status ?? t.raw?.statut) : (source.status ?? source.raw?.status ?? t.status);
+      const status = normalizeStatus(rawStatusSource ?? 'ajoute');
+      const mappedCssClass = mapStatusToCssClass(role, status);
+      const bgClass = `trajet-card ${mappedCssClass}`;
+
+      const stableId = extractId(t.serverId ?? t.id ?? '') || '';
+
+      console.debug('TRACE status/role:', {
+        id: stableId,
+        roleGuess: role,
+        rawStatusSource,
+        normalizedStatus: status,
+        mappedCssClass
+      });
+
+      let buttonsHtml = '';
+
+      // --- BOUTONS selon classe --
+      if (role === 'chauffeur') {
+        if (mappedCssClass === 'demarre') {
+          // le bouton "Arrivée" / "Valider" après démarrage
+          buttonsHtml = `<button class="btn-trajet trajet-validate-btn" data-id="${stableId}">Valider</button>`;
+        } else if (mappedCssClass === 'attente' || mappedCssClass === 'actif') {
+          // 'actif' => initial (après création), 'attente' => attente après validation "arrivée" selon ton flux
+          buttonsHtml = `
+            <button class="btn-trajet trajet-edit-btn" data-id="${stableId}">Modifier</button>
+            <button class="btn-trajet trajet-delete-btn" data-id="${stableId}">Supprimer</button>
+            <button class="btn-trajet trajet-start-btn" data-id="${stableId}">Démarrer</button>
+          `;
+        } else if (mappedCssClass === 'termine') {
+          buttonsHtml = `<span class="trajet-status">Terminé</span>`;
+        } else {
+          // fallback
+          buttonsHtml = `<button class="btn-trajet trajet-start-btn" data-id="${stableId}">Démarrer</button>`;
+        }
+      } else {
+        // passager
+        const refId = t.covoId || (t.raw?.carpool?.['@id']) || '';
+        // si le chauffeur a cliqué "arrivée" et mappedCssClass est 'attente', on doit afficher "Valider" au passager
+        // mais tu as demandé que le bouton passager passe de "Annuler" à "Valider" quand le chauffeur clique "Arrivée"
+        // donc on vérifie si mappedCssClass === 'attente' and role==='passager' to change label
+        const passengerShouldValidate = (mappedCssClass === 'attente' || status === (STATUS?.PASSAGER?.AWAITING_VALIDATION ?? 'awaiting_validation'));
+        buttonsHtml = `
+          <button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>
+          ${passengerShouldValidate ? `<button class="btn-trajet trajet-validate-passager-btn" data-id="${stableId}">Valider</button>` : `<button class="btn-trajet trajet-cancel-btn" data-id="${stableId}">Annuler</button>`}
+          <button class="btn-trajet trajet-signaler-btn" data-id="${stableId}">⚠ Signaler</button>
+        `;
+      }
+
+      // --- RENDU HTML (structure inchangée pour ton SCSS) ---
+      html += `
+        <div class="${bgClass.trim()}" data-id="${stableId}" data-role="${role}">
+          <div class="trajet-body">
+            <div class="trajet-info">
+              <strong>Covoiturage ${dateText ? `(${dateText})` : ''} : <br>${escapeHtml(depart)} → ${escapeHtml(arrivee)}</strong>
+              <span class="details">${escapeHtml(horaireText)}${horaireText ? ' • ' : ''}${placesLabelText} ${placesWord}</span>
+            </div>
+            <div class="trajet-price">${Number(prix || 0).toLocaleString('fr-FR')} crédits</div>
+            ${buttonsHtml}
+          </div>
+        </div>
+      `;
+    } catch (err) {
+      console.error('Erreur rendu trajet:', err);
+    }
+  });
+
+  // Helper indispensable pour éviter les erreurs de rendu
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#039;"}[m]));
+  }
+
+  container.innerHTML = html;
+
+  // Si on a programmé des enrichissements asynchrones, attendre qu'ils finissent,
+  // puis relancer un seul rendu final pour refléter toutes les données fusionnées.
+  if (enrichPromises.length > 0) {
+    Promise.all(enrichPromises.map(p => p.catch(() => null))).then(() => {
+      try { renderTrajetsInProgress(); } catch (e) { console.warn('Rerender after enrich failed', e); }
+    }).catch(() => {
+      try { renderTrajetsInProgress(); } catch (e) { console.warn('Rerender after enrich failed', e); }
+    });
+  }
+
+  if (!container.dataset.boundTrajets) {
+    container.dataset.boundTrajets = "1";
+    container.addEventListener('click', (e) => {
+      const target = e.target;
+
+      // Edit
+      const editBtn = target.closest('.trajet-edit-btn');
+      if (editBtn) {
+        const rawId = editBtn.dataset.id;
+        const foundTrajet =
+          trajets.find(x => String(x.serverId) === String(rawId)) ||
+          trajets.find(x => String(x.id) === String(rawId)) ||
+          trajets.find(x => String(x.serverId) === `/api/carpools/${rawId}`);
+        if (!foundTrajet) return;
+        if (typeof openEditTrajetForm === 'function') openEditTrajetForm(foundTrajet);
+        return;
+      }
+
+      // Detail
+      const detailBtn = target.closest('.trajet-detail-btn');
+      if (detailBtn) {
+        const covoId = detailBtn.dataset.covoId;
+        if (!covoId) return;
+        const newPath = `/detail/${encodeURIComponent(covoId)}`;
+        try {
+          window.history.pushState({}, '', newPath);
+          LoadContentPage();
+        } catch (err) {
+          window.location.href = newPath;
+        }
+        return;
+      }
+
+      // Start (chauffeur)
+      const startBtn = target.closest('.trajet-start-btn');
+      if (startBtn) {
+        const id = startBtn.dataset.id;
+        if (!id) return;
+        if (typeof startTrajet === 'function') {
+          startTrajet(id);
+        } else {
+          // fallback: try updateStatusApi if available
+          if (typeof updateStatusApi === 'function') updateStatusApi(id, 'started').then(() => renderTrajetsInProgress());
+        }
+        return;
+      }
+
+      // Validate / Arrival (chauffeur) - "Valider"
+      const validateBtn = target.closest('.trajet-validate-btn');
+      if (validateBtn) {
+        const id = validateBtn.dataset.id;
+        if (!id) return;
+        if (typeof validateTrajet === 'function') {
+          validateTrajet(id);
+        } else {
+          if (confirm("Voulez-vous confirmer que ce trajet est terminé ?")) {
+            if (typeof updateStatusApi === 'function') updateStatusApi(id, 'finished').then(() => renderTrajetsInProgress());
+          }
+        }
+        return;
+      }
+
+      // Validate (passager) - lorsque chauffeur a cliqué "arrivée" et passager doit valider
+      const validatePassBtn = target.closest('.trajet-validate-passager-btn');
+      if (validatePassBtn) {
+        const id = validatePassBtn.dataset.id;
+        if (!id) return;
+        if (typeof validateReservation === 'function') {
+          validateReservation(id).then(() => renderTrajetsInProgress()).catch(err => console.warn('Validate passager failed', err));
+        } else if (typeof updateReservationStatusApi === 'function') {
+          if (confirm('Confirmer ce trajet et laisser un avis ?')) {
+            updateReservationStatusApi(id, 'validated').then(() => renderTrajetsInProgress()).catch(err => console.warn('Validate passager failed', err));
+          }
+        }
+        return;
+      }
+
+      // Delete (chauffeur)
+      const deleteBtn = target.closest('.trajet-delete-btn');
+      if (deleteBtn) {
+        const id = deleteBtn.dataset.id;
+        if (!id) return;
+        if (typeof deleteTrajetApi === 'function') {
+          if (confirm('Supprimer ce trajet ? Cette action est irréversible.')) {
+            deleteTrajetApi(id).then(() => renderTrajetsInProgress()).catch(err => console.warn('Delete failed', err));
+          }
+        } else if (typeof deleteTrajet === 'function') {
+          deleteTrajet(id);
+        }
+        return;
+      }
+
+      // Cancel (passager)
+      const cancelBtn = target.closest('.trajet-cancel-btn');
+      if (cancelBtn) {
+        const id = cancelBtn.dataset.id;
+        if (!id) return;
+        if (typeof cancelReservation === 'function') {
+          if (confirm('Voulez-vous annuler cette réservation ?')) {
+            cancelReservation(id).then(() => renderTrajetsInProgress()).catch(err => console.warn('Cancel failed', err));
+          }
+        } else if (typeof deleteReservationApi === 'function') {
+          if (confirm('Voulez-vous annuler cette réservation ?')) {
+            deleteReservationApi(id).then(() => renderTrajetsInProgress()).catch(err => console.warn('Cancel failed', err));
+          }
+        }
+        return;
+      }
+
+      // Signaler
+      const signalBtn = target.closest('.trajet-signaler-btn');
+      if (signalBtn) {
+        const id = signalBtn.dataset.id;
+        if (!id) return;
+        if (typeof openSignalForm === 'function') openSignalForm(id);
+        return;
+      }
+    });
   }
 
   function safeFormatDate(val) {
@@ -2611,219 +3581,6 @@ export function renderTrajetsInProgress() {
     const d = new Date(val);
     if (!isNaN(d)) return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
     return String(val);
-  }
-
-  const departCandidates = [ 'depart', 'departLieu', 'departVille', 'villeDepart', 'from', 'from.city', 'from.name', 'route.from', 'route.from.city', 'origin', 'origin.city' ];
-  const arriveeCandidates = [ 'arrivee', 'arriveeLieu', 'arriveeVille', 'villeArrivee', 'to', 'to.city', 'to.name', 'route.to', 'route.to.city', 'destination', 'destination.city' ];
-  const dateCandidates = [ 'date', 'dateDepart', 'departureDate', 'date_depart', 'startDate', 'start_at', 'departure_at', 'jour' ];
-
-  function extractId(val) {
-    if (val == null) return '';
-    const s = String(val);
-    const m = s.match(/(\d+)$/);
-    return m ? m[1] : s;
-  }
-
-  function getBookingSeatsFromBooking(b) {
-    if (!b) return 0;
-    return Number(b.seats ?? b.reservedSeats ?? b.nb_places_reservees ?? 0) || 0;
-  }
-
-  function findMyBookingOnTrajet(trajetRef, passengerIdOrIri) {
-    if (!trajetRef || !Array.isArray(trajetRef.bookings)) return null;
-    return trajetRef.bookings.find(b => {
-      const pass = b.passenger ?? b.user ?? b.passengerIri ?? null;
-      if (!pass) return false;
-      if (typeof pass === 'object' && pass.id) return String(pass.id) === String(passengerIdOrIri);
-      if (typeof pass === 'string') return pass === passengerIdOrIri || pass.endsWith('/' + passengerIdOrIri);
-      return String(pass) === String(passengerIdOrIri);
-    }) || null;
-  }
-
-  const me = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
-  const myIdOrIri = me ? (me.id ?? `/api/users/${me.id}`) : null;
-
-  function computePlacesReservees(t, trajetRef) {
-    if (t.placesReservees != null) return Number(t.placesReservees) || 0;
-    if (t.seats != null) return Number(t.seats) || 0;
-    if (t.reservedSeats != null) return Number(t.reservedSeats) || 0;
-
-    if (t.role === 'chauffeur' || (trajetRef && t.role !== 'passager')) {
-      const bList = trajetRef?.bookings ?? [];
-      return bList.reduce((sum, b) => sum + getBookingSeatsFromBooking(b), 0);
-    }
-
-    if (t.role === 'passager') {
-      if (Array.isArray(t.bookings) && t.bookings.length > 0) return getBookingSeatsFromBooking(t.bookings[0]);
-      const found = myIdOrIri ? findMyBookingOnTrajet(trajetRef, myIdOrIri) : null;
-      if (found) return getBookingSeatsFromBooking(found);
-      return 1;
-    }
-
-    return 0;
-  }
-
-  filteredEnCours.forEach((t, i) => {
-    try {
-      if (!t) {
-        console.warn('Rendu trajet: trajet non défini, index =', i);
-        return;
-      }
-
-      let bgClass = "trajet-card";
-      let actionHtml = "";
-
-      // Pour passager, récupérer les infos du trajet chauffeur lié
-      let trajetRef = t;
-      if (t.role === 'passager') {
-        const covoId = t.covoId || t.detailId || t.serverId || t.id || null;
-        if (covoId) {
-          const covoIdStr = String(covoId);
-          const trajetChauffeur = trajets.find(tr =>
-            String(tr.serverId) === covoIdStr ||
-            String(tr.id) === covoIdStr ||
-            (tr.serverId && tr.serverId.endsWith('/' + covoIdStr))
-          );
-          if (trajetChauffeur) trajetRef = trajetChauffeur;
-          else console.warn('Passager: covoId référencé mais trajet chauffeur introuvable', covoId, 'reservation id=', t.id);
-        }
-      }
-
-      // Extraction des infos principales
-      const rawDepart = pickFirst(trajetRef, departCandidates);
-      const rawArrivee = pickFirst(trajetRef, arriveeCandidates);
-      const rawDate = pickFirst(trajetRef, dateCandidates);
-
-      const depart = rawDepart ? String(rawDepart).trim() : '';
-      const arrivee = rawArrivee ? String(rawArrivee).trim() : '';
-      const dateToDisplay = safeFormatDate(rawDate) || '';
-
-      const stableIdRaw = t.serverId ?? t.id ?? t['@id'] ?? '';
-      const stableId = extractId(stableIdRaw);
-      const dataIdForAttr = t.id ?? t.serverId ?? stableIdRaw;
-
-      const heureDepart = t.heureDepart || trajetRef.heureDepart || '';
-      const heureArrivee = t.heureArrivee || trajetRef.heureArrivee || '';
-      const prix = t.prix ?? trajetRef.prix ?? 0;
-
-      const placesReservees = computePlacesReservees(t, trajetRef);
-
-      // Normalisation rôle / statut
-      const role = String(t.role || '').toLowerCase().trim() || (t.driver ? 'chauffeur' : (t.role === undefined && t.covoId ? 'passager' : 'chauffeur'));
-      const status = normalizeStatus(t.status ?? t.raw?.status ?? t.raw?.statut ?? 'ajoute');
-
-      // mappedClass (utilisé pour apply CSS by default)
-      const mappedClass = STATUS_TO_CLASS[status] ?? status;
-      // par défaut on applique mappedClass (ex: reserve, actif, demarre, attente...)
-      bgClass += mappedClass ? ` ${mappedClass}` : '';
-
-      // Actions selon rôle/statu (on privilégie mappedClass pour la logique passager)
-      if (role === "chauffeur") {
-        if (status === STATUS.CHAUFFEUR.DRAFT || status === 'ajoute') {
-          bgClass = 'trajet-card actif';
-          actionHtml = `
-            <button class="btn-trajet trajet-edit-btn" data-id="${stableId}" data-server-id="${stableIdRaw}">Modifier</button>
-            <button class="btn-trajet trajet-delete-btn" data-id="${stableId}" data-server-id="${stableIdRaw}">Supprimer</button>
-            <button class="btn-trajet trajet-start-btn" data-id="${stableId}" data-server-id="${stableIdRaw}">Démarrer</button>
-          `;
-        } else if (status === STATUS.CHAUFFEUR.STARTED || status === 'demarre') {
-          bgClass = 'trajet-card demarre';
-          actionHtml = `<button class="btn-trajet trajet-arrive-btn" data-id="${stableId}" data-server-id="${stableIdRaw}">Arrivée à destination</button>`;
-        } else if (status === STATUS.CHAUFFEUR.COMPLETED || status === 'termine') {
-          // Détecter s'il reste des réservations en attente pour ce covo
-          const hasPendingBookings = Array.isArray(trajetRef.bookings) && trajetRef.bookings.some(b => {
-            const bs = normalizeStatus(b.status ?? b.statut ?? '');
-            return bs === STATUS.PASSAGER.A_VALIDATE || bs === STATUS.PASSAGER.PENDING;
-          });
-
-          if (hasPendingBookings) {
-            bgClass = 'trajet-card attente';
-            actionHtml = `<span class="trajet-status">En attente de validation</span>`;
-          } else {
-            // aucun passager en attente -> on le considère comme terminé / historique
-            bgClass = 'trajet-card termine-ok';
-            actionHtml = `<span class="trajet-status">Terminé</span>`;
-            // si tu veux enlever le trajet de la liste en cours et le placer en historique automatiquement,
-            // appelle ici renderHistorique() ou fais la logique de déplacement.
-          }
-        } else {
-          // fallback: keep mapped class and no special actions
-        }
-      } else if (role === "passager") {
-        // on considère comme "reserve" si mappedClass === 'reserve' ou status équivalent
-        if (mappedClass === 'reserve' || status === STATUS.PASSAGER.RESERVED || status === STATUS.PASSAGER.PENDING) {
-          // s'assurer que la classe "reserve" est présente
-          if (!bgClass.includes('reserve')) bgClass += ' reserve';
-          const refId = getCovoId(t) || t.covoId || t.detailId || '';
-          actionHtml = `
-            <button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>
-            <button class="btn-trajet trajet-cancel-btn" data-id="${dataIdForAttr}" data-server-id="${stableIdRaw}">Annuler</button>
-            <button class="btn-trajet trajet-signaler-btn" data-id="${dataIdForAttr}" data-covo-id="${refId}">⚠ Signaler</button>
-          `;
-        } else if (mappedClass === 'attente' || status === STATUS.PASSAGER.A_VALIDATE) {
-          if (!bgClass.includes('attente')) bgClass += ' attente';
-          const refId = getCovoId(t);
-          actionHtml = `
-            <button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>
-            <button class="btn-trajet trajet-validate-btn" data-id="${stableId}" data-server-id="${stableIdRaw}">Valider</button>
-          `;
-        } else {
-          // fallback: keep mapped class
-        }
-      }
-
-      // Label pluriel/singulier
-      const placeLabel = placesReservees > 1 ? 'places réservées' : 'place réservée';
-
-      // Construction HTML du bloc
-      html += `
-        <div class="${bgClass.trim()}" data-id="${stableId}" data-server-id="${stableIdRaw}">
-          <div class="trajet-body">
-            <div class="trajet-info">
-              <strong>Covoiturage (${dateToDisplay}) : <br>${depart || '—'} → ${arrivee || '—'}</strong>
-              ${t.synced === false ? '<span style="color:orange;font-size:0.9em;">⚠ Non synchronisé</span>' : ''}
-              <span class="details">${heureDepart} → ${heureArrivee} • ${placesReservees} ${placeLabel}</span>
-            </div>
-            <div class="trajet-price">${prix} crédits</div>
-            ${actionHtml}
-          </div>
-        </div>
-      `;
-    } catch (err) {
-      console.warn('Erreur lors du rendu d\'un trajet (continue):', err);
-    }
-  });
-
-  container.innerHTML = html;
-
-  if (!container.dataset.boundTrajets) {
-    container.dataset.boundTrajets = "1";
-    container.addEventListener('click', (e) => {
-      const editBtn = e.target.closest('.trajet-edit-btn');
-      if (editBtn) {
-        const rawId = editBtn.dataset.id;
-        const foundTrajet =
-          trajets.find(x => String(x.serverId) === String(rawId)) ||
-          trajets.find(x => String(x.id) === String(rawId)) ||
-          trajets.find(x => String(x.serverId) === `/api/carpools/${rawId}`);
-        if (!foundTrajet) return;
-        if (typeof openEditTrajetForm === 'function') openEditTrajetForm(foundTrajet);
-        return;
-      }
-      const detailBtn = e.target.closest('.trajet-detail-btn');
-      if (detailBtn) {
-        const covoId = detailBtn.dataset.covoId;
-        if (!covoId) return;
-        const newPath = `/detail/${encodeURIComponent(covoId)}`;
-        try {
-          window.history.pushState({}, '', newPath);
-          LoadContentPage();
-        } catch (err) {
-          window.location.href = newPath;
-        }
-        return;
-      }
-    });
   }
 }
 
@@ -2899,10 +3656,11 @@ export async function renderHistorique() {
       return parts[parts.length - 1] || null;
     };
     function allPassengersValidated(trip) {
-      if (!trip || !Array.isArray(trip.bookings)) return false;
-      return trip.bookings.length > 0 && trip.bookings.every(b => {
-        const st = normalizeStatus(b.status ?? b.statut ?? b.rawStatus ?? '');
-        return st === STATUS.PASSAGER.VALIDATED;
+      const bks = trip.bookings || (trip.raw ? trip.raw.bookings : []);
+      if (!bks || bks.length === 0) return false; 
+      return bks.every(b => {
+        const s = normalizeStatus(b.status ?? b.statut ?? '');
+        return (s === 'valide' || s === 'validated');
       });
     }
 
@@ -2959,14 +3717,34 @@ export async function renderHistorique() {
     const filteredTrajets = [];
     for (const cp of carpools) {
       const cpId = extractId(cp.serverId || cp['@id'] || cp.id || cp.server || cp.covoId);
-      const related = cpId ? (bookingsByCovo.get(cpId) || []) : [];
-      const userBook = related.find(b => bookingBelongsToCurrentUser(b));
-      if (userBook) {
-        filteredTrajets.push(Object.assign({}, userBook, { role: 'passager' }));
+    
+      // récupérer driver brut (plusieurs sources possibles)
+      const drv = cp.driver ?? cp.chauffeur ?? cp.raw?.driver ?? cp.owner ?? null;
+    
+      // extraction via ton helper existant
+      const driverId = extractIdFromDriver(drv);
+      const driverNormalized = (typeof normalizeDriver === 'function') ? normalizeDriver(drv) : drv;
+    
+      // DEBUG
+      console.debug('[renderHistorique] cpId=', cpId, 'driverId=', driverId, 'currentUserId=', currentUserId);
+      console.log('[DEBUG] cp:', cp);
+      console.log('[DEBUG] cp.driver:', cp.driver);
+      console.log('[DEBUG] cp.raw:', cp.raw);
+    
+      // Si je suis chauffeur -> priorité absolue : push chauffeur et skip
+      if (driverId && currentUserId && String(driverId) === String(currentUserId)) {
+        filteredTrajets.push(Object.assign({}, cp, { role: 'chauffeur', driver: driverNormalized }));
         continue;
       }
-      const roleStr = (cp.role || (cp.driver ? 'chauffeur' : '')).toString().toLowerCase();
-      filteredTrajets.push(Object.assign({}, cp, { role: roleStr }));
+    
+      // Sinon, on recherche les bookings liés (passager)
+      const related = cpId ? (bookingsByCovo.get(cpId) || []) : [];
+      const userBook = related.find(b => bookingBelongsToCurrentUser(b));
+    
+      if (userBook) {
+        filteredTrajets.push(Object.assign({}, userBook, { role: 'passager', driver: driverNormalized }));
+        continue;
+      }
     }
     for (const b of bookings) {
       const covoId = extractId(b.covoId || b.covo || b.covo_id || b.server || b.serverId);
@@ -2980,10 +3758,25 @@ export async function renderHistorique() {
       const key = extractId(t.covoId || t.serverId || t['@id'] || t.covo || t.id) || (`__noid_${Math.random().toString(36).slice(2)}`);
       const existing = deduped.get(key);
       if (!existing) { deduped.set(key, t); continue; }
+
       const existingRole = (existing.role || '').toLowerCase();
       const newRole = (t.role || '').toLowerCase();
-      if (existingRole === 'passager') continue;
-      if (newRole === 'passager') deduped.set(key, t);
+
+      // Prioriser chauffeur > passager > autre (valide)
+      if (existingRole === 'chauffeur') {
+        continue;
+      }
+      if (newRole === 'chauffeur') {
+        deduped.set(key, t);
+        continue;
+      }
+      if (existingRole === 'passager') {
+        continue;
+      }
+      if (newRole === 'passager') {
+        deduped.set(key, t);
+        continue;
+      }
     }
     const filteredUnique = Array.from(deduped.values());
     const historique = filteredUnique.filter(t => {
@@ -3139,35 +3932,26 @@ async function retryPendingSyncs() {
 
   for (const t of pending) {
     try {
-      // s'assurer d'avoir un carId avant de poster (créer la voiture si besoin)
+      // 1. S'assurer d'avoir un carId avant de poster
       if (!t.carId && t.vehicle) {
         try {
           const newCarId = await createCarIfNeeded(t.vehicle);
           if (newCarId) {
             t.carId = newCarId;
             t.vehicle.id = newCarId;
-
-            // Mettre à jour ecoride_vehicles si tu veux persister l'id serveur
-            try {
-              const vehicles = JSON.parse(localStorage.getItem('ecoride_vehicles') || '[]');
-              const idx = vehicles.findIndex(v =>
-                (v.plate && t.vehicle.plate && v.plate === t.vehicle.plate) ||
-                (v._tmpId && t.vehicle._tmpId && v._tmpId === t.vehicle._tmpId)
-              );
-              if (idx !== -1) {
-                vehicles[idx] = { ...vehicles[idx], ...t.vehicle };
-              } else {
-                vehicles.push(t.vehicle);
-              }
-              localStorage.setItem('ecoride_vehicles', JSON.stringify(vehicles));
-            } catch (e) {
-              console.warn('retryPendingSyncs: erreur mise à jour ecoride_vehicles', e);
-            }
+            // Mise à jour ecoride_vehicles
+            const vehicles = JSON.parse(localStorage.getItem('ecoride_vehicles') || '[]');
+            const idx = vehicles.findIndex(v => 
+              (v.plate && t.vehicle.plate && v.plate === t.vehicle.plate) || 
+              (v._tmpId && t.vehicle._tmpId && v._tmpId === t.vehicle._tmpId)
+            );
+            if (idx !== -1) vehicles[idx] = { ...vehicles[idx], ...t.vehicle };
+            else vehicles.push(t.vehicle);
+            localStorage.setItem('ecoride_vehicles', JSON.stringify(vehicles));
           }
         } catch (err) {
-          console.warn('retry: impossible de créer la voiture pour', t.id, err);
-          t.syncError = `Erreur création voiture : ${err.message || String(err)}`;
-          continue; // skip ce trajet pour l'instant
+          t.syncError = `Erreur voiture: ${err.message || String(err)}`;
+          continue;
         }
       }
 
@@ -3175,52 +3959,61 @@ async function retryPendingSyncs() {
 
       try {
         const serverObj = await saveCarpoolApi(t);
-        console.log('DEBUG saveCarpoolApi result for', t.id, serverObj);
-
-        // Accepter plusieurs formes de réponse :
+        
+        // Extraction de l'ID depuis la réponse (objet ou IRI)
         const newServerId = serverObj?.['@id'] || serverObj?.id || null;
-
-        // Si l'API a répondu 204 (No Content) et qu'on avait déjà un serverId, on considère OK
         const isNoContent = serverObj && serverObj.status === 204;
 
         if (newServerId) {
-          t.serverId = newServerId;
+          // Correction ici : on utilise newServerId (et non newServerIdRaw qui n'existe pas)
+          t.serverId = (String(newServerId).startsWith('/api/') ? newServerId : `/api/carpools/${newServerId}`);
           t.synced = true;
           delete t.syncError;
-          console.log('🔁 Retry sync OK pour', t.id, '->', t.serverId);
+          console.log('🔁 Retry sync SUCCESS pour', t.id, '->', t.serverId);
         } else if (isNoContent && serverIdRaw) {
-          // pas d'id renvoyé mais suppression/ack possible — conserver l'ancien id
+          // Le serveur a validé sans renvoyer de corps (cas classique du PATCH 204)
           t.synced = true;
           delete t.syncError;
-          console.log('🔁 Retry sync OK (204) pour', t.id, 'conserve serverId=', serverIdRaw);
+          console.log('🔁 Retry sync OK (204) pour', t.id);
         } else {
-          // Pas d'id renvoyé — ne pas écraser serverId ; marquer erreur
-          throw new Error('Aucun identifiant serveur retourné par saveCarpoolApi');
+          throw new Error('Aucun identifiant serveur retourné');
         }
       } catch (err) {
-        // ❌ Ne jamais faire de POST si serverId existe
         if (serverIdRaw) {
-          console.warn('🔁 Échec mise à jour (PATCH) pour', t.id, '. On ne recrée pas.', err.message || err);
           t.syncError = `update-failed: ${err.message || String(err)}`;
-          // Optionnel : si 404, marquer comme "stale"
-          if (err.status === 404) {
-            t.syncError = 'stale-serverid';
-          }
+          if (err.status === 404) t.syncError = 'stale-serverid';
         } else {
-          // Si c’est une création échouée, on peut retenter plus tard
           t.syncError = `create-failed: ${err.message || String(err)}`;
-          console.warn('🔁 Échec création (POST) pour', t.id, err.message || err);
         }
+        console.warn('🔁 Retry échoué pour', t.id, err.message || err);
       }
     } catch (err) {
       t.syncError = err.message || String(err);
-      console.warn('🔁 Retry échoué pour', t.id, err.message || err);
     }
   }
 
   localStorage.setItem('ecoride_trajets', JSON.stringify(list));
   window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
+}
 
+function normalizeAndPersistRoles() {
+  try {
+    const me = getCurrentUser();
+    trajets.forEach(t => {
+      try {
+        // recalcule via detectRole si existant, sinon fallback à 'passager'
+        const r = (typeof detectRole === 'function') ? detectRole(t) : (t.role || 'passager');
+        t.role = r || 'passager';
+      } catch (e) {
+        t.role = t.role || 'passager';
+      }
+    });
+    // sauvegarde cohérente (utilise ta fonction de persistance existante)
+    localStorage.setItem('ecoride_trajets', JSON.stringify(trajets));
+    saveTrajets(trajets);
+  } catch (e) {
+    console.warn('normalizeAndPersistRoles error', e);
+  }
 }
 
 // -------------------- Exposition globale (debug) --------------------
@@ -3262,3 +4055,9 @@ if (typeof window !== 'undefined') {
 }
 
 try { renderHistorique(); } catch(e) { /* ignore si pas le bon moment */ }
+
+// À ajouter tout en bas de trajets.js
+window.loadAllUserTrajets = loadAllUserTrajets;
+window.reserverPlace = reserverPlace;
+window.apiFetch = apiFetch; // Utile pour tes tests
+window.ensureCarpoolIriFromBooking = ensureCarpoolIriFromBooking;

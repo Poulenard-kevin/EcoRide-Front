@@ -588,18 +588,38 @@ export async function createCarIfNeeded(vehicle, options = {}) {
 export async function updateBookingStatus(bookingId, newStatus) {
   if (!bookingId) throw new Error('bookingId requis');
 
-  // construire le chemin attendu par apiFetch
-  const path = String(bookingId).startsWith('/api/') ? bookingId.replace(/^\/api/, '') : `/bookings/${String(bookingId).replace(/^\/api\/bookings\//, '')}`;
+  const id = String(bookingId).replace(/^\/api\/bookings\/?/, '').replace(/\D.*$/, '');
+  const url = `/api/bookings/${id}/status`;
 
-  try {
-    const res = await apiFetch(`/api${path}`.replace('//','/'), {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/merge-patch+json' },
+  // helper pour appeler apiFetch et retourner {ok,res} ou lancer erreur
+  const doCall = async (method, extraHeaders = {}) => {
+    return apiFetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/merge-patch+json',
+        'Accept': 'application/json',
+        ...extraHeaders
+      },
       body: JSON.stringify({ status: newStatus })
     });
-    return res;
+  };
+
+  try {
+    // 1) Essayer PATCH (le plus propre)
+    return await doCall('PATCH');
   } catch (err) {
-    console.error('updateBookingStatus failed', err);
-    throw err;
+    console.warn('PATCH failed, trying POST+override', err);
+
+    // Si le serveur bloque PATCH (405) ou autre erreur réseau, retenter en POST+override
+    try {
+      return await doCall('POST', { 'X-HTTP-Method-Override': 'PATCH' });
+    } catch (err2) {
+      console.error('Both PATCH and POST+override failed', err2);
+      if (err2?.status === 404 || (err2?.message && err2.message.includes('404'))) {
+        markReservationLocallyAsPending(id, newStatus);
+        return { fallback: true };
+      }
+      throw err2;
+    }
   }
 }

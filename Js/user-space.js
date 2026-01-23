@@ -404,30 +404,34 @@ async function loadHTML(id, filePath) {
   const container = document.getElementById(id);
   if (!container) return;
 
-  // ✅ Éviter rechargement si déjà fait
   if (container.dataset.loaded === '1') {
     console.log(`⚪ ${id} déjà chargé, skip`);
     return;
   }
 
-  // ✅ NOUVEAU : Si plusieurs conteneurs avec cet ID existent, on nettoie
   const allWithId = document.querySelectorAll(`#${id}`);
   if (allWithId.length > 1) {
     console.warn(`⚠️ ${allWithId.length} conteneurs #${id} détectés, nettoyage...`);
     allWithId.forEach((el, i) => {
-      if (i > 0) el.remove(); // garde le premier, supprime les autres
+      if (i > 0) el.remove();
     });
   }
 
   try {
-    const response = await fetch(filePath);
+    const response = await fetch(filePath, {
+      method: 'GET',
+      mode: 'same-origin',  // <-- Ajouté ici
+      headers: {
+        'Accept': 'text/html'
+      }
+    });
     if (!response.ok) {
       console.error(`❌ Erreur de statut pour ${filePath}:`, response.status);
       return;
     }
     const html = await response.text();
     container.innerHTML = html;
-    container.dataset.loaded = '1';  // ✅ marque comme chargé
+    container.dataset.loaded = '1';
     console.log(`✅ ${id} chargé depuis ${filePath}`);
   } catch (err) {
     console.error(`❌ Erreur de chargement de ${filePath}:`, err);

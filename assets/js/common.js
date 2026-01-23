@@ -84,6 +84,7 @@
       return null;
     } catch (e) {
       console.error('fetchMe error', e);
+      // Ne pas déconnecter immédiatement, juste retourner null
       return null;
     }
   }

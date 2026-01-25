@@ -234,71 +234,121 @@ export async function loadAllUserTrajets() {
     const userId = String(user.id).split('/').pop();
     console.log("🔄 [loadAllUserTrajets] Chargement pour l'utilisateur:", userId);
 
-    // Charger les trajets où l'utilisateur est CHAUFFEUR
-    let driverEntries = [];
-    try {
-      const driverCarpools = await apiFetch(`/carpools?driver=${userId}`);
-      const members = driverCarpools?.['hydra:member'] || [];
-      driverEntries = members.map(c => ({
-        ...c,
-        role: 'chauffeur',
-        serverId: c['@id'],
-        id: String(c.id || c['@id']?.split('/').pop())
-      }));
-      console.debug("[loadAllUserTrajets] driverEntries:", driverEntries.length);
-    } catch (err) {
-      console.warn("[loadAllUserTrajets] Erreur récupération carpools (chauffeur) :", err);
-      driverEntries = [];
+    // --- Tentative 1 : utiliser loadTrajetsFromApi si disponible (unifie le mapping) ---
+    let combined = [];
+    if (typeof loadTrajetsFromApi === 'function') {
+      try {
+        console.debug('[loadAllUserTrajets] using loadTrajetsFromApi()');
+        combined = await loadTrajetsFromApi({ modeAll: true });
+        // loadTrajetsFromApi retourne la liste combinée (chauffeur + passager)
+      } catch (err) {
+        console.warn('[loadAllUserTrajets] loadTrajetsFromApi failed, fallback to manual fetch:', err);
+        combined = [];
+      }
     }
 
-    // Charger les réservations où l'utilisateur est PASSAGER
-    let passengerEntries = [];
-    try {
-      const passengerBookings = await apiFetch(`/bookings?passenger=${userId}`);
-      const bookings = passengerBookings?.['hydra:member'] || [];
-      passengerEntries = bookings.map(b => {
-        const covoiture = b.carpool || b.covoiturage || null;
-        const hasDetails = covoiture && typeof covoiture === 'object';
+    // --- Fallback : si loadTrajetsFromApi indisponible ou renvoie vide, faire les deux appels séparés ---
+    if (!combined || combined.length === 0) {
+      console.debug('[loadAllUserTrajets] fallback to manual driver/bookings fetch');
 
-        return {
-          role: 'passager',
-          bookingId: String(b.id || b['@id']?.split('/').pop()),
-          serverId: b['@id'],
-          status: b.status || b.statut,
-          covoId: hasDetails ? covoiture['@id'] : (typeof covoiture === 'string' ? covoiture : b.carpoolIri),
-          depart: hasDetails ? (covoiture.departureLocation || covoiture.depart) : '',
-          arrivee: hasDetails ? (covoiture.arrivalLocation || covoiture.arrivee) : '',
-          date: hasDetails ? (covoiture.departureDate || covoiture.date) : b.date,
-          heureDepart: hasDetails ? covoiture.departureTime : '',
-          prix: hasDetails ? covoiture.price : 0,
-          raw: b
-        };
-      });
-      console.debug("[loadAllUserTrajets] passengerEntries:", passengerEntries.length);
-    } catch (err) {
-      console.warn("[loadAllUserTrajets] Erreur récupération bookings (passager) :", err);
-      passengerEntries = [];
+      // Charger les trajets où l'utilisateur est CHAUFFEUR
+      let driverEntries = [];
+      try {
+        const driverCarpools = await apiFetch(`/carpools?driver=${userId}`);
+        const members = driverCarpools?.['hydra:member'] || (Array.isArray(driverCarpools) ? driverCarpools : []);
+        driverEntries = members.map(c => ({
+          ...c,
+          role: 'chauffeur',
+          serverId: c['@id'],
+          id: String(c.id ?? (c['@id'] ? c['@id'].split('/').pop() : genId()))
+        }));
+        console.debug("[loadAllUserTrajets] driverEntries:", driverEntries.length);
+      } catch (err) {
+        console.warn("[loadAllUserTrajets] Erreur récupération carpools (chauffeur) :", err);
+        driverEntries = [];
+      }
+
+      // Charger les réservations où l'utilisateur est PASSAGER
+      let passengerEntries = [];
+      try {
+        const passengerBookings = await apiFetch(`/bookings?passenger=${userId}`);
+        const bookings = passengerBookings?.['hydra:member'] || (Array.isArray(passengerBookings) ? passengerBookings : []);
+        passengerEntries = bookings.map(b => {
+          const covoiture = b.carpool || b.covoiturage || null;
+          const hasDetails = covoiture && typeof covoiture === 'object';
+          const serverId = hasDetails ? covoiture['@id'] : (typeof covoiture === 'string' ? covoiture : (b.carpoolIri || null));
+          return {
+            role: 'passager',
+            bookingId: String(b.id ?? (b['@id'] ? b['@id'].split('/').pop() : genId())),
+            serverId,
+            covoId: serverId,
+            status: normalizeStatus(b.status ?? b.statut ?? 'pending'),
+            depart: hasDetails ? (covoiture.departureLocation || covoiture.depart) : '',
+            arrivee: hasDetails ? (covoiture.arrivalLocation || covoiture.arrivee) : '',
+            date: hasDetails ? (covoiture.departureDate || covoiture.date) : (b.date || null),
+            heureDepart: hasDetails ? (covoiture.departureTime || '') : '',
+            prix: hasDetails ? (covoiture.price ?? covoiture.pricePerSeat ?? 0) : 0,
+            bookings: hasDetails ? (covoiture.bookings ?? []) : [b],
+            raw: b,
+            id: String(b.id ?? genId())
+          };
+        });
+        console.debug("[loadAllUserTrajets] passengerEntries:", passengerEntries.length);
+      } catch (err) {
+        console.warn("[loadAllUserTrajets] Erreur récupération bookings (passager) :", err);
+        passengerEntries = [];
+      }
+
+      combined = [...driverEntries, ...passengerEntries];
     }
 
-    const combined = [...driverEntries, ...passengerEntries];
-    console.log(`[loadAllUserTrajets] combined count = ${combined.length} (drivers=${driverEntries.length} passengers=${passengerEntries.length})`);
+    // --- Injection défensive depuis localStorage pour affichage immédiat des passagers ---
+    try {
+      const store = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+      if (Array.isArray(store) && store.length) {
+        const existingServerIds = new Set((combined || []).map(c => String(c.serverId || c.covoId || c.id || '')));
+        for (const s of store) {
+          try {
+            if (s && String(s.role).toLowerCase() === 'passager') {
+              const sid = String(s.serverId || s.covoId || s.id || '');
+              if (sid && !existingServerIds.has(sid)) {
+                // injecter une version légère pour affichage immédiat
+                combined.push(Object.assign({}, s, { _injectedFromLocalStorage: true }));
+                existingServerIds.add(sid);
+                console.debug('[loadAllUserTrajets] injected passenger from localStorage', sid);
+              }
+            }
+          } catch (e) { /* ignore per-item */ }
+        }
+      }
+    } catch (e) {
+      console.warn('[loadAllUserTrajets] localStorage parse failed (inject skip)', e);
+    }
 
-    // Sauvegarde défensive : n'écrit pas si combined vide
-    if (combined.length > 0) {
-      saveTrajets(combined);
+    console.log(`[loadAllUserTrajets] combined count = ${combined.length}`);
+
+    // Sauvegarde (écrase seulement si on a quelque chose)
+    if (Array.isArray(combined) && combined.length > 0) {
+      if (Array.isArray(trajets)) {
+        trajets.splice(0, trajets.length, ...combined);
+      } else {
+        window.trajets = combined.slice();
+      }
+      try { saveTrajets(); } catch (e) { console.warn('[loadAllUserTrajets] saveTrajets failed', e); }
     } else {
       console.info("[loadAllUserTrajets] combined vide → skip saveTrajets()");
-      console.trace();
     }
 
-    // Rendu : utiliser les données en mémoire pour éviter une relecture incohérente
-    renderTrajetsInProgress();
+    // Rendu immédiat (évite l'affichage incohérent)
     try {
-      renderHistorique(typeof renderHistorique === 'function' ? (combined.length > 0 ? combined : undefined) : undefined);
-    } catch (e) {
-      // Fallback si renderHistorique n'accepte pas l'argument
-      try { renderHistorique(); } catch (err) { console.warn("[loadAllUserTrajets] renderHistorique fallback failed:", err); }
-    }
+      if (typeof renderTrajetsInProgress === 'function') renderTrajetsInProgress();
+    } catch (e) { console.warn('[loadAllUserTrajets] renderTrajetsInProgress failed', e); }
+
+    // renderHistorique ne prend pas d'argument dans ta version. Il lit localStorage,
+    // donc on l'appelle sans argument pour qu'il se base sur saveTrajets()
+    try {
+      if (typeof renderHistorique === 'function') renderHistorique();
+    } catch (e) { console.warn('[loadAllUserTrajets] renderHistorique failed', e); }
 
     console.log(`✅ [loadAllUserTrajets] ${combined.length} trajets chargés.`);
     return combined;
@@ -3354,6 +3404,23 @@ export function renderTrajetsInProgress() {
 
   const deDupedList = Array.from(dedupMap.values());
 
+  // quick: si le trajet n'a pas de bookings mais l'ancien localStore a une réservation correspondante, 
+  // fusionne-la pour affichage immédiat
+  try {
+    const store = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+    if (Array.isArray(store) && store.length) {
+      for (const s of store) {
+        // si s.role === 'passager' et covoId présent et pas déjà dans trajets
+        const sid = extractServerId(s.serverId || s.covoId || s.id);
+        if (!sid) continue;
+        if (!deDupedList.some(d => extractServerId(d.serverId || d.id) === sid)) {
+          // push une version light pour affichage rapide
+          deDupedList.push(Object.assign({}, s, { _resolvedRole: 'passager', _enriched: true }));
+        }
+      }
+    }
+  } catch (e) { /* ignore */ }
+
   // ----------------------
   // Filtrage : on retire seulement les réservations déjà validées (passager)
   // ----------------------
@@ -3636,7 +3703,7 @@ export function renderTrajetsInProgress() {
                   window._renderTimeout = setTimeout(() => {
                     window._renderTimeout = null;
                     renderTrajetsInProgress();
-                  }, 500);
+                  }, 200);
                 }
               }
             } catch (e) {
@@ -4097,11 +4164,6 @@ function waitForElement(selector, timeout = 2000) {
 export async function renderHistorique() {
   console.log("[renderHistorique] Démarrage");
 
-  const allContainers = document.querySelectorAll('.trajets-historique');
-  if (allContainers.length > 1) {
-    allContainers.forEach((el, i) => { if (i > 0) el.remove(); });
-  }
-
   const container = document.querySelector('.trajets-historique');
   if (!container) return;
 
@@ -4112,30 +4174,101 @@ export async function renderHistorique() {
 
   let allTrajets = [];
   try {
-    // Vérifie les deux clés possibles et log leur contenu brut pour debug
-    console.log("[renderHistorique] localStorage keys:",
-      { ecoride_trajets: !!localStorage.getItem('ecoride_trajets'), trajets: !!localStorage.getItem('trajets') }
-    );
-
     allTrajets = JSON.parse(localStorage.getItem('ecoride_trajets') || localStorage.getItem('trajets') || '[]');
-    console.log("DEBUG Historique - Total trajets en mémoire:", allTrajets.length);
-    console.log("DEBUG Historique - Exemples (first 5):", allTrajets.slice(0,5));
   } catch (e) {
     console.error('❌ Erreur localStorage', e);
   }
 
-  // 🔍 FILTRE CORRIGÉ : On exclut seulement les trajets annulés (cancel / annul)
+  const _normalize = (v) => {
+    try { if (typeof normalizeStatus === 'function') return normalizeStatus(v || ''); } catch (e) {}
+    return String(v || '').toLowerCase();
+  };
+
+  const now = new Date();
+
+  // --- FILTRE AMÉLIORÉ ---
   const passe = allTrajets.filter(t => {
-    const s = String(t.status || t.statut || t.raw?.status || '').toLowerCase();
-    // Retourne true sauf si le statut contient "cancel" ou "annul"
-    return !(s.includes('cancel') || s.includes('annul'));
+    try {
+      const role = (t.role || '').toString().toLowerCase();
+      const rawStatus = t.status ?? t.statut ?? t.raw?.status ?? '';
+      const status = _normalize(rawStatus);
+  
+      // Exclure annulés
+      if (status.includes('cancel') || status.includes('annul')) return false;
+  
+      // Date et heure du trajet
+      const dateTrajetRaw = t.date || t.raw?.departureDate || t.raw?.date || null;
+      if (!dateTrajetRaw) return false; // pas de date = pas dans historique
+  
+      const dateTrajet = new Date(dateTrajetRaw);
+      if (isNaN(dateTrajet)) return false;
+  
+      const now = new Date();
+  
+      // On compare uniquement la date (sans heure) pour savoir si c'est passé
+      const dateTrajetOnly = new Date(dateTrajet.getFullYear(), dateTrajet.getMonth(), dateTrajet.getDate());
+      const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+      // Heure de départ (optionnelle)
+      let heureDepart = null;
+      if (t.heureDepart) {
+        const parts = t.heureDepart.split(':');
+        if (parts.length >= 2) {
+          heureDepart = new Date(dateTrajetOnly);
+          heureDepart.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+        }
+      } else if (t.raw?.departureTime) {
+        const parts = t.raw.departureTime.split('T')[1]?.split(':') || [];
+        if (parts.length >= 2) {
+          heureDepart = new Date(dateTrajetOnly);
+          heureDepart.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+        }
+      }
+  
+      // --- Chauffeur ---
+      if (role === 'chauffeur' || role === 'driver') {
+        // Affiche si statut completed
+        if (status === 'completed') return true;
+  
+        // Affiche si date strictement antérieure à aujourd'hui
+        if (dateTrajetOnly < nowOnly) return true;
+  
+        // Sinon pas dans historique (trajet en cours ou futur)
+        return false;
+      }
+  
+      // --- Passager ---
+      if (role === 'passager' || role === 'passenger') {
+        // Affiche si statut confirmed
+        if (status === 'confirmed' || status === 'confirmé') return true;
+  
+        // Affiche si date strictement antérieure à aujourd'hui
+        if (dateTrajetOnly < nowOnly) return true;
+  
+        // Vérifie bookings confirmés
+        const bookings = Array.isArray(t.bookings) ? t.bookings : (Array.isArray(t.raw?.bookings) ? t.raw.bookings : []);
+        if (Array.isArray(bookings) && bookings.length > 0) {
+          for (const b of bookings) {
+            const bStatus = _normalize(b.status ?? b.statut ?? '');
+            if (bStatus === 'confirmed' || bStatus === 'confirmé') return true;
+          }
+        }
+  
+        // Sinon pas dans historique
+        return false;
+      }
+  
+      // Par défaut, exclure
+      return false;
+    } catch (err) {
+      console.warn('[renderHistorique] filter error', err, t);
+      return false;
+    }
   });
 
-  console.log(`[renderHistorique] Trajets après filtrage : ${passe.length}`);
-  // Log des statuts restants pour debug
-  console.log("[renderHistorique] Statuts après filtrage (exemples):",
-    passe.slice(0,10).map(x => (x.status || x.statut || x.raw?.status || '')));
+  console.log(`[renderHistorique] Trajets affichés : ${passe.length}`);
 
+  // Tri par date décroissante
   passe.sort((a, b) => {
     const dateA = new Date(a.date || a.raw?.departureDate || 0);
     const dateB = new Date(b.date || b.raw?.departureDate || 0);
@@ -4159,8 +4292,6 @@ export async function renderHistorique() {
     let cardClass = 'trajet-card valide';
     if (role === 'passager') cardClass = 'trajet-card reserve';
     else if (role === 'chauffeur') cardClass = 'trajet-card chauffeur-historique';
-
-    const idKey = trajet.id || (trajet.serverId ? trajet.serverId.split('/').pop() : Math.floor(Math.random()*1000));
 
     container.innerHTML += `
       <div class="${cardClass}">

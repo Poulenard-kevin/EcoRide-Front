@@ -319,25 +319,23 @@ function showForgotPasswordModal() {
       feedback.textContent = 'Envoi en cours...';
 
       try {
-        // Exemple d'appel backend — adapte l'URL et la gestion d'erreur selon ton API
-        const res = await fetch('/api/forgot-password', {
+        // apiFetch gère l'URL, les headers, le body JSON et les erreurs HTTP
+        const result = await apiFetch('/forgot-password', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email })
+          body: { email }
         });
-
-        if (!res.ok) {
-          const errMsg = await res.text().catch(() => 'Erreur serveur');
-          feedback.innerHTML = `<span style="color:#b73a3a">${errMsg}</span>`;
-          confirmBtn.disabled = false;
-          return;
-        }
-
+      
+        // Succès
         feedback.innerHTML = `<span style="color:green">Email envoyé si le compte existe. Vérifiez votre boîte.</span>`;
         setTimeout(() => cleanup(email), 1200);
+      
       } catch (err) {
         console.error('forgot-password error', err);
-        feedback.innerHTML = `<span style="color:#b73a3a">Erreur réseau. Réessayez.</span>`;
+      
+        // err.body contient souvent le message d'erreur retourné par l'API
+        const errMsg = (err.body && typeof err.body === 'string') ? err.body : 'Erreur serveur';
+      
+        feedback.innerHTML = `<span style="color:#b73a3a">${errMsg}</span>`;
         confirmBtn.disabled = false;
       }
     });

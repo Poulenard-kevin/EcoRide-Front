@@ -40,48 +40,42 @@ function nextSeq() {
 }
 
 /* ---------- API de création d'avis (fallback robuste) ---------- */
-async function doCreateReview({ reservationObj, rating, comment }) {
-  // Utilise window.createReviewApi si défini (tu l'as dans trajets.js), sinon tente appel direct vers /api/reviews
-  if (typeof window.createReviewApi === 'function') {
-    return window.createReviewApi({ reservationObj, rating, comment });
-  }
-
-  // fallback direct
+async function doCreateReview({ reservationObj, rating, comment } = {}) {
+  // 1. Préparation du payload selon l'entité Review.php
   const payload = {
-    rating: Number(rating) || 0,
+    rating: Number(rating),
     comment: comment || null,
+    // IMPORTANT : Utiliser "carpool" et "booking" (noms des propriétés PHP)
+    carpool: reservationObj.carpoolIri || reservationObj.carpool || null,
+    booking: reservationObj.bookingIri || reservationObj.booking || null
   };
 
-  // tenter inférence des relations depuis reservationObj si présent
-  if (reservationObj) {
-    if (reservationObj.bookingIri) payload.booking = reservationObj.bookingIri;
-    if (reservationObj.carpool || reservationObj.carpoolIri || reservationObj.covoiturage) {
-      payload.carpool = reservationObj.carpool || reservationObj.carpoolIri || reservationObj.covoiturage;
-    } else if (reservationObj.covoId || reservationObj.covo) {
-      const cov = String(reservationObj.covoId || reservationObj.covo);
-      payload.carpool = cov.includes('/api/') ? cov : `/api/carpools/${cov}`; // best-effort
-    }
+  // 2. Sécurité : carpool est requis par l'entité (JoinColumn nullable=false)
+  if (!payload.carpool) {
+     throw new Error("doCreateReview: Le champ carpool est obligatoire.");
   }
-
-  // supprimer clés nulles
-  Object.keys(payload).forEach(k => payload[k] == null && delete payload[k]);
 
   const token = localStorage.getItem('api_token') || localStorage.getItem('ecoride_token') || '';
-  const API_BASE = (typeof window !== 'undefined' && window.API_BASE) ? window.API_BASE : '';
-
-  const url = API_BASE ? `${API_BASE}/api/reviews` : '/api/reviews';
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = { 
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
-  const text = await res.text().catch(() => '');
+  console.log('🚀 Retry Review Payload:', payload);
+
+  const res = await fetch('/api/reviews', { 
+    method: 'POST', 
+    headers, 
+    body: JSON.stringify(payload) 
+  });
+
+  const text = await res.text();
   if (!res.ok) {
-    const err = new Error(`HTTP ${res.status} ${text}`);
-    err.status = res.status;
-    err.body = text;
-    throw err;
+    throw new Error(`HTTP ${res.status}: ${text}`);
   }
-  try { return JSON.parse(text); } catch (e) { return text; }
+
+  return JSON.parse(text);
 }
 
 /* ---------- public API ---------- */
@@ -140,7 +134,7 @@ export function getPendingReviewsSorted(desc = true) {
 
 /**
  * retryPendingReviews(options)
- * options: { delayBetween: ms, onSuccess: fn(review), onFail: fn(review, err) }
+ * options: { delayBetween: ms, onSuccess: fn(review), onFail: fn(review, err), maxAttempts: number }
  * renvoie la liste restante après tentative
  */
 export async function retryPendingReviews(options = {}) {
@@ -150,28 +144,84 @@ export async function retryPendingReviews(options = {}) {
   const remaining = [];
   const failedInvalid = JSON.parse(localStorage.getItem(FAILED_REVIEWS_KEY) || '[]');
 
+  const maxAttempts = typeof options.maxAttempts === 'number' ? options.maxAttempts : 3;
+
   for (const m of messages) {
     // validité minimale : doit avoir un carpool reference (pour éviter boucle infinie)
-    const hasCarpool = !!(m.carpool || m.carpoolIri || m.carpoolId || (m.reservationObj && (m.reservationObj.carpool || m.reservationObj.covoiturage || m.reservationObj.covoId)));
+    const hasCarpool = !!(
+      m.carpool ||
+      m.carpoolIri ||
+      m.carpoolId ||
+      (m.reservationObj && (m.reservationObj.carpool || m.reservationObj.covoiturage || m.reservationObj.covoId))
+    );
     if (!hasCarpool) {
       // archiver en invalid
       failedInvalid.push({ pending: m, error: 'missing carpool', when: new Date().toISOString() });
       continue;
     }
 
+    // increment local attempt counter (non-destructive)
+    m.attemptCount = (m.attemptCount || 0) + 1;
+
     try {
-      await doCreateReview({ reservationObj: m.reservationObj || m.reservation || null, rating: m.rating, comment: m.comment });
-      if (options.onSuccess) try { options.onSuccess(m); } catch (e) { console.warn('pending-reviews.onSuccess failed', e); }
+      // --- build a reservationObj fallback from pending record if not present
+      const reservationObjForRetry = (m.reservationObj || m.reservation) ? { ...(m.reservationObj || m.reservation) } : {};
+
+      // prefer bookingIri/carpoolIri top-level fields if present
+      if (!reservationObjForRetry.bookingIri && (m.bookingIri || m.booking)) {
+        reservationObjForRetry.bookingIri = m.bookingIri || m.booking;
+      }
+      if (!reservationObjForRetry.carpoolIri && (m.carpoolIri || m.carpool || m.covo || m.covoId)) {
+        reservationObjForRetry.carpoolIri = m.carpoolIri || m.carpool || m.covo || m.covoId;
+      }
+      // also keep a simple covoId/covo field if present (used by many helpers)
+      if (!reservationObjForRetry.covoId && (m.covoId || m.covo)) {
+        reservationObjForRetry.covoId = m.covoId || m.covo;
+      }
+
+      console.log('retryPendingReviews: attempting send pending review', {
+        seq: m._seq, id: m.id, attempt: m.attemptCount, reservationObj: reservationObjForRetry, bookingIri: m.bookingIri, carpoolIri: m.carpoolIri
+      });
+
+      // Défensif : passe aussi bookingIri / carpoolIri au cas où doCreateReview les accepte
+      await doCreateReview({
+        reservationObj: reservationObjForRetry,
+        rating: m.rating,
+        comment: m.comment,
+        bookingIri: reservationObjForRetry.bookingIri || m.bookingIri,
+        carpoolIri: reservationObjForRetry.carpoolIri || m.carpoolIri
+      });
+
+      // succès : appeler callback et ne pas remettre dans remaining
+      if (options.onSuccess) {
+        try { options.onSuccess(m); } catch (e) { console.warn('pending-reviews.onSuccess failed', e); }
+      }
+
       if (options.delayBetween) await new Promise(r => setTimeout(r, options.delayBetween));
     } catch (err) {
-      const status = err && err.status ? err.status : null;
+      // extraire un status/body si possible (fetch/axios custom)
+      const status = err && (err.status || (err.response && err.response.status)) ? (err.status || err.response.status) : null;
+      const body = err && (err.body || (err.response && err.response.data) || err.message) ? (err.body || (err.response && err.response.data) || err.message) : String(err);
+
+      console.warn('retryPendingReviews: error sending', { id: m.id, attempt: m.attemptCount, status, body });
+
+      // si erreur 400 => invalide, archiver
       if (status === 400) {
-        // invalide -> archiver
-        failedInvalid.push({ pending: m, error: err.body || err.message || String(err), when: new Date().toISOString() });
-        if (options.onFail) try { options.onFail(m, err); } catch (e) {}
+        failedInvalid.push({ pending: m, error: body || '400 Bad Request', when: new Date().toISOString() });
+        if (options.onFail) try { options.onFail(m, err); } catch (e) { console.warn('pending-reviews.onFail failed', e); }
         continue;
       }
+
+      // si dépassement du nombre max de tentatives => archiver pour inspection
+      if (m.attemptCount >= maxAttempts) {
+        failedInvalid.push({ pending: m, error: `max attempts reached (${m.attemptCount})`, lastError: body, when: new Date().toISOString() });
+        if (options.onFail) try { options.onFail(m, err); } catch (e) { console.warn('pending-reviews.onFail failed', e); }
+        continue;
+      }
+
       // autres erreurs -> garder pour retenter plus tard
+      // enrichir l'objet pending avec lastError pour debug futur
+      m.lastError = body;
       remaining.push(m);
       if (options.onFail) try { options.onFail(m, err); } catch (e) { console.warn('pending-reviews.onFail failed', e); }
     }

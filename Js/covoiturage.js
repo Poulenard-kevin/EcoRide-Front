@@ -239,7 +239,7 @@ document.addEventListener('pageContentLoaded', async () => {
   let me = getCurrentUser(); // -> objet ou null
 
   // === Code bouton dev pour effacer trajets ajoutés ===
-  const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  /*const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const btn = document.getElementById('clear-user-trajets-dev');
   if (isDev && btn) {
     btn.style.display = 'block';
@@ -251,7 +251,7 @@ document.addEventListener('pageContentLoaded', async () => {
         window.location.reload();
       }
     });
-  }
+  }*/
 
   // =================== ⚡ Gestion placeholders input date/heure ⚡ ===================
   document.querySelectorAll('input[type="date"], input[type="time"]').forEach(input => {

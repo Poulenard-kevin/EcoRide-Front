@@ -2738,12 +2738,15 @@ async function handleTrajetActions(e) {
         try { removeLocalTrajetByServerId(serverId, id); } catch (e) { console.warn('removeLocalTrajetByServerId failed', e); }
 
         // retirer du tableau en mémoire
-        const idx = trajets.findIndex(t => String(t.id) === String(id) || String(t.serverId) === String(serverId));
+        const idx = trajets.findIndex(t => String(t.id) === String(reservationId));
         if (idx !== -1) {
-          trajets.splice(idx, 1);
-          saveTrajets(trajets);
-          renderTrajetsInProgress();
-          renderHistorique();
+            // FUSIONNER au lieu de remplacer pour garder date_depart, lieu_depart, etc.
+            trajets[idx] = {
+                ...trajets[idx], 
+                status: 'validated',
+                statut: 'validated'
+            };
+            saveTrajets(trajets);
         }
 
         window.dispatchEvent(new CustomEvent('ecoride:carpool-deleted', { detail: { serverId, localId: id } }));
@@ -2868,268 +2871,6 @@ async function handleTrajetActions(e) {
         alert('Annulation abandonnée. La réservation est toujours active sur le serveur.');
       }
     }
-  }
-
-  // validate (passager valide son trajet)
-  if (target.classList && target.classList.contains('trajet-validate-btn')) {
-    e.preventDefault();
-    e.stopPropagation();
-    const reservationId = target.dataset.id;
-    if (!reservationId) return;
-  
-    openRatingModal({
-      reservationId,
-      onSubmit: async ({ rating, review, flagged }) => {
-        try {
-          // 1) Changer le statut côté serveur
-          await updateBookingStatus(reservationId, 'confirmed');
-    
-          // 2) Mettre à jour localStorage (statut validé)
-          let reservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
-          const idx = reservations.findIndex(r => String(r.id) === String(reservationId));
-          if (idx === -1) {
-            alert('Réservation introuvable.');
-            return;
-          }
-    
-          reservations[idx].status = 'valide';
-          reservations[idx].rating = rating;
-          reservations[idx].review = review;
-          reservations[idx].validatedAt = new Date().toISOString();
-          reservations[idx].reviewModeration = {
-            status: 'pending',
-            flagged: !!flagged,
-            submittedAt: new Date().toISOString()
-          };
-    
-          localStorage.setItem('ecoride_trajets', JSON.stringify(reservations));
-          window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
-    
-          // 3) Préparer userId, bookingIri et carpoolIri robustement, puis appeler saveReviewDoubleStorage
-          try {
-            const me = (typeof getCurrentUser === 'function') ? getCurrentUser() : window.currentUser || null;
-            const currentTrajet = reservations[idx] || {};
-    
-            // Utilitaires
-            const extractIdNumber = (v) => {
-              if (v == null) return null;
-              const s = String(v);
-              if (s.startsWith('/api/')) return s.split('/').filter(Boolean).pop();
-              const m = s.match(/(\d+)$/);
-              return m ? m[1] : s;
-            };
-            const buildIri = (type, v) => {
-              if (!v) return null;
-              const s = String(v);
-              if (s.startsWith('/api/')) return s;
-              const m = s.match(/(\d+)$/);
-              const id = m ? m[1] : s;
-              return `/api/${type}/${id}`;
-            };
-    
-            const numericUserId = extractIdNumber(me?.id || currentTrajet?.userId || null);
-    
-            // bookingIri: tenter plusieurs sources
-            let bookingIri =
-              currentTrajet?.bookingIri ||
-              currentTrajet?.serverBookingIri ||
-              currentTrajet?.serverId ||
-              currentTrajet?.['@id'] ||
-              (currentTrajet?.id && /^\d+$/.test(String(currentTrajet.id)) ? `/api/bookings/${currentTrajet.id}` : null) ||
-              null;
-            if (bookingIri && !String(bookingIri).startsWith('/api/')) bookingIri = buildIri('bookings', bookingIri);
-    
-            // carpoolIri: tenter plusieurs sources
-            let carpoolIri =
-              currentTrajet?.carpoolIri ||
-              currentTrajet?.covoiturageIri ||
-              currentTrajet?.covoiturage?.['@id'] ||
-              currentTrajet?.carpool?.['@id'] ||
-              (currentTrajet?.covoiturage?.id ? `/api/carpools/${currentTrajet.covoiturage.id}` : null) ||
-              (currentTrajet?.carpool?.id ? `/api/carpools/${currentTrajet.carpool.id}` : null) ||
-              (currentTrajet?.covoId ? `/api/carpools/${currentTrajet.covoId}` : null) ||
-              (currentTrajet?.carpoolId ? `/api/carpools/${currentTrajet.carpoolId}` : null) ||
-              null;
-            if (carpoolIri && !String(carpoolIri).startsWith('/api/')) carpoolIri = buildIri('carpools', carpoolIri);
-    
-            // Si carpoolIri absent, tenter ensureCarpoolIriFromBooking si dispo
-            if (!carpoolIri && typeof ensureCarpoolIriFromBooking === 'function') {
-              try {
-                const resolved = await ensureCarpoolIriFromBooking(currentTrajet);
-                if (resolved) carpoolIri = resolved;
-              } catch (e) {
-                console.warn('Erreur résolution carpoolIri via booking:', e);
-              }
-            }
-    
-            // Si bookingIri contient par erreur une IRI de carpool -> corriger automatiquement
-            if (bookingIri && String(bookingIri).includes('/carpools/')) {
-              console.warn('bookingIri semble être une IRI de carpool, correction automatique', bookingIri);
-              if (!carpoolIri) carpoolIri = bookingIri;
-              bookingIri = null;
-              if (reservationId && /^\d+$/.test(String(reservationId))) {
-                bookingIri = `/api/bookings/${String(reservationId)}`;
-                console.log('Rebuilt bookingIri from reservationId ->', bookingIri);
-              }
-            }
-    
-            // Last fallback: build bookingIri from reservationId
-            if (!bookingIri && reservationId && /^\d+$/.test(String(reservationId))) {
-              bookingIri = `/api/bookings/${String(reservationId)}`;
-            }
-    
-            console.log('[validate] reservationId, bookingIri, carpoolIri, userId', reservationId, bookingIri, carpoolIri, numericUserId);
-    
-            // Appel to helper which will try to resolve anything remaining and perform mongo+sql handling
-            let res = null;
-            try {
-              res = await saveReviewDoubleStorage({
-                rating: Number(rating) || 0,
-                comment: review || '',
-                bookingIri,
-                carpoolIri,
-                userId: numericUserId,
-                reservationId,
-                reservationObj: currentTrajet
-              });
-            } catch (saveErr) {
-              console.warn('saveReviewDoubleStorage a levé une erreur, fallback vers pending', saveErr);
-              res = null;
-            }
-    
-            const sqlOk = !!(res && res.sql && (res.sql.ok || res.sql.status === 201 || res.sql.status === 200));
-            const sqlSkipped = !!(res && res.sql && res.sql.skipped);
-    
-            if (sqlOk) {
-              const createdSql = (res.sql.json || res.sql.body) || null;
-              const serverRef = createdSql?.['@id'] || createdSql?.id || null;
-              reservations[idx].reviewServer = serverRef;
-              reservations[idx].reviewLocal = {
-                rating,
-                comment: review,
-                pending: false,
-                sentAt: new Date().toISOString(),
-                serverRef
-              };
-              safeShowToast('Merci — ton avis a bien été envoyé et est en attente de validation.');
-    
-              // Resynchronisation des trajets
-              try {
-                if (typeof loadTrajetsFromApi === 'function') await loadTrajetsFromApi();
-                else if (typeof loadAllUserTrajets === 'function') await loadAllUserTrajets();
-                else if (typeof fetchReservationsForDriver === 'function') await fetchReservationsForDriver();
-              } catch (resyncErr) {
-                console.warn('Resync après création SQL échoué', resyncErr);
-              }
-            } else {
-              // fallback pending
-              console.warn('SQL non OK ou skipped — création d\'un avis pending', res?.sql || res);
-              try {
-                addPendingReview({
-                  reservationId: reservations[idx]?.id || reservationId,
-                  reservationObj: {
-                    id: reservations[idx]?.id,
-                    covoiturage: reservations[idx]?.covoiturage || reservations[idx]?.carpool || null,
-                    date: reservations[idx]?.date || null
-                  },
-                  bookingIri,
-                  carpoolIri,
-                  rating,
-                  comment: review,
-                  flagged: !!flagged,
-                  userId: numericUserId,
-                  mongoId: res?.mongo?.json?.id || res?.mongo?.json?._id || null,
-                  sqlInfo: res?.sql || null,
-                  dateCreated: new Date().toISOString(),
-                  lastAttempt: new Date().toISOString(),
-                  attemptCount: 1
-                });
-    
-                reservations[idx].reviewLocal = { rating, comment: review, pending: true, savedAt: new Date().toISOString() };
-    
-                if (sqlSkipped) safeShowToast('Avis enregistré localement (carpool non résolu). Il sera renvoyé plus tard.');
-                else safeShowToast('Avis enregistré localement (échec serveur SQL). Il sera renvoyé plus tard.');
-              } catch (pendErr) {
-                console.error('addPendingReview a échoué, fallback vers localStorage', pendErr);
-                const key = 'ecoride_reviews_pending';
-                const pending = {
-                  reservationId: reservations[idx]?.id || reservationId,
-                  reservationObjSnapshot: {
-                    id: reservations[idx]?.id,
-                    covoiturage: reservations[idx]?.covoiturage || reservations[idx]?.carpool || null,
-                    date: reservations[idx]?.date || null
-                  },
-                  bookingIri,
-                  carpoolIri,
-                  rating,
-                  comment: review,
-                  flagged: !!flagged,
-                  dateCreated: new Date().toISOString(),
-                  lastAttempt: new Date().toISOString(),
-                  attemptCount: 1
-                };
-                const existing = JSON.parse(localStorage.getItem(key) || '[]');
-                existing.push(pending);
-                localStorage.setItem(key, JSON.stringify(existing));
-                reservations[idx].reviewLocal = { rating, comment: review, pending: true, savedAt: new Date().toISOString() };
-                safeShowToast('Avis enregistré localement (fallback). Il sera renvoyé plus tard.');
-              }
-            }
-    
-            // Log Mongo success (optionnel)
-            if (res && res.mongo && (res.mongo.ok || res.mongo.status === 201 || res.mongo.status === 200)) {
-              console.log('Mongo save success:', res.mongo.json || res.mongo.body || res.mongo);
-            }
-    
-            // Sauvegarde locale et dispatch event
-            localStorage.setItem('ecoride_trajets', JSON.stringify(reservations));
-            window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
-          } catch (err) {
-            console.error("Erreur dans le traitement de l'avis :", err);
-            safeShowToast("Erreur lors de l'enregistrement de l'avis. Voir console.");
-          }
-    
-          // 4) Mise à jour UI et bascule onglet
-          try {
-            if (typeof activateHistoryTab === 'function') activateHistoryTab();
-            await new Promise(resolve => setTimeout(resolve, 300));
-            if (typeof loadTrajetsFromApi === 'function') {
-              try { await loadTrajetsFromApi(); } catch (e) { console.warn("loadTrajetsFromApi failed", e); }
-            }
-            const stored = (typeof getTrajets === 'function') ? getTrajets() : JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
-            trajets.splice(0, trajets.length, ...stored);
-            if (typeof saveTrajets === 'function') saveTrajets();
-            if (typeof updatePlacesReservees === 'function') updatePlacesReservees();
-            renderTrajetsInProgress();
-            renderHistorique();
-    
-            // fetch driver en background (protégé contre HTML)
-            (async () => {
-              try {
-                if (typeof fetchReservationsForDriver === 'function') {
-                  const response = await fetchReservationsForDriver();
-                  if (typeof response === 'string' && response.includes('<!DOCTYPE')) {
-                    console.warn('fetchReservationsForDriver returned HTML, ignoring.');
-                    return;
-                  }
-                  renderHistorique();
-                }
-              } catch (bgErr) {
-                console.warn("Le fetch driver a renvoyé du HTML ou a échoué, on ignore pour ne pas bloquer l'UI.", bgErr);
-              }
-            })();
-          } catch (uiErr) {
-            console.warn('UI refresh after validation failed', uiErr);
-          }
-    
-          alert('Validation enregistrée. Merci !');
-        } catch (err) {
-          console.error('Erreur validation trajet :', err);
-          alert('Erreur lors de l\'enregistrement.');
-        }
-      }
-    });
-    return;
   }
 }
 
@@ -3268,7 +3009,32 @@ async function ensureCarpoolIriFromBooking(t) {
 // Ajoute un flag global pour éviter les appels concurrents
 window._renderTrajetsInProgressRunning = false;
 
+
+function isTrajetHistorique(t) {
+  const status = (t.status || t.statut || "").toLowerCase();
+  const me = (typeof getCurrentUser === 'function' ? getCurrentUser() : window.currentUser) || null;
+  const meId = me ? String(me.id ?? me['@id'] ?? me).split('/').pop() : null;
+
+  // 1. Si le trajet global est marqué comme fini
+  const isGlobalFinished = ['completed', 'validated', 'termine', 'valide'].includes(status);
+  
+  // 2. Si c'est un passager et qu'IL a validé sa réservation
+  const bookings = Array.isArray(t.bookings) ? t.bookings : (Array.isArray(t.raw?.bookings) ? t.raw.bookings : []);
+  const myBooking = bookings.find(b => {
+    const p = b.passenger ?? b.user ?? b.passengerIri ?? b.userIri ?? null;
+    const pid = (typeof p === 'object') ? String(p.id ?? p['@id'] ?? '').split('/').pop() : String(p).split('/').pop();
+    return pid === meId;
+  });
+  const myBookingValidated = myBooking && ['validated', 'valide', 'confirmed'].includes(normalizeStatus(myBooking.status || ''));
+
+  // 3. Si la date est passée
+  const datePassee = new Date(t.date_depart || t.dateDepart || t.date || t.raw?.date) < new Date();
+
+  return isGlobalFinished || myBookingValidated || datePassee;
+}
+
 export function renderTrajetsInProgress() {
+  const inProgress = trajets.filter(t => !isTrajetHistorique(t));
   if ((!Array.isArray(trajets) || trajets.length === 0) && typeof loadTrajetsFromApi === 'function') {
     try {
       if (!window._loadingTrajets) {
@@ -3299,7 +3065,7 @@ export function renderTrajetsInProgress() {
   // ----------------------
   // Helpers: ID canonical, user id, role resolution
   // ----------------------
-  
+
   function canonicalCarpoolNum(v) {
     const iri = canonicalCarpoolId(v);
     const m = String(iri).match(/(\d+)$/);
@@ -3551,19 +3317,6 @@ export function renderTrajetsInProgress() {
     return 0;
   }
 
-  function allPassengersValidated(trajet) {
-    const bookings = Array.isArray(trajet.bookings) ? trajet.bookings : (Array.isArray(trajet.raw?.bookings) ? trajet.raw.bookings : []);
-    if (!Array.isArray(bookings) || bookings.length === 0) return true; // pas de bookings => ok
-    for (const b of bookings) {
-      const st = normalizeStatus(b.status ?? b.statut ?? '');
-      // considérer validés les statuts confirmés/valide/validated
-      if (st !== (STATUS.PASSAGER.VALIDATED) && st !== (STATUS.PASSAGER.A_VALIDATE)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
   // ----------------------
   // Filtrage final selon rôle et status (utilise roleForCurrentUser)
   // NOTE: on n'exclut plus les 'finished' pour le passager — il les verra et pourra valider
@@ -3572,9 +3325,9 @@ export function renderTrajetsInProgress() {
     const roleNorm = roleForCurrentUser(t);
     const statusNorm = normalizeStatus(t.status ?? (t.raw ? t.raw.status : ''));
     const meId = getCurrentUserIdStr();
-  
+
     if (['archive', 'annule', 'archived', 'cancelled'].includes(statusNorm)) return false;
-  
+
     // --- LOGIQUE CHAUFFEUR ---
     if (roleNorm === 'chauffeur') {
       if (['finished', 'termine', 'completed', 'done'].includes(statusNorm)) {
@@ -3586,12 +3339,11 @@ export function renderTrajetsInProgress() {
       }
       return true; // actif / demarre
     }
-  
+
     // --- LOGIQUE PASSAGER ---
     if (roleNorm === 'passager') {
       const bookings = Array.isArray(t.bookings) ? t.bookings : (Array.isArray(t.raw?.bookings) ? t.raw.bookings : []);
-      
-      // On cherche TA réservation spécifique
+    
       const myBooking = bookings.find(b => {
         const p = b.passenger ?? b.user ?? b.passengerIri ?? b.userIri ?? null;
         if (!p) return false;
@@ -3601,16 +3353,29 @@ export function renderTrajetsInProgress() {
 
       if (!myBooking) return false;
 
-      // On stocke l'ID de la RÉSERVATION dans une variable pour le bouton
       const myBookingId = extractId(myBooking.id || myBooking['@id']);
-      t._myBookingId = myBookingId; // On le garde en mémoire pour le rendu du bouton
+      t._myBookingId = myBookingId;
+
 
       const bStatus = normalizeStatus(myBooking.status || '');
-      if (bStatus === STATUS.PASSAGER.VALIDATED) return false;
+      const tStatus = normalizeStatus(t.status || '');
+
+      // On cache la carte si :
+      // 1. La réservation est validée (validated ou valide)
+      // 2. OU si le trajet global est terminé (termine ou completed)
+      const isFinished = [
+        'validated', 'valide', 'confirmed', 
+        'termine', 'completed', 'finished'
+      ].includes(bStatus) || [
+        'termine', 'completed', 'finished'
+      ].includes(tStatus);
+
+      if (isFinished) return false; 
+      // ----------------------
 
       return true;
     }
-  
+
     return false;
   });
 
@@ -3651,7 +3416,7 @@ export function renderTrajetsInProgress() {
       }
       return 'attente';
     }
-  
+
     return 'reserve';
   }
 
@@ -3667,7 +3432,6 @@ export function renderTrajetsInProgress() {
   }
 
   filteredEnCours.forEach((t, i) => {
-    if (window.__TRAJETS_POLLING_DEBUG) console.debug(i, 'serverId:', t.serverId, 'covoId:', t.covoId, 'raw.carpool:', t.raw?.carpool);
     try {
       if (!t) return;
 
@@ -3775,13 +3539,21 @@ export function renderTrajetsInProgress() {
 
       const stableId = extractId(t.serverId ?? t.id ?? '') || '';
 
-      if (window.__TRAJETS_POLLING_DEBUG) console.debug('TRACE status/role:', {
-        id: stableId,
-        roleGuess: role,
-        rawStatusSource,
-        normalizedStatus: status,
-        mappedCssClass
-      });
+      if (window.__TRAJETS_POLLING_DEBUG) {
+        console.debug('renderTrajetsInProgress trace', {
+          index: i,
+          id: stableId,
+          role,
+          rawStatus: rawStatusSource,
+          normalizedStatus: status,
+          mappedCssClass,
+          bookings: (Array.isArray(source?.bookings) ? source.bookings : (Array.isArray(t.bookings) ? t.bookings : [])).map(b => ({
+            id: b?.id ?? b?.['@id'],
+            raw: b?.status ?? b?.statut,
+            normalized: normalizeStatus(b?.status ?? b?.statut ?? '')
+          }))
+        });
+      }
 
       let buttonsHtml = '';
 
@@ -3860,212 +3632,117 @@ export function renderTrajetsInProgress() {
       // Trouver l'élément actionnable le plus proche (bouton, lien ou élément marqué data-action)
       const target = e.target.closest('button, a, [data-action]');
       if (!target || !container.contains(target)) return;
-    
+  
       // --- UTILS ---
       const getId = (el) => {
         if (!el) return null;
         return el.dataset?.id ?? el.getAttribute('data-id') ?? null;
       };
-    
+  
       // 1) GESTION DU BOUTON VALIDER (PASSAGER) -> ouvre la modal d'avis
       if (target.classList.contains('trajet-validate-passager-btn')) {
         e.preventDefault();
         e.stopPropagation();
-    
+  
         const reservationId = getId(target);
         if (!reservationId) {
           console.warn('No reservationId on validate button', target);
           return;
         }
         console.log('👉 Clic Valider Passager pour la réservation:', reservationId);
-    
+  
         openRatingModal({
           reservationId,
           onSubmit: async ({ rating, review, flagged }) => {
             try {
-              // 1) Update status côté serveur
+              // 1) Update status de la RÉSERVATION côté serveur
               await updateBookingStatus(reservationId, 'confirmed');
-        
-              // 2) Mise à jour locale
+
+              // 2) Mise à jour locale de la réservation
               let reservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
               const idx = reservations.findIndex(r => String(r.id) === String(reservationId));
-              if (idx === -1) {
-                console.warn('Réservation introuvable localement pour', reservationId);
-              } else {
+              
+              let currentTrajet = (idx !== -1 ? reservations[idx] : { id: reservationId });
+
+              if (idx !== -1) {
                 reservations[idx].status = 'valide';
                 reservations[idx].rating = rating;
                 reservations[idx].review = review;
                 reservations[idx].validatedAt = new Date().toISOString();
-                reservations[idx].reviewModeration = {
-                  status: 'pending',
-                  flagged: !!flagged,
-                  submittedAt: new Date().toISOString()
-                };
                 localStorage.setItem('ecoride_trajets', JSON.stringify(reservations));
-                window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
               }
-        
-              // 3) Préparer userId, bookingIri et carpoolIri robustement, puis appeler saveReviewDoubleStorage
+
+              // --- RÉCUPÉRATION ROBUSTE DES IRIs ---
+              const extractIdNumber = (v) => {
+                if (v == null) return null;
+                const s = String(v);
+                const m = s.match(/(\d+)$/);
+                return m ? m[1] : s;
+              };
+
+              // On définit carpoolIri ici pour corriger la ReferenceError
+              let carpoolIri = currentTrajet?.carpoolIri ?? currentTrajet?.covoId ?? currentTrajet?.serverId ?? null;
+              if (carpoolIri && !String(carpoolIri).startsWith('/api/')) {
+                carpoolIri = `/api/carpools/${extractIdNumber(carpoolIri)}`;
+              }
+
+              // 3) CLÔTURE DU TRAJET CHAUFFEUR (Si c'est le passager qui valide)
+              if (carpoolIri) {
+                const carpoolId = extractIdNumber(carpoolIri);
+                console.log("🏁 Tentative de clôture du carpool:", carpoolId);
+                
+                // On utilise apiFetch pour être sûr d'avoir le token
+                apiFetch(`/carpools/${carpoolId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/merge-patch+json' },
+                    body: JSON.stringify({ status: 'termine' }) // On force le passage en historique
+                }).then(() => console.log("✅ Carpool marqué comme termine"))
+                  .catch(e => console.warn("Échec clôture carpool", e));
+              }
+      
+              // 4) Sauvegarde de l'avis (Review)
               try {
                 const me = (typeof getCurrentUser === 'function') ? getCurrentUser() : window.currentUser || null;
-                const currentTrajet = (idx !== -1 ? reservations[idx] : { id: reservationId });
-              
-                // helpers
-                const extractIdNumber = (v) => {
-                  if (v == null) return null;
-                  const s = String(v);
-                  if (s.startsWith('/api/')) {
-                    const parts = s.split('/').filter(Boolean);
-                    return parts.length ? parts.pop() : null;
-                  }
-                  const m = s.match(/(\d+)$/);
-                  return m ? m[1] : null;
-                };
-                const buildIri = (type, v) => {
-                  if (!v) return null;
-                  const id = extractIdNumber(v) || String(v);
-                  return `/api/${type}/${id}`;
-                };
-              
-                const userId = extractIdNumber(me?.id ?? me?.['@id'] ?? currentTrajet?.userId ?? null);
-              
-                // bookingIri: plusieurs sources possibles
-                let bookingIri =
-                  currentTrajet?.bookingIri ??
-                  currentTrajet?.serverBookingIri ??
-                  currentTrajet?.serverId ??    // parfois contient une IRI
-                  currentTrajet?.['@id'] ??
-                  (currentTrajet?.id && /^\d+$/.test(String(currentTrajet.id)) ? `/api/bookings/${currentTrajet.id}` : null) ??
-                  null;
-              
-                // normaliser en IRI si possible
-                if (bookingIri && !String(bookingIri).startsWith('/api/')) {
-                  bookingIri = buildIri('bookings', bookingIri);
-                }
-              
-                // carpoolIri: plusieurs variantes (idem normalisation)
-                let carpoolIri =
-                  currentTrajet?.carpoolIri ??
-                  currentTrajet?.covoiturageIri ??
-                  currentTrajet?.covoiturage?.['@id'] ??
-                  currentTrajet?.carpool?.['@id'] ??
-                  (currentTrajet?.covoiturage?.id ? `/api/carpools/${currentTrajet.covoiturage.id}` : null) ??
-                  (currentTrajet?.carpool?.id ? `/api/carpools/${currentTrajet.carpool.id}` : null) ??
-                  (currentTrajet?.covoId ? `/api/carpools/${currentTrajet.covoId}` : null) ??
-                  (currentTrajet?.carpoolId ? `/api/carpools/${currentTrajet.carpoolId}` : null) ??
-                  null;
-                if (carpoolIri && !String(carpoolIri).startsWith('/api/')) carpoolIri = buildIri('carpools', carpoolIri);
-              
-                // fallback via ensureCarpoolIriFromBooking si dispo
-                if (!carpoolIri && typeof ensureCarpoolIriFromBooking === 'function') {
-                  try {
-                    const resolved = await ensureCarpoolIriFromBooking(currentTrajet);
-                    if (resolved) carpoolIri = resolved;
-                  } catch (e) {
-                    console.warn('ensureCarpoolIriFromBooking failed', e);
-                  }
-                }
-              
-                // dernier fallback: si reservationId numérique => bookingIri
-                if (!bookingIri && reservationId && /^\d+$/.test(String(reservationId))) {
-                  bookingIri = `/api/bookings/${String(reservationId)}`;
-                }
-              
-                console.log('[validate] reservationId, bookingIri, carpoolIri, userId', reservationId, bookingIri, carpoolIri, userId);
-              
-                // --- Vérifier si on peut créer une review ---
-                // Essayons plusieurs variantes pour couvrir APIs qui attendent id ou IRI.
-                const bookingId = extractIdNumber(bookingIri || reservationId);
-                const candidates = [];
-                if (bookingIri) candidates.push(bookingIri);
-                if (bookingId) candidates.push(`/api/bookings/${bookingId}`);
-                if (bookingId) candidates.push(String(bookingId)); // id nu
-              
-                let canCreate = false;
-                for (const cand of candidates) {
-                  try {
-                    console.debug('canCreateReview try candidate:', cand);
-                    // suppose canCreateReview est celle que nous avons rendue permissive/fallback earlier
-                    if (await canCreateReview(cand)) {
-                      canCreate = true;
-                      break;
-                    }
-                  } catch (e) {
-                    console.warn('canCreateReview candidate error', cand, e);
-                    // continue to next candidate
-                  }
-                }
-              
-                if (!canCreate) {
-                  console.warn('create review blocked after tries, candidates:', candidates);
-                  alert('Vous avez déjà noté ce covoiturage.');
-                  return;
-                }
-              
-                // Si l'objet réservation est introuvable localement, on peut tenter de le fetcher pour
-                // fournir des données complètes à saveReviewDoubleStorage.
-                let reservationObj = currentTrajet;
-                if ((!reservationObj || !reservationObj.id) && bookingId) {
-                  try {
-                    const r = await apiFetch ? apiFetch(`/api/bookings/${bookingId}`) : (await fetch(`/api/bookings/${bookingId}`).then(r=>r.json()));
-                    reservationObj = r ?? reservationObj;
-                  } catch (e) {
-                    console.warn('fetch booking fallback failed', e);
-                  }
-                }
-              
+                const userId = extractIdNumber(me?.id ?? me?.['@id'] ?? null);
+                let bookingIri = currentTrajet?.serverId ?? currentTrajet?.['@id'] ?? `/api/bookings/${reservationId}`;
+
                 await saveReviewDoubleStorage({
                   rating: Number(rating) || 0,
                   comment: review || '',
-                  bookingIri: bookingIri || (bookingId ? `/api/bookings/${bookingId}` : null),
+                  bookingIri,
                   carpoolIri,
                   userId,
                   reservationId,
-                  reservationObj
+                  reservationObj: currentTrajet
                 });
               } catch (err) {
-                console.warn('Erreur saveReviewDoubleStorage (fallback to pending)', err);
+                console.warn('Erreur saveReviewDoubleStorage', err);
               }
-        
-              // 4) Rafraîchir l'UI (sécurisé)
-              try {
-                if (typeof loadTrajetsFromApi === 'function') {
-                  try { await loadTrajetsFromApi(); } catch (loadErr) { console.warn('loadTrajetsFromApi a échoué (on continue avec le cache local):', loadErr); }
-                }
-        
-                const stored = (typeof getTrajets === 'function') ? getTrajets() : JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
-                trajets.splice(0, trajets.length, ...stored);
-                if (typeof saveTrajets === 'function') saveTrajets();
-                if (typeof updatePlacesReservees === 'function') updatePlacesReservees();
-                if (typeof renderTrajetsInProgress === 'function') renderTrajetsInProgress();
-                if (typeof renderHistorique === 'function') renderHistorique();
-        
-                (async () => {
-                  try {
-                    if (typeof fetchReservationsForDriver === 'function') {
-                      await fetchReservationsForDriver();
-                    }
-                  } catch (bgErr) {
-                    console.warn('fetchReservationsForDriver (background) a échoué, on ignore:', bgErr);
-                  }
-                })();
-        
-                if (typeof activateHistoryTab === 'function') activateHistoryTab();
-              } catch (uiErr) {
-                console.warn('UI refresh after validation failed', uiErr);
-              }
-        
+      
+              // 5) Rafraîchir l'UI et changer d'onglet
               alert('Validation enregistrée. Merci !');
+              
+              if (typeof loadTrajetsFromApi === 'function') {
+                await loadTrajetsFromApi();
+              }
+              
+              renderTrajetsInProgress();
+              renderHistorique();
+              
+              if (typeof activateHistoryTab === 'function') {
+                activateHistoryTab();
+              }
+
             } catch (err) {
               console.error('Erreur validation via modal:', err);
-              alert('Erreur lors de l\'enregistrement. Voir console.');
+              alert('Erreur lors de l\'enregistrement.');
             }
           }
         });
-    
+  
         return;
       }
-    
+  
       // 2) GESTION DU BOUTON ARRIVÉE (CHAUFFEUR)
       if (target.classList.contains('trajet-validate-btn')) {
         e.preventDefault();
@@ -4106,7 +3783,7 @@ export function renderTrajetsInProgress() {
           // Mise à jour locale / refresh UI
           if (Array.isArray(trajets)) {
             const t = trajets.find(x => String(x.id) === String(stableId) || String(x.serverId) === String(stableId));
-            if (t) t.status = backendStatus;
+            if (t) t.status = 'termine';
           }
           alert('Trajet marqué comme terminé !');
           if (typeof renderTrajetsInProgress === 'function') renderTrajetsInProgress();
@@ -4124,12 +3801,12 @@ export function renderTrajetsInProgress() {
 
         return;
       }
-    
+  
       // 3) GESTION DU BOUTON DÉTAIL
       if (target.classList.contains('trajet-detail-btn')) {
         e.preventDefault();
         e.stopPropagation();
-    
+  
         const covoId = target.dataset?.covoId ?? target.getAttribute('data-covo-id');
         if (covoId) {
           console.log('Ouvrir détail:', covoId);
@@ -4142,7 +3819,7 @@ export function renderTrajetsInProgress() {
         }
         return;
       }
-    
+  
       // 4) AUTRES ACTIONS (Annuler, Signaler, Edit, Delete, Start, etc.)
       if (target.classList.contains('trajet-cancel-btn')) {
         e.preventDefault();
@@ -4155,7 +3832,7 @@ export function renderTrajetsInProgress() {
         }
         return;
       }
-    
+  
       if (target.classList.contains('trajet-edit-btn')) {
         e.preventDefault();
         e.stopPropagation();
@@ -4166,7 +3843,7 @@ export function renderTrajetsInProgress() {
         }
         return;
       }
-    
+  
       if (target.classList.contains('trajet-delete-btn')) {
         e.preventDefault();
         e.stopPropagation();
@@ -4177,7 +3854,7 @@ export function renderTrajetsInProgress() {
         }
         return;
       }
-    
+  
       // ... ajoute d'autres handlers si nécessaire ...
     });
   }
@@ -4208,6 +3885,7 @@ export function renderTrajetsInProgress() {
   }
 }
 
+
 // -------------------- Historique --------------------
 
 // utilitaire, si tu ne l'as pas déjà
@@ -4224,8 +3902,29 @@ function waitForElement(selector, timeout = 2000) {
   });
 }
 
+function allPassengersValidated(trajet) {
+  const bookings = Array.isArray(trajet.bookings)
+    ? trajet.bookings
+    : (Array.isArray(trajet.raw?.bookings) ? trajet.raw.bookings : []);
+  if (!Array.isArray(bookings) || bookings.length === 0) return true;
+
+  const accepted = new Set([
+    'validated','valide','confirmed','accepted','approve','approved','a_valider','termine','completed'
+  ].map(s => s.toLowerCase()));
+
+  for (const b of bookings) {
+    const raw = b.status ?? b.statut ?? b.state ?? '';
+    const st = (typeof normalizeStatus === 'function') ? (normalizeStatus(raw) || '').toString().toLowerCase().trim() : String(raw || '').toLowerCase().trim();
+    if (!st) return false;
+    if (st.includes('cancel') || st.includes('annul')) return false;
+    if (!accepted.has(st)) return false;
+  }
+  return true;
+}
+
 // -------------------- Historique --------------------
 export async function renderHistorique() {
+  const historique = trajets.filter(t => isTrajetHistorique(t));
   console.log("[renderHistorique] Démarrage");
 
   const container = document.querySelector('.trajets-historique');
@@ -4244,61 +3943,112 @@ export async function renderHistorique() {
   }
 
   const now = new Date();
+  const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  // --- FILTRE AMÉLIORÉ ---
   const passe = allTrajets.filter(t => {
     try {
       const id = t.id || t.serverId || t.raw?.id || '(no-id)';
-      const role = (t.role || '').toString().toLowerCase();
+      const roleRaw = (t.role || t.raw?.role || '').toString().toLowerCase();
+      const role = roleRaw;
       const rawStatus = t.status ?? t.statut ?? t.raw?.status ?? '';
       const status = normalizeStatus(rawStatus);
       const dateTrajetRaw = t.date || t.raw?.departureDate || t.raw?.date || null;
       const dateTrajet = dateTrajetRaw ? new Date(dateTrajetRaw) : null;
-      const dateTrajetOnly = dateTrajet ? new Date(dateTrajet.getFullYear(), dateTrajet.getMonth(), dateTrajet.getDate()) : null;
-      const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const dateTrajetOnly = dateTrajet && !isNaN(dateTrajet.getTime())
+        ? new Date(dateTrajet.getFullYear(), dateTrajet.getMonth(), dateTrajet.getDate())
+        : null;
 
-      // preliminary checks
+      if (window.__TRAJETS_LOG) {
+        const bookingsArr = Array.isArray(t.bookings) ? t.bookings : (Array.isArray(t.raw?.bookings) ? t.raw.bookings : []);
+        console.debug('[renderHistorique] checking trajet', {
+          id,
+          role,
+          rawStatus,
+          normalizedStatus: status,
+          dateTrajetRaw,
+          dateTrajetOnly,
+          bookings: bookingsArr.map(b => ({
+            id: b?.id ?? b?.['@id'] ?? '(no-id)',
+            raw: b?.status ?? b?.statut ?? b?.state ?? '',
+            normalized: normalizeStatus(b?.status ?? b?.statut ?? b?.state ?? '')
+          }))
+        });
+      }
+
       if (!dateTrajet) { console.debug('[renderHistorique][skip] no date', id, t); return false; }
       if (status.includes('cancel') || status.includes('annul')) { console.debug('[renderHistorique][skip] cancelled', id, status); return false; }
 
-      // CAS CHAUFFEUR : n'apparaît en historique que si covo terminé définitivement
+      // Chauffeur
       if (role === 'chauffeur' || role === 'driver') {
-        // si statut final "terminé" (backend/front normalisé)
-        if (status === STATUS.CHAUFFEUR.COMPLETED) {
-          console.debug('[renderHistorique][keep] driver completed', id);
+        // 1) si status carpool indique déjà "terminé" (ou équivalent), l'afficher
+        if (status === (STATUS?.CHAUFFEUR?.COMPLETED ?? 'termine') || status === 'termine' || status === 'completed') {
+          console.debug('[renderHistorique][keep] driver completed (status)', id);
           return true;
         }
-        // si date passée ET tous les passagers ont validé, considérer historique
-        if (dateTrajetOnly && dateTrajetOnly < nowOnly && allPassengersValidated(t)) {
-          console.debug('[renderHistorique][keep] driver date past + all passengers validated', id);
+
+        // 2) si la date est déjà passée -> considérer historique (optionnel, pratique)
+        if (dateTrajetOnly && dateTrajetOnly.getTime() < nowOnly.getTime()) {
+          console.debug('[renderHistorique][keep] driver date past', id);
           return true;
         }
+
+        // 3) fallback strict : si tous les passagers ont validé, on considère aussi historique
+        if (typeof allPassengersValidated === 'function' && allPassengersValidated(t)) {
+          console.debug('[renderHistorique][keep] driver all passengers validated (fallback)', id);
+          return true;
+        }
+
         console.debug('[renderHistorique][skip] driver not finalized', id, status, dateTrajetOnly);
         return false;
       }
 
-      // PASSAGER : afficher si réservation validée ou date passée
+      // Passager
       if (role === 'passager' || role === 'passenger') {
-        if (status === STATUS.PASSAGER.VALIDATED || status === STATUS.CHAUFFEUR.COMPLETED) {
-          console.debug('[renderHistorique][keep] passenger confirmed/completed', id);
-          return true;
+        const bookings = Array.isArray(t.bookings) ? t.bookings : (Array.isArray(t.raw?.bookings) ? t.raw.bookings : []);
+        
+        // 1. Récupération de l'ID utilisateur (plus robuste)
+        const me = (typeof getCurrentUser === 'function' ? getCurrentUser() : window.currentUser) || null;
+        // On extrait l'ID que ce soit un objet, un IRI ou un nombre
+        const meId = me ? String(me.id ?? me['@id'] ?? me).split('/').pop() : null;
+
+        let myBooking = null;
+        if (Array.isArray(bookings) && meId) {
+          myBooking = bookings.find(b => {
+            const p = b.passenger ?? b.user ?? b.passengerIri ?? b.userIri ?? null;
+            if (!p) return false;
+            const pid = (typeof p === 'object') ? String(p.id ?? p['@id'] ?? '').split('/').pop() : String(p).split('/').pop();
+            return pid === meId;
+          }) || null;
         }
-        if (dateTrajetOnly && dateTrajetOnly < nowOnly) {
-          console.debug('[renderHistorique][keep] passenger date past', id);
+
+        // 2. Si on a trouvé ma réservation, on vérifie si elle est "historique"
+        if (myBooking) {
+          const rawB = myBooking.status ?? myBooking.statut ?? myBooking.state ?? '';
+          const bStatus = (typeof normalizeStatus === 'function') ? (normalizeStatus(rawB) || '') : String(rawB || '');
+          const bStatusNorm = bStatus.toLowerCase().trim();
+
+          const acceptedStatus = [
+            'confirmed', 'valide', 'validated', 'accepted', 'confirmé',
+            'termine', 'completed', 'approved'
+          ];
+          if (STATUS?.PASSAGER?.VALIDATED) acceptedStatus.push(String(STATUS.PASSAGER.VALIDATED));
+
+          const acceptedSet = new Set(acceptedStatus.map(s => s.toLowerCase()));
+
+          if (acceptedSet.has(bStatusNorm)) {
+            console.debug('[renderHistorique][keep] passenger booking confirmed/done', id);
+            return true;
+          }
+        }
+
+        // 3. CRITÈRE DE SECOURS : Si la date est passée, on l'affiche TOUJOURS en historique
+        // Même si la réservation est restée en "a_valider", si le jour est fini, c'est du passé.
+        if (dateTrajetOnly && dateTrajetOnly.getTime() < nowOnly.getTime()) {
+          console.debug('[renderHistorique][keep] passenger date past (fallback)', id);
           return true;
         }
 
-        const bookings = Array.isArray(t.bookings) ? t.bookings : (Array.isArray(t.raw?.bookings) ? t.raw.bookings : []);
-        if (Array.isArray(bookings) && bookings.length > 0) {
-          for (const b of bookings) {
-            const bStatus = normalizeStatus(b.status ?? b.statut ?? '');
-            if (bStatus === STATUS.PASSAGER.VALIDATED || bStatus === STATUS.PASSAGER.A_VALIDATE) {
-              console.debug('[renderHistorique][keep] passenger booking confirmed', id, b);
-              return true;
-            }
-          }
-        }
-        console.debug('[renderHistorique][skip] passenger not confirmed', id, {status, bookings});
+        console.debug('[renderHistorique][skip] passenger not confirmed and not past', id, {status, myBookingStatus: myBooking?.status});
         return false;
       }
 
@@ -4322,27 +4072,31 @@ export async function renderHistorique() {
 
   if (passe.length === 0) {
     container.innerHTML += `<p>Aucun trajet enregistré</p>`;
-    delete container.dataset.rendering;
+    container.removeAttribute('data-rendering');
     return;
   }
 
-  passe.forEach(trajet => {
+  // Construire HTML en une seule passe (meilleure perf)
+  const htmlParts = [];
+  for (const trajet of passe) {
     const depart = trajet.depart || trajet.raw?.departureLocation || 'Inconnu';
     const arrivee = trajet.arrivee || trajet.raw?.arrivalLocation || 'Inconnu';
     const dateRaw = trajet.date || trajet.raw?.departureDate || '';
-    const prix = trajet.prix || trajet.raw?.pricePerPlace || 0;
-    const role = (trajet.role || '').toLowerCase();
-    const places = trajet.placesReservees || trajet.places || (trajet.raw?.bookings ? trajet.raw.bookings.length : 0);
+    const prix = trajet.prix ?? trajet.raw?.pricePerPlace ?? 0;
+    const role = (trajet.role || '').toString().toLowerCase();
+    const places = Number(trajet.placesReservees ?? trajet.places ?? (Array.isArray(trajet.raw?.bookings) ? trajet.raw.bookings.length : 0)) || 0;
 
     let cardClass = 'trajet-card valide';
-    if (role === 'passager') cardClass = 'trajet-card reserve';
-    else if (role === 'chauffeur') cardClass = 'trajet-card chauffeur-historique';
+    if (role === 'passager' || role === 'passenger') cardClass = 'trajet-card reserve';
+    else if (role === 'chauffeur' || role === 'driver') cardClass = 'trajet-card chauffeur-historique';
 
-    container.innerHTML += `
+    const dateDisplay = (typeof formatDateJJMMAAAA === 'function') ? formatDateJJMMAAAA(dateRaw) : dateRaw;
+
+    htmlParts.push(`
       <div class="${cardClass}">
         <div class="trajet-body">
           <div class="trajet-info">
-            <strong>Covoiturage (${formatDateJJMMAAAA(dateRaw)}) : <br>${depart} → ${arrivee}</strong>
+            <strong>Covoiturage (${dateDisplay}) : <br>${depart} → ${arrivee}</strong>
             <span class="details">
               ${trajet.heureDepart || ""} → ${trajet.heureArrivee || ""} • 
               ${places} place${places > 1 ? 's' : ''}
@@ -4351,10 +4105,11 @@ export async function renderHistorique() {
           <div class="trajet-price">${prix} crédits</div>
         </div>
       </div>
-    `;
-  });
+    `);
+  }
 
-  delete container.dataset.rendering;
+  container.innerHTML += htmlParts.join('');
+  container.removeAttribute('data-rendering');
 }
 
 // -------------------- Ajout au covoiturage --------------------

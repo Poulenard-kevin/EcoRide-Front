@@ -197,6 +197,15 @@ export async function retryPendingReviews(options = {}) {
         try { options.onSuccess(m); } catch (e) { console.warn('pending-reviews.onSuccess failed', e); }
       }
 
+      // dispatch global pour synchroniser l'UI
+      try {
+        const bookingIri = m.bookingIri || (m.reservationObj && (m.reservationObj.bookingIri || m.reservationObj.serverBookingIri)) || null;
+        const carpoolIri = m.carpoolIri || m.carpool || (m.reservationObj && (m.reservationObj.carpoolIri || m.reservationObj.covoId)) || null;
+        window.dispatchEvent(new CustomEvent('ecoride:review-saved', { detail: { bookingIri, carpoolIri, pending: m } }));
+      } catch (e) {
+        console.warn('retryPendingReviews: dispatch review-saved failed', e);
+      }
+
       if (options.delayBetween) await new Promise(r => setTimeout(r, options.delayBetween));
     } catch (err) {
       // extraire un status/body si possible (fetch/axios custom)

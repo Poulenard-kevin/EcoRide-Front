@@ -1,4 +1,4 @@
-import { resolveAvatarSrc, getProfileAvatarFromStorage } from './trajets.js';
+import { resolveAvatarSrc, getProfileAvatarFromStorage, LS } from './trajets.js';
 import { carpoolFromApiAsync } from '/assets/js/trips-api.js';
 import { updatePlacesFromVehicle, renderPreferences, applyVehicleTypeToElement, normalizeTypeKey, labelFromTypeKey, slugifyForClass } from '/assets/js/type-utils.js';
 import { createBooking, reloadCarpoolAndNotify } from '/assets/js/bookings-api.js';
@@ -222,69 +222,29 @@ function renderPlaces(trajetObj) {
 function cancelReservationById(reservationId) {
   if (!reservationId) return false;
 
-  // 1️⃣ Retirer la réservation de trajets globaux
-  let trajets = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
-  const beforeLen = trajets.length;
-  trajets = trajets.filter(t => t.id !== reservationId);
-  localStorage.setItem('ecoride_trajets', JSON.stringify(trajets));
-  window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
+  try {
+    // Récupère la liste via le helper LS (doit retourner un tableau)
+    let trajets = typeof LS !== 'undefined' && LS.get ? LS.get() : JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
 
-  if (trajets.length === beforeLen) {
-    console.warn("Aucune réservation trouvée à supprimer (cancelReservationById)");
+    const beforeLen = trajets.length;
+    // Compare en string pour éviter les problèmes type number vs string
+    trajets = trajets.filter(t => String(t.id) !== String(reservationId));
+
+    // Sauvegarde via LS si dispo, sinon fallback sur localStorage
+    if (typeof LS !== 'undefined' && LS.set) {
+      LS.set(trajets);
+    } else {
+      localStorage.setItem('ecoride_trajets', JSON.stringify(trajets));
+    }
+
+    // Notification aux autres modules
+    window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
+
+    return trajets.length < beforeLen; // true si quelque chose a été retiré
+  } catch (err) {
+    console.warn('cancelReservationById error', err);
     return false;
   }
-
-  // 2️⃣ Retirer le passager du covoiturage dans nouveauxTrajets
-  let userPseudo = "Moi";
-  try {
-    const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
-    if (me && me.pseudo) userPseudo = me.pseudo;
-  } catch (e) {}
-
-  let nouveaux = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
-  nouveaux = nouveaux.map(covo => {
-    covo.passagers = (Array.isArray(covo.passagers) ? covo.passagers : [])
-      .filter(p => {
-        if (typeof p === 'object' && p.pseudo) return p.pseudo !== userPseudo;
-        if (typeof p === 'string') return !(p.startsWith(userPseudo) || p.startsWith('Moi'));
-        return true;
-      })
-      .map(p => {
-        if (typeof p === 'object' && p.pseudo) return p;
-        if (typeof p === 'string') {
-          const m = p.match(/^(.+?)\s*x(\d+)$/i);
-          return m ? { pseudo: m[1].trim(), places: Number(m[2]) } : { pseudo: p.trim(), places: 1 };
-        }
-        return null;
-      })
-      .filter(Boolean);
-
-    // Recalcul places disponibles
-    const totalOccupied = covo.passagers.reduce((sum, p) => sum + (Number(p.places) || 1), 0);
-    const capacity = typeof covo.capacity === 'number'
-      ? covo.capacity
-      : (covo.vehicle?.places ?? covo.places ?? 4);
-    covo.places = Math.max(0, capacity - totalOccupied);
-
-    return covo;
-  });
-
-  localStorage.setItem('nouveauxTrajets', JSON.stringify(nouveaux));
-  window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
-
-  // 3️⃣ Notifier l'annulation
-  window.dispatchEvent(new CustomEvent('ecoride:reservationCancelled', { detail: { id: reservationId } }));
-
-  // ✅ BONUS : notifier clairement la suppression pour l’espace utilisateur
-  window.dispatchEvent(new CustomEvent('ecoride:reservationRemoved', { detail: { id: reservationId } }));
-
-  // 👉 cet event peut être capté dans user-space.js :
-  // window.addEventListener('ecoride:reservationRemoved', () => { renderHistorique(); });
-
-  // ✅ Redirection vers "Espace utilisateur" directement sur l'onglet Mes trajets
-  window.location.href = "/espace-utilisateur?tab=trajets";
-
-  return true;
 }
 
 function isCurrentUserDriver(trajet) {

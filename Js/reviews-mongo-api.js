@@ -249,6 +249,19 @@ export async function saveReviewDoubleStorage({
   // ----- LOG FINAL AVANT RETOUR -----
   console.log('saveReviewDoubleStorage: finished', { sqlJson, mongoResult });
 
+  try {
+    window.dispatchEvent(new CustomEvent('ecoride:review-saved', {
+      detail: {
+        bookingIri: bookingIri || null,
+        carpoolIri: carpoolIri || null,
+        sqlJson: sqlJson || null,
+        mongoResult: mongoResult || null
+      }
+    }));
+  } catch (e) {
+    console.warn('dispatch review-saved failed', e);
+  }
+
   return {
     sql: { ok: true, json: sqlJson },
     mongo: mongoResult

@@ -9,6 +9,133 @@ const departCandidates  = ['departureLocation', 'departure', 'depart', 'from', '
 const arriveeCandidates = ['arrivalLocation', 'arrival', 'arrivee', 'to', 'endLocation'];
 const dateCandidates    = ['departureDate', 'date', 'jour', 'departure_at', 'departure'];
 
+// === LocalStorage helper central pour les trajets ===
+const LS_KEY = 'ecoride_trajets';
+const LS_BC_CHANNEL = 'ecoride_trajets_channel';
+const LS_KEY_TRAJETS = 'ecoride_trajets';
+const LS_EVENT = 'ecoride:trajetsUpdated';
+
+const LS = (function(){
+  let bc = null;
+  try { if ('BroadcastChannel' in window) bc = new BroadcastChannel(LS_BC_CHANNEL); } catch(e){ bc = null; }
+
+  if (bc) {
+    bc.addEventListener('message', ev => {
+      try { window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated', { detail: ev.data })); } catch(e){/*ignore*/ }
+    });
+  } else {
+    window.addEventListener('storage', (ev) => {
+      if (ev.key === LS_KEY) {
+        try {
+          const parsed = ev.newValue ? JSON.parse(ev.newValue) : [];
+          window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated', { detail: parsed }));
+        } catch(e){}
+      }
+    });
+  }
+
+  function parseRaw(raw) {
+    if (!raw) return [];
+    try {
+      const v = JSON.parse(raw);
+      // si on stocke déjà un payload { metadata, items } -> retourner items
+      if (v && typeof v === 'object' && Array.isArray(v.items)) return v.items;
+      if (Array.isArray(v)) return v;
+      return [];
+    } catch (e) {
+      console.warn('LS.parseRaw failed', e);
+      return [];
+    }
+  }
+
+  function get() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      return parseRaw(raw);
+    } catch (e) {
+      console.warn('LS.get error', e);
+      return [];
+    }
+  }
+
+  function set(arr) {
+    const payload = Array.isArray(arr) ? arr : [];
+  
+    // notify util
+    function notify(savedPayload) {
+      try { window.dispatchEvent(new CustomEvent(LS_EVENT, { detail: savedPayload })); } catch(e){}
+      if (bc) {
+        try { bc.postMessage(savedPayload); } catch(e){}
+      }
+    }
+  
+    // 1) nettoyer d'abord
+    const cleaned = cleanTrajetsForStorage(payload);
+  
+    // 2) sérialiser en protégeant contre structures circulaires
+    let serialized;
+    try {
+      serialized = JSON.stringify(cleaned);
+    } catch (jsonErr) {
+      console.warn('LS.set: JSON.stringify failed (possibly circular). Attempting to stringify safe subset.', jsonErr);
+      // fallback : essayer de stringify uniquement champs essentiels (déjà fait par clean, mais on reconfirme)
+      try {
+        const minimal = cleaned.map(t => ({ id: t.id, date: t.date, status: t.status }));
+        serialized = JSON.stringify(minimal);
+      } catch (e2) {
+        console.error('LS.set: fallback stringify failed', e2);
+        return null;
+      }
+    }
+  
+    // 3) log taille pour debug
+    const bytes = new Blob([serialized]).size;
+    console.debug(`LS.set — key=${LS_KEY} items=${cleaned.length} bytes=${bytes}`);
+  
+    // 4) tentative d'écriture simple
+    if (trySetLocalStorage(LS_KEY, serialized)) {
+      notify(cleaned);
+      return cleaned;
+    }
+  
+    // 5) purge candidates et réessai
+    console.warn('LS.set error: QuotaExceeded — attempting purge of candidate keys');
+    const candidatesToRemove = [
+      'largeAvatarCache',
+      'ecoride_trajets_backup',
+      'ecoride_vehicles',
+      'old_large_payload'
+    ];
+    candidatesToRemove.forEach(k => {
+      try { localStorage.removeItem(k); } catch(_) {}
+    });
+  
+    if (trySetLocalStorage(LS_KEY, serialized)) {
+      notify(cleaned);
+      console.info('LS.set: saved after removing candidate keys');
+      return cleaned;
+    }
+  
+    // 6) trim payload et réessai
+    console.warn('LS.set: still failing after purge — trimming payload');
+    const N = 50;
+    const trimmed = Array.isArray(cleaned) ? cleaned.slice(-N) : [];
+    let serializedTrimmed;
+    try { serializedTrimmed = JSON.stringify(trimmed); } catch(e) { serializedTrimmed = JSON.stringify([]); }
+    if (trySetLocalStorage(LS_KEY, serializedTrimmed)) {
+      let trimmedParsed = trimmed;
+      notify(trimmedParsed);
+      console.info(`LS.set: saved trimmed payload (${trimmed.length} items)`);
+      return trimmedParsed;
+    }
+  
+    console.error('LS.set: final failure after purge and trim');
+    return null;
+  }
+
+  return { get, set, bc };
+})();
+
 // place ce helper près du haut de /Js/trajets.js (avec tes autres fonctions utilitaires)
 function formatApiTime(timeStr) {
   if (!timeStr) return '';
@@ -304,7 +431,7 @@ export async function loadAllUserTrajets() {
 
     // --- Injection défensive depuis localStorage pour affichage immédiat des passagers ---
     try {
-      const store = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+      const store = LS.get(); // retourne un tableau []
       if (Array.isArray(store) && store.length) {
         const existingServerIds = new Set((combined || []).map(c => String(c.serverId || c.covoId || c.id || '')));
         for (const s of store) {
@@ -1041,9 +1168,14 @@ let editingIndex = null;
  * Recharge le tableau global `trajets` depuis le localStorage
  */
 function reloadTrajetsFromLocalStorage() {
-  const stored = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
-  trajets.splice(0, trajets.length, ...stored);
-  console.log('🔄 trajets rechargés depuis localStorage:', trajets.length);
+  try {
+    const stored = LS.get();
+    if (!Array.isArray(trajets)) trajets = [];
+    trajets.splice(0, trajets.length, ...stored);
+    console.log('🔄 trajets rechargés depuis localStorage:', trajets.length);
+  } catch (e) {
+    console.warn('reloadTrajetsFromLocalStorage failed', e);
+  }
 }
 
 // ========================================
@@ -1078,7 +1210,7 @@ function syncBookingsWithLocalStorage(serverBookings) {
   const localKey = 'ecoride_trajets';
   try {
     // existing list
-    const existing = JSON.parse(localStorage.getItem(localKey) || '[]');
+    const existing = LS.get();
 
     // transform serverBookings -> lightBookings (comme tu as déjà)
     const lightBookings = serverBookings.map(b => ({
@@ -1104,11 +1236,11 @@ function syncBookingsWithLocalStorage(serverBookings) {
     // merge: carpools remain, new light bookings appended (avoid duplicates)
     const merged = cleaned.concat(lightBookings.filter(lb => !cleaned.some(c => String(c.serverId) === String(lb.serverId))));
 
-    localStorage.setItem(localKey, JSON.stringify(merged));
-    // réhydrater état mémoire
+    LS.set(merged);
+    // ré-hydrater état mémoire
     reloadTrajetsFromLocalStorage();
     normalizeAndPersistRoles();
-    window.dispatchEvent(new CustomEvent('trajets:changed', { detail: { source: 'syncBookingsWithLocalStorage' } }));
+    window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated', { detail: { source: 'syncBookingsWithLocalStorage' } }));
     console.log(`✅ Sync terminée : ${lightBookings.length} trajets synchronisés (merge).`);
   } catch (e) {
     console.warn('syncBookingsWithLocalStorage error', e);
@@ -1118,39 +1250,85 @@ function syncBookingsWithLocalStorage(serverBookings) {
 // -------------------- Persistance --------------------
 export function getTrajets() {
   try {
-    const stored = localStorage.getItem('ecoride_trajets');
-    return stored ? JSON.parse(stored) : [];
+    return LS.get();
   } catch (err) {
     console.error("❌ Erreur lecture trajets localStorage:", err);
     return [];
   }
 }
 
-export function saveTrajets(updated = null, { force = false } = {}) {
-  try {
-    // Défense : s'assurer que la variable trajets est un tableau
-    if (!Array.isArray(trajets)) trajets = [];
+// utilitaire pour garder uniquement les champs essentiels
+function cleanTrajetsForStorage(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map(t => ({
+    id: t.id || t.Id,
+    status: t.status || t.statut || 'termine',
+    date: t.date,
+    depart: t.depart || t.villeDepart || 'Non précisé',
+    arrivee: t.arrivee || t.villeArrivee || 'Non précisé',
+    heureDepart: t.heureDepart || (t.departureTime ? new Date(t.departureTime).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : ''),
+    heureArrivee: t.heureArrivee || (t.arrivalTime ? new Date(t.arrivalTime).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : ''),
+    prix: t.prix ?? t.price ?? t.credits ?? 0, 
+    myBookingStatus: t.myBookingStatus || (t.isPassenger ? 'confirmed' : undefined),
+    placesReservees: t.placesReservees ?? 0,
+    availableSeats: t.availableSeats ?? 0,
+    covoId: t.covoId ?? null,
+    role: t.role || (t.isDriver ? 'driver' : 'passenger')
+  }));
+}
 
-    // Si on a reçu un tableau pour mise à jour
-    if (Array.isArray(updated)) {
-      // Si la nouvelle valeur est vide mais qu'on a déjà des trajets, on bloque par défaut
-      if (updated.length === 0 && trajets.length > 0 && !force) {
-        console.warn("⚠️ [saveTrajets] Écrasement par [] bloqué (protégeant l'historique). current:", trajets.length);
-        console.trace();
-        return;
-      }
-      // Remplace le contenu de trajets
-      trajets.splice(0, trajets.length, ...updated);
+function trySetLocalStorage(key, valueStr) {
+  try {
+    localStorage.setItem(key, valueStr);
+    return true;
+  } catch (e) {
+    const isQuota = e && (e.name === 'QuotaExceededError' || e.code === 22 || e.name === 'NS_ERROR_DOM_QUOTA_REACHED');
+    if (!isQuota) {
+      console.error('LS: unexpected localStorage error', e);
+    }
+    return false;
+  }
+}
+
+export function saveTrajets(list) {
+  try {
+    const cleaned = cleanTrajetsForStorage(list);
+    const serialized = JSON.stringify(cleaned);
+    console.log('saveTrajets — items:', cleaned.length, 'bytes:', new Blob([serialized]).size);
+
+    // tentative simple
+    if (trySetLocalStorage(LS_KEY_TRAJETS, serialized)) {
+      window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
+      console.info('💾 Trajets sauvegardés (cleaned)');
+      return true;
     }
 
-    // Enregistrement final
-    localStorage.setItem('ecoride_trajets', JSON.stringify(trajets));
-    window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
-    window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
-    console.log("💾 Trajets sauvegardés:", trajets.length,
-      updated && Array.isArray(updated) ? `(updated payload: ${updated.length})` : '');
+    // purge candidates puis réessai
+    console.warn('LS.set error: QuotaExceededError — tentative de purge');
+    ['largeAvatarCache', 'ecoride_trajets_backup', 'old_large_payload', 'ecoride.avatars'].forEach(k => {
+      try { localStorage.removeItem(k); } catch(_) {}
+    });
+
+    if (trySetLocalStorage(LS_KEY_TRAJETS, serialized)) {
+      window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
+      console.info('LS.set: saved after removing candidate keys');
+      return true;
+    }
+
+    // trim payload (garder derniers N items)
+    const N = 50;
+    const trimmed = Array.isArray(cleaned) ? cleaned.slice(-N) : [];
+    if (trySetLocalStorage(LS_KEY_TRAJETS, JSON.stringify(trimmed))) {
+      window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
+      console.info(`LS.set: saved trimmed payload (${trimmed.length} items)`);
+      return true;
+    }
+
+    console.error('LS.set: échec final après toutes tentatives (QuotaExceeded)');
+    return false;
   } catch (err) {
-    console.error("❌ Erreur sauvegarde trajets:", err);
+    console.error('saveTrajets unexpected error', err);
+    return false;
   }
 }
 
@@ -1158,54 +1336,26 @@ export function saveTrajets(updated = null, { force = false } = {}) {
 
 export function removeLocalTrajetByServerId(serverId, localId = null) {
   if (!serverId && !localId) return;
+  try {
+    const list = LS.get();
+    const sidNorm = serverId ? (String(serverId).replace(/^\/api\/carpools\//,'').split('/').pop()) : null;
+    const lidNorm = localId ? String(localId) : null;
 
-  const normalize = (v) => {
-    if (v === null || v === undefined) return '';
-    const s = String(v);
-    // cas où on stocke l'IRI complet (/api/carpools/12)
-    const m = s.match(/\/api\/carpools\/(\d+)$/);
-    if (m) return m[1];
-    // retirer un éventuel préfixe /api/carpools/
-    return s.replace(/^\/api\/carpools\//, '');
-  };
+    const filtered = list.filter(t => {
+      const tServer = extractServerId(t.serverId ?? t['@id'] ?? t.carserverId ?? t.covoServerId ?? '');
+      const tLocal = t._localId ?? t.id ?? t.detailId ?? t.covoId ?? null;
+      if (lidNorm && tLocal && String(tLocal) === String(lidNorm)) return false;
+      if (sidNorm && tServer && String(tServer) === String(sidNorm)) return false;
+      return true;
+    });
 
-  const sid = normalize(serverId);
-  const lid = localId ? String(localId) : null;
-
-  const removeFromKey = (key) => {
-    try {
-      const list = JSON.parse(localStorage.getItem(key) || '[]');
-  
-      // normaliser les comparateurs externes (si sid/lid sont des variables externes)
-      const sidNorm = (typeof sid !== 'undefined') ? extractServerId(sid) : null;
-      const lidNorm = (typeof lid !== 'undefined') ? extractServerId(lid) : null;
-  
-      const filtered = list.filter(t => {
-        const tServerRaw = t.serverId ?? t['@id'] ?? t.carserverId ?? t.covoServerId ?? '';
-        const tServer = extractServerId(tServerRaw);
-        const tLocal = t._localId ?? t.id ?? t.detailId ?? t.covoId ?? null;
-  
-        if (lidNorm && tLocal && String(tLocal) === String(lidNorm)) return false;
-        if (sidNorm && tServer && String(tServer) === String(sidNorm)) return false;
-  
-        return true;
-      });
-  
-      if (filtered.length !== list.length) {
-        localStorage.setItem(key, JSON.stringify(filtered));
-      }
-    } catch (e) {
-      console.warn('removeLocalTrajetByServerId: error handling key', key, e);
-    }
-  };
-
-  // clés primaires à nettoyer
-  removeFromKey('ecoride_trajets');
-  removeFromKey('nouveauxTrajets');
-
-  // notifier les autres vues
-  window.dispatchEvent(new CustomEvent('ecoride:trajets-synced', { detail: { serverId: sid, localId: lid } }));
-  window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+    LS.set(filtered);
+    // notifier
+    window.dispatchEvent(new CustomEvent('ecoride:trajets-synced', { detail: { serverId: sidNorm, localId: lidNorm } }));
+    window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
+  } catch (e) {
+    console.warn('removeLocalTrajetByServerId failed', e);
+  }
 }
 
 // -------------------- Init & helpers DOM --------------------
@@ -1917,9 +2067,9 @@ export async function reserverPlace(trajetId, placesDemandees = 1) {
 
     // Mettre à jour ecoride_trajets (localStorage)
     try {
-      const stored = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+      const stored = LS.get();
       stored.push(reservationObj);
-      localStorage.setItem('ecoride_trajets', JSON.stringify(stored));
+      LS.set(stored);
     } catch (e) {
       console.warn('reserverPlace: impossible de mettre à jour localStorage', e);
     }
@@ -2446,6 +2596,7 @@ async function handleTrajetActions(e) {
           return;
         }
 
+        const backendStatus = 'a_valider';
         const payload = JSON.stringify({ status: backendStatus });
 
         console.log('[trajet-arrive] PATCH /carpools/' + serverNum, payload);
@@ -2734,31 +2885,34 @@ async function handleTrajetActions(e) {
       const res = await deleteCarpoolApi(serverId);
       console.log('[delete] réponse deleteCarpoolApi:', res);
 
+      // Remplace la logique de recherche/retour après suppression serveur
       if (res && (res.status === 204 || res.status === 200 || res.status === 404)) {
-        try { removeLocalTrajetByServerId(serverId, id); } catch (e) { console.warn('removeLocalTrajetByServerId failed', e); }
+        try {
+          // fonction utilitaire pour supprimer côté local (à ajuster selon ton implémentation)
+          removeLocalTrajetByServerId(serverId, id);
+        } catch (e) {
+          console.warn('removeLocalTrajetByServerId failed', e);
+        }
 
-        // retirer du tableau en mémoire
-        const idx = trajets.findIndex(t => String(t.id) === String(reservationId));
+        // Retirer du tableau en mémoire (rechercher par id local ou serverId)
+        const idx = trajets.findIndex(t =>
+          String(t.id) === String(id) ||
+          String(t.serverId) === String(serverId) ||
+          // helper d'extraction si tu stockes "@id" ou "serverId" différemment
+          (typeof extractServerId === 'function' && extractServerId(t.serverId || t['@id'] || t.id) === extractServerId(serverId))
+        );
         if (idx !== -1) {
-            // FUSIONNER au lieu de remplacer pour garder date_depart, lieu_depart, etc.
-            trajets[idx] = {
-                ...trajets[idx], 
-                status: 'validated',
-                statut: 'validated'
-            };
-            saveTrajets(trajets);
+          trajets.splice(idx, 1);
+          LS.set(trajets);              // sauvegarde harmonisée
+          renderTrajetsInProgress();    // re-render
+          renderHistorique();
         }
 
         window.dispatchEvent(new CustomEvent('ecoride:carpool-deleted', { detail: { serverId, localId: id } }));
         console.log('Suppression appliquée localement et serveur OK', serverId);
       } else {
-        console.warn('Suppression serveur inattendue', res);
-        if (confirm(`La suppression côté serveur a échoué (statut: ${res?.status}). Forcer suppression locale ?`)) {
-          try { removeLocalTrajetByServerId(serverId, id); } catch (e) { console.warn(e); }
-          const idx = trajets.findIndex(t => String(t.id) === String(id) || String(t.serverId) === String(serverId));
-          if (idx !== -1) { trajets.splice(idx, 1); saveTrajets(trajets); renderTrajetsInProgress(); renderHistorique(); }
-          window.dispatchEvent(new CustomEvent('ecoride:carpool-deleted', { detail: { serverId, localId: id } }));
-        }
+        // rollback / message d'erreur éventuel
+        console.warn('Suppression serveur échouée', res);
       }
     } catch (err) {
       console.error('[delete] erreur deleteCarpoolApi:', err);
@@ -2921,7 +3075,7 @@ function updatePlacesReservees() {
     });
 
     // Persister si on a modifié (ne pas écraser autres clés)
-    localStorage.setItem('ecoride_trajets', JSON.stringify(trajets));
+    LS.set(trajets);
   } catch (err) {
     console.warn('updatePlacesReservees error', err);
   }
@@ -3170,7 +3324,7 @@ export function renderTrajetsInProgress() {
   // quick: si le trajet n'a pas de bookings mais l'ancien localStore a une réservation correspondante, 
   // fusionne-la pour affichage immédiat
   try {
-    const store = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+    const store = LS.get(); // retourne un tableau []
     if (Array.isArray(store) && store.length) {
       for (const s of store) {
         // si s.role === 'passager' et covoId présent et pas déjà dans trajets
@@ -3221,7 +3375,7 @@ export function renderTrajetsInProgress() {
     }
 
     try {
-      const store = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+      const store = LS.get(); // retourne un tableau []
       if (Array.isArray(store) && store.length) {
         found = store.find(tr => {
           const sid = extractServerId(tr.serverId) || extractServerId(tr.id) || '';
@@ -3937,7 +4091,7 @@ export async function renderHistorique() {
 
   let allTrajets = [];
   try {
-    allTrajets = JSON.parse(localStorage.getItem('ecoride_trajets') || localStorage.getItem('trajets') || '[]');
+    allTrajets = LS.get();
   } catch (e) {
     console.error('❌ Erreur localStorage', e);
   }
@@ -4276,8 +4430,13 @@ async function retryPendingSyncs() {
     }
   }
 
-  localStorage.setItem('ecoride_trajets', JSON.stringify(list));
-  window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
+  // Persist after attempts
+  try {
+    LS.set(list);
+    window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
+  } catch (e) {
+    console.warn('retryPendingSyncs persist failed', e);
+  }
 }
 
 function normalizeAndPersistRoles() {
@@ -4293,7 +4452,7 @@ function normalizeAndPersistRoles() {
       }
     });
     // sauvegarde cohérente (utilise ta fonction de persistance existante)
-    localStorage.setItem('ecoride_trajets', JSON.stringify(trajets));
+    LS.set(trajets);
     saveTrajets(trajets);
   } catch (e) {
     console.warn('normalizeAndPersistRoles error', e);
@@ -4345,3 +4504,5 @@ window.loadAllUserTrajets = loadAllUserTrajets;
 window.reserverPlace = reserverPlace;
 window.apiFetch = apiFetch; // Utile pour tes tests
 window.ensureCarpoolIriFromBooking = ensureCarpoolIriFromBooking;
+
+export { LS };

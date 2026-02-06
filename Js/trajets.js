@@ -351,6 +351,17 @@ export async function loadAllUserTrajets() {
   if (isLoadingTrajets) return [];
   isLoadingTrajets = true;
 
+  const normalizeId = v => {
+    if (v === null || v === undefined) return '';
+    const s = String(v);
+    return s.includes('/') ? s.split('/').filter(Boolean).pop() : s;
+  };
+
+  const normalizeBookingId = v => {
+    if (!v && v !== 0) return '';
+    return normalizeId(v);
+  };
+
   try {
     const user = await getMe();
     if (!user || !user.id) {
@@ -366,8 +377,7 @@ export async function loadAllUserTrajets() {
     if (typeof loadTrajetsFromApi === 'function') {
       try {
         console.debug('[loadAllUserTrajets] using loadTrajetsFromApi()');
-        combined = await loadTrajetsFromApi({ modeAll: true });
-        // loadTrajetsFromApi retourne la liste combinée (chauffeur + passager)
+        combined = await loadTrajetsFromApi({ modeAll: true }) || [];
       } catch (err) {
         console.warn('[loadAllUserTrajets] loadTrajetsFromApi failed, fallback to manual fetch:', err);
         combined = [];
@@ -407,6 +417,7 @@ export async function loadAllUserTrajets() {
           return {
             role: 'passager',
             bookingId: String(b.id ?? (b['@id'] ? b['@id'].split('/').pop() : genId())),
+            bookingServerId: b['@id'] ?? null,
             serverId,
             covoId: serverId,
             status: normalizeStatus(b.status ?? b.statut ?? 'pending'),
@@ -429,21 +440,29 @@ export async function loadAllUserTrajets() {
       combined = [...driverEntries, ...passengerEntries];
     }
 
-    // --- Injection défensive depuis localStorage pour affichage immédiat des passagers ---
+    // --- Injection défensive depuis localStorage pour affichage immédiat des passagers (avec normalisation) ---
     try {
       const store = LS.get(); // retourne un tableau []
       if (Array.isArray(store) && store.length) {
-        const existingServerIds = new Set((combined || []).map(c => String(c.serverId || c.covoId || c.id || '')));
+        // Construire un Set normalisé des IDs déjà présents dans "combined"
+        const existingNormIds = new Set((combined || []).map(c => normalizeId(c.serverId || c.covoId || c.id || '')));
         for (const s of store) {
           try {
-            if (s && String(s.role).toLowerCase() === 'passager') {
-              const sid = String(s.serverId || s.covoId || s.id || '');
-              if (sid && !existingServerIds.has(sid)) {
-                // injecter une version légère pour affichage immédiat
-                combined.push(Object.assign({}, s, { _injectedFromLocalStorage: true }));
-                existingServerIds.add(sid);
-                console.debug('[loadAllUserTrajets] injected passenger from localStorage', sid);
-              }
+            if (!s) continue;
+            const role = String(s.role || '').toLowerCase();
+            if (role !== 'passager' && role !== 'passenger') continue;
+
+            const sidRaw = s.serverId || s.covoId || s.id || '';
+            const sid = normalizeId(sidRaw);
+            if (!sid) continue;
+
+            if (!existingNormIds.has(sid)) {
+              // injecter une version légère pour affichage immédiat
+              combined.push(Object.assign({}, s, { _injectedFromLocalStorage: true }));
+              existingNormIds.add(sid);
+              console.debug('[loadAllUserTrajets] injected passenger from localStorage', sid);
+            } else {
+              // skip injection si déjà présent
             }
           } catch (e) { /* ignore per-item */ }
         }
@@ -452,7 +471,34 @@ export async function loadAllUserTrajets() {
       console.warn('[loadAllUserTrajets] localStorage parse failed (inject skip)', e);
     }
 
-    console.log(`[loadAllUserTrajets] combined count = ${combined.length}`);
+    console.log(`[loadAllUserTrajets] before dedupe combined count = ${combined.length}`);
+
+    // --- Dédoublonnage final (normalisé par serverId + booking) ---
+    const uniqueMap = new Map();
+    for (const t of (combined || [])) {
+      const carpoolNorm = normalizeId(t.serverId || t.covoId || t.id || '');
+      const bookingNorm = normalizeBookingId(t.bookingServerId || t.bookingId || t.booking_id || t.bookingId || '');
+      const key = (carpoolNorm || '') + '|' + (bookingNorm || '');
+
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, t);
+      } else {
+        const prev = uniqueMap.get(key);
+        // Préférer l'objet non injecté (API) sur l'injecté du localStorage
+        if (prev._injectedFromLocalStorage && !t._injectedFromLocalStorage) {
+          uniqueMap.set(key, t);
+        } else {
+          // Fusion douce : garder valeurs utiles (placesReservees, bookings, status, etc.)
+          uniqueMap.set(key, Object.assign({}, prev, t, {
+            bookings: (t.bookings && t.bookings.length) ? t.bookings : prev.bookings,
+            status: t.status || prev.status,
+            placesReservees: t.placesReservees ?? prev.placesReservees
+          }));
+        }
+      }
+    }
+    combined = Array.from(uniqueMap.values());
+    console.log(`[loadAllUserTrajets] after dedupe combined count = ${combined.length}`);
 
     // Sauvegarde (écrase seulement si on a quelque chose)
     if (Array.isArray(combined) && combined.length > 0) {
@@ -471,8 +517,7 @@ export async function loadAllUserTrajets() {
       if (typeof renderTrajetsInProgress === 'function') renderTrajetsInProgress();
     } catch (e) { console.warn('[loadAllUserTrajets] renderTrajetsInProgress failed', e); }
 
-    // renderHistorique ne prend pas d'argument dans ta version. Il lit localStorage,
-    // donc on l'appelle sans argument pour qu'il se base sur saveTrajets()
+    // renderHistorique lit saveTrajets() donc on l'appelle pour mise à jour
     try {
       if (typeof renderHistorique === 'function') renderHistorique();
     } catch (e) { console.warn('[loadAllUserTrajets] renderHistorique failed', e); }
@@ -3169,20 +3214,27 @@ function isTrajetHistorique(t) {
   const me = (typeof getCurrentUser === 'function' ? getCurrentUser() : window.currentUser) || null;
   const meId = me ? String(me.id ?? me['@id'] ?? me).split('/').pop() : null;
 
-  // 1. Si le trajet global est marqué comme fini
-  const isGlobalFinished = ['completed', 'validated', 'termine', 'valide'].includes(status);
+  // 1. Si le trajet global est marqué comme fini ou en attente de validation
+  // On inclut 'a_valider' et 'pending' pour que le passager le voie dans l'historique
+  const isGlobalFinished = ['completed', 'validated', 'termine', 'valide', 'a_valider', 'pending'].includes(status);
   
-  // 2. Si c'est un passager et qu'IL a validé sa réservation
+  // 2. Si c'est un passager et qu'IL a déjà validé sa réservation
   const bookings = Array.isArray(t.bookings) ? t.bookings : (Array.isArray(t.raw?.bookings) ? t.raw.bookings : []);
   const myBooking = bookings.find(b => {
     const p = b.passenger ?? b.user ?? b.passengerIri ?? b.userIri ?? null;
+    if (!p) return false;
     const pid = (typeof p === 'object') ? String(p.id ?? p['@id'] ?? '').split('/').pop() : String(p).split('/').pop();
     return pid === meId;
   });
-  const myBookingValidated = myBooking && ['validated', 'valide', 'confirmed'].includes(normalizeStatus(myBooking.status || ''));
+  
+  const myBookingStatus = normalizeStatus(myBooking?.status || '');
+  const myBookingValidated = ['validated', 'valide', 'confirmed'].includes(myBookingStatus);
 
-  // 3. Si la date est passée
-  const datePassee = new Date(t.date_depart || t.dateDepart || t.date || t.raw?.date) < new Date();
+  // 3. Si la date est passée (comparaison stricte au jour J)
+  const dateT = new Date(t.date || t.raw?.departureDate || t.raw?.date);
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  const datePassee = !isNaN(dateT.getTime()) && dateT.getTime() < now.getTime();
 
   return isGlobalFinished || myBookingValidated || datePassee;
 }
@@ -4159,10 +4211,7 @@ export async function renderHistorique() {
       // Passager
       if (role === 'passager' || role === 'passenger') {
         const bookings = Array.isArray(t.bookings) ? t.bookings : (Array.isArray(t.raw?.bookings) ? t.raw.bookings : []);
-        
-        // 1. Récupération de l'ID utilisateur (plus robuste)
         const me = (typeof getCurrentUser === 'function' ? getCurrentUser() : window.currentUser) || null;
-        // On extrait l'ID que ce soit un objet, un IRI ou un nombre
         const meId = me ? String(me.id ?? me['@id'] ?? me).split('/').pop() : null;
 
         let myBooking = null;
@@ -4175,34 +4224,26 @@ export async function renderHistorique() {
           }) || null;
         }
 
-        // 2. Si on a trouvé ma réservation, on vérifie si elle est "historique"
+        const tStatus = normalizeStatus(t.status ?? t.raw?.status ?? '');
+
+        // CRITÈRE 1 : Ma réservation est validée
         if (myBooking) {
-          const rawB = myBooking.status ?? myBooking.statut ?? myBooking.state ?? '';
-          const bStatus = (typeof normalizeStatus === 'function') ? (normalizeStatus(rawB) || '') : String(rawB || '');
-          const bStatusNorm = bStatus.toLowerCase().trim();
-
-          const acceptedStatus = [
-            'confirmed', 'valide', 'validated', 'accepted', 'confirmé',
-            'termine', 'completed', 'approved'
-          ];
-          if (STATUS?.PASSAGER?.VALIDATED) acceptedStatus.push(String(STATUS.PASSAGER.VALIDATED));
-
-          const acceptedSet = new Set(acceptedStatus.map(s => s.toLowerCase()));
-
-          if (acceptedSet.has(bStatusNorm)) {
-            console.debug('[renderHistorique][keep] passenger booking confirmed/done', id);
+          const bStatus = normalizeStatus(myBooking.status || '');
+          if (['confirmed', 'valide', 'validated', 'termine', 'completed'].includes(bStatus)) {
             return true;
           }
         }
 
-        // 3. CRITÈRE DE SECOURS : Si la date est passée, on l'affiche TOUJOURS en historique
-        // Même si la réservation est restée en "a_valider", si le jour est fini, c'est du passé.
-        if (dateTrajetOnly && dateTrajetOnly.getTime() < nowOnly.getTime()) {
-          console.debug('[renderHistorique][keep] passenger date past (fallback)', id);
+        // CRITÈRE 2 : Le trajet global est terminé ou en attente (permet au passager de valider)
+        if (['termine', 'completed', 'a_valider', 'pending'].includes(tStatus)) {
           return true;
         }
 
-        console.debug('[renderHistorique][skip] passenger not confirmed and not past', id, {status, myBookingStatus: myBooking?.status});
+        // CRITÈRE 3 : La date est passée
+        if (dateTrajetOnly && dateTrajetOnly.getTime() < nowOnly.getTime()) {
+          return true;
+        }
+
         return false;
       }
 

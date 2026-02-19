@@ -9,8 +9,48 @@ const departCandidates  = ['departureLocation', 'departure', 'depart', 'from', '
 const arriveeCandidates = ['arrivalLocation', 'arrival', 'arrivee', 'to', 'endLocation'];
 const dateCandidates    = ['departureDate', 'date', 'jour', 'departure_at', 'departure'];
 
-// === LocalStorage helper central pour les trajets ===
+window._deletingBookings = window._deletingBookings || new Set();
+
 const LS_KEY = 'ecoride_trajets';
+
+// -------------------- DEDUPE / PERSISTENCE SÉCURISÉE --------------------
+function dedupeByNormId(arr) {
+  const norm = v => {
+    if (v === 0) return '0';
+    if (!v && v !== 0) return '';
+    const s = String(v);
+    return s.includes('/') ? s.split('/').filter(Boolean).pop() : s;
+  };
+
+  const map = new Map();
+  for (const it of (arr || [])) {
+    // Normalise plusieurs sources d'ID possibles
+    const rawId = it?.serverId ?? it?.covoId ?? it?.id ?? it?.['@id'] ?? '';
+    const id = norm(rawId);
+    if (!id) continue;
+
+    if (!map.has(id)) {
+      map.set(id, it);
+    } else {
+      const existing = map.get(id);
+
+      // Prioriser les entrées venant de l'API (_fromApi), sinon la version la plus "complète"
+      const preferNew = (!!it._fromApi && !existing._fromApi) ||
+                        (Object.keys(it || {}).length > Object.keys(existing || {}).length);
+      if (preferNew) map.set(id, it);
+      else {
+        // fusion douce pour ne pas perdre bookings/champs utiles
+        const merged = Object.assign({}, existing, it);
+        // garder bookings si l'un des deux en a
+        merged.bookings = (it.bookings && it.bookings.length) ? it.bookings : (existing.bookings || []);
+        map.set(id, merged);
+      }
+    }
+  }
+  return Array.from(map.values());
+}
+
+// === LocalStorage helper central pour les trajets ===
 const LS_BC_CHANNEL = 'ecoride_trajets_channel';
 const LS_KEY_TRAJETS = 'ecoride_trajets';
 const LS_EVENT = 'ecoride:trajetsUpdated';
@@ -70,7 +110,15 @@ const LS = (function(){
     }
   
     // 1) nettoyer d'abord
-    const cleaned = cleanTrajetsForStorage(payload);
+    let cleaned = cleanTrajetsForStorage(payload);
+    try {
+      // applique la déduplication canonique avant sérialisation
+      if (typeof dedupeByNormId === 'function') {
+        cleaned = dedupeByNormId(cleaned);
+      }
+    } catch (e) {
+      console.warn('LS.set: dedupeByNormId failed', e);
+    }
   
     // 2) sérialiser en protégeant contre structures circulaires
     let serialized;
@@ -135,6 +183,33 @@ const LS = (function(){
 
   return { get, set, bc };
 })();
+
+// Mutation lock + clé LS pour bookings supprimés
+let isMutatingTrajets = false;
+const DELETED_BOOKINGS_LS_KEY = 'ecoride_deleted_bookings';
+function getDeletedBookings() {
+  try {
+    const raw = localStorage.getItem(DELETED_BOOKINGS_LS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+function setDeletedBookings(list) {
+  try { localStorage.setItem(DELETED_BOOKINGS_LS_KEY, JSON.stringify(Array.from(new Set(list)))); }
+  catch (e) { /* ignore */ }
+}
+function addDeletedBooking(idOrIri) {
+  const cur = getDeletedBookings();
+  cur.push(String(idOrIri));
+  setDeletedBookings(cur);
+}
+function removeDeletedBooking(idOrIri) {
+  const cur = getDeletedBookings().filter(x => String(x) !== String(idOrIri));
+  setDeletedBookings(cur);
+}
+function isBookingMarkedDeleted(idOrIri) {
+  const lst = getDeletedBookings();
+  return lst.some(x => String(x) === String(idOrIri));
+}
 
 // place ce helper près du haut de /Js/trajets.js (avec tes autres fonctions utilitaires)
 function formatApiTime(timeStr) {
@@ -208,7 +283,14 @@ function markTrajetAsFinishedUI(id, serverResponse = {}, options = {}) {
 // declaration hoistée, doit être en haut pour éviter ReferenceError
 async function getMe() {
   try {
-    return await apiFetch('/me'); // ou '/api/me' selon ta config d'apiFetch
+    // Appel direct en HTTP au backend en dev
+    const token = localStorage.getItem('api_token');
+    const res = await fetch('http://127.0.0.1:8000/api/me', {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+      // credentials: 'include' // décommente si tu utilises des cookies/sessions
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
   } catch (err) {
     const local = localStorage.getItem('ecoride_user');
     return local ? JSON.parse(local) : null;
@@ -347,7 +429,7 @@ function extractIdFromDriver(d) {
 // ---------- loadAllUserTrajets (fusion carpools créés + bookings passager) ----------
 let isLoadingTrajets = false;
 
-export async function loadAllUserTrajets() {
+export async function loadAllUserTrajets(force = false) {
   if (isLoadingTrajets) return [];
   isLoadingTrajets = true;
 
@@ -372,23 +454,20 @@ export async function loadAllUserTrajets() {
     const userId = String(user.id).split('/').pop();
     console.log("🔄 [loadAllUserTrajets] Chargement pour l'utilisateur:", userId);
 
-    // --- Tentative 1 : utiliser loadTrajetsFromApi si disponible (unifie le mapping) ---
     let combined = [];
     if (typeof loadTrajetsFromApi === 'function') {
       try {
         console.debug('[loadAllUserTrajets] using loadTrajetsFromApi()');
-        combined = await loadTrajetsFromApi({ modeAll: true }) || [];
+        combined = await loadTrajetsFromApi({ modeAll: true, forceRefresh: force }) || [];
       } catch (err) {
         console.warn('[loadAllUserTrajets] loadTrajetsFromApi failed, fallback to manual fetch:', err);
         combined = [];
       }
     }
 
-    // --- Fallback : si loadTrajetsFromApi indisponible ou renvoie vide, faire les deux appels séparés ---
     if (!combined || combined.length === 0) {
       console.debug('[loadAllUserTrajets] fallback to manual driver/bookings fetch');
 
-      // Charger les trajets où l'utilisateur est CHAUFFEUR
       let driverEntries = [];
       try {
         const driverCarpools = await apiFetch(`/carpools?driver=${userId}`);
@@ -405,7 +484,6 @@ export async function loadAllUserTrajets() {
         driverEntries = [];
       }
 
-      // Charger les réservations où l'utilisateur est PASSAGER
       let passengerEntries = [];
       try {
         const passengerBookings = await apiFetch(`/bookings?passenger=${userId}`);
@@ -440,84 +518,127 @@ export async function loadAllUserTrajets() {
       combined = [...driverEntries, ...passengerEntries];
     }
 
-    // --- Injection défensive depuis localStorage pour affichage immédiat des passagers (avec normalisation) ---
+    // helper (utiliser l'extractServerId déjà défini dans le fichier)
+    const normIdForCompare = v => {
+      if (!v && v !== 0) return '';
+      return String(v).includes('/') ? String(v).split('/').filter(Boolean).pop() : String(v);
+    };
+
+    // --- INJECTION SÉCURISÉE DU LOCALSTORAGE (VERSION SOLIDE) ---
     try {
-      const store = LS.get(); // retourne un tableau []
+      const store = LS.get();
       if (Array.isArray(store) && store.length) {
-        // Construire un Set normalisé des IDs déjà présents dans "combined"
-        const existingNormIds = new Set((combined || []).map(c => normalizeId(c.serverId || c.covoId || c.id || '')));
+        // utiliser extractServerId/normIdForCompare pour UNIFORMISER
+        const existingNormIds = new Set((combined || []).map(c =>
+          normIdForCompare(c.serverId || c.covoId || c.id || c['@id'] || '')
+        ));
+
         for (const s of store) {
           try {
             if (!s) continue;
-            const role = String(s.role || '').toLowerCase();
+
+            // normaliser l'id de l'item du store
+            const sid = normIdForCompare(s.serverId || s.covoId || '');
+            if (!sid) continue; // skip si pas d'ID exploitable
+
+            // On n'injecte QUE les passagers (chauffeurs viennent de l'API)
+            const role = String(s.role || (s.raw && s.raw.role) || '').toLowerCase();
             if (role !== 'passager' && role !== 'passenger') continue;
 
-            const sidRaw = s.serverId || s.covoId || s.id || '';
-            const sid = normalizeId(sidRaw);
-            if (!sid) continue;
+            // hasData strict (évite chaînes vides)
+            const hasData = !!(s.depart && String(s.depart).trim() !== '') && !!(s.arrivee && String(s.arrivee).trim() !== '');
+            if (!hasData) continue;
 
-            if (!existingNormIds.has(sid)) {
-              // injecter une version légère pour affichage immédiat
-              combined.push(Object.assign({}, s, { _injectedFromLocalStorage: true }));
-              existingNormIds.add(sid);
-              console.debug('[loadAllUserTrajets] injected passenger from localStorage', sid);
-            } else {
-              // skip injection si déjà présent
-            }
-          } catch (e) { /* ignore per-item */ }
+            // skip si déjà présent dans les données API (même id canonique)
+            if (existingNormIds.has(sid)) continue;
+
+            // normalize fields minimally to avoid circular refs when saving
+            const injected = {
+              ...s,
+              serverId: s.serverId || s.covoId || s['@id'] || null,
+              covoId: s.covoId || s.serverId || null,
+              depart: s.depart || s.departureLocation || s.raw?.departureLocation || '',
+              arrivee: s.arrivee || s.arrivalLocation || s.raw?.arrivalLocation || '',
+              date: s.date || s.departureDate || s.raw?.departureDate || null,
+              placesReservees: Number(s.placesReservees ?? s.seats ?? s.places ?? 1),
+              _injectedFromLocalStorage: true
+            };
+
+            combined.push(injected);
+            existingNormIds.add(sid);
+          } catch (e) {
+            console.warn('[loadAllUserTrajets] inject store item failed', e);
+          }
         }
       }
     } catch (e) {
-      console.warn('[loadAllUserTrajets] localStorage parse failed (inject skip)', e);
+      console.warn('[loadAllUserTrajets] localStorage parse failed', e);
     }
 
     console.log(`[loadAllUserTrajets] before dedupe combined count = ${combined.length}`);
 
-    // --- Dédoublonnage final (normalisé par serverId + booking) ---
+    // --- DEDUPE par carpoolId uniquement ---
     const uniqueMap = new Map();
     for (const t of (combined || [])) {
-      const carpoolNorm = normalizeId(t.serverId || t.covoId || t.id || '');
-      const bookingNorm = normalizeBookingId(t.bookingServerId || t.bookingId || t.booking_id || t.bookingId || '');
-      const key = (carpoolNorm || '') + '|' + (bookingNorm || '');
+        const carpoolNorm = normIdForCompare(t.serverId || t.covoId || t.id || t['@id'] || '');
 
-      if (!uniqueMap.has(key)) {
-        uniqueMap.set(key, t);
-      } else {
-        const prev = uniqueMap.get(key);
-        // Préférer l'objet non injecté (API) sur l'injecté du localStorage
-        if (prev._injectedFromLocalStorage && !t._injectedFromLocalStorage) {
-          uniqueMap.set(key, t);
+        if (!carpoolNorm) continue;
+
+        if (!uniqueMap.has(carpoolNorm)) {
+            uniqueMap.set(carpoolNorm, t);
         } else {
-          // Fusion douce : garder valeurs utiles (placesReservees, bookings, status, etc.)
-          uniqueMap.set(key, Object.assign({}, prev, t, {
-            bookings: (t.bookings && t.bookings.length) ? t.bookings : prev.bookings,
-            status: t.status || prev.status,
-            placesReservees: t.placesReservees ?? prev.placesReservees
-          }));
+            const prev = uniqueMap.get(carpoolNorm);
+            
+            // On fusionne intelligemment
+            const isNewFromApi = !t._injectedFromLocalStorage;
+            const isPrevFromApi = !prev._injectedFromLocalStorage;
+
+            uniqueMap.set(carpoolNorm, Object.assign({}, prev, t, {
+                // On garde les bookings des deux sources s'ils existent
+                bookings: (t.bookings?.length) ? t.bookings : (prev.bookings || []),
+                // Si l'un des deux est marqué comme passager, on garde l'info du bookingId
+                bookingId: t.bookingId || prev.bookingId,
+                bookingServerId: t.bookingServerId || prev.bookingServerId,
+                // On garde le rôle le plus spécifique (si on est passager, on veut garder l'accès au bouton valider)
+                roleThis: t.roleThis || prev.roleThis || roleForCurrentUser(t)
+            }));
         }
-      }
     }
     combined = Array.from(uniqueMap.values());
     console.log(`[loadAllUserTrajets] after dedupe combined count = ${combined.length}`);
 
-    // Sauvegarde (écrase seulement si on a quelque chose)
+    // --- NETTOYAGE FINAL AVANT SAUVEGARDE ---
+    // Normaliser champs de capacité avant sauvegarde
+    combined = combined.map(t => {
+      const nb = Number(t.nbPlacesTotal ?? t.totalSeats ?? t.places ?? t.vehicle?.seats ?? 0);
+      return { ...t, totalSeats: nb, places: nb, nbPlacesTotal: nb };
+    }).filter(t => {
+      const hasId = !!(t.id || t.serverId || t.bookingId || t.bookingServerId || t.covoId);
+      const hasData = !!(t.depart && String(t.depart).trim() !== '' && t.arrivee && String(t.arrivee).trim() !== '');
+      return hasId && hasData;
+    });
+
+    // On écrase le localStorage avec la version PROPRE
+    if (Array.isArray(combined)) {
+      window.trajets = combined;
+      try { LS.set(combined); } catch (e) { console.warn('[loadAllUserTrajets] LS.set failed', e); }
+    }
+
     if (Array.isArray(combined) && combined.length > 0) {
       if (Array.isArray(trajets)) {
         trajets.splice(0, trajets.length, ...combined);
       } else {
         window.trajets = combined.slice();
       }
-      try { saveTrajets(); } catch (e) { console.warn('[loadAllUserTrajets] saveTrajets failed', e); }
+      try { saveTrajets(trajets); } catch (e) { console.warn('[loadAllUserTrajets] saveTrajets failed', e); }
     } else {
       console.info("[loadAllUserTrajets] combined vide → skip saveTrajets()");
     }
 
-    // Rendu immédiat (évite l'affichage incohérent)
     try {
       if (typeof renderTrajetsInProgress === 'function') renderTrajetsInProgress();
     } catch (e) { console.warn('[loadAllUserTrajets] renderTrajetsInProgress failed', e); }
 
-    // renderHistorique lit saveTrajets() donc on l'appelle pour mise à jour
     try {
       if (typeof renderHistorique === 'function') renderHistorique();
     } catch (e) { console.warn('[loadAllUserTrajets] renderHistorique failed', e); }
@@ -537,10 +658,10 @@ export default loadAllUserTrajets;
 function extractServerId(s) {
   if (!s) return null;
   const str = String(s).trim();
-  // Cas 1: IRI complète /api/carpools/123
-  const m = str.match(/\/api\/carpools\/(\d+)$/);
+  // Capture n'importe quel ID numérique à la fin d'une IRI /api/quelque_chose/123
+  const m = str.match(/\/api\/[^\/]+\/(\d+)$/);
   if (m) return m[1];
-  // Cas 2: Juste le nombre à la fin (ex: "res-123" ou "123")
+  // Fallback : capture le dernier groupe de chiffres (ex: "123" ou "item-123")
   const mm = str.match(/(\d+)$/);
   return mm ? mm[1] : null; 
 }
@@ -929,7 +1050,6 @@ const STATUS_MAP = {
   'demarre': STATUS.CHAUFFEUR.STARTED,
   'ajoute': STATUS.CHAUFFEUR.DRAFT,
   'en_cours': STATUS.CHAUFFEUR.ACTIVE,
-  'termine': STATUS.CHAUFFEUR.COMPLETED,
 
   // booking / reservation statuses
   'pending': STATUS.PASSAGER.PENDING,
@@ -1305,21 +1425,38 @@ export function getTrajets() {
 // utilitaire pour garder uniquement les champs essentiels
 function cleanTrajetsForStorage(list) {
   if (!Array.isArray(list)) return [];
-  return list.map(t => ({
-    id: t.id || t.Id,
-    status: t.status || t.statut || 'termine',
-    date: t.date,
-    depart: t.depart || t.villeDepart || 'Non précisé',
-    arrivee: t.arrivee || t.villeArrivee || 'Non précisé',
-    heureDepart: t.heureDepart || (t.departureTime ? new Date(t.departureTime).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : ''),
-    heureArrivee: t.heureArrivee || (t.arrivalTime ? new Date(t.arrivalTime).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : ''),
-    prix: t.prix ?? t.price ?? t.credits ?? 0, 
-    myBookingStatus: t.myBookingStatus || (t.isPassenger ? 'confirmed' : undefined),
-    placesReservees: t.placesReservees ?? 0,
-    availableSeats: t.availableSeats ?? 0,
-    covoId: t.covoId ?? null,
-    role: t.role || (t.isDriver ? 'driver' : 'passenger')
-  }));
+  return list.map(t => {
+    // On cherche le nombre de places partout où il pourrait être
+    const total = Number(
+      t.nbPlacesTotal || 
+      t.totalSeats || 
+      t.vehicle?.seats || 
+      t.car?.seats || 
+      t.car?.nbPlaces ||
+      (t.role === 'chauffeur' ? 4 : 0) // Valeur par défaut si on ne trouve rien
+    );
+
+    return {
+      id: t.id || t.Id,
+      status: t.status || t.statut || 'termine',
+      date: t.date,
+      depart: t.depart || t.villeDepart || 'Non précisé',
+      arrivee: t.arrivee || t.villeArrivee || 'Non précisé',
+      heureDepart: t.heureDepart || (t.departureTime ? new Date(t.departureTime).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : ''),
+      heureArrivee: t.heureArrivee || (t.arrivalTime ? new Date(t.arrivalTime).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : ''),
+      prix: t.prix ?? t.price ?? t.credits ?? 0,
+      role: t.role || (t.isDriver ? 'chauffeur' : 'passager'),
+      
+      // ✅ ON FORCE LA SAUVEGARDE DU TOTAL RÉEL
+      nbPlacesTotal: total,
+      
+      // On sauvegarde les bookings pour pouvoir les compter plus tard
+      bookings: Array.isArray(t.bookings) ? t.bookings.map(b => ({ id: b.id, seats: b.seats || 1 })) : [],
+      
+      // Pour le passager, on garde sa réservation spécifique
+      placesReservees: Number(t.placesReservees ?? t.seats ?? 1)
+    };
+  });
 }
 
 function trySetLocalStorage(key, valueStr) {
@@ -1337,18 +1474,23 @@ function trySetLocalStorage(key, valueStr) {
 
 export function saveTrajets(list) {
   try {
-    const cleaned = cleanTrajetsForStorage(list);
+    // Utiliser le clean existant puis déduper par ID canonique
+    let cleaned = cleanTrajetsForStorage(list);
+    if (typeof dedupeByNormId === 'function') {
+      cleaned = dedupeByNormId(cleaned);
+    }
+
     const serialized = JSON.stringify(cleaned);
     console.log('saveTrajets — items:', cleaned.length, 'bytes:', new Blob([serialized]).size);
 
-    // tentative simple
+    // essayer d'écrire via trySetLocalStorage (qui gère quota)
     if (trySetLocalStorage(LS_KEY_TRAJETS, serialized)) {
       window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
-      console.info('💾 Trajets sauvegardés (cleaned)');
+      console.info('💾 Trajets sauvegardés (cleaned + dedup)');
       return true;
     }
 
-    // purge candidates puis réessai
+    // Tentatives de purge/réessai (conserve ta logique existante)
     console.warn('LS.set error: QuotaExceededError — tentative de purge');
     ['largeAvatarCache', 'ecoride_trajets_backup', 'old_large_payload', 'ecoride.avatars'].forEach(k => {
       try { localStorage.removeItem(k); } catch(_) {}
@@ -1481,7 +1623,13 @@ export async function initTrajets() {
   const form = document.querySelector('#trajet-form');
   if (form) form.addEventListener('submit', handleTrajetSubmit);
 
-  document.addEventListener('click', handleTrajetActions);
+  if (!window._trajetActionsInstalled) {
+    window._trajetActionsInstalled = true;
+    console.log('installing handleTrajetActions (once)');
+    document.addEventListener('click', handleTrajetActions);
+  } else {
+    console.warn('handleTrajetActions already installed, skipping');
+  }
 
   // relancer les pending reviews après une connexion réussie
   window.addEventListener('ecoride:login-success', () => {
@@ -1549,7 +1697,18 @@ let lastTrajetsHash = null;
  * @param {boolean} options.modeAll - Si false, ne charge que les carpools où l'utilisateur est chauffeur
  * @returns {Promise<Array>} Liste des trajets (chauffeur + passager)
  */
-export async function loadTrajetsFromApi({ modeAll = true } = {}) {
+export async function loadTrajetsFromApi({ modeAll = true, forceRefresh = false } = {}) {
+  // Si on est en mutation (suppression/en cours), on attend une courte période et réessaie
+  if (isMutatingTrajets) {
+    console.debug('[loadTrajetsFromApi] mutation en cours, attente courte puis retry');
+    await new Promise(r => setTimeout(r, 250)); // 250ms backoff
+    // si toujours verrouillé, skip pour éviter override
+    if (isMutatingTrajets) {
+      console.debug('[loadTrajetsFromApi] still mutating -> skip reload');
+      return getTrajets();
+    }
+  }
+
   const me = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
 
   try {
@@ -1564,9 +1723,24 @@ export async function loadTrajetsFromApi({ modeAll = true } = {}) {
     } else {
       membersForHash = [];
     }
-    const newHash = JSON.stringify(membersForHash.map(r => r && r.id ? r.id : '').sort());
+    const shortForHash = (r) => {
+      if (!r) return '';
+      try {
+        const id = r.id ?? (r['@id'] ? String(r['@id']).split('/').pop() : '');
+        const stat = String(r.status ?? r.statut ?? '');
+        // inclure résumé des bookings (id:status) pour détecter changements côté passager
+        const bs = (Array.isArray(r.bookings) ? r.bookings.map(b => (b.id ?? b['@id'] ?? '') + ':' + String(b.status ?? b.statut ?? '')).sort().join('|') : '');
+        return `${id}#${stat}#${bs}`;
+      } catch (e) { return String(r.id ?? r['@id'] ?? ''); }
+    };
+    // On inclut l'ID ET le statut pour que le polling détecte le passage à "a_valider"
+    const newHash = JSON.stringify(membersForHash.map(r => {
+      const id = r.id || (r['@id'] ? r['@id'].split('/').pop() : '');
+      const stat = r.status || r.statut || '';
+      return `${id}-${stat}`;
+    }).sort());
 
-    if (newHash === lastTrajetsHash) {
+    if (!forceRefresh && newHash === lastTrajetsHash) {
       console.debug('⏭️ [loadTrajetsFromApi] skip (aucun changement détecté)');
       return getTrajets();
     }
@@ -1632,7 +1806,6 @@ export async function loadTrajetsFromApi({ modeAll = true } = {}) {
         places: c.nbPlacesTotal ?? c.totalSeats ?? c.nb_places_total ?? c.places ?? (carObj?.seats ?? 4),
         totalSeats: c.nbPlacesTotal ?? c.totalSeats ?? c.places ?? (carObj?.seats ?? 4),
         availableSeats: c.availableSeats ?? c.nb_places_dispo ?? c.available ?? null,
-        // normaliser driver (toujours un objet si possible)
         driver: normalizeDriver(c.driver ?? c.raw?.driver ?? null),
         bookings,
         carIri,
@@ -1650,7 +1823,7 @@ export async function loadTrajetsFromApi({ modeAll = true } = {}) {
       };
     });
 
-    // --- Générer des entrées "passager" à partir des bookings normalisés ---
+    // Générer des entrées "passager" à partir des bookings normalisés
     const passengerEntries = [];
     for (const pool of (mapped || [])) {
       for (const b of (pool.bookings || [])) {
@@ -1663,25 +1836,34 @@ export async function loadTrajetsFromApi({ modeAll = true } = {}) {
             else isMe = String(pass) === String(me.id);
           }
           if (!isMe) continue;
-
-          // bookingServerId separate, serverId MUST refer to carpool IRI (pool.serverId)
+    
+          // --- identification de la booking (id numérique ou IRI) ---
           const bookingServerId = b['@id'] ?? (b.id ? `/api/bookings/${b.id}` : null);
-          const resLocalId = b.id ? String(b.id) : genId();
+          const bookingIdStr = b.id ? String(b.id) : (bookingServerId ? String(bookingServerId).split('/').pop() : null);
+          const bookingIdNumeric = bookingIdStr ? (Number.isFinite(Number(bookingIdStr)) ? String(Number(bookingIdStr)) : null) : null;
+          const resLocalId = bookingIdNumeric || genId();
 
-          // éviter doublons par booking
-          const bookingNorm = extractServerId(bookingServerId) || (b.id ? String(b.id) : null);
+          // SKIP si la booking est marquée supprimée localement
+          if ((bookingServerId && isBookingMarkedDeleted(bookingServerId)) || (bookingIdStr && isBookingMarkedDeleted(bookingIdStr))) {
+            continue;
+          }
+
+          const bookingNorm = extractServerId(bookingServerId) || bookingIdNumeric || (b.id ? String(b.id) : null);
           const already = passengerEntries.some(pe => {
-            const peBooking = extractServerId(pe.bookingServerId || pe.serverId || pe.id || '') || pe.id;
+            const peBooking = extractServerId(pe.bookingServerId || pe.serverId || pe.bookingId || pe.id || '') || pe.id || null;
             return peBooking && bookingNorm && String(peBooking) === String(bookingNorm);
           });
           if (already) continue;
 
+          console.debug('Booking ID:', b.id, 'Carpool ID:', pool.id);
+
+          // PUSH : id = l'ID de la booking (numérique si possible), serverId = carpool, bookingServerId & bookingId explicites
           passengerEntries.push({
-            id: resLocalId,
-            serverId: pool.serverId || pool.id || pool.covoId || null,
-            covoId: pool.serverId || pool.id || pool.covoId || null,
-            bookingServerId: bookingServerId,
-            bookingId: b.id ?? null,
+            id: resLocalId,                       // utilisé pour data-id du bouton -> priorité booking numeric
+            bookingId: bookingIdNumeric || bookingIdStr || null, // ex: "90"
+            bookingServerId: bookingServerId,    // ex: "/api/bookings/90"
+            serverId: pool.serverId || pool.id || null, // parent carpool (ex: "/api/carpools/91" ou "91")
+            covoId: pool.serverId || pool.id || null,
             depart: pool.depart || '',
             arrivee: pool.arrivee || pool.arrival || pool.arrivalLocation || '',
             date: pool.date || null,
@@ -1691,8 +1873,8 @@ export async function loadTrajetsFromApi({ modeAll = true } = {}) {
             placesReservees: Number(b.seats ?? b.reservedSeats ?? b.nb_places_reservees ?? 1),
             role: 'passager',
             status: normalizeStatus(b.status ?? b.statut ?? 'pending'),
+            carpoolStatus: normalizeStatus(pool.status ?? pool.raw?.status ?? ''),
             bookings: [b],
-            // normaliser driver : toujours un objet { id, '@id' } si possible
             driver: normalizeDriver(pool.driver ?? pool.raw?.driver ?? null),
             raw: b
           });
@@ -1702,32 +1884,47 @@ export async function loadTrajetsFromApi({ modeAll = true } = {}) {
       }
     }
 
-    // Construire un Set des IDs déjà présents dans mapped
     const mappedIds = new Set((mapped || []).map(t => extractServerId(t.serverId ?? t.id ?? '')));
 
-    // Filtrer passengerEntries pour exclure les doublons
     const filteredPassengerEntries = passengerEntries.filter(pe => {
-      const peId = extractServerId(pe.serverId ?? pe.id ?? '');
-      const peCovoId = extractServerId(pe.covoId ?? '');
-      if (peId && mappedIds.has(peId)) return false;
-      if (peCovoId && mappedIds.has(peCovoId)) return false;
+      // garder l'entrée passager si elle a une bookingServerId unique (ne pas l'écraser)
+      const bookingNum = extractServerId(pe.bookingServerId ?? pe.bookingId ?? pe.id ?? '');
+      const covoNum = extractServerId(pe.covoId ?? pe.serverId ?? '');
+      // si le covo existe dans mappedIds mais la booking est aussi liée, on garde la booking
+      // on ne filtre que les cas où la "passenger entry" est littéralement la même que la mapped carpool
+      if (!bookingNum && covoNum && mappedIds.has(covoNum)) return false;
       return true;
     });
 
-    // Fusionner avec les entrées filtrées
-    const combined = (mapped || []).concat(filteredPassengerEntries);
+    // Construire une map par carpoolId
+    const byCarpool = new Map();
 
-    // Mettre à jour trajets et rendre
+    // D'abord les carpools (chauffeur)
+    for (const m of mapped || []) {
+      const key = extractServerId(m.serverId ?? m.id ?? '');
+      if (!key) continue;
+      byCarpool.set(key, m);
+    }
+
+    // Ensuite les passagers → remplacent le carpool chauffeur si même ID
+    for (const p of filteredPassengerEntries) {
+      const key = extractServerId(p.covoId ?? p.serverId ?? '');
+      if (!key) continue;
+
+      // ✅ On remplace l'entrée chauffeur par la version passager
+      byCarpool.set(key, p);
+    }
+
+    const combined = Array.from(byCarpool.values());
+
     if (Array.isArray(trajets)) {
       trajets.splice(0, trajets.length, ...combined);
     } else {
-      // créer si absent
       window.trajets = combined.slice();
     }
-    saveTrajets();
+    saveTrajets(trajets);
     if (typeof renderTrajetsInProgress === 'function') renderTrajetsInProgress();
 
-    // --- Debug / détection bookings orphelines (à exécuter AVANT le return) ---
     const allServerIds = new Set((trajets || []).map(t => String(t.serverId)));
     const orphans = [];
     (trajets || []).forEach(t => {
@@ -1780,7 +1977,7 @@ async function handleTrajetSubmit(e) {
   const selectedVehicle = vehicles.find(v => v.plate === selectedPlate) || null;
 
   // ... ensuite dans trajetData :
-  const trajetData = {
+  let trajetData = {
     id: (editingIndex !== null && trajets[editingIndex]) ? trajets[editingIndex].id : genId(),
     depart: formData.get('depart')?.trim() || '',
     arrivee: formData.get('arrivee')?.trim() || '',
@@ -1823,6 +2020,7 @@ async function handleTrajetSubmit(e) {
     trajets[editingIndex] = trajetData;
     editingIndex = null;
   } else {
+    trajetData._tmpCreate = true;
     trajets.push(trajetData);
   }
   
@@ -1846,20 +2044,26 @@ async function handleTrajetSubmit(e) {
       // createCarIfNeeded retourne l'id (ex: "12")
       const newCarId = await createCarIfNeeded(trajetData.vehicle, { useSession: true });
       if (newCarId) {
-        trajetData.carId = newCarId;
-        // mettre à jour la voiture locale pour éviter de recréer à l'avenir
-        trajetData.vehicle.id = newCarId;
-        // mettre à jour ecoride_vehicles dans localStorage si tu veux persister
+        // créer des copies pour éviter toute écriture sur un objet potentiellement immuable
+        const updatedVehicle = trajetData.vehicle ? { ...trajetData.vehicle, id: newCarId } : { id: newCarId };
+        trajetData = { ...trajetData, carId: newCarId, vehicle: updatedVehicle };
+      
+        // mettre à jour ecoride_vehicles dans localStorage (avec la copie)
         try {
           const vehicles = JSON.parse(localStorage.getItem('ecoride_vehicles') || '[]');
-          const idx = vehicles.findIndex(v => (v.plate && trajetData.vehicle.plate && v.plate === trajetData.vehicle.plate) || (v._tmpId && trajetData.vehicle._tmpId && v._tmpId === trajetData.vehicle._tmpId));
+          const idx = vehicles.findIndex(v =>
+            (v.plate && updatedVehicle.plate && v.plate === updatedVehicle.plate) ||
+            (v._tmpId && updatedVehicle._tmpId && v._tmpId === updatedVehicle._tmpId)
+          );
           if (idx !== -1) {
-            vehicles[idx] = { ...vehicles[idx], ...trajetData.vehicle };
+            vehicles[idx] = { ...vehicles[idx], ...updatedVehicle };
           } else {
-            vehicles.push(trajetData.vehicle);
+            vehicles.push(updatedVehicle);
           }
           localStorage.setItem('ecoride_vehicles', JSON.stringify(vehicles));
-        } catch (e) { console.warn('failed to update ecoride_vehicles', e); }
+        } catch (e) {
+          console.warn('failed to update ecoride_vehicles', e);
+        }
       }
     }
     } catch (err) {
@@ -1986,52 +2190,84 @@ async function handleTrajetSubmit(e) {
     }
 
     // === Mise à jour de l'ID serveur local ===
-  const newServerId = serverObj?.['@id'] || serverObj?.id || null;
+  const rawServerId = serverObj?.['@id'] || serverObj?.id || null;
+  const isNoContent = serverObj && serverObj.status === 204;
 
-  if (newServerId) {
-    trajetData.serverId = newServerId;
-    trajetData.synced = true;
-    delete trajetData.syncError;
+  if (rawServerId) {
+    const normalizedServerId = String(rawServerId).startsWith('/api/') ? rawServerId : `/api/carpools/${rawServerId}`;
 
-    // Mettre à jour dans le tableau trajets
-    const idx = trajets.findIndex(x => x.id === trajetData.id);
-    if (idx !== -1) {
-      trajets[idx] = { ...trajets[idx], ...trajetData };
+    // Créer des copies au lieu de muter trajetData ou vehicle (évite "readonly property")
+    const updatedVehicle = trajetData.vehicle ? { ...trajetData.vehicle } : undefined;
+    const updatedTrajet = { ...trajetData, serverId: normalizedServerId, synced: true, vehicle: updatedVehicle };
+
+    // Supprimer les champs temporaires sur la copie
+    delete updatedTrajet.syncError;
+    delete updatedTrajet._tmpCreate;
+
+    // Mettre à jour la collection locale sans muter les objets originaux
+    const localIdx = trajets.findIndex(x => String(x.id) === String(updatedTrajet.id));
+    if (localIdx !== -1) {
+      trajets[localIdx] = { ...trajets[localIdx], ...updatedTrajet };
+    } else {
+      const existingByServerIdx = trajets.findIndex(x =>
+        String(extractServerId(x.serverId || x['@id'] || x.id)) === String(extractServerId(updatedTrajet.serverId))
+      );
+      if (existingByServerIdx !== -1) {
+        trajets[existingByServerIdx] = { ...trajets[existingByServerIdx], ...updatedTrajet };
+      } else {
+        trajets.push(updatedTrajet);
+      }
+    }
+
+    // Supprimer doublons restants par serverId (sauf l'enregistrement courant)
+    const sid = extractServerId(updatedTrajet.serverId || updatedTrajet['@id']);
+    if (sid) {
+      for (let i = trajets.length - 1; i >= 0; i--) {
+        const t = trajets[i];
+        if (!t) continue;
+        const tSid = extractServerId(t.serverId || t['@id'] || t.id);
+        if (String(tSid) === String(sid) && String(t.id) !== String(updatedTrajet.id)) {
+          trajets.splice(i, 1);
+        }
+      }
     }
 
     saveTrajets(trajets);
-    console.log('✅ Trajet synchronisé avec le serveur :', trajetData.serverId);
-    ajouterAuCovoiturage(trajetData);
+    console.log('✅ Trajet synchronisé avec le serveur :', updatedTrajet.serverId);
+
+    // Mettre à jour l'état global / UI avec la copie
+    ajouterAuCovoiturage(updatedTrajet);
     window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
     window.dispatchEvent(new CustomEvent('trajets:changed', {
-      detail: { source: serverIdRaw ? 'edit' : 'create', trajetId: trajetData.serverId || trajetData.id }
+      detail: { source: serverIdRaw ? 'edit' : 'create', trajetId: updatedTrajet.serverId || updatedTrajet.id }
     }));
-  } else if (serverObj && serverObj.status === 204) {
-    trajetData.synced = true;
-    delete trajetData.syncError;
+  } else if (isNoContent && (serverIdRaw || trajetData.serverId)) {
+    // PATCH 204 — le serveur a accepté sans renvoyer de corps
+    const updatedTrajet = { ...trajetData, synced: true };
+    delete updatedTrajet.syncError;
 
-    const idx = trajets.findIndex(x => x.id === trajetData.id);
+    const idx = trajets.findIndex(x => x.id === updatedTrajet.id);
     if (idx !== -1) {
-      trajets[idx] = { ...trajets[idx], ...trajetData };
+      trajets[idx] = { ...trajets[idx], ...updatedTrajet };
     }
 
     saveTrajets(trajets);
-    console.log('✅ Trajet synchronisé (204 No Content) :', trajetData.serverId);
+    console.log('✅ Trajet synchronisé (204 No Content) :', updatedTrajet.serverId);
     window.dispatchEvent(new CustomEvent('trajets:changed', {
-      detail: { source: 'edit', trajetId: trajetData.serverId || trajetData.id }
+      detail: { source: 'edit', trajetId: updatedTrajet.serverId || updatedTrajet.id }
     }));
   } else {
-    trajetData.synced = false;
-    trajetData.syncError = 'Aucun identifiant serveur retourné';
+    // Aucun identifiant serveur retourné — garder localement
+    const updatedTrajet = { ...trajetData, synced: false, syncError: 'Aucun identifiant serveur retourné' };
 
-    const idx = trajets.findIndex(x => x.id === trajetData.id);
+    const idx = trajets.findIndex(x => x.id === updatedTrajet.id);
     if (idx !== -1) {
-      trajets[idx] = { ...trajets[idx], ...trajetData };
+      trajets[idx] = { ...trajets[idx], ...updatedTrajet };
     }
 
     saveTrajets(trajets);
     window.dispatchEvent(new CustomEvent('trajets:changed', {
-      detail: { source: 'local', trajetId: trajetData.id }
+      detail: { source: 'local', trajetId: updatedTrajet.id }
     }));
     console.warn('⚠️ Aucun identifiant serveur retourné, trajet non synchronisé');
   }
@@ -2155,6 +2391,13 @@ export async function reserverPlace(trajetId, placesDemandees = 1) {
     console.error('Erreur réseau réservation', err);
     return { ok: false, error: err };
   }
+}
+
+function getAuthToken() {
+  const token = localStorage.getItem('authToken');
+  if (token) return token;
+  const match = document.cookie.match(/(?:^|; )BEARER=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
 // fallback safe pour showToast — utilise la fonction existante si elle est définie,
@@ -2360,7 +2603,7 @@ async function deleteBookingApi(bookingOrIri, covoId = null) {
         // apiFetch peut renvoyer une erreur object avec status
         console.warn('[deleteBookingApi] apiFetch failed for', url, err);
         if (err && err.status && (err.status === 204 || err.status === 200 || err.status === 404)) {
-          return { status: err.status, ok: err.status === 200 || err.status === 204, via: 'apiFetch-error', url, raw: err };
+          return { status: err.status, ok: true, via: 'apiFetch-error', url, raw: err };
         }
         // sinon on tentera fetch
       }
@@ -2378,7 +2621,7 @@ async function deleteBookingApi(bookingOrIri, covoId = null) {
       console.log('[deleteBookingApi] fetch result', fullUrl, res.status, text);
 
       if (res.ok || res.status === 204 || res.status === 404) {
-        return { status: res.status, ok: res.ok || res.status === 204, via: 'fetch', url: fullUrl, body: text };
+        return { status: res.status, ok: true, via: 'fetch', url: fullUrl, body: text };
       } else {
         const err = new Error(`HTTP ${res.status} ${text}`);
         err.status = res.status;
@@ -2459,7 +2702,7 @@ async function handleTrajetActions(e) {
 
     // mise à jour locale optimiste
     trajet.status = 'demarre';
-    saveTrajets();
+    saveTrajets(trajets);
     updatePlacesReservees();
     renderTrajetsInProgress();
 
@@ -2477,7 +2720,7 @@ async function handleTrajetActions(e) {
           // pas d'ID serveur : garder l'état local et marquer non-synchronisé
           trajet.synced = false;
           trajet.syncError = 'no-server-id';
-          saveTrajets();
+          saveTrajets(trajets);
           console.warn('trajet-start: aucun server id détecté, mise à jour locale seulement');
           return;
         }
@@ -2504,7 +2747,7 @@ async function handleTrajetActions(e) {
 
           trajet.synced = false;
           trajet.syncError = resp && resp.status ? `http:${resp.status}` : 'http:error';
-          saveTrajets();
+          saveTrajets(trajets);
           console.warn(`[trajet-start] PATCH failed ${resp && resp.status}`, errText);
           return;
         }
@@ -2544,7 +2787,7 @@ async function handleTrajetActions(e) {
             trajets.unshift(itemToInsert);
           }
 
-          saveTrajets();
+          saveTrajets(trajets);
           // optional: recharger depuis l'API pour bookings si nécessaire
           try { await loadTrajetsFromApi(); } catch (e) { /* non critique */ }
           updatePlacesReservees();
@@ -2569,7 +2812,7 @@ async function handleTrajetActions(e) {
         if (trajet) {
           trajet.synced = false;
           trajet.syncError = err && err.message ? err.message : String(err);
-          saveTrajets();
+          saveTrajets(trajets);
         }
       } finally {
         try { btn.disabled = false; btn.classList.remove('is-loading'); } catch (e) {}
@@ -2596,25 +2839,27 @@ async function handleTrajetActions(e) {
     if (trajet && trajet.role === 'chauffeur') {
       trajet.status = 'termine';
 
+      // PROPAGER l'état "a_valider" vers toutes les entrées passager correspondant au même covo
       try {
-        // récupère l'ID serveur du covoiturage courant (fonction utilitaire que tu as déjà)
-        const covoId = getCovoId(trajet) || trajet.serverId || trajet['@id'] || `/api/carpools/${trajet.id}`;
-      
-        // mettre à jour tous les trajets locaux qui correspondent à ce covo (côté passagers)
-        trajets.forEach(t => {
-          const tCovoId = getCovoId(t) || t.serverId || t['@id'] || `/api/carpools/${t.id}`;
-          if (String(tCovoId) === String(covoId)) {
-            if (t.role === 'passager') {
-              t.status = 'a_valider'; // ou autre status attendu par ton rendu
-              t.synced = false;
+        // extraire le numéro canonique du covo (ex: "123")
+        const covoNum = extractServerId(getCovoId(trajet) || trajet.serverId || trajet['@id'] || trajet.id);
+        if (covoNum) {
+          trajets.forEach(t => {
+            const tCovoNum = extractServerId(getCovoId(t) || t.serverId || t['@id'] || t.covoId || t.id);
+            if (tCovoNum && String(tCovoNum) === String(covoNum)) {
+              const role = (t.role || '').toString().toLowerCase();
+              if (role.includes('pass')) {
+                t.status = 'a_valider';   // status attendu côté rendu passager
+                t.synced = false;
+              }
             }
-          }
-        });
+          });
+        }
       } catch (e) {
-        console.warn('Erreur lors de la propagation aux passagers :', e);
+        console.warn('Erreur propagation arrivée -> passagers :', e);
       }
       
-      saveTrajets();
+      saveTrajets(trajets);
       updatePlacesReservees();
       renderTrajetsInProgress();
       renderHistorique();
@@ -2667,7 +2912,7 @@ async function handleTrajetActions(e) {
         if (trajet) {
           trajet.synced = false;
           trajet.syncError = err.message || String(err);
-          saveTrajets();
+          saveTrajets(trajets);
         }
       } finally {
         try {
@@ -2970,157 +3215,57 @@ async function handleTrajetActions(e) {
   }
 
   // cancel (passager)
-  if (target.classList.contains('trajet-cancel-btn')) {
-    e.preventDefault();
-    e.stopPropagation();
+if (target.classList.contains('trajet-cancel-btn')) {
+  e.preventDefault();
+  e.stopPropagation();
 
-    const id = target.dataset.id;
-    const index = trajets.findIndex(t => String(t.id) === String(id) || String(t.serverId) === String(id));
-    if (index === -1) return;
-    const trajet = trajets[index];
-    if (!trajet || trajet.role !== 'passager') return;
-    if (!confirm("Voulez-vous annuler cette réservation ?")) return;
+  const id = target.dataset.id;
+  if (!id) return;
 
-    // récupérer booking server IRI ou booking id depuis l'objet
-    const bookingCandidate =
-      trajet.serverId
-      || (Array.isArray(trajet.bookings) && trajet.bookings[0] && (trajet.bookings[0]['@id'] || (trajet.bookings[0].id ? `/api/bookings/${trajet.bookings[0].id}` : null)))
-      || (trajet.raw && Array.isArray(trajet.raw.bookings) && trajet.raw.bookings[0] && (trajet.raw.bookings[0]['@id'] || trajet.raw.bookings[0].id))
-      || null;
-
-    const covoId = getCovoId(trajet) || trajet.covoId || trajet.detailId || null;
-
-    const doLocalRemoval = () => {
-      trajets.splice(index, 1);
-      saveTrajets();
-
-      let userReservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
-      userReservations = userReservations.filter(r => String(r.id) !== String(id));
-      localStorage.setItem('ecoride_trajets', JSON.stringify(userReservations));
-      window.dispatchEvent(new CustomEvent('ecoride:trajet-updated'));
-
-      try {
-        let trajetsCovoiturage = JSON.parse(localStorage.getItem('nouveauxTrajets') || '[]');
-        const refId = getCovoId(trajet);
-        if (refId) {
-          const covoIndex = trajetsCovoiturage.findIndex(t => String(t.id) === String(refId));
-          if (covoIndex !== -1) {
-            const covo = trajetsCovoiturage[covoIndex];
-            const mePseudo = getCurrentUserPseudo();
-            covo.passagers = (Array.isArray(covo.passagers) ? covo.passagers : [])
-              .filter(p => {
-                if (!p) return false;
-                if (typeof p === 'object' && p.pseudo) return p.pseudo !== mePseudo;
-                if (typeof p === 'string') return !(p.startsWith(mePseudo) || p.startsWith('Moi'));
-                return true;
-              }).map(p => {
-                if (typeof p === 'object' && p.pseudo) return { pseudo: p.pseudo, places: Number(p.places || 1) };
-                if (typeof p === 'string') {
-                  const m = p.match(/^(.+?)\s*x(\d+)$/i);
-                  return m ? { pseudo: m[1].trim(), places: Number(m[2]) } : { pseudo: p.trim(), places: 1 };
-                }
-                return null;
-              }).filter(Boolean);
-
-            const occupied = covo.passagers.reduce((s, p) => s + (Number(p.places) || 1), 0);
-            const capacity = Number(covo.capacity ?? covo.vehicle?.places ?? covo.places ?? 4);
-            covo.places = Math.max(0, capacity - occupied);
-
-            trajetsCovoiturage[covoIndex] = covo;
-            localStorage.setItem('nouveauxTrajets', JSON.stringify(trajetsCovoiturage));
-            window.dispatchEvent(new CustomEvent('ecoride:trajetsUpdated'));
-          }
-        }
-      } catch (err) {
-        console.warn('Erreur mise à jour nouveauxTrajets lors suppression locale', err);
-      }
-
-      updatePlacesReservees();
-      renderTrajetsInProgress();
-      renderHistorique();
-      window.dispatchEvent(new CustomEvent('ecoride:reservationCancelled', { detail: { id } }));
-      alert("Réservation annulée.");
-    };
-
-    // si pas d'info serveur => suppression locale
-    if (!bookingCandidate && !covoId) {
-      doLocalRemoval();
-      return;
-    }
-
-    try {
-      const res = await deleteBookingApi(bookingCandidate || '', covoId);
-      console.log('[handle cancel] deleteBookingApi returned', res);
-
-      // accepter 200/204/404 comme OK
-      if (res && (res.status === 200 || res.status === 204 || res.status === 404)) {
-        try { removeLocalTrajetByServerId(bookingCandidate || covoId || id, id); } catch (e) { console.warn('removeLocalTrajetByServerId failed', e); }
-        doLocalRemoval();
-        return;
-      }
-
-      // sinon fallback: proposer suppression locale
-      throw new Error('Suppression serveur non confirmée: ' + JSON.stringify(res));
-    } catch (err) {
-      console.error('[handle cancel] deletion failed', err);
-      if (confirm('Impossible d\'annuler côté serveur (' + (err.status || err.message || '') + '). Supprimer localement quand même ?')) {
-        try { removeLocalTrajetByServerId(bookingCandidate || covoId || id, id); } catch (e) { console.warn(e); }
-        doLocalRemoval();
-      } else {
-        alert('Annulation abandonnée. La réservation est toujours active sur le serveur.');
-      }
-    }
+  if (confirm("Voulez-vous vraiment annuler cette réservation ?")) {
+    // appel l'alias global (ou handleCancelBookingFixed(id))
+    window.handleCancelBooking(id);
   }
+  return;
+}
 }
 
 // -------------------- Rendu en cours --------------------
 
 function updatePlacesReservees() {
   try {
-    // Récupérer toutes les entrées sauvegardées (carpools + réservations)
-    const allStored = Array.isArray(trajets) && trajets.length ? trajets : JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
+    const source = (Array.isArray(window.trajets) && window.trajets.length) 
+                   ? window.trajets 
+                   : (LS.get() || []);
 
-    // Extraire réservations locales (role 'passager')
-    const localReservations = (allStored || []).filter(r => r && r.role === 'passager');
-
-    // Agréger par covoId (getCovoId compatible)
+    // 1. On crée un dictionnaire propre des réservations par trajet
     const reservedByCovo = {};
-    localReservations.forEach(r => {
-      const covoId = getCovoId(r) || (r.covoId ?? r.detailId ?? r.serverId ?? r.id) || null;
-      const places = Number(r.placesReservees ?? r.places ?? r.seats ?? 1) || 1;
-      if (!covoId) return;
-      reservedByCovo[covoId] = (reservedByCovo[covoId] || 0) + places;
-      // garantir la prop sur la réservation elle-même
-      r.placesReservees = places;
-    });
-
-    // Mettre à jour chaque trajet (chauffeur) présent dans trajets
-    if (!Array.isArray(trajets) || trajets.length === 0) {
-      trajets.splice(0, trajets.length, ...(Array.isArray(allStored) ? allStored : []));
-    }
-
-    console.log('updatePlacesReservees - trajets:', trajets);
-
-    trajets.forEach(t => {
-      // id stable du covo
-      const covoId = getCovoId(t) || (t.serverId ?? t.id ?? '');
-      // capacité : pref vehicle.seats, sinon t.places / t.totalSeats / fallback 4
-      const capacity = Number(t.vehicle?.seats ?? t.totalSeats ?? t.places ?? t.capacity ?? 4) || 4;
-      const reserved = reservedByCovo[covoId] !== undefined ? reservedByCovo[covoId] : (Number(t.placesReservees) || 0);
-
-      // assurer valeur minimale pour une réservation passager (1)
-      if (t.role === 'passager' && (reserved === 0 || reserved === null)) {
-        t.placesReservees = 1;
-      } else {
-        t.placesReservees = Number(reserved || 0);
+    
+    // On ne boucle que sur les vraies réservations passager
+    source.forEach(r => {
+      if (r && String(r.role).toLowerCase() === 'passager') {
+        const covoId = extractServerId(r.covoId || r.serverId || r.id);
+        const places = Number(r.placesReservees ?? r.seats ?? 1) || 1;
+        if (covoId) {
+          reservedByCovo[covoId] = (reservedByCovo[covoId] || 0) + places;
+        }
       }
-
-      // places disponibles calculées (surtout utile pour la page détail)
-      t.availableSeats = Math.max(0, capacity - Number(t.placesReservees || 0));
     });
 
-    // Persister si on a modifié (ne pas écraser autres clés)
-    LS.set(trajets);
+    // 2. On applique les valeurs aux trajets chauffeurs
+    source.forEach(t => {
+      const sid = extractServerId(t.serverId || t.id);
+      const capacity = Number(t.totalSeats ?? t.places ?? 4);
+      
+      // On RE-CALCULE au lieu de cumuler
+      const totalReserved = reservedByCovo[sid] || 0;
+      t.placesReservees = totalReserved;
+      t.availableSeats = Math.max(0, capacity - totalReserved);
+    });
+
+    // 3. Sauvegarde propre
+    window.trajets = source;
+    LS.set(source);
   } catch (err) {
     console.warn('updatePlacesReservees error', err);
   }
@@ -3239,22 +3384,44 @@ function isTrajetHistorique(t) {
   return isGlobalFinished || myBookingValidated || datePassee;
 }
 
-export function renderTrajetsInProgress() {
-  const inProgress = trajets.filter(t => !isTrajetHistorique(t));
-  if ((!Array.isArray(trajets) || trajets.length === 0) && typeof loadTrajetsFromApi === 'function') {
+function safeFormatDate(val) {
+  if (!val) return '';
+  if (typeof formatDateJJMMAAAA === 'function') {
     try {
-      if (!window._loadingTrajets) {
-        loadTrajetsFromApi().catch(e => { console.warn('loadTrajetsFromApi prefetch failed', e); });
-      }
-    } catch (e) {
-      console.warn('Erreur préfetch', e);
-    }
-    return;
+      const formatted = formatDateJJMMAAAA(val);
+      if (formatted) return formatted;
+    } catch (e) { /* ignore */ }
   }
+  const d = new Date(val);
+  if (!isNaN(d)) return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  return String(val);
+}
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#039;"}[m]));
+}
+
+export function renderTrajetsInProgress() {
   if (typeof window !== 'undefined') {
     window.loadTrajetsFromApi = loadTrajetsFromApi;
     window.renderTrajetsInProgress = renderTrajetsInProgress;
+  }
+
+  if ((!Array.isArray(trajets) || trajets.length === 0) && typeof loadTrajetsFromApi === 'function') {
+    try {
+      if (!window._loadingTrajets && !window._renderTrajetsInProgressFetching) {
+        window._renderTrajetsInProgressFetching = true;
+        loadTrajetsFromApi()
+          .then(() => { renderTrajetsInProgress(); })
+          .catch(e => { console.warn('loadTrajetsFromApi prefetch failed', e); })
+          .finally(() => { window._renderTrajetsInProgressFetching = false; });
+      }
+    } catch (e) {
+      console.warn('Erreur préfetch', e);
+      window._renderTrajetsInProgressFetching = false;
+    }
+    return;
   }
 
   const container = document.querySelector('#trajets-en-cours .trajets-list');
@@ -3322,73 +3489,139 @@ export function renderTrajetsInProgress() {
     const m = s.match(/(\d+)$/);
     return m ? m[1] : s;
   };
-  const extractServerId = (val) => extractId(val);
 
   // ----------------------
-  // Dé-duplication
+  // Dé-duplication unifiée (évite double carte pour même covoiturage)
   // ----------------------
   const dedupMap = new Map();
   const meId = getCurrentUserIdStr();
 
   for (const t of allActive) {
-    const keyNum = canonicalCarpoolNum(t.serverId ?? t['@id'] ?? t.covoId ?? t.id ?? t.covoId);
-    const key = keyNum || (typeof genId === 'function' ? genId() : JSON.stringify(t));
-    const existing = dedupMap.get(key);
+    // Récupère l'ID canonique du covoiturage
+    let carpoolNum = extractServerId(
+      t._parentCarpoolId ??  
+      t.covoId ??
+      t.carpoolId ??
+      t.carpool?.id ??
+      t.raw?.carpool?.id ??
+      t.serverId ??
+      t['@id'] ??
+      t.id ??
+      ''
+    );
+
+    // Si c'est clairement une booking, on force la clé sur le carpool
+    if (t.bookingId || t.bookingServerId || t.raw?.carpool) {
+      const parentId = extractServerId(
+        t.covoId ??
+        t.carpoolId ??
+        t.carpool?.id ??
+        t.raw?.carpool?.id ??
+        ''
+      );
+      if (parentId) {
+        carpoolNum = parentId;
+      }
+    }
+    if (!carpoolNum) {
+      // conserve quand même les éléments sans id sous une clé unique
+      const randKey = `raw-${Math.random()}`;
+      dedupMap.set(randKey, Object.assign({}, t, { _resolvedRole: roleForCurrentUser(t) }));
+      continue;
+    }
+
+    const existing = dedupMap.get(carpoolNum);
     const roleThis = roleForCurrentUser(t);
 
     if (!existing) {
-      dedupMap.set(key, Object.assign({}, t, { _resolvedRole: roleThis }));
+      // première entrée pour ce covoiturage
+      dedupMap.set(carpoolNum, Object.assign({}, t, { _resolvedRole: roleThis }));
+      console.debug('dedupe: added', { key: carpoolNum, roleThis, carpoolNum });
       continue;
     }
 
-    const roleExisting = existing._resolvedRole || roleForCurrentUser(existing);
-    const existingHasBookings = Array.isArray(existing.bookings) && existing.bookings.length > 0;
-    const newHasBookings = Array.isArray(t.bookings) && t.bookings.length > 0;
+    // Si on a déjà une entrée, on fusionne plutôt que d'ajouter une 2e carte
+    // Priorités : booking présent > enrichi (full) > plus récent (fallback)
+    const existingHasBookings = (Array.isArray(existing.bookings) && existing.bookings.length > 0)
+      || Boolean(existing.bookingId) || Boolean(existing.bookingServerId)
+      || String(existing._key || '').includes('|b');
+
+    const newHasBookings = (Array.isArray(t.bookings) && t.bookings.length > 0)
+      || Boolean(t.bookingId) || Boolean(t.bookingServerId)
+      || String(t._key || '').includes('|b');
+
+    const existingEnriched = Boolean(existing._enriched);
+    const newEnriched = Boolean(t._enriched);
+
+    // Si le nouvel item a booking et l'existant n'en a pas -> remplacer par le nouvel item (qui contient la réservation)
     if (newHasBookings && !existingHasBookings) {
-      dedupMap.set(key, Object.assign({}, t, { _resolvedRole: roleThis }));
+      dedupMap.set(carpoolNum, Object.assign({}, existing, t, { _resolvedRole: roleThis }));
+      console.debug('dedupe: replaced by booking', { carpoolNum });
       continue;
     }
+    // Si l'existant a booking et le nouvel item n'en a pas -> garder existing
     if (existingHasBookings && !newHasBookings) {
+      console.debug('dedupe: keep existing with booking', { carpoolNum });
       continue;
     }
 
-    if (roleThis === 'passager' && roleExisting !== 'passager') {
-      dedupMap.set(key, Object.assign({}, t, { _resolvedRole: roleThis }));
+    // Si nouvel item enrichi (full data) et existing pas -> prendre le nouvel item
+    if (newEnriched && !existingEnriched) {
+      dedupMap.set(carpoolNum, Object.assign({}, existing, t, { _resolvedRole: roleThis }));
+      console.debug('dedupe: replaced by enriched', { carpoolNum });
       continue;
     }
-    if (roleExisting === 'passager' && roleThis !== 'passager') {
-      continue;
-    }
-
-    if (roleThis === 'chauffeur' && roleExisting !== 'chauffeur') {
-      dedupMap.set(key, Object.assign({}, t, { _resolvedRole: roleThis }));
-      continue;
-    }
-    if (roleExisting === 'chauffeur' && roleThis !== 'chauffeur') {
+    if (existingEnriched && !newEnriched) {
+      console.debug('dedupe: keep existing enriched', { carpoolNum });
       continue;
     }
 
-    dedupMap.set(key, Object.assign({}, t, { _resolvedRole: roleThis }));
+    // Sinon fusion douce : combine les champs sans perdre bookingId/_myBookingId
+    const merged = Object.assign({}, existing, t, { _resolvedRole: roleThis });
+    // garde booking id si présent
+    merged.bookingId = merged.bookingId || existing.bookingId || t.bookingId || merged._myBookingId || existing._myBookingId || t._myBookingId;
+    merged._myBookingId = merged._myBookingId || existing._myBookingId || t._myBookingId;
+    dedupMap.set(carpoolNum, merged);
+    console.debug('dedupe: merged default', { carpoolNum });
   }
 
+  // transforme la map en liste unique
   const deDupedList = Array.from(dedupMap.values());
+  console.debug('Dedupe terminé, cartes uniques:', deDupedList.length);
 
   // quick: si le trajet n'a pas de bookings mais l'ancien localStore a une réservation correspondante, 
   // fusionne-la pour affichage immédiat
+  // ✅ Injection LS uniquement si parent carpool connu
   try {
-    const store = LS.get(); // retourne un tableau []
+    const store = LS.get();
     if (Array.isArray(store) && store.length) {
       for (const s of store) {
-        // si s.role === 'passager' et covoId présent et pas déjà dans trajets
-        const sid = extractServerId(s.serverId || s.covoId || s.id);
-        if (!sid) continue;
-        if (!deDupedList.some(d => extractServerId(d.serverId || d.id) === sid)) {
-          // push une version light pour affichage rapide
-          deDupedList.push(Object.assign({}, s, { _resolvedRole: 'passager', _enriched: true }));
+        const sid = extractServerId(s.serverId || s.covoId);
+        if (!sid) continue; // ignore booking standalone
+
+        if (!deDupedList.some(d =>
+          extractServerId(d.serverId || d.covoId || d.id) === sid
+        )) {
+          deDupedList.push(
+            Object.assign({}, s, {
+              _resolvedRole: 'passager',
+              _enriched: true
+            })
+          );
         }
       }
     }
-  } catch (e) { /* ignore */ }
+  } catch (e) {}
+
+  // --- Normaliser _myBookingId pour les passagers AVANT le rendu/filtrage ---
+  deDupedList.forEach(t => {
+    if (t._resolvedRole === 'passager' && !t._myBookingId) {
+      // on essaie différentes sources possibles pour l'ID de réservation
+      t._myBookingId = t.bookingId || t.id || (t.raw && t.raw.id) || null;
+      // debug optionnel :
+      // console.debug('fix booking id for', extractServerId(t.serverId || t.id), t._myBookingId);
+    }
+  });
 
   // ----------------------
   // Filtrage : on retire seulement les réservations déjà validées (passager)
@@ -3549,7 +3782,7 @@ export function renderTrajetsInProgress() {
     // --- LOGIQUE PASSAGER ---
     if (roleNorm === 'passager') {
       const bookings = Array.isArray(t.bookings) ? t.bookings : (Array.isArray(t.raw?.bookings) ? t.raw.bookings : []);
-    
+
       const myBooking = bookings.find(b => {
         const p = b.passenger ?? b.user ?? b.passengerIri ?? b.userIri ?? null;
         if (!p) return false;
@@ -3557,28 +3790,30 @@ export function renderTrajetsInProgress() {
         return pid === meId;
       });
 
-      if (!myBooking) return false;
+      // ✅ Fallback : si myBooking introuvable dans bookings[], 
+      // vérifier si l'entrée a quand même un bookingId (passager après dedupe)
+      if (!myBooking) {
+        const hasBookingId = !!(t.bookingId || t.bookingServerId || t._myBookingId);
+        if (!hasBookingId) return false;
+        // Pas encore validé → on garde la carte visible
+        const bStatus = normalizeStatus(t.status || '');
+        const hasPassengerValidated = ['validated', 'valide', 'confirmed'].includes(bStatus);
+        if (hasPassengerValidated) return false;
+        return true;
+      }
 
       const myBookingId = extractId(myBooking.id || myBooking['@id']);
       t._myBookingId = myBookingId;
 
-
       const bStatus = normalizeStatus(myBooking.status || '');
-      const tStatus = normalizeStatus(t.status || '');
 
-      // On cache la carte si :
-      // 1. La réservation est validée (validated ou valide)
-      // 2. OU si le trajet global est terminé (termine ou completed)
-      const isFinished = [
-        'validated', 'valide', 'confirmed', 
-        'termine', 'completed', 'finished'
-      ].includes(bStatus) || [
-        'termine', 'completed', 'finished'
-      ].includes(tStatus);
+      // On cache la carte UNIQUEMENT si le passager a déjà validé (confirmé)
+      // Mais on la GARDE si le trajet est 'termine' par le chauffeur pour permettre au passager de cliquer sur "Valider"
+      const hasPassengerValidated = ['validated', 'valide', 'confirmed'].includes(bStatus);
 
-      if (isFinished) return false; 
-      // ----------------------
+      if (hasPassengerValidated) return false;
 
+      // Si le trajet est terminé mais pas encore validé par moi, je DOIS voir la carte pour pouvoir valider
       return true;
     }
 
@@ -3713,11 +3948,11 @@ export function renderTrajetsInProgress() {
       const dateText = safeFormatDate(rawDate) || '';
 
       // formatage des heures via helper (évite ISO brut)
-      const hD = formatApiTime(source.departureTime || source.heureDepart || '');
-      const hA = formatApiTime(source.arrivalTime || source.heureArrivee || '');
+      const hD = formatApiTime(source.heure || source.departureTime || source.heureDepart || '');
+      const hA = formatApiTime(source.heure_arrivee || source.arrivalTime || source.heureArrivee || '');
       const horaireText = (hD && hA) ? `${hD} → ${hA}` : (hD || hA || '');
 
-      const placesOccupees = t.placesReservees ?? computePlacesReservees(t, source) ?? 0;
+      const placesOccupees = computePlacesReservees(t, source) ?? 0;
       const placesTotales = Number(
         t.places ?? 
         t.totalSeats ?? 
@@ -3734,12 +3969,30 @@ export function renderTrajetsInProgress() {
         ? `${placesOccupees} / ${placesTotales}`
         : String(passengerReserved);
 
-      const placesWord = (role === 'chauffeur')
+        const placesWord = (role === 'chauffeur')
         ? (placesOccupees <= 1 ? 'place réservée' : 'places réservées')
         : (passengerReserved <= 1 ? 'place réservée' : 'places réservées');
-
-      const rawStatusSource = role === 'passager' ? (t.status ?? t.raw?.status ?? t.raw?.statut) : (source.status ?? source.raw?.status ?? t.status);
-      const status = normalizeStatus(rawStatusSource ?? 'ajoute');
+      
+      // On force le passager à regarder le statut du carpool (source) s'il existe
+      let rawStatusSource = '';
+      if (role === 'passager' && source) {
+        rawStatusSource =
+          source.status ??
+          source.raw?.status ??
+          source.statut ??
+          t.status ??
+          t.raw?.status ??
+          t.raw?.statut ??
+          '';
+      } else {
+        rawStatusSource =
+          t.status ??
+          t.raw?.status ??
+          t.statut ??
+          '';
+      }
+      
+      const status = normalizeStatus(rawStatusSource || 'ajoute');
       const mappedCssClass = mapStatusToCssClass(role, status);
       const bgClass = `trajet-card ${mappedCssClass}`;
 
@@ -3777,28 +4030,142 @@ export function renderTrajetsInProgress() {
         } else if (mappedCssClass === 'termine') {
           buttonsHtml = `<span class="trajet-status">Terminé</span>`;
         }
-      } else {
-        const refId = t.covoId || (t.raw?.carpool?.['@id']) || '';
-        const isParentFinished = (
-          status === STATUS.CHAUFFEUR.COMPLETED ||
-          status === STATUS.PASSAGER.A_VALIDATE ||
-          status === STATUS.PASSAGER.PENDING 
-        );
-
-        if (isParentFinished) {
-          buttonsHtml = `
-            <button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>
-            <button class="btn-trajet trajet-validate-passager-btn" data-id="${t._myBookingId}">Valider</button>
-            <button class="btn-trajet trajet-signaler-btn" data-id="${t._myBookingId}">⚠ Signaler</button>
-          `;
         } else {
-          buttonsHtml = `
-            <button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>
-            <button class="btn-trajet trajet-cancel-btn" data-id="${stableId}">Annuler</button>
-            <button class="btn-trajet trajet-signaler-btn" data-id="${stableId}">⚠ Signaler</button>
-          `;
+          // 1) IDs et recherche covoId canonique
+          const refId = t.covoId || t.serverId || (t.raw?.carpool?.['@id']) || '';
+          const passagerCovoIdStr = extractServerId(refId || t.serverId || t.id || (t.raw && t.raw.carpool && t.raw.carpool['@id']) || '');
+  
+          // 2) CHOISIR UN "master" ROBUSTE
+          // Priorité:
+          //  - dédupedList / deDupedList (si présent)
+          //  - global window.trajets (si présent)
+          //  - source calculé précédemment (source) ou fallback t
+          let master = null;
+  
+          if (passagerCovoIdStr) {
+            // 2.a chercher dans la liste dédupliquée si disponible
+            try {
+              master = (typeof deDupedList !== 'undefined' && Array.isArray(deDupedList))
+                ? deDupedList.find(tr => extractServerId(tr.serverId || tr.id) === passagerCovoIdStr && (!tr.bookingId && !String(tr._key||'').includes('|b')))
+                : null;
+            } catch (e) { master = null; }
+  
+            // 2.b si pas trouvé, chercher dans global trajets (prioriser objets "complets")
+            if (!master && Array.isArray(window.trajets)) {
+              master = window.trajets.find(tr => {
+                const sid = extractServerId(tr.serverId || tr.id || tr['@id'] || '');
+                if (sid !== passagerCovoIdStr) return false;
+                // privilégier entrées qui ressemblent au carpool (driver présent, bookings array non vide, ou _enriched)
+                if (tr.driver || (Array.isArray(tr.bookings) && tr.bookings.length > 0) || tr._enriched || tr.car) return true;
+                // sinon on peut quand même le retourner mais en dernier recours
+                return true;
+              });
+            }
+  
+            // 2.c sinon fallback: utiliser 'source' (calculé plus haut) ou t
+            if (!master) master = source || t;
+          } else {
+            master = source || t;
+          }
+  
+          // 3) Si master ressemble à une booking (bookingId present), tenter de trouver le vrai parent
+          if (master && (master.bookingId || master.bookingServerId || String(master._key||'').includes('|b'))) {
+            const maybeParent = (Array.isArray(window.trajets) ? window.trajets : []).find(tr => extractServerId(tr.serverId || tr.id) === passagerCovoIdStr && !tr.bookingId);
+            if (maybeParent) master = maybeParent;
+          }
+  
+          // 4) Trouver la réservation du passager courant (si présente)
+          const bookingsForSource = Array.isArray(master?.bookings)
+            ? master.bookings
+            : (Array.isArray(t.bookings) ? t.bookings : (Array.isArray(t.raw?.bookings) ? t.raw.bookings : []));
+          const currentUserId = getCurrentUserIdStr();
+          let myBookingObj = null;
+          if (Array.isArray(bookingsForSource) && bookingsForSource.length && currentUserId) {
+            myBookingObj = bookingsForSource.find(b => {
+              const p = b.passenger ?? b.user ?? b.passengerIri ?? b.userIri ?? b.userId ?? null;
+              if (!p) return false;
+              const pid = (typeof p === 'object') ? String(p.id ?? p['@id'] ?? '').split('/').pop() : String(p).split('/').pop();
+              return pid === currentUserId;
+            }) || null;
+          }
+  
+          // 5) Normaliser statuts en cherchant partout
+          const bStatus = normalizeStatus(myBookingObj?.status ?? myBookingObj?.statut ?? t.status ?? 'pending');
+
+          // Chercher le statut du CARPOOL PARENT (pas de la booking)
+          // On cherche d'abord une entrée chauffeur dans window.trajets avec le même carpoolId
+          let masterCarpoolStatus = '';
+          if (passagerCovoIdStr) {
+            const parentCarpool = (Array.isArray(window.trajets) ? window.trajets : []).find(tr => {
+              const sid = extractServerId(tr.serverId || tr.id || tr['@id'] || '');
+              return sid === passagerCovoIdStr && (tr.role === 'chauffeur' || (!tr.bookingId && !tr.bookingServerId));
+            });
+            if (parentCarpool) {
+              masterCarpoolStatus = parentCarpool.status ?? parentCarpool.raw?.status ?? '';
+            }
+          }
+          // Fallback sur master si on n'a pas trouvé de carpool parent distinct
+          if (!masterCarpoolStatus) {
+            masterCarpoolStatus = master?.status ?? master?.raw?.status ?? master?.carpool?.status ?? master?.raw?.carpool?.status ?? '';
+          }
+          const masterStatus = normalizeStatus(
+            t.carpoolStatus ??
+            masterCarpoolStatus ??
+            master?.status ??
+            master?.raw?.status ??
+            ''
+          );
+          const tStatus = normalizeStatus(t.status ?? t.raw?.status ?? '');
+  
+          // ID d'action
+          const idForAction = t._myBookingId || t.bookingId || t.id || (myBookingObj?.id || myBookingObj?.['@id']) || '';
+  
+          // 6) DEBUG : log complète du master/source/t pour la carte problématique
+          if (extractServerId(master?.serverId || master?.id || master?.['@id']) === passagerCovoIdStr || extractId(idForAction) === '105') {
+            if (window.__TRAJETS_POLLING_DEBUG) {
+              console.log('DEBUG MASTER FULL for passagerCovoIdStr=', passagerCovoIdStr, { master, source, t, myBookingObj });
+            }
+          }
+  
+          // 7) Logique décision (CORRIGÉE)
+          // On considère qu'on peut valider si :
+          // - Le passager n'a pas ENCORE validé (hasPassengerValidated est faux)
+          // ET (Le trajet global est terminé OU la réservation est en attente de validation)
+
+          const hasPassengerValidated = ['validated', 'valide', 'confirmed'].includes(bStatus);
+
+          // On vérifie si le trajet est fini côté chauffeur
+          const isMasterFinished = ['a_valider', 'termine', 'completed', 'finished'].includes(masterStatus);
+
+          // On vérifie si la réservation elle-même attend une validation
+          const isBookingWaiting = ['a_valider', 'pending_validation'].includes(bStatus);
+
+          // CONDITION CRUCIALE : Si le master est fini, le passager DOIT voir le bouton valider
+          const isReadyToValidate = !hasPassengerValidated && (isMasterFinished || isBookingWaiting);
+
+          if (window.__TRAJETS_POLLING_DEBUG) {
+              console.log(`PASSAGER CARD ID:${idForAction}`, {
+                  masterStatus,
+                  bookingStatus: bStatus,
+                  isMasterFinished,
+                  isReadyToValidate
+              });
+          }
+
+          if (isReadyToValidate) {
+              buttonsHtml = `
+                <button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>
+                <button class="btn-trajet trajet-validate-passager-btn" data-id="${idForAction}">Valider</button>
+                <button class="btn-trajet trajet-signaler-btn" data-id="${idForAction}">⚠ Signaler</button>
+              `;
+          } else {
+              buttonsHtml = `
+                <button class="btn-trajet trajet-detail-btn" data-covo-id="${refId}">Détail</button>
+                <button class="btn-trajet trajet-cancel-btn" data-id="${idForAction}">Annuler</button>
+                <button class="btn-trajet trajet-signaler-btn" data-id="${idForAction}">⚠ Signaler</button>
+              `;
+          }
         }
-      }
 
       html += `
         <div class="${bgClass.trim()}" data-id="${stableId}" data-role="${role}">
@@ -3817,18 +4184,25 @@ export function renderTrajetsInProgress() {
     }
   });
 
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#039;"}[m]));
-  }
-
   container.innerHTML = html;
 
   if (enrichPromises.length > 0) {
     Promise.all(enrichPromises.map(p => p.catch(() => null))).then(() => {
-      try { renderTrajetsInProgress(); } catch (e) { console.warn('Rerender after enrich failed', e); }
+      // Le re-render après enrich est déjà planifié via window._renderTimeout dans chaque enrich
+      // On ne déclenche un re-render ici QUE si aucun timeout n'est déjà en attente
+      if (!window._renderTimeout) {
+        window._renderTimeout = setTimeout(() => {
+          window._renderTimeout = null;
+          try { renderTrajetsInProgress(); } catch (e) { console.warn('Rerender after enrich failed', e); }
+        }, 200);
+      }
     }).catch(() => {
-      try { renderTrajetsInProgress(); } catch (e) { console.warn('Rerender after enrich failed', e); }
+      if (!window._renderTimeout) {
+        window._renderTimeout = setTimeout(() => {
+          window._renderTimeout = null;
+          try { renderTrajetsInProgress(); } catch (e) { console.warn('Rerender after enrich failed', e); }
+        }, 200);
+      }
     });
   }
 
@@ -3836,13 +4210,26 @@ export function renderTrajetsInProgress() {
     container.dataset.boundTrajets = "1";
     container.addEventListener('click', async (e) => {
       // Trouver l'élément actionnable le plus proche (bouton, lien ou élément marqué data-action)
-      const target = e.target.closest('button, a, [data-action]');
+      const target = e.target.closest(
+        'button, a, [data-action], [data-id], [data-covo-id],' +
+        '.trajet-detail-btn, .trajet-cancel-btn, .trajet-validate-btn, .trajet-validate-passager-btn,' +
+        '.trajet-edit-btn, .trajet-delete-btn, .trajet-detail-btn'
+      );
       if (!target || !container.contains(target)) return;
   
       // --- UTILS ---
       const getId = (el) => {
         if (!el) return null;
-        return el.dataset?.id ?? el.getAttribute('data-id') ?? null;
+        // Cherche plusieurs sources possibles d'ID/IRI
+        const ds = el.dataset || {};
+        return ds.id ?? ds.covoId ?? ds.serverId ?? el.getAttribute('data-id') ?? el.getAttribute('data-covo-id') ?? null;
+      };
+  
+      const extractIdNumber = (v) => {
+        if (v == null) return null;
+        const s = String(v);
+        const m = s.match(/(\d+)$/);
+        return m ? m[1] : s;
       };
   
       // 1) GESTION DU BOUTON VALIDER (PASSAGER) -> ouvre la modal d'avis
@@ -3858,90 +4245,32 @@ export function renderTrajetsInProgress() {
         console.log('👉 Clic Valider Passager pour la réservation:', reservationId);
   
         openRatingModal({
-          reservationId,
-          onSubmit: async ({ rating, review, flagged }) => {
+          reservationId, // C'est l'ID de la BOOKING (ex: 105)
+          onSubmit: async ({ rating, review }) => {
             try {
-              // 1) Update status de la RÉSERVATION côté serveur
+              // 1. On valide la RÉSERVATION (Booking) -> PATCH /api/bookings/105
               await updateBookingStatus(reservationId, 'confirmed');
-
-              // 2) Mise à jour locale de la réservation
-              let reservations = JSON.parse(localStorage.getItem('ecoride_trajets') || '[]');
-              const idx = reservations.findIndex(r => String(r.id) === String(reservationId));
-              
-              let currentTrajet = (idx !== -1 ? reservations[idx] : { id: reservationId });
-
-              if (idx !== -1) {
-                reservations[idx].status = 'valide';
-                reservations[idx].rating = rating;
-                reservations[idx].review = review;
-                reservations[idx].validatedAt = new Date().toISOString();
-                localStorage.setItem('ecoride_trajets', JSON.stringify(reservations));
-              }
-
-              // --- RÉCUPÉRATION ROBUSTE DES IRIs ---
-              const extractIdNumber = (v) => {
-                if (v == null) return null;
-                const s = String(v);
-                const m = s.match(/(\d+)$/);
-                return m ? m[1] : s;
-              };
-
-              // On définit carpoolIri ici pour corriger la ReferenceError
-              let carpoolIri = currentTrajet?.carpoolIri ?? currentTrajet?.covoId ?? currentTrajet?.serverId ?? null;
-              if (carpoolIri && !String(carpoolIri).startsWith('/api/')) {
-                carpoolIri = `/api/carpools/${extractIdNumber(carpoolIri)}`;
-              }
-
-              // 3) CLÔTURE DU TRAJET CHAUFFEUR (Si c'est le passager qui valide)
-              if (carpoolIri) {
-                const carpoolId = extractIdNumber(carpoolIri);
-                console.log("🏁 Tentative de clôture du carpool:", carpoolId);
-                
-                // On utilise apiFetch pour être sûr d'avoir le token
-                apiFetch(`/carpools/${carpoolId}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/merge-patch+json' },
-                    body: JSON.stringify({ status: 'termine' }) // On force le passage en historique
-                }).then(() => console.log("✅ Carpool marqué comme termine"))
-                  .catch(e => console.warn("Échec clôture carpool", e));
-              }
-      
-              // 4) Sauvegarde de l'avis (Review)
-              try {
-                const me = (typeof getCurrentUser === 'function') ? getCurrentUser() : window.currentUser || null;
-                const userId = extractIdNumber(me?.id ?? me?.['@id'] ?? null);
-                let bookingIri = currentTrajet?.serverId ?? currentTrajet?.['@id'] ?? `/api/bookings/${reservationId}`;
-
+        
+              // 2. On récupère l'ID du trajet pour envoyer l'avis
+              const trajet = trajets.find(t => String(t.id) === String(reservationId) || String(t.bookingId) === String(reservationId));
+              const carpoolId = extractServerId(trajet?.serverId || trajet?.covoId);
+        
+              // 3. Envoi de l'avis (Review)
+              if (carpoolId) {
                 await saveReviewDoubleStorage({
-                  rating: Number(rating) || 0,
-                  comment: review || '',
-                  bookingIri,
-                  carpoolIri,
-                  userId,
-                  reservationId,
-                  reservationObj: currentTrajet
+                  rating: Number(rating),
+                  comment: review,
+                  bookingIri: `/api/bookings/${reservationId}`,
+                  carpoolIri: `/api/carpools/${carpoolId}`,
+                  reservationId: reservationId
                 });
-              } catch (err) {
-                console.warn('Erreur saveReviewDoubleStorage', err);
               }
-      
-              // 5) Rafraîchir l'UI et changer d'onglet
-              alert('Validation enregistrée. Merci !');
-              
-              if (typeof loadTrajetsFromApi === 'function') {
-                await loadTrajetsFromApi();
-              }
-              
-              renderTrajetsInProgress();
-              renderHistorique();
-              
-              if (typeof activateHistoryTab === 'function') {
-                activateHistoryTab();
-              }
-
+        
+              alert('Voyage validé !');
+              await loadAllUserTrajets(true); // Refresh complet
             } catch (err) {
-              console.error('Erreur validation via modal:', err);
-              alert('Erreur lors de l\'enregistrement.');
+              console.error('Erreur validation:', err);
+              alert('Erreur lors de la validation.');
             }
           }
         });
@@ -3953,19 +4282,16 @@ export function renderTrajetsInProgress() {
       if (target.classList.contains('trajet-validate-btn')) {
         e.preventDefault();
         e.stopPropagation();
-
+  
         const stableId = getId(target);
         if (!stableId) return;
-
+  
         if (!confirm('Confirmez-vous l\'arrivée à destination ?')) return;
-
+  
         try {
           console.log('🏁 Déclenchement arrivée pour le covoiturage:', stableId);
-
-          // envoi d'un statut intermédiaire : le covoiturage est terminé côté chauffeur
-          // mais en attente de validation par les passagers.
-          // Choix de la valeur : soit 'pending_validation' (EN) soit 'a_valider' (FR) — backend doit accepter.
-          const backendStatus = 'a_valider'; // ou 'pending_validation' si ton API préfère l'anglais
+  
+          const backendStatus = 'a_valider';
           const payload = JSON.stringify({ status: backendStatus });
           const opts = {
             method: 'PUT',
@@ -3975,18 +4301,16 @@ export function renderTrajetsInProgress() {
             },
             body: payload
           };
-
+  
           let res;
           if (typeof apiFetch === 'function') {
-            // apiFetch devrait accepter headers et body ; si apiFetch modifie Content-Type, utilise fetch natif
             res = await apiFetch(`/api/carpools/${stableId}`, opts);
           } else {
             const r = await fetch(`/api/carpools/${stableId}`, opts);
             if (!r.ok) throw new Error(`HTTP ${r.status}`);
             res = await r.json().catch(() => null);
           }
-
-          // Mise à jour locale / refresh UI
+  
           if (Array.isArray(trajets)) {
             const t = trajets.find(x => String(x.id) === String(stableId) || String(x.serverId) === String(stableId));
             if (t) t.status = 'termine';
@@ -3994,74 +4318,88 @@ export function renderTrajetsInProgress() {
           alert('Trajet marqué comme terminé !');
           if (typeof renderTrajetsInProgress === 'function') renderTrajetsInProgress();
           if (typeof renderHistorique === 'function') renderHistorique();
-
+  
         } catch (err) {
           console.error('Erreur lors de la clôture du trajet:', err);
-          // Si c'est un 415, log plus d'infos utiles
           if (err?.message && err.message.includes('415')) {
             alert('Erreur: type de contenu non supporté (415). Vérifie l\'en-tête Content-Type envoyé.');
           } else {
             alert('Erreur technique lors de la clôture du trajet. Voir console.');
           }
         }
-
+  
         return;
       }
   
       // 3) GESTION DU BOUTON DÉTAIL
       if (target.classList.contains('trajet-detail-btn')) {
-        e.preventDefault();
-        e.stopPropagation();
+        const covoId = getId(target) ?? target.getAttribute('data-covo-id') ?? target.dataset?.covoId;
+        if (!covoId) return;
   
-        const covoId = target.dataset?.covoId ?? target.getAttribute('data-covo-id');
-        if (covoId) {
-          console.log('Ouvrir détail:', covoId);
-          // Exemple d'action : ouvrir l'onglet détail
-          // window.location.hash = `#carpool:${covoId}`;
-          // ou appeler ta fonction d'ouverture de détail si elle existe
-          if (typeof openCarpoolDetail === 'function') {
-            try { openCarpoolDetail(covoId); } catch (err) { console.warn('openCarpoolDetail failed', err); }
-          }
+        // Appeler openCarpoolDetail seulement si la fonction existe => alors on empêche la propagation
+        if (typeof openCarpoolDetail === 'function') {
+          e.preventDefault();
+          e.stopPropagation();
+          try { openCarpoolDetail(covoId); } catch (err) { console.warn('openCarpoolDetail failed', err); }
+          return;
         }
+        // Sinon, laisser l'événement remonter pour être traité par handler global
         return;
       }
   
       // 4) AUTRES ACTIONS (Annuler, Signaler, Edit, Delete, Start, etc.)
       if (target.classList.contains('trajet-cancel-btn')) {
-        e.preventDefault();
-        e.stopPropagation();
         const bookingId = getId(target);
         if (!bookingId) return;
-        // implémenter la logique d'annulation...
+  
         if (typeof handleCancelBooking === 'function') {
+          e.preventDefault();
+          e.stopPropagation();
           try { await handleCancelBooking(bookingId, target); } catch (err) { console.error(err); }
+          return;
         }
+        // Sinon, laisser bubble pour que le handler global s'en charge
         return;
       }
   
       if (target.classList.contains('trajet-edit-btn')) {
-        e.preventDefault();
-        e.stopPropagation();
         const carpoolId = getId(target);
         if (!carpoolId) return;
+  
         if (typeof handleEditCarpool === 'function') {
+          e.preventDefault();
+          e.stopPropagation();
           try { handleEditCarpool(carpoolId); } catch (err) { console.warn('handleEditCarpool failed', err); }
+          return;
         }
+        // Sinon, laisser l'événement continuer vers le handler global
         return;
       }
   
       if (target.classList.contains('trajet-delete-btn')) {
-        e.preventDefault();
-        e.stopPropagation();
         const carpoolId = getId(target);
         if (!carpoolId) return;
+  
         if (typeof handleDeleteCarpool === 'function') {
+          e.preventDefault();
+          e.stopPropagation();
           try { await handleDeleteCarpool(carpoolId, target); } catch (err) { console.error(err); }
+          return;
         }
+        // Sinon, laisser bubble pour que le handler global le traite (et gère 404/retours)
+        return;
+      }
+
+      if (target.classList.contains('trajet-start-btn')) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Créer un event synthétique avec target = le bouton exact
+        const syntheticEvent = Object.assign({}, e, { target });
+        try { await handleTrajetActions(syntheticEvent); } catch (err) { console.error(err); }
         return;
       }
   
-      // ... ajoute d'autres handlers si nécessaire ...
+      // ... ajoute d'autres handlers spécifiques si nécessaire ...
     });
   }
 
@@ -4076,19 +4414,6 @@ export function renderTrajetsInProgress() {
       console.warn('Erreur clear guard', e);
     }
   }, 0);
-
-  function safeFormatDate(val) {
-    if (!val) return '';
-    if (typeof formatDateJJMMAAAA === 'function') {
-      try {
-        const formatted = formatDateJJMMAAAA(val);
-        if (formatted) return formatted;
-      } catch (e) { /* ignore */ }
-    }
-    const d = new Date(val);
-    if (!isNaN(d)) return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
-    return String(val);
-  }
 }
 
 
@@ -4130,181 +4455,105 @@ function allPassengersValidated(trajet) {
 
 // -------------------- Historique --------------------
 export async function renderHistorique() {
-  const historique = trajets.filter(t => isTrajetHistorique(t));
-  console.log("[renderHistorique] Démarrage");
-
   const container = document.querySelector('.trajets-historique');
   if (!container) return;
 
-  if (container.dataset.rendering === '1') return;
-  container.dataset.rendering = '1';
-
+  // On vide et on met le titre
   container.innerHTML = `<h2>Mes trajets passés</h2>`;
 
   let allTrajets = [];
   try {
-    allTrajets = LS.get();
-  } catch (e) {
-    console.error('❌ Erreur localStorage', e);
-  }
+    // Priorité : mémoire vive (plus complète que le LS)
+    if (Array.isArray(window.trajets) && window.trajets.length > 0) {
+      allTrajets = window.trajets;
+    } else {
+      allTrajets = JSON.parse(localStorage.getItem('ecoride_trajets')) || [];
+    }
+} catch (e) { console.error("Erreur LS:", e); }
 
   const now = new Date();
-  const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  now.setHours(0,0,0,0);
 
+  // 1. Filtrage et Nettoyage des données corrompues
   const passe = allTrajets.filter(t => {
-    try {
-      const id = t.id || t.serverId || t.raw?.id || '(no-id)';
-      const roleRaw = (t.role || t.raw?.role || '').toString().toLowerCase();
-      const role = roleRaw;
-      const rawStatus = t.status ?? t.statut ?? t.raw?.status ?? '';
-      const status = normalizeStatus(rawStatus);
-      const dateTrajetRaw = t.date || t.raw?.departureDate || t.raw?.date || null;
-      const dateTrajet = dateTrajetRaw ? new Date(dateTrajetRaw) : null;
-      const dateTrajetOnly = dateTrajet && !isNaN(dateTrajet.getTime())
-        ? new Date(dateTrajet.getFullYear(), dateTrajet.getMonth(), dateTrajet.getDate())
-        : null;
-
-      if (window.__TRAJETS_LOG) {
-        const bookingsArr = Array.isArray(t.bookings) ? t.bookings : (Array.isArray(t.raw?.bookings) ? t.raw.bookings : []);
-        console.debug('[renderHistorique] checking trajet', {
-          id,
-          role,
-          rawStatus,
-          normalizedStatus: status,
-          dateTrajetRaw,
-          dateTrajetOnly,
-          bookings: bookingsArr.map(b => ({
-            id: b?.id ?? b?.['@id'] ?? '(no-id)',
-            raw: b?.status ?? b?.statut ?? b?.state ?? '',
-            normalized: normalizeStatus(b?.status ?? b?.statut ?? b?.state ?? '')
-          }))
-        });
-      }
-
-      if (!dateTrajet) { console.debug('[renderHistorique][skip] no date', id, t); return false; }
-      if (status.includes('cancel') || status.includes('annul')) { console.debug('[renderHistorique][skip] cancelled', id, status); return false; }
-
-      // Chauffeur
-      if (role === 'chauffeur' || role === 'driver') {
-        // 1) si status carpool indique déjà "terminé" (ou équivalent), l'afficher
-        if (status === (STATUS?.CHAUFFEUR?.COMPLETED ?? 'termine') || status === 'termine' || status === 'completed') {
-          console.debug('[renderHistorique][keep] driver completed (status)', id);
-          return true;
-        }
-
-        // 2) si la date est déjà passée -> considérer historique (optionnel, pratique)
-        if (dateTrajetOnly && dateTrajetOnly.getTime() < nowOnly.getTime()) {
-          console.debug('[renderHistorique][keep] driver date past', id);
-          return true;
-        }
-
-        // 3) fallback strict : si tous les passagers ont validé, on considère aussi historique
-        if (typeof allPassengersValidated === 'function' && allPassengersValidated(t)) {
-          console.debug('[renderHistorique][keep] driver all passengers validated (fallback)', id);
-          return true;
-        }
-
-        console.debug('[renderHistorique][skip] driver not finalized', id, status, dateTrajetOnly);
-        return false;
-      }
-
-      // Passager
-      if (role === 'passager' || role === 'passenger') {
-        const bookings = Array.isArray(t.bookings) ? t.bookings : (Array.isArray(t.raw?.bookings) ? t.raw.bookings : []);
-        const me = (typeof getCurrentUser === 'function' ? getCurrentUser() : window.currentUser) || null;
-        const meId = me ? String(me.id ?? me['@id'] ?? me).split('/').pop() : null;
-
-        let myBooking = null;
-        if (Array.isArray(bookings) && meId) {
-          myBooking = bookings.find(b => {
-            const p = b.passenger ?? b.user ?? b.passengerIri ?? b.userIri ?? null;
-            if (!p) return false;
-            const pid = (typeof p === 'object') ? String(p.id ?? p['@id'] ?? '').split('/').pop() : String(p).split('/').pop();
-            return pid === meId;
-          }) || null;
-        }
-
-        const tStatus = normalizeStatus(t.status ?? t.raw?.status ?? '');
-
-        // CRITÈRE 1 : Ma réservation est validée
-        if (myBooking) {
-          const bStatus = normalizeStatus(myBooking.status || '');
-          if (['confirmed', 'valide', 'validated', 'termine', 'completed'].includes(bStatus)) {
-            return true;
-          }
-        }
-
-        // CRITÈRE 2 : Le trajet global est terminé ou en attente (permet au passager de valider)
-        if (['termine', 'completed', 'a_valider', 'pending'].includes(tStatus)) {
-          return true;
-        }
-
-        // CRITÈRE 3 : La date est passée
-        if (dateTrajetOnly && dateTrajetOnly.getTime() < nowOnly.getTime()) {
-          return true;
-        }
-
-        return false;
-      }
-
-      console.debug('[renderHistorique][skip] unknown role', id, role);
-      return false;
-
-    } catch (err) {
-      console.warn('[renderHistorique] filter error', err, t);
-      return false;
+    const dRaw = t.date || t.raw?.departureDate || t.departureDate;
+    if (!dRaw) return false;
+    const dObj = new Date(dRaw);
+    dObj.setHours(0,0,0,0);
+    if (dObj > now) return false; // pas encore passé
+  
+    const role = String(t.role || t._resolvedRole || '').toLowerCase();
+    const status = normalizeStatus(t.status ?? t.raw?.status ?? '');
+  
+    // Chauffeur : trajet terminé
+    if (role.includes('chauffeur')) {
+      return ['completed', 'termine', 'finished', 'archive'].includes(status);
     }
+  
+    // Passager : réservation validée
+    if (role.includes('passager')) {
+      return ['validated', 'confirmed', 'valide'].includes(status);
+    }
+  
+    return false;
   });
-
-  console.log(`[renderHistorique] Trajets affichés : ${passe.length}`);
 
   // Tri par date décroissante
-  passe.sort((a, b) => {
-    const dateA = new Date(a.date || a.raw?.departureDate || 0);
-    const dateB = new Date(b.date || b.raw?.departureDate || 0);
-    return dateB - dateA;
-  });
+  passe.sort((a, b) => new Date(b.date) - new Date(a.date));
 
   if (passe.length === 0) {
-    container.innerHTML += `<p>Aucun trajet enregistré</p>`;
-    container.removeAttribute('data-rendering');
+    container.innerHTML += `<p>Aucun trajet passé trouvé.</p>`;
     return;
   }
 
-  // Construire HTML en une seule passe (meilleure perf)
-  const htmlParts = [];
-  for (const trajet of passe) {
-    const depart = trajet.depart || trajet.raw?.departureLocation || 'Inconnu';
-    const arrivee = trajet.arrivee || trajet.raw?.arrivalLocation || 'Inconnu';
-    const dateRaw = trajet.date || trajet.raw?.departureDate || '';
-    const prix = trajet.prix ?? trajet.raw?.pricePerPlace ?? 0;
-    const role = (trajet.role || '').toString().toLowerCase();
-    const places = Number(trajet.placesReservees ?? trajet.places ?? (Array.isArray(trajet.raw?.bookings) ? trajet.raw.bookings.length : 0)) || 0;
+  // 2. Génération du HTML
+  const htmlParts = passe.map(t => {
+    const role = String(t.role || '').toLowerCase();
+    const isPassager = role.includes('passager');
+    
+    const hD = t.heureDepart || t.heure || "00:00";
+    const hA = t.heureArrivee || t.heure_arrivee || "";
 
-    let cardClass = 'trajet-card valide';
-    if (role === 'passager' || role === 'passenger') cardClass = 'trajet-card reserve';
-    else if (role === 'chauffeur' || role === 'driver') cardClass = 'trajet-card chauffeur-historique';
+    // ✅ total déclaré ICI, accessible dans les deux branches
+    const total = Number(t.nbPlacesTotal || t.totalSeats || t.vehicle?.seats || t.car?.seats || 4);
 
-    const dateDisplay = (typeof formatDateJJMMAAAA === 'function') ? formatDateJJMMAAAA(dateRaw) : dateRaw;
+    let placesHTML = "";
 
-    htmlParts.push(`
+    if (isPassager) {
+        // ✅ Le passager voit uniquement ce qu'il a réservé
+        const n = Number(t.placesReservees) || 1;
+        placesHTML = `${n} place${n > 1 ? 's' : ''}`;
+    } else {
+        // ✅ Le chauffeur voit occupation réelle
+        const total = Number(t.nbPlacesTotal) || 0;
+
+        // ✅ On calcule correctement les places occupées
+        const occupied = Array.isArray(t.bookings)
+            ? t.bookings.reduce((sum, b) => sum + (Number(b.seats || 1)), 0)
+            : 0;
+
+        placesHTML = `${occupied} / ${total} place${total > 1 ? 's' : ''}`;
+    }
+
+    const cardClass = isPassager ? 'trajet-card reserve' : 'trajet-card chauffeur-historique';
+    const dateDisp = typeof formatDateJJMMAAAA === 'function' ? formatDateJJMMAAAA(t.date) : t.date;
+
+    return `
       <div class="${cardClass}">
         <div class="trajet-body">
           <div class="trajet-info">
-            <strong>Covoiturage (${dateDisplay}) : <br>${depart} → ${arrivee}</strong>
+            <strong>Covoiturage (${dateDisp}) :<br>${t.depart} → ${t.arrivee}</strong>
             <span class="details">
-              ${trajet.heureDepart || ""} → ${trajet.heureArrivee || ""} • 
-              ${places} place${places > 1 ? 's' : ''}
+              ${hD}${hA ? ` → ${hA}` : ''} • ${placesHTML}
             </span>
           </div>
-          <div class="trajet-price">${prix} crédits</div>
+          <div class="trajet-price">${t.prix} crédits</div>
         </div>
       </div>
-    `);
-  }
+    `;
+});
 
   container.innerHTML += htmlParts.join('');
-  container.removeAttribute('data-rendering');
 }
 
 // -------------------- Ajout au covoiturage --------------------
@@ -4440,12 +4689,12 @@ async function retryPendingSyncs() {
         const serverObj = await saveCarpoolApi(t);
         
         // Extraction de l'ID depuis la réponse (objet ou IRI)
-        const newServerId = serverObj?.['@id'] || serverObj?.id || null;
+        const rawServerId = serverObj?.['@id'] || serverObj?.id || null;
         const isNoContent = serverObj && serverObj.status === 204;
 
-        if (newServerId) {
-          // Correction ici : on utilise newServerId (et non newServerIdRaw qui n'existe pas)
-          t.serverId = (String(newServerId).startsWith('/api/') ? newServerId : `/api/carpools/${newServerId}`);
+        if (rawServerId) {
+          const normalizedServerId = String(rawServerId).startsWith('/api/') ? rawServerId : `/api/carpools/${rawServerId}`;
+          t.serverId = normalizedServerId;
           t.synced = true;
           delete t.syncError;
           console.log('🔁 Retry sync SUCCESS pour', t.id, '->', t.serverId);
@@ -4545,5 +4794,115 @@ window.loadAllUserTrajets = loadAllUserTrajets;
 window.reserverPlace = reserverPlace;
 window.apiFetch = apiFetch; // Utile pour tes tests
 window.ensureCarpoolIriFromBooking = ensureCarpoolIriFromBooking;
+
+// === CORRECTIF SUPPRESSION RÉSERVATION ===
+
+// 1. Wrapper simple pour l'appel API
+async function deleteBookingApiSimple(id) {
+  const token = localStorage.getItem('api_token');
+  const res = await fetch(`${API_BASE}/api/bookings/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': token ? `Bearer ${token}` : ''
+    }
+  });
+  return { status: res.status, ok: res.ok };
+}
+
+// 2. Rechargement forcé sans cache
+async function reloadBookingsFromApiForce() {
+  console.log("🔄 Rechargement forcé des trajets depuis l'API...");
+  await loadAllUserTrajets(); // Utilise ta fonction existante qui gère déjà le mapping
+  if (typeof renderTrajetsInProgress === 'function') renderTrajetsInProgress();
+  if (typeof renderHistorique === 'function') renderHistorique();
+}
+
+// 3. handleCancelBookingFixed avec suppression locale et rechargement forcé
+async function handleCancelBookingFixed(bookingId) {
+  const idStr = String(bookingId);
+
+  // Guard anti-double submission
+  if (window._deletingBookings.has(idStr)) {
+    console.debug('[handleCancelBookingFixed] suppression déjà en cours pour', idStr);
+    return;
+  }
+  window._deletingBookings.add(idStr);
+
+  // normaliser état mutating
+  isMutatingTrajets = true;
+
+  // loader global optionnel (utilise ton #carpool-loader)
+  const globalLoader = document.getElementById('carpool-loader');
+  if (globalLoader) globalLoader.style.display = 'flex';
+
+  try {
+    console.log(`🗑️ Tentative de suppression de la réservation ${idStr}`);
+
+    // Marquer localement comme supprimée (empêche réinsertion depuis API ou LS)
+    addDeletedBooking(idStr);
+    if (!idStr.startsWith('/api/')) {
+      addDeletedBooking(`/api/bookings/${idStr}`);
+    }
+
+    // Enlever localement avant appel API (feedback UI immédiat)
+    const filterFn = t => String(t.id) !== idStr && String(t.bookingId) !== idStr && String(t.bookingServerId || '') !== idStr;
+    if (Array.isArray(trajets)) {
+      const filtered = trajets.filter(filterFn);
+      trajets.splice(0, trajets.length, ...filtered);
+    }
+    if (Array.isArray(window.trajets)) {
+      window.trajets = (window.trajets || []).filter(filterFn);
+    }
+
+    // Mise à jour LS immédiate
+    try {
+      if (typeof LS === 'object' && typeof LS.set === 'function') {
+        LS.set(Array.isArray(trajets) ? trajets : (window.trajets || []));
+      } else {
+        localStorage.setItem('ecoride_trajets', JSON.stringify(Array.isArray(trajets) ? trajets : (window.trajets || [])));
+      }
+    } catch (e) { console.warn('LS set failed before delete', e); }
+
+    // Appel API DELETE
+    const res = await deleteBookingApiSimple(idStr);
+
+    if (res && (res.ok || res.status === 204)) {
+      // suppression confirmée côté serveur -> retirer marque
+      removeDeletedBooking(idStr);
+      removeDeletedBooking(`/api/bookings/${idStr}`);
+    } else if (res && res.status === 404) {
+      // déjà absente côté serveur -> retirer marque aussi
+      removeDeletedBooking(idStr);
+      removeDeletedBooking(`/api/bookings/${idStr}`);
+    } else {
+      console.warn('delete API returned', res && res.status);
+      // Au choix : conserver la marque pour réconciliation, ou la retirer.
+      // Ici on retire pour éviter de masquer une réapparition légitime.
+      removeDeletedBooking(idStr);
+      removeDeletedBooking(`/api/bookings/${idStr}`);
+    }
+
+    // Forcer un reload depuis l'API (ignore bookings marquées supprimées)
+    await loadAllUserTrajets(true);
+
+    // Feedback utilisateur
+    alert("Réservation annulée.");
+  } catch (err) {
+    console.error("❌ Erreur lors de l'annulation:", err);
+    // cleanup : retirer marque si erreur locale
+    removeDeletedBooking(idStr);
+    removeDeletedBooking(`/api/bookings/${idStr}`);
+    // tenter reload pour resync
+    try { await loadAllUserTrajets(true); } catch (e) { console.warn('reload failed', e); }
+  } finally {
+    // cleanup global
+    isMutatingTrajets = false;
+    window._deletingBookings.delete(idStr);
+    if (globalLoader) globalLoader.style.display = 'none';
+    if (typeof startTrajetsPolling === 'function') startTrajetsPolling(20000);
+  }
+}
+
+window.handleCancelBooking = handleCancelBookingFixed;
 
 export { LS };

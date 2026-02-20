@@ -3359,29 +3359,25 @@ function isTrajetHistorique(t) {
   const me = (typeof getCurrentUser === 'function' ? getCurrentUser() : window.currentUser) || null;
   const meId = me ? String(me.id ?? me['@id'] ?? me).split('/').pop() : null;
 
-  // 1. Si le trajet global est marqué comme fini ou en attente de validation
-  // On inclut 'a_valider' et 'pending' pour que le passager le voie dans l'historique
-  const isGlobalFinished = ['completed', 'validated', 'termine', 'valide', 'a_valider', 'pending'].includes(status);
-  
-  // 2. Si c'est un passager et qu'IL a déjà validé sa réservation
-  const bookings = Array.isArray(t.bookings) ? t.bookings : (Array.isArray(t.raw?.bookings) ? t.raw.bookings : []);
-  const myBooking = bookings.find(b => {
-    const p = b.passenger ?? b.user ?? b.passengerIri ?? b.userIri ?? null;
-    if (!p) return false;
-    const pid = (typeof p === 'object') ? String(p.id ?? p['@id'] ?? '').split('/').pop() : String(p).split('/').pop();
-    return pid === meId;
-  });
-  
-  const myBookingStatus = normalizeStatus(myBooking?.status || '');
-  const myBookingValidated = ['validated', 'valide', 'confirmed'].includes(myBookingStatus);
+  // 1. Normalisation du statut
+  const statusNorm = normalizeStatus(status);
 
-  // 3. Si la date est passée (comparaison stricte au jour J)
+  // 2. Si c'est un passager et que le statut est 'valide' (confirmé/validé) -> HISTORIQUE IMMÉDIAT
+  const role = String(t.role || t._resolvedRole || '').toLowerCase();
+  if (role.includes('passager') && (statusNorm === 'valide' || statusNorm === 'validated')) {
+    return true; 
+  }
+
+  // 3. Si le trajet global est marqué comme fini (Chauffeur)
+  const isGlobalFinished = ['completed', 'termine', 'archive'].includes(statusNorm);
+  
+  // 4. Si la date est passée (comparaison au jour J)
   const dateT = new Date(t.date || t.raw?.departureDate || t.raw?.date);
   const now = new Date();
   now.setHours(0,0,0,0);
   const datePassee = !isNaN(dateT.getTime()) && dateT.getTime() < now.getTime();
 
-  return isGlobalFinished || myBookingValidated || datePassee;
+  return isGlobalFinished || datePassee;
 }
 
 function safeFormatDate(val) {
@@ -3624,12 +3620,20 @@ export function renderTrajetsInProgress() {
   });
 
   // ----------------------
-  // Filtrage : on retire seulement les réservations déjà validées (passager)
+  // Filtrage : on retire les trajets qui doivent être en historique
   // ----------------------
   const enCours = deDupedList.filter(t => {
+    // Si la fonction isTrajetHistorique dit que c'est du passé, on l'enlève de "En cours"
+    if (isTrajetHistorique(t)) {
+        return false;
+    }
+
     const s = normalizeStatus(t.status ?? t.raw?.status ?? '');
-    // on garde les trajets 'finished' pour permettre au passager de valider
-    if (s === (STATUS?.PASSAGER?.VALIDATED ?? 'validated')) return false;
+    // Sécurité supplémentaire : on ne veut pas de 'valide' ou 'annule' ici
+    if (['valide', 'validated', 'annule', 'cancelled', 'archive'].includes(s)) {
+        return false;
+    }
+    
     return true;
   });
 

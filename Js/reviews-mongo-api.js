@@ -158,7 +158,19 @@ export async function saveReviewDoubleStorage({
   const mongoPayload = {
     note: Number(rating) || 0,
     comment: comment || '',
-    userId: userId ? Number(userId) : (reservationObj?.userId ? Number(reservationObj.userId) : undefined),
+    userId: (() => {
+      if (userId) return Number(userId);
+      if (reservationObj?.userId) return Number(reservationObj.userId);
+      // Fallback : récupérer depuis getCurrentUser ou window.currentUser
+      try {
+        const me = (typeof getCurrentUser === 'function' ? getCurrentUser() : null) || window.currentUser || null;
+        if (me) {
+          const id = me.id ?? String(me['@id'] ?? '').split('/').pop();
+          if (id && !isNaN(Number(id))) return Number(id);
+        }
+      } catch (e) {}
+      return undefined;
+    })(),
     reservationId: reservationId ? String(reservationId) : (reservationObj?.id ? String(reservationObj.id) : undefined),
     carpoolId: carpoolIri ? String(carpoolIri).split('/').pop() : undefined
   };
@@ -170,7 +182,7 @@ export async function saveReviewDoubleStorage({
   let mongoJson = null;
   let mongoResult = { ok: false };
   try {
-    const { ok, resp, errorBody } = await fetchWithJsonError(`${API_BASE}/api/review_mongos`, {
+    const { ok, resp, errorBody } = await fetchWithJsonError(`${API_BASE}/api/mongo/reviews`, {
       method: 'POST',
       headers,
       body: JSON.stringify(mongoPayload)
@@ -232,10 +244,10 @@ export async function saveReviewDoubleStorage({
   // 11) Patch mongo pour lier l'ID SQL si possible
   try {
     const patchBody = { sqlId: sqlJson['@id'] || sqlJson.id || null };
-    if (patchBody.sqlId) {
-      const { ok, resp } = await fetchWithJsonError(`${API_BASE}/api/review_mongos/${mongoJson.id}`, {
+    if (patchBody.sqlId && mongoJson && mongoJson.id) {
+      const { ok, resp } = await fetchWithJsonError(`${API_BASE}/api/mongo/reviews/${mongoJson.id}`, {
         method: 'PATCH',
-        headers: { ...headers, 'Content-Type': 'application/merge-patch+json' },
+        headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify(patchBody)
       });
       if (!ok) {

@@ -1445,6 +1445,7 @@ function cleanTrajetsForStorage(list) {
       heureDepart: t.heureDepart || (t.departureTime ? new Date(t.departureTime).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : ''),
       heureArrivee: t.heureArrivee || (t.arrivalTime ? new Date(t.arrivalTime).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : ''),
       prix: t.prix ?? t.price ?? t.credits ?? 0,
+      totalPrice: t.totalPrice ?? t.prix_total ?? null,
       role: t.role || (t.isDriver ? 'chauffeur' : 'passager'),
       
       // ✅ ON FORCE LA SAUVEGARDE DU TOTAL RÉEL
@@ -3947,7 +3948,6 @@ export function renderTrajetsInProgress() {
       // --- extraction pour affichage ---
       const depart = t.depart || source.departureLocation || source.depart || '—';
       const arrivee = t.arrivee || source.arrivalLocation || source.arrivee || '—';
-      const prix = (t.prix ?? source.price ?? source.prix ?? 0);
       const rawDate = source.departureDate || source.date || t.date;
       const dateText = safeFormatDate(rawDate) || '';
 
@@ -3968,6 +3968,18 @@ export function renderTrajetsInProgress() {
       );
 
       const passengerReserved = Number(computePlacesReservees(t, source, (typeof getCurrentUser === 'function' ? getCurrentUser() : null)) || 0);
+
+      const prixUnitaire = Number(t.totalPrice ?? t.prix_total ?? t.prix ?? source.price ?? source.prix ?? 0);
+      let prix = 0;
+      if (role === 'chauffeur') {
+          const occupied = Array.isArray(source.bookings)
+              ? source.bookings.reduce((sum, b) => sum + (Number(b.seats || b.reservedSeats || 1)), 0)
+              : (Number(placesOccupees) || 0);
+          prix = prixUnitaire * occupied;
+      } else {
+          const n = Number(passengerReserved) || 1;
+          prix = prixUnitaire * n;
+      }
 
       const placesLabelText = (role === 'chauffeur')
         ? `${placesOccupees} / ${placesTotales}`
@@ -4514,6 +4526,17 @@ export async function renderHistorique() {
   const htmlParts = passe.map(t => {
     const role = String(t.role || '').toLowerCase();
     const isPassager = role.includes('passager');
+    const prixUnitaire = Number(t.price ?? t.prix ?? 0);
+    let affichagePrix = 0;
+    if (isPassager) {
+        const n = Number(t.placesReservees) || 1;
+        affichagePrix = prixUnitaire * n;
+    } else {
+        const occupied = Array.isArray(t.bookings)
+            ? t.bookings.reduce((sum, b) => sum + (Number(b.seats || 1)), 0)
+            : 0;
+        affichagePrix = prixUnitaire * occupied;
+    }
     
     const hD = t.heureDepart || t.heure || "00:00";
     const hA = t.heureArrivee || t.heure_arrivee || "";
@@ -4551,7 +4574,7 @@ export async function renderHistorique() {
               ${hD}${hA ? ` → ${hA}` : ''} • ${placesHTML}
             </span>
           </div>
-          <div class="trajet-price">${t.prix} crédits</div>
+          <div class="trajet-price">${affichagePrix.toLocaleString('fr-FR')} crédits</div>
         </div>
       </div>
     `;

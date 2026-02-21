@@ -18,6 +18,37 @@
         }
       });
     </script>
+
+    <script>
+      (function() {
+        try {
+          // Sauvegarde l'original (si présent) pour pouvoir restaurer si besoin
+          window._origConsoleDebug = (typeof console.debug === 'function') ? console.debug.bind(console) : function() {};
+
+          // Activation conditionnelle : n'affiche debug que si window.DEBUG truthy
+          if (!window.DEBUG) {
+            console.debug = function() {};
+          } else {
+            // restore immediately if DEBUG true at load
+            console.debug = window._origConsoleDebug;
+            console.debug('console.debug active (DEBUG=true)');
+          }
+
+          // Activation via param d'URL (ex: ?debug=1)
+          try {
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('debug')) {
+              window.DEBUG = true;
+              console.debug = window._origConsoleDebug;
+              console.debug('Debug activé via param ?debug=1');
+            }
+          } catch (e) { /* ignore if URL parsing not allowed */ }
+        } catch (err) {
+          // Pas de panique si console n'existe pas (environnements exotiques)
+          // On ne veut jamais casser le chargement de la page.
+        }
+      })();
+    </script>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

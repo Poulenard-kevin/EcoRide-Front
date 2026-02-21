@@ -719,576 +719,71 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
 //<!-- FORM 2 : Crédits -->
 //<!-- FORM 2 : Crédits -->
 
-// credits.js (ou coller dans ton bundle)
-(function () {
-  const CREDITS_KEY = 'ecoride.credits';
-  const CREDITS_INIT_FLAG = 'ecoride.credits.initialized';
-  const INITIAL_CREDITS = 20;
-
-  function getCredits() {
-    const raw = localStorage.getItem(CREDITS_KEY);
-    return raw == null ? 0 : (parseInt(raw, 10) || 0);
-  }
-
-  function setCredits(n) {
-    const safe = Math.max(0, Math.floor(n));
-    localStorage.setItem(CREDITS_KEY, String(safe));
-    window.dispatchEvent(new CustomEvent('ecoride:creditsChanged', { detail: { credits: safe } }));
-    return safe;
-  }
-
-  function initCreditsFromLocal() {
+(function() {
+  // Rafraîchit l'affichage des crédits à partir d'un objet user
+  function applyUserToCredits(user) {
     try {
-      const existing = localStorage.getItem(CREDITS_KEY);
-      if (existing == null) {
-        // jamais initialisé -> on crée les 20 crédits
-        localStorage.setItem(CREDITS_KEY, String(INITIAL_CREDITS));
-        localStorage.setItem(CREDITS_INIT_FLAG, '1');
-        console.log('[credits] initialisés à', INITIAL_CREDITS);
-      } else {
-        // s'il y a une valeur mais pas de flag, pose juste le flag pour éviter ré-init ultérieure
-        if (!localStorage.getItem(CREDITS_INIT_FLAG)) {
-          localStorage.setItem(CREDITS_INIT_FLAG, '1');
+      if (!user) return;
+      // Sauvegarde cohérente localement (utile si d'autres scripts lisent localStorage)
+      try { localStorage.setItem('ecoride_user', JSON.stringify(user)); } catch(e){}
+      // Si l'API publique existe, l'utiliser (ton credits.js)
+      if (window.ecorideCredits && typeof window.ecorideCredits.syncFromUser === 'function') {
+        window.ecorideCredits.syncFromUser(user);
+        return;
+      }
+      // Fallback minimal: dispatch event creditsChanged pour que d'autres scripts réagissent
+      const credits = (user && Number.isFinite(Number(user.credits))) ? Number(user.credits) : 0;
+      window.dispatchEvent(new CustomEvent('ecoride:creditsChanged', { detail: { credits } }));
+    } catch (e) {
+      console.warn('[profile] applyUserToCredits error', e);
+    }
+  }
+
+  // Handler d'événement pour ecoride:userUpdated
+  function onUserUpdated(ev) {
+    try {
+      // Priorité au payload de l'événement (ex: dispatch new CustomEvent('ecoride:userUpdated',{detail:user}))
+      const userFromEvent = ev && ev.detail ? ev.detail : null;
+      if (userFromEvent && typeof userFromEvent === 'object') {
+        applyUserToCredits(userFromEvent);
+        return;
+      }
+
+      // Sinon, tenter de lire localStorage.ecoride_user
+      const raw = localStorage.getItem('ecoride_user');
+      if (raw) {
+        try {
+          const user = JSON.parse(raw);
+          applyUserToCredits(user);
+        } catch (e) {
+          console.warn('[profile] failed parsing localStorage ecoride_user', e);
         }
+      } else {
+        // Pas d'info disponible — noop
+        // Optionnel : tu pourrais fetch('/api/me') ici si tu veux forcer une synchro
       }
     } catch (e) {
-      console.warn('[credits] init error', e);
+      console.warn('[profile] onUserUpdated error', e);
     }
   }
 
-  function addCredits(delta) {
-    if (!Number.isFinite(delta)) return getCredits();
-    const prev = getCredits();
-    return setCredits(prev + Math.floor(delta));
+  // Attache l'écouteur (idempotent)
+  if (!window.__ecoride_profile_userUpdated_attached) {
+    window.addEventListener('ecoride:userUpdated', onUserUpdated, { passive: true });
+    window.__ecoride_profile_userUpdated_attached = true;
   }
 
-  // validation : multiple de 5
-  function isMultipleOfFive(n) {
-    return (Math.floor(n) % 5) === 0;
-  }
-
-  // --- boot / binding robustes pour SPA (PATCHED) ---
-  (function () {
-    // utilitaires & storage already defined above (getCredits, addCredits, etc.)
-
-    // utilitaire : recherche tolérante de l'élément d'affichage des crédits
-    function findCreditsDisplay(root) {
-      if (!root) return null;
-
-      // tentatives explicites
-      let el = root.querySelector('#creditsValue') ||
-              root.querySelector('[data-ecoride-credits]') ||
-              root.querySelector('.credits-value') ||
-              root.querySelector('.eco-circle, .credit-control, .credit-row');
-      if (el) return el;
-
-      // fallback : chercher un noeud sans enfants qui contient le mot "crédit"
-      const candidates = Array.from(root.querySelectorAll('*')).filter(n => {
-        try {
-          return n.children.length === 0 && /crédit/i.test(n.textContent || '');
-        } catch (e) {
-          return false;
-        }
-      });
-      return candidates.length ? candidates[0] : null;
-    }
-
-    // binding UI vers un container (idempotent)
-    function bindCreditsUI(root = document) {
-      // try to find the display element (tolerant)
-      const display = findCreditsDisplay(root);
-      const form = root.querySelector('#creditsForm') || root.querySelector('.credits-form');
-      const input = root.querySelector('#creditsAddInput') || root.querySelector('input[name="creditsAdd"]');
-
-      function refreshUI() {
-        const credits = getCredits();
-        if (!display) return; // rien à mettre à jour pour le moment
-        // si l'élément contient déjà le mot "crédit", on affiche "N crédits", sinon on met juste la valeur
-        if (/crédit/i.test(display.textContent || '')) {
-          display.textContent = `${credits} crédits`;
-        } else {
-          display.textContent = String(credits);
-        }
+  // Refresh initial au chargement : si localStorage contient ecoride_user, l'appliquer tout de suite
+  (function initialRefresh() {
+    try {
+      const raw = localStorage.getItem('ecoride_user');
+      if (raw) {
+        const user = JSON.parse(raw);
+        applyUserToCredits(user);
       }
-
-      // attacher listener global (idempotent)
-      if (!bindCreditsUI.__attached) {
-        window.addEventListener('ecoride:creditsChanged', refreshUI);
-        bindCreditsUI.__attached = true;
-      }
-
-      // initial render (peut être no-op si display absent)
-      refreshUI();
-
-      // si le formulaire existe, attacher / remplacer proprement le handler submit
-      if (form && input) {
-        if (form.__ecorideCreditsSubmitHandler) {
-          try { form.removeEventListener('submit', form.__ecorideCreditsSubmitHandler); } catch (e) {}
-        }
-
-        const handler = function (ev) {
-          ev.preventDefault();
-          const val = parseInt(input.value, 10) || 5;
-          if (window.__ecorideOpenCreditsModal) {
-            window.__ecorideOpenCreditsModal(val);
-          } else {
-            addCredits(val);
-            input.value = 5;
-          }
-        };
-
-        form.addEventListener('submit', handler);
-        form.__ecorideCreditsSubmitHandler = handler;
-      }
-
-      // Optionnel : si display est absent pour l'instant, surveiller les insertions dans root
-      if (!display && root instanceof Element) {
-        const mo = new MutationObserver((mutations, obs) => {
-          const found = findCreditsDisplay(root);
-          if (found) {
-            // petite latence pour laisser le DOM se stabiliser
-            setTimeout(() => {
-              try {
-                refreshUI();
-              } catch (e) { /* ignore */ }
-            }, 30);
-            obs.disconnect();
-          }
-        });
-        try {
-          mo.observe(root, { childList: true, subtree: true });
-          // sécurité : déconnecte au bout de 10s
-          setTimeout(() => { try { mo.disconnect(); } catch (_) {} }, 10000);
-        } catch (e) { /* ignore */ }
-      }
+    } catch (e) {
+      console.warn('[profile] initial credits refresh failed', e);
     }
-    
-  /* ecoride-credits-modal.js
-   Modal Bootstrap 5 dynamique pour achat de crédits.
-   - Idempotent : n'injecte qu'une seule fois.
-   - Expose window.__ecorideOpenCreditsModal(initialValue)
-   - Requiert Bootstrap 5 JS chargé avant ce script.
-*/
-  (function () {
-    if (window.__ecorideCreditsModalBootstrapAdded) return;
-    window.__ecorideCreditsModalBootstrapAdded = true;
-
-    // markup Bootstrap 5
-    const modalHtml = `
-    <div class="modal fade" id="ecorideCreditsModal" tabindex="-1" aria-labelledby="ecorideCreditsModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="ecorideCreditsModalLabel">Acheter des crédits</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-          </div>
-          <div class="modal-body">
-            <div class="ecoride-credit-packs d-flex gap-2 flex-wrap mb-3" role="list">
-              <button type="button" class="ecoride-pack btn btn-outline-secondary" data-value="5">5 crédits</button>
-              <button type="button" class="ecoride-pack btn btn-outline-secondary" data-value="10">10 crédits</button>
-              <button type="button" class="ecoride-pack btn btn-outline-secondary" data-value="20">20 crédits</button>
-              <button type="button" class="ecoride-pack btn btn-outline-secondary" data-value="50">50 crédits</button>
-            </div>
-
-            <div class="mb-2">
-              <label class="form-label small">Ou montant personnalisé (multiple de 5)</label>
-              <input type="number" min="5" step="5" value="5" class="form-control ecoride-custom-input" />
-            </div>
-
-            <div class="text-muted small mt-2">Paiement simulé — remplace par ton intégration CB/Stripe si nécessaire.</div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary btn-cancel" data-bs-dismiss="modal">Annuler</button>
-            <button type="button" class="btn btn-success btn-confirm">Payer et ajouter</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    `;
-
-    // inject DOM once
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = modalHtml;
-    document.body.appendChild(wrapper.firstElementChild);
-
-    const modalEl = document.getElementById('ecorideCreditsModal');
-    const packs = Array.from(modalEl.querySelectorAll('.ecoride-pack'));
-    const input = modalEl.querySelector('.ecoride-custom-input');
-    const btnConfirm = modalEl.querySelector('.btn-confirm');
-
-    function setSelectedPack(val) {
-      packs.forEach(p => p.classList.remove('active'));
-      const match = packs.find(p => Number(p.dataset.value) === Number(val));
-      if (match) match.classList.add('active');
-    }
-
-    packs.forEach(p => {
-      p.addEventListener('click', () => {
-        setSelectedPack(p.dataset.value);
-        input.value = p.dataset.value;
-      });
-    });
-
-    // create bootstrap modal instance (requires bootstrap to be available)
-    let bsModal = null;
-    if (window.bootstrap && typeof window.bootstrap.Modal === 'function') {
-      bsModal = new window.bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
-    } else {
-      console.warn('Bootstrap Modal API non trouvée — vérifie que bootstrap.js est chargé avant ecoride-credits-modal.js');
-    }
-
-    async function confirmHandler() {
-      const val = parseInt(input.value, 10);
-      if (!Number.isFinite(val) || val <= 0) {
-        alert('Entrez un nombre entier positif (au moins 5).');
-        return;
-      }
-      if ((Math.floor(val) % 5) !== 0) {
-        alert('Le montant doit être un multiple de 5.');
-        return;
-      }
-
-      // UI lock
-      btnConfirm.disabled = true;
-      const prevText = btnConfirm.textContent;
-      btnConfirm.textContent = 'Traitement…';
-
-      try {
-        // simulate payment
-        await new Promise(r => setTimeout(r, 700));
-
-        if (typeof addCredits === 'function') {
-          addCredits(val);
-        } else if (window.ecorideCredits && typeof window.ecorideCredits.add === 'function') {
-          window.ecorideCredits.add(val);
-        } else {
-          // fallback LS / event
-          const prev = parseInt(localStorage.getItem('ecoride.credits') || '0', 10);
-          localStorage.setItem('ecoride.credits', String(prev + val));
-          window.dispatchEvent(new CustomEvent('ecoride:creditsChanged', { detail: { credits: prev + val } }));
-        }
-
-        btnConfirm.textContent = 'Crédits ajoutés ✓';
-
-        setTimeout(() => {
-          btnConfirm.disabled = false;
-          btnConfirm.textContent = prevText;
-          if (bsModal) {
-            bsModal.hide();
-          } else if (typeof accessibleHide === 'function') {
-            accessibleHide(modalEl);
-          } else if (window.__ecorideAccessibleHideCreditsModal) {
-            window.__ecorideAccessibleHideCreditsModal();
-          } else {
-            // dernier recours
-            modalEl.classList.remove('show');
-            modalEl.style.display = 'none';
-            modalEl.setAttribute('aria-hidden', 'true');
-          }
-        }, 350);
-        
-      } catch (err) {
-        console.error('Paiement simulé échoué', err);
-        alert('Erreur paiement (simulation).');
-        btnConfirm.disabled = false;
-        btnConfirm.textContent = prevText;
-      }
-    }
-
-    btnConfirm.addEventListener('click', confirmHandler);
-
-    // expose opener that selects pack and shows modal
-    window.__ecorideOpenCreditsModal = function (initialValue = 5) {
-      input.value = initialValue || 5;
-      setSelectedPack(initialValue);
-      if (bsModal) {
-        bsModal.show();
-      } 
-      // Accessible fallback si bootstrap.Modal absent
-      (function() {
-        let prevFocused = null;
-      
-        function accessibleShow(modalEl) {
-          // ensure focusable
-          if (!modalEl.hasAttribute('tabindex')) modalEl.setAttribute('tabindex', '-1');
-      
-          // save previously focused element to restore later
-          prevFocused = document.activeElement;
-      
-          // show visually
-          modalEl.classList.add('show');
-          modalEl.style.display = 'block';
-          modalEl.setAttribute('aria-modal', 'true');
-          modalEl.removeAttribute('aria-hidden');
-      
-          // inert background (optional): add inert to main content container if you have one
-          const main = document.querySelector('main') || document.querySelector('#app') || document.body;
-          try { if (main && main !== modalEl) main.inert = true; } catch(e){ /* some browsers need polyfill */ }
-      
-          // focus modal
-          try { modalEl.focus(); } catch(e) { /* ignore */ }
-        }
-      
-        function accessibleHide(modalEl) {
-          if (!modalEl) return;
-        
-          // 1) blur l'élément encore focusé dans la modal (si présent)
-          try {
-            const activeInside = modalEl.contains(document.activeElement) ? document.activeElement : null;
-            if (activeInside && typeof activeInside.blur === 'function') {
-              activeInside.blur();
-            }
-          } catch (e) { /* ignore */ }
-        
-          // 2) restaurer le focus précédent (si connu) ou donner le focus au body comme fallback
-          try {
-            if (prevFocused && typeof prevFocused.focus === 'function') {
-              prevFocused.focus();
-            } else if (document.body && typeof document.body.focus === 'function') {
-              document.body.focus();
-            }
-          } catch (e) { /* ignore */ }
-        
-          // 3) maintenant on peut cacher la modal visuellement
-          try {
-            modalEl.classList.remove('show');
-            modalEl.style.display = 'none';
-          } catch(e){ /* ignore */ }
-        
-          // 4) remettre les attributs ARIA (après restauration du focus)
-          try { modalEl.removeAttribute('aria-modal'); } catch(e){}
-          try { modalEl.setAttribute('aria-hidden', 'true'); } catch(e){}
-        
-          // 5) restaurer l'interaction du contenu principal (inert)
-          const main = document.querySelector('main') || document.querySelector('#app') || document.body;
-          try { if (main && main !== modalEl) main.inert = false; } catch(e){ /* ignore */ }
-        
-          // 6) cleanup
-          prevFocused = null;
-        }
-      
-        // override __ecorideOpenCreditsModal to use accessible fallback when bsModal absent
-        const modalEl = document.getElementById('ecorideCreditsModal');
-        if (modalEl && !window.__ecorideOpenCreditsModalAccessiblePatched) {
-          window.__ecorideOpenCreditsModalAccessiblePatched = true;
-          const originalOpener = window.__ecorideOpenCreditsModal || function(v){ /* noop */ };
-      
-          window.__ecorideOpenCreditsModal = function(initialValue = 5) {
-            // update input & packs first (existing logic)
-            const input = modalEl.querySelector('.ecoride-custom-input');
-            const packs = Array.from(modalEl.querySelectorAll('.ecoride-pack'));
-            if (input) input.value = initialValue || 5;
-            packs.forEach(p => p.classList.toggle('active', Number(p.dataset.value) === Number(initialValue)));
-      
-            if (window.bootstrap && typeof window.bootstrap.Modal === 'function') {
-              // use bootstrap if available
-              try {
-                const bs = new window.bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
-                bs.show();
-              } catch(e) {
-                // fallback accessible
-                accessibleShow(modalEl);
-              }
-            } else {
-              // accessible fallback show
-              accessibleShow(modalEl);
-            }
-          };
-      
-          // patcher l'événement de fermeture si tu utilises ton btnCancel / close
-          const cancelBtns = modalEl.querySelectorAll('[data-bs-dismiss], .btn-cancel, .btn-close');
-          cancelBtns.forEach(btn => btn.addEventListener('click', () => accessibleHide(modalEl)));
-          // si tu caches la modal côté code (ex: après paiement), appelle accessibleHide(modalEl) à la place de modalEl.classList.remove(...)
-        }
-
-        // bootstrap accessibility fixes
-        (function ensureBootstrapModalA11y(modalEl) {
-          if (!modalEl || !window.bootstrap) return;
-
-          let prevFocused = null;
-
-          modalEl.addEventListener('show.bs.modal', () => {
-            // avant d'afficher, sauvegarde le focus (Bootstrap va afficher)
-            prevFocused = document.activeElement;
-          });
-
-          modalEl.addEventListener('shown.bs.modal', () => {
-            // Bootstrap a montré la modal -> retirer aria-hidden et focus
-            try { modalEl.removeAttribute('aria-hidden'); } catch(e){}
-            try { modalEl.setAttribute('aria-modal', 'true'); } catch(e){}
-            try { modalEl.focus(); } catch(e){}
-          });
-
-          modalEl.addEventListener('hide.bs.modal', () => {
-            // avant la fermeture visuelle : blur le bouton si nécessaire pour éviter qu'il reste focusé
-            try {
-              const active = modalEl.querySelector(':focus');
-              if (active && typeof active.blur === 'function') active.blur();
-            } catch(e){}
-          });
-
-          modalEl.addEventListener('hidden.bs.modal', () => {
-            // Bootstrap a caché la modal -> restaurer focus et marquer aria-hidden
-            try {
-              if (prevFocused && typeof prevFocused.focus === 'function') prevFocused.focus();
-            } catch(e){}
-            try { modalEl.setAttribute('aria-hidden', 'true'); } catch(e){}
-            try { modalEl.removeAttribute('aria-modal'); } catch(e){}
-            prevFocused = null;
-          });
-        })(document.getElementById('ecorideCreditsModal'));
-      })();
-    };
-  })();
-
-  // Fix permanent pour attacher l'ouverture de la modal au vrai bouton "Ajouter"
-  (function bindCreditsButtonPermanent() {
-    const btnSelector = '#creditAddBtn'; // <-- bouton identifié dans tes logs
-    const inputSelector = '#creditAdd, .ecoride-custom-input, input[name="creditsAdd"]';
-
-    function attach() {
-      const btn = document.querySelector(btnSelector);
-      if (!btn) return false;
-
-      // remove previous handler if any
-      try { if (btn.__ecorideCreditsClickHandler) btn.removeEventListener('click', btn.__ecorideCreditsClickHandler); } catch(e){}
-
-      const handler = function(ev) {
-        ev.preventDefault();
-        const input = document.querySelector(inputSelector);
-        const val = input ? (parseInt(input.value, 10) || 5) : 5;
-        if (window.__ecorideOpenCreditsModal) {
-          window.__ecorideOpenCreditsModal(val);
-        } else {
-          console.warn('__ecorideOpenCreditsModal absent — fallback addCredits/localStorage will be used');
-          if (typeof addCredits === 'function') addCredits(val);
-          else {
-            const prev = parseInt(localStorage.getItem('ecoride.credits') || '0', 10);
-            localStorage.setItem('ecoride.credits', String(prev + val));
-            window.dispatchEvent(new CustomEvent('ecoride:creditsChanged', { detail: { credits: prev + val } }));
-          }
-        }
-      };
-
-      btn.addEventListener('click', handler);
-      btn.__ecorideCreditsClickHandler = handler;
-      console.log('[credits] handler attaché définitivement sur', btnSelector);
-      return true;
-    }
-
-    // Try attach immediately, otherwise observe DOM for injection (SPA)
-    if (!attach()) {
-      const mo = new MutationObserver((mutations, obs) => {
-        if (attach()) obs.disconnect();
-      });
-      mo.observe(document.body, { childList: true, subtree: true });
-      // safety timeout
-      setTimeout(() => { try { mo.disconnect(); } catch(e){} }, 10000);
-    }
-  })();
-
-  function findCreditsElementsForUpdate() {
-    // priorité : attribut explicite (ajoute data-ecoride-credits à ton élément d'affichage)
-    const explicit = Array.from(document.querySelectorAll('[data-ecoride-credits], #creditsValue, .credits-value, .credits-count'));
-    const filteredExplicit = explicit.filter(el => !el.closest('#ecorideCreditsModal'));
-    if (filteredExplicit.length) return filteredExplicit;
-
-    // fallback : cherche éléments texte contenant "crédit" en excluant modal & boutons & packs
-    const candidates = Array.from(document.querySelectorAll('body *'))
-      .filter(n => n.children.length === 0) // éléments feuilles
-      .filter(n => !n.closest('#ecorideCreditsModal')) // exclure la modal
-      .filter(n => n.tagName !== 'BUTTON' && n.tagName !== 'INPUT' && !n.classList.contains('ecoride-pack'))
-      .filter(n => /\d/.test((n.textContent||'').trim()) && /crédit/i.test(n.textContent || ''))
-      .slice(0, 2);
-
-    return candidates;
-  }
-
-  function refreshCreditsUI(credits) {
-    const els = findCreditsElementsForUpdate(); // ta fonction de recherche actuelle
-    if (!els || !els.length) return;
-  
-    els.forEach(el => {
-      // ne pas toucher les éléments dans la modal (sécurité)
-      if (el.closest && el.closest('#ecorideCreditsModal')) return;
-  
-      // insère deux spans : nombre + label
-      el.innerHTML = `<span class="ecoride-credit-number">${Number(credits)}</span>` +
-                     `<span class="ecoride-credit-label">crédits</span>`;
-  
-      // s'assure que l'attribut existe pour ciblage futur
-      el.setAttribute('data-ecoride-credits', '');
-  
-      // effet visuel (optionnel)
-      el.classList.add('ecoride-credits-updated');
-      setTimeout(() => el.classList.remove('ecoride-credits-updated'), 500);
-    });
-  
-    console.log('[credits] UI rafraîchie ->', credits, els);
-  }
-
-  // écoute l'event dispatché par setCredits / addCredits / modal
-  window.addEventListener('ecoride:creditsChanged', function (ev) {
-    const credits = (ev && ev.detail && Number(ev.detail.credits)) || parseInt(localStorage.getItem('ecoride.credits') || '0', 10) || 0;
-    refreshCreditsUI(credits);
-  }, { passive: true });
-
-  // initialisation immédiate au chargement si possible (au cas où le listener arrive trop tard)
-  try {
-    const initial = parseInt(localStorage.getItem('ecoride.credits') || '0', 10) || 0;
-    refreshCreditsUI(initial);
-  } catch (e) { /* ignore */ }
-
-  // CSS utilitaire (tu peux le mettre dans ton CSS global si tu préfères)
-  if (!document.getElementById('ecoride-credits-update-style')) {
-    const s = document.createElement('style');
-    s.id = 'ecoride-credits-update-style';
-    s.textContent = `.ecoride-credits-updated{ transition: transform .18s ease, color .18s ease; transform: scale(1.03); color: #246b2a; }`;
-    document.head.appendChild(s);
-  }
-
-    // fonction d'init publique (idempotente)
-    function initCreditsUIAndStorage(root = document) {
-      try { initCreditsFromLocal(); } catch (e) { console.warn('[credits] init error', e); }
-      bindCreditsUI(root);
-    
-      function doRefresh() {
-        try {
-          const credits = getCredits();
-          if (typeof refreshCreditsUI === 'function') {
-            refreshCreditsUI(credits);
-          } else {
-            window.dispatchEvent(new CustomEvent('ecoride:creditsChanged', { detail: { credits } }));
-          }
-        } catch (e) {
-          console.warn('[credits] refresh error', e);
-        }
-      }
-    
-      // refresh immédiat
-      doRefresh();
-    
-      // retry après courts délais pour gérer les scripts qui écrasent l'élément
-      setTimeout(doRefresh, 120);
-      setTimeout(doRefresh, 600);
-    
-      // expose pour debug manuel si besoin
-      window.__ecoride_forceRefreshCredits = doRefresh;
-    }
-
-    // auto-run si page est chargé normalement (utile si la page n'est pas injectée par SPA)
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => initCreditsUIAndStorage(document));
-    } else {
-      initCreditsUIAndStorage(document);
-    }
-
-    // API publique pour ton routeur / initUserSpace
-    window.ecorideCredits = window.ecorideCredits || {};
-    window.ecorideCredits.init = initCreditsUIAndStorage;
-    window.ecorideCredits.get = window.ecorideCredits.get || getCredits;
-    window.ecorideCredits.add = window.ecorideCredits.add || addCredits;
-    window.ecorideCredits.set = window.ecorideCredits.set || setCredits;
   })();
 })();
 

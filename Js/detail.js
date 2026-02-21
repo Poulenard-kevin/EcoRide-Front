@@ -1401,6 +1401,11 @@ async function reserverPlace(trajet, seats = 1) {
       return;
     }
 
+    // Après la réservation réussie
+    const updatedUser = await apiFetch('/api/me');
+    window.ecorideCredits.syncFromUser(updatedUser);
+    console.log(`💸 Nouveau solde : ${updatedUser.credits} crédits`);
+
     // Succès — Option A : utiliser la réponse de reloadCarpoolAndNotify (évite double requête)
     const updatedTrajet = await reloadCarpoolAndNotify(trajet.id);
     if (updatedTrajet) {

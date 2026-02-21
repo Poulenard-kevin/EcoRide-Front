@@ -374,7 +374,12 @@ export async function initUserSpace() {
       setTimeout(() => {
         console.log("🟢 Normalisation des dates après initTrajets");
         normalizeRideDates();
-        // renderHistorique() sera appelé par onDomReady dans trajets.js
+        
+        // Forcer la synchronisation des crédits une fois que tout est prêt
+        if (window.refreshUserSession) {
+            console.log("💰 Déclenchement de la synchro crédits post-init");
+            window.refreshUserSession();
+        }
       }, 200);
     } catch (e) {
       console.error(e);

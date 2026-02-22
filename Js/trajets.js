@@ -184,31 +184,114 @@ const LS = (function(){
   return { get, set, bc };
 })();
 
-// Mutation lock + clé LS pour bookings supprimés
+// -------------------- Deleted bookings (robuste & normalisé) --------------------
 let isMutatingTrajets = false;
 const DELETED_BOOKINGS_LS_KEY = 'ecoride_deleted_bookings';
-function getDeletedBookings() {
+
+/** normalize ID: extract last numeric segment when possible */
+function normalizeDeletedId(raw) {
+  if (raw === null || raw === undefined) return '';
+  const s = String(raw).trim();
+  const m = s.match(/(\d+)$/);
+  return m ? m[1] : s;
+}
+
+/** Initialize window._deletedBookings set from localStorage (run immediately) */
+(function initDeletedBookingsFromLS(){
   try {
     const raw = localStorage.getItem(DELETED_BOOKINGS_LS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) { return []; }
+    let arr = [];
+    if (raw) {
+      try { arr = JSON.parse(raw) || []; } catch(e) { arr = []; }
+    }
+    const normalized = (Array.isArray(arr) ? arr.map(normalizeDeletedId).filter(Boolean) : []);
+    const set = new Set(normalized);
+    if (window._deletedBookings instanceof Set) {
+      normalized.forEach(id => window._deletedBookings.add(id));
+    } else {
+      window._deletedBookings = set;
+    }
+    console.debug('IDs supprimés chargés au démarrage:', Array.from(window._deletedBookings));
+  } catch (e) {
+    console.warn('initDeletedBookingsFromLS failed', e);
+    window._deletedBookings = window._deletedBookings || new Set();
+  }
+})();
+
+function getDeletedBookings() {
+  try {
+    if (window._deletedBookings instanceof Set) return Array.from(window._deletedBookings);
+    const raw = localStorage.getItem(DELETED_BOOKINGS_LS_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw) || [];
+    return Array.isArray(arr) ? arr.map(normalizeDeletedId).filter(Boolean) : [];
+  } catch (e) {
+    console.warn('getDeletedBookings error', e);
+    return [];
+  }
 }
+
 function setDeletedBookings(list) {
-  try { localStorage.setItem(DELETED_BOOKINGS_LS_KEY, JSON.stringify(Array.from(new Set(list)))); }
-  catch (e) { /* ignore */ }
+  try {
+    const set = (list instanceof Set) ? list : new Set(Array.isArray(list) ? list : getDeletedBookings());
+    const normalized = Array.from(set).map(normalizeDeletedId).filter(Boolean);
+    localStorage.setItem(DELETED_BOOKINGS_LS_KEY, JSON.stringify(normalized));
+    window._deletedBookings = new Set(normalized);
+    console.debug('setDeletedBookings -> saved', normalized);
+  } catch (e) {
+    console.warn('setDeletedBookings failed', e);
+  }
 }
+
 function addDeletedBooking(idOrIri) {
-  const cur = getDeletedBookings();
-  cur.push(String(idOrIri));
-  setDeletedBookings(cur);
+  try {
+    const id = normalizeDeletedId(idOrIri);
+    if (!id) return;
+    window._deletedBookings = window._deletedBookings || new Set(getDeletedBookings());
+    if (!window._deletedBookings.has(id)) {
+      window._deletedBookings.add(id);
+      setDeletedBookings(window._deletedBookings);
+      console.debug('addDeletedBooking -> added', id);
+    }
+  } catch (e) {
+    console.warn('addDeletedBooking failed', e);
+  }
 }
+
 function removeDeletedBooking(idOrIri) {
-  const cur = getDeletedBookings().filter(x => String(x) !== String(idOrIri));
-  setDeletedBookings(cur);
+  try {
+    const id = normalizeDeletedId(idOrIri);
+    if (!id) return;
+    window._deletedBookings = window._deletedBookings || new Set(getDeletedBookings());
+    if (window._deletedBookings.has(id)) {
+      window._deletedBookings.delete(id);
+      setDeletedBookings(window._deletedBookings);
+      console.debug('removeDeletedBooking -> removed', id);
+    }
+  } catch (e) {
+    console.warn('removeDeletedBooking failed', e);
+  }
 }
+
 function isBookingMarkedDeleted(idOrIri) {
-  const lst = getDeletedBookings();
-  return lst.some(x => String(x) === String(idOrIri));
+  try {
+    const id = normalizeDeletedId(idOrIri);
+    if (!id) return false;
+    window._deletedBookings = window._deletedBookings || new Set(getDeletedBookings());
+    return window._deletedBookings.has(id);
+  } catch (e) {
+    console.warn('isBookingMarkedDeleted failed', e);
+    return false;
+  }
+}
+
+// expose pour debug rapide
+if (typeof window !== 'undefined') {
+  window._deletedBookings = window._deletedBookings || new Set(getDeletedBookings());
+  window.getDeletedBookings = getDeletedBookings;
+  window.addDeletedBooking = addDeletedBooking;
+  window.removeDeletedBooking = removeDeletedBooking;
+  window.isBookingMarkedDeleted = isBookingMarkedDeleted;
 }
 
 // place ce helper près du haut de /Js/trajets.js (avec tes autres fonctions utilitaires)
@@ -617,6 +700,55 @@ export async function loadAllUserTrajets(force = false) {
       const hasData = !!(t.depart && String(t.depart).trim() !== '' && t.arrivee && String(t.arrivee).trim() !== '');
       return hasId && hasData;
     });
+
+    // ----------------- RECONCILIATION DES BOOKINGS SUPPRIMÉES -----------------
+    // Construire l'ensemble des bookings présents côté serveur (numériques normalisés)
+    try {
+      const serverBookingIds = new Set();
+
+      // 1) Parcourir combined pour extraire bookings[]
+      (combined || []).forEach(tr => {
+        try {
+          const bs = Array.isArray(tr.bookings) ? tr.bookings : (Array.isArray(tr.raw?.bookings) ? tr.raw.bookings : []);
+          bs.forEach(b => {
+            const bid = extractServerId(b['@id'] ?? b.id ?? b.bookingId ?? b['@id'] ?? '');
+            if (bid) serverBookingIds.add(String(bid));
+            // aussi ajouter id numeric si présent
+            if (b.id) serverBookingIds.add(String(b.id));
+          });
+
+          // pour les entrées passager créées (bookingServerId / bookingId au niveau de tr)
+          const bookingServerId = tr.bookingServerId ?? tr.bookingIri ?? tr.bookingId ?? null;
+          if (bookingServerId) {
+            const bid = extractServerId(bookingServerId);
+            if (bid) serverBookingIds.add(String(bid));
+          }
+        } catch (e) { /* ignore item parse errors */ }
+      });
+
+      // 2) Si on a un Set local de marks, on retire celles qui ne sont plus présentes côté serveur
+      if (window._deletedBookings instanceof Set) {
+        const toRemove = [];
+        window._deletedBookings.forEach(localId => {
+          if (!localId) return;
+          // localId est déjà normalisé (numérique) par notre helper normalizeDeletedId
+          if (!serverBookingIds.has(String(localId))) {
+            // si le booking local est absent du serveur, suppression confirmée -> enlever la marque locale
+            toRemove.push(localId);
+          }
+        });
+
+        toRemove.forEach(id => {
+          try {
+            removeDeletedBooking(id);
+            removeDeletedBooking(`/api/bookings/${id}`);
+            console.debug(`[Reconciliation] marque locale retirée pour booking ${id} (absente côté serveur)`);
+          } catch (e) { console.warn('reconciliation remove failed for', id, e); }
+        });
+      }
+    } catch (e) {
+      console.warn('Reconciliation step failed', e);
+    }
 
     // On écrase le localStorage avec la version PROPRE
     if (Array.isArray(combined)) {
@@ -1713,51 +1845,7 @@ export async function loadTrajetsFromApi({ modeAll = true, forceRefresh = false 
   const me = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
 
   try {
-    // --- Chargement filtré depuis l'API pour ne récupérer que les trajets "en cours" ---
-    const today = new Date().toISOString().split('T')[0];
-
-    // URL suggérées — adapte les noms de param si ton API diffère
-    const filteredCarpoolsUrl = `/api/carpools?departureDate[after]=${today}&status=published`;
-    const driverCarpoolsUrl = me && me.id ? `/api/carpools?driver=/api/users/${me.id}&departureDate[after]=${today}` : filteredCarpoolsUrl;
-    const myBookingsUrl = me && me.id ? `/api/bookings?passenger=/api/users/${me.id}&status=pending` : null;
-
-    let raw;
-    let externalBookingsRaw = null;
-
-    try {
-      if (modeAll) {
-        // modeAll = true => on veut les carpools "publics/futurs"
-        // tente d'abord la requête filtrée, fallback sur /carpools si échec
-        try {
-          raw = await apiFetch(filteredCarpoolsUrl);
-        } catch (err) {
-          console.warn('[loadTrajetsFromApi] filtered carpools fetch failed, falling back to /carpools', err);
-          raw = await apiFetch('/carpools');
-        }
-
-        // si on a l'utilisateur -> récupérer aussi ses bookings actives pour construire
-        if (myBookingsUrl) {
-          try {
-            externalBookingsRaw = await apiFetch(myBookingsUrl);
-          } catch (err) {
-            // ok si échec : on retombera sur les bookings imbriquées dans les carpools
-            console.warn('[loadTrajetsFromApi] my bookings fetch failed (non critique)', err);
-            externalBookingsRaw = null;
-          }
-        }
-      } else {
-        // modeAll = false => on veut uniquement mes carpools en tant que chauffeur (futurs)
-        try {
-          raw = await apiFetch(driverCarpoolsUrl);
-        } catch (err) {
-          console.warn('[loadTrajetsFromApi] driver filtered fetch failed, falling back to /carpools', err);
-          raw = await apiFetch('/carpools');
-        }
-      }
-    } catch (err) {
-      console.error('[loadTrajetsFromApi] erreur lors des fetchs filtrés, fallback final à /carpools', err);
-      try { raw = await apiFetch('/carpools'); } catch (e) { console.error('[loadTrajetsFromApi] fallback /carpools aussi failed', e); raw = null; }
-    }
+    const raw = await apiFetch('/carpools');
 
     // === Guard hydra/member avant hash ===
     let membersForHash = [];
@@ -1868,20 +1956,11 @@ export async function loadTrajetsFromApi({ modeAll = true, forceRefresh = false 
       };
     });
 
-    // --- passengerEntries : priorise les bookings récupérées séparément (externalBookingsRaw) ---
+    // Générer des entrées "passager" à partir des bookings normalisés
     const passengerEntries = [];
-
-    if (typeof externalBookingsRaw !== 'undefined' && externalBookingsRaw) {
-      // supporte array direct ou hydra:member
-      const bookingsList = Array.isArray(externalBookingsRaw)
-        ? externalBookingsRaw
-        : (externalBookingsRaw && Array.isArray(externalBookingsRaw['hydra:member'])
-            ? externalBookingsRaw['hydra:member']
-            : []);
-
-      for (const b of (bookingsList || [])) {
+    for (const pool of (mapped || [])) {
+      for (const b of (pool.bookings || [])) {
         try {
-          // identique à ton test "isMe"
           const pass = b.passenger ?? b.user ?? b.passengerIri ?? null;
           let isMe = false;
           if (pass && me) {
@@ -1890,7 +1969,8 @@ export async function loadTrajetsFromApi({ modeAll = true, forceRefresh = false 
             else isMe = String(pass) === String(me.id);
           }
           if (!isMe) continue;
-
+    
+          // --- identification de la booking (id numérique ou IRI) ---
           const bookingServerId = b['@id'] ?? (b.id ? `/api/bookings/${b.id}` : null);
           const bookingIdStr = b.id ? String(b.id) : (bookingServerId ? String(bookingServerId).split('/').pop() : null);
           const bookingIdNumeric = bookingIdStr ? (Number.isFinite(Number(bookingIdStr)) ? String(Number(bookingIdStr)) : null) : null;
@@ -1901,99 +1981,38 @@ export async function loadTrajetsFromApi({ modeAll = true, forceRefresh = false 
             continue;
           }
 
-          // résoudre le parent carpool (peut être IRI ou id)
-          const parentIri = b.carpool ?? b.carpoolIri ?? (b.carpool && b.carpool['@id']) ?? null;
-          const parentServerId = parentIri ? (typeof parentIri === 'string' ? parentIri : (parentIri['@id'] ?? null)) : null;
-          const parentIdNum = parentServerId ? String(parentServerId).split('/').pop() : null;
+          const bookingNorm = extractServerId(bookingServerId) || bookingIdNumeric || (b.id ? String(b.id) : null);
+          const already = passengerEntries.some(pe => {
+            const peBooking = extractServerId(pe.bookingServerId || pe.serverId || pe.bookingId || pe.id || '') || pe.id || null;
+            return peBooking && bookingNorm && String(peBooking) === String(bookingNorm);
+          });
+          if (already) continue;
 
-          // essayer d'enrichir l'entrée passager à partir du mapped carpool parent si présent
-          let pool = null;
-          if (parentIdNum) {
-            pool = (mapped || []).find(p => {
-              const pid = extractServerId(p.serverId ?? p.id ?? '');
-              return pid && String(pid) === String(parentIdNum);
-            }) || null;
-          }
+          console.debug('Booking ID:', b.id, 'Carpool ID:', pool.id);
 
+          // PUSH : id = l'ID de la booking (numérique si possible), serverId = carpool, bookingServerId & bookingId explicites
           passengerEntries.push({
-            id: resLocalId,
-            bookingId: bookingIdNumeric || bookingIdStr || null,
-            bookingServerId: bookingServerId,
-            serverId: parentServerId,
-            covoId: parentServerId,
-            depart: pool?.depart || pool?.departureLocation || pool?.depart || '',
-            arrivee: pool?.arrivee || pool?.arrivalLocation || pool?.arrivee || '',
-            date: pool?.date || b.date || null,
-            heureDepart: pool?.heureDepart || b.departureTime || '',
-            heureArrivee: pool?.heureArrivee || b.arrivalTime || '',
-            prix: b.price ?? pool?.prix ?? 0,
+            id: resLocalId,                       // utilisé pour data-id du bouton -> priorité booking numeric
+            bookingId: bookingIdNumeric || bookingIdStr || null, // ex: "90"
+            bookingServerId: bookingServerId,    // ex: "/api/bookings/90"
+            serverId: pool.serverId || pool.id || null, // parent carpool (ex: "/api/carpools/91" ou "91")
+            covoId: pool.serverId || pool.id || null,
+            depart: pool.depart || '',
+            arrivee: pool.arrivee || pool.arrival || pool.arrivalLocation || '',
+            date: pool.date || null,
+            heureDepart: pool.heureDepart || pool.departureTime || '',
+            heureArrivee: pool.heureArrivee || pool.arrivalTime || '',
+            prix: pool.prix ?? pool.pricePerSeat ?? 0,
             placesReservees: Number(b.seats ?? b.reservedSeats ?? b.nb_places_reservees ?? 1),
             role: 'passager',
             status: normalizeStatus(b.status ?? b.statut ?? 'pending'),
-            carpoolStatus: normalizeStatus(pool?.status ?? pool?.raw?.status ?? ''),
+            carpoolStatus: normalizeStatus(pool.status ?? pool.raw?.status ?? ''),
             bookings: [b],
-            driver: normalizeDriver(pool?.driver ?? pool?.raw?.driver ?? null),
+            driver: normalizeDriver(pool.driver ?? pool.raw?.driver ?? null),
             raw: b
           });
         } catch (err) {
-          console.warn('[loadTrajetsFromApi] skip booking build from externalBookings', err);
-        }
-      }
-    } else {
-      // fallback : ton code existant qui itère sur mapped.bookings
-      for (const pool of (mapped || [])) {
-        for (const b of (pool.bookings || [])) {
-          try {
-            const pass = b.passenger ?? b.user ?? b.passengerIri ?? null;
-            let isMe = false;
-            if (pass && me) {
-              if (typeof pass === 'object' && pass.id) isMe = String(pass.id) === String(me.id);
-              else if (typeof pass === 'string') isMe = (pass === `/api/users/${me.id}`) || pass.endsWith('/' + me.id);
-              else isMe = String(pass) === String(me.id);
-            }
-            if (!isMe) continue;
-
-            const bookingServerId = b['@id'] ?? (b.id ? `/api/bookings/${b.id}` : null);
-            const bookingIdStr = b.id ? String(b.id) : (bookingServerId ? String(bookingServerId).split('/').pop() : null);
-            const bookingIdNumeric = bookingIdStr ? (Number.isFinite(Number(bookingIdStr)) ? String(Number(bookingIdStr)) : null) : null;
-            const resLocalId = bookingIdNumeric || genId();
-
-            if ((bookingServerId && isBookingMarkedDeleted(bookingServerId)) || (bookingIdStr && isBookingMarkedDeleted(bookingIdStr))) {
-              continue;
-            }
-
-            const bookingNorm = extractServerId(bookingServerId) || bookingIdNumeric || (b.id ? String(b.id) : null);
-            const already = passengerEntries.some(pe => {
-              const peBooking = extractServerId(pe.bookingServerId || pe.serverId || pe.bookingId || pe.id || '') || pe.id || null;
-              return peBooking && bookingNorm && String(peBooking) === String(bookingNorm);
-            });
-            if (already) continue;
-
-            console.debug('Booking ID:', b.id, 'Carpool ID:', pool.id);
-
-            passengerEntries.push({
-              id: resLocalId,
-              bookingId: bookingIdNumeric || bookingIdStr || null,
-              bookingServerId: bookingServerId,
-              serverId: pool.serverId || pool.id || null,
-              covoId: pool.serverId || pool.id || null,
-              depart: pool.depart || '',
-              arrivee: pool.arrivee || pool.arrival || pool.arrivalLocation || '',
-              date: pool.date || null,
-              heureDepart: pool.heureDepart || pool.departureTime || '',
-              heureArrivee: pool.heureArrivee || pool.arrivalTime || '',
-              prix: pool.prix ?? pool.pricePerSeat ?? 0,
-              placesReservees: Number(b.seats ?? b.reservedSeats ?? b.nb_places_reservees ?? 1),
-              role: 'passager',
-              status: normalizeStatus(b.status ?? b.statut ?? 'pending'),
-              carpoolStatus: normalizeStatus(pool.status ?? pool.raw?.status ?? ''),
-              bookings: [b],
-              driver: normalizeDriver(pool.driver ?? pool.raw?.driver ?? null),
-              raw: b
-            });
-          } catch (err) {
-            console.warn('[loadTrajetsFromApi] skip booking build', err);
-          }
+          console.warn('[loadTrajetsFromApi] skip booking build', err);
         }
       }
     }
@@ -3697,33 +3716,6 @@ export function renderTrajetsInProgress() {
 
   // transforme la map en liste unique
   const deDupedList = Array.from(dedupMap.values());
-
-  // FILTRE FORCÉ : cacher définitivement certaines réservations/covoiturages
-  // Ajoute ici les bookingId / serverId à cacher (ex: '116')
-  const FORCE_HIDE_IDS = new Set(['116']);
-
-  // parcours en sens inverse pour pouvoir supprimer en place
-  for (let i = deDupedList.length - 1; i >= 0; i--) {
-    const item = deDupedList[i];
-    const candidates = [
-      item.bookingId,
-      item._myBookingId,
-      item.id,
-      item.serverId,
-      item.bookingServerId,
-      item.covoId
-    ];
-    const shouldHide = candidates.some(v => {
-      if (v == null) return false;
-      // extractId/extractServerId sont définis plus haut dans la fonction
-      const normalized = String(extractId(v) || extractServerId(v) || v).trim();
-      return FORCE_HIDE_IDS.has(normalized);
-    });
-    if (shouldHide) {
-      console.info('[renderTrajetsInProgress] Forced hide of trajet with id(s):', FORCE_HIDE_IDS, 'item=', item);
-      deDupedList.splice(i, 1);
-    }
-  }
   console.debug('Dedupe terminé, cartes uniques:', deDupedList.length);
 
   // quick: si le trajet n'a pas de bookings mais l'ancien localStore a une réservation correspondante, 
@@ -4625,84 +4617,37 @@ export async function renderHistorique() {
     } else {
       allTrajets = JSON.parse(localStorage.getItem('ecoride_trajets')) || [];
     }
-  } catch (e) { console.error("Erreur LS:", e); }
-
-  const me = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
-  const myId = me && me.id ? String(me.id) : null;
+} catch (e) { console.error("Erreur LS:", e); }
 
   const now = new Date();
   now.setHours(0,0,0,0);
 
-  // Helper : trouve les bookings du trajet qui correspondent à moi
-  const myBookingsForTrajet = (t) => {
-    if (!Array.isArray(t.bookings)) return [];
-    return t.bookings.filter(b => {
-      const pass = b.passenger ?? b.user ?? b.passengerIri ?? null;
-      if (!pass) return false;
-      if (!myId) {
-        // si pas d'user connu, essayer d'inférer (absence -> skip)
-        return false;
-      }
-      if (typeof pass === 'object' && pass.id) return String(pass.id) === myId;
-      if (typeof pass === 'string') return (pass === `/api/users/${myId}`) || pass.endsWith('/' + myId) || pass === myId;
-      return String(pass) === myId;
-    });
-  };
-
   // 1. Filtrage et Nettoyage des données corrompues
   const passe = allTrajets.filter(t => {
-    // Extraire une date utilisable (trajet ou booking)
-    const dRawCandidates = [
-      t.date,
-      t.raw?.departureDate,
-      t.raw?.date,
-      t.departureDate,
-      // si pas de date sur le trajet, tenter la première booking
-      (Array.isArray(t.bookings) && t.bookings[0] && (t.bookings[0].date || t.bookings[0].departureDate)) || null
-    ].filter(Boolean);
-    const dRaw = dRawCandidates[0];
+    const dRaw = t.date || t.raw?.departureDate || t.departureDate;
     if (!dRaw) return false;
     const dObj = new Date(dRaw);
     dObj.setHours(0,0,0,0);
     if (dObj > now) return false; // pas encore passé
-
-    // Rôles / statuts
+  
     const role = String(t.role || t._resolvedRole || '').toLowerCase();
-    const carpoolStatus = normalizeStatus(t.status ?? t.raw?.status ?? '');
-    const myBookings = myBookingsForTrajet(t);
-
-    // 1) Si c'est explicitement un trajet en tant que chauffeur
+    const status = normalizeStatus(t.status ?? t.raw?.status ?? '');
+  
+    // Chauffeur : trajet terminé
     if (role.includes('chauffeur')) {
-      // considérer historique si carpool a un statut "terminé/archivé"
-      return ['completed', 'termine', 'finished', 'archive'].includes(carpoolStatus);
+      return ['completed', 'termine', 'finished', 'archive'].includes(status);
     }
-
-    // 2) Si c'est explicitement un trajet passager
+  
+    // Passager : réservation validée
     if (role.includes('passager')) {
-      // utiliser le statut global (souvent la réservation détermine)
-      return ['validated', 'confirmed', 'valide', 'completed', 'termine'].includes(carpoolStatus);
+      return ['validated', 'confirmed', 'valide'].includes(status);
     }
-
-    // 3) Cas où la carte est une entrée "chauffeur" mais contient mes bookings
-    if (myBookings.length > 0) {
-      // si j'ai des bookings, regarder leurs statuts : on veut les bookings validées/terminées
-      const acceptedStatuses = ['validated', 'confirmed', 'valide', 'completed', 'termine'];
-      const anyAccepted = myBookings.some(b => {
-        const bstatus = normalizeStatus(b.status ?? b.statut ?? '');
-        return acceptedStatuses.includes(bstatus);
-      });
-      if (anyAccepted) return true;
-
-      // si booking marked cancelled/annule, on peut considérer non-historique ici
-      return false;
-    }
-
-    // sinon : pas dans l'historique
+  
     return false;
   });
 
   // Tri par date décroissante
-  passe.sort((a, b) => new Date(b.date || b.raw?.date || b.raw?.departureDate || 0) - new Date(a.date || a.raw?.date || a.raw?.departureDate || 0));
+  passe.sort((a, b) => new Date(b.date) - new Date(a.date));
 
   if (passe.length === 0) {
     container.innerHTML += `<p>Aucun trajet passé trouvé.</p>`;
@@ -4712,46 +4657,45 @@ export async function renderHistorique() {
   // 2. Génération du HTML
   const htmlParts = passe.map(t => {
     const role = String(t.role || '').toLowerCase();
-    const isPassager = role.includes('passager') || (Array.isArray(t.bookings) && t.bookings.some(b => {
-      const pass = b.passenger ?? b.user ?? b.passengerIri ?? null;
-      return pass && myId && ((typeof pass === 'object' && pass.id && String(pass.id) === myId) || (typeof pass === 'string' && (pass === `/api/users/${myId}` || pass.endsWith('/' + myId) || pass === myId)));
-    }));
-
+    const isPassager = role.includes('passager');
     const prixUnitaire = Number(t.price ?? t.prix ?? 0);
     let affichagePrix = 0;
     if (isPassager) {
-        // si on a une booking pour moi pr calcul places
-        const myBookings = myBookingsForTrajet(t);
-        const n = myBookings.length > 0 ? myBookings.reduce((s,b)=> s + (Number(b.seats ?? b.reservedSeats ?? 1) || 0), 0) : (Number(t.placesReservees) || 1);
+        const n = Number(t.placesReservees) || 1;
         affichagePrix = prixUnitaire * n;
     } else {
         const occupied = Array.isArray(t.bookings)
-            ? t.bookings.reduce((sum, b) => sum + (Number(b.seats || 1) || 0), 0)
+            ? t.bookings.reduce((sum, b) => sum + (Number(b.seats || 1)), 0)
             : 0;
         affichagePrix = prixUnitaire * occupied;
     }
-
+    
     const hD = t.heureDepart || t.heure || "00:00";
     const hA = t.heureArrivee || t.heure_arrivee || "";
 
+    // ✅ total déclaré ICI, accessible dans les deux branches
     const total = Number(t.nbPlacesTotal || t.totalSeats || t.vehicle?.seats || t.car?.seats || 4);
 
     let placesHTML = "";
 
     if (isPassager) {
-        const myBookings = myBookingsForTrajet(t);
-        const n = myBookings.length > 0 ? myBookings.reduce((s,b)=> s + (Number(b.seats ?? 1) || 0), 0) : (Number(t.placesReservees) || 1);
+        // ✅ Le passager voit uniquement ce qu'il a réservé
+        const n = Number(t.placesReservees) || 1;
         placesHTML = `${n} place${n > 1 ? 's' : ''}`;
     } else {
-        const totalSeats = Number(t.nbPlacesTotal) || 0;
+        // ✅ Le chauffeur voit occupation réelle
+        const total = Number(t.nbPlacesTotal) || 0;
+
+        // ✅ On calcule correctement les places occupées
         const occupied = Array.isArray(t.bookings)
-            ? t.bookings.reduce((sum, b) => sum + (Number(b.seats || 1) || 0), 0)
+            ? t.bookings.reduce((sum, b) => sum + (Number(b.seats || 1)), 0)
             : 0;
-        placesHTML = `${occupied} / ${totalSeats} place${totalSeats > 1 ? 's' : ''}`;
+
+        placesHTML = `${occupied} / ${total} place${total > 1 ? 's' : ''}`;
     }
 
     const cardClass = isPassager ? 'trajet-card reserve' : 'trajet-card chauffeur-historique';
-    const dateDisp = typeof formatDateJJMMAAAA === 'function' ? formatDateJJMMAAAA(t.date || t.raw?.date || t.raw?.departureDate) : (t.date || t.raw?.date || t.raw?.departureDate);
+    const dateDisp = typeof formatDateJJMMAAAA === 'function' ? formatDateJJMMAAAA(t.date) : t.date;
 
     return `
       <div class="${cardClass}">
@@ -4766,7 +4710,7 @@ export async function renderHistorique() {
         </div>
       </div>
     `;
-  });
+});
 
   container.innerHTML += htmlParts.join('');
 }
@@ -5034,7 +4978,8 @@ async function reloadBookingsFromApiForce() {
 
 // 3. handleCancelBookingFixed avec suppression locale et rechargement forcé
 async function handleCancelBookingFixed(bookingId) {
-  const idStr = String(bookingId);
+  const idStr = String(bookingId).trim();
+  if (!idStr) return;
 
   // Guard anti-double submission
   if (window._deletingBookings.has(idStr)) {
@@ -5042,24 +4987,20 @@ async function handleCancelBookingFixed(bookingId) {
     return;
   }
   window._deletingBookings.add(idStr);
-
-  // normaliser état mutating
   isMutatingTrajets = true;
 
-  // loader global optionnel (utilise ton #carpool-loader)
+  // loader global optionnel
   const globalLoader = document.getElementById('carpool-loader');
   if (globalLoader) globalLoader.style.display = 'flex';
 
   try {
     console.log(`🗑️ Tentative de suppression de la réservation ${idStr}`);
 
-    // Marquer localement comme supprimée (empêche réinsertion depuis API ou LS)
+    // 1) Marquer localement la booking supprimée (empêche réinsertion depuis LS/API jusqu'à réconciliation)
     addDeletedBooking(idStr);
-    if (!idStr.startsWith('/api/')) {
-      addDeletedBooking(`/api/bookings/${idStr}`);
-    }
+    addDeletedBooking(`/api/bookings/${idStr}`);
 
-    // Enlever localement avant appel API (feedback UI immédiat)
+    // 2) Retirer l'entrée de l'UI/local immédiatement pour feedback
     const filterFn = t => String(t.id) !== idStr && String(t.bookingId) !== idStr && String(t.bookingServerId || '') !== idStr;
     if (Array.isArray(trajets)) {
       const filtered = trajets.filter(filterFn);
@@ -5069,7 +5010,6 @@ async function handleCancelBookingFixed(bookingId) {
       window.trajets = (window.trajets || []).filter(filterFn);
     }
 
-    // Mise à jour LS immédiate
     try {
       if (typeof LS === 'object' && typeof LS.set === 'function') {
         LS.set(Array.isArray(trajets) ? trajets : (window.trajets || []));
@@ -5078,39 +5018,28 @@ async function handleCancelBookingFixed(bookingId) {
       }
     } catch (e) { console.warn('LS set failed before delete', e); }
 
-    // Appel API DELETE
+    // 3) Appel API DELETE (ta fonction simple)
     const res = await deleteBookingApiSimple(idStr);
 
+    // IMPORTANT : ne pas retirer la marque ici ! On laisse la réconciliation vérifier l'absence côté serveur.
     if (res && (res.ok || res.status === 204)) {
-      // suppression confirmée côté serveur -> retirer marque
-      removeDeletedBooking(idStr);
-      removeDeletedBooking(`/api/bookings/${idStr}`);
+      console.log('[handleCancelBookingFixed] suppression serveur ok (ou 204). Réconciliation programmée.');
     } else if (res && res.status === 404) {
-      // déjà absente côté serveur -> retirer marque aussi
-      removeDeletedBooking(idStr);
-      removeDeletedBooking(`/api/bookings/${idStr}`);
+      console.log('[handleCancelBookingFixed] suppression serveur renvoie 404 (déjà absente). Réconciliation programmée.');
     } else {
-      console.warn('delete API returned', res && res.status);
-      // Au choix : conserver la marque pour réconciliation, ou la retirer.
-      // Ici on retire pour éviter de masquer une réapparition légitime.
-      removeDeletedBooking(idStr);
-      removeDeletedBooking(`/api/bookings/${idStr}`);
+      console.warn('[handleCancelBookingFixed] delete API returned', res && res.status);
+      // On laisse la marque pour tenter de réconcilier plus tard.
     }
 
-    // Forcer un reload depuis l'API (ignore bookings marquées supprimées)
+    // 4) Forcer un reload depuis l'API qui exécutera ensuite la réconciliation
     await loadAllUserTrajets(true);
 
-    // Feedback utilisateur
-    alert("Réservation annulée.");
+    alert("Réservation annulée (UI mise à jour).");
   } catch (err) {
     console.error("❌ Erreur lors de l'annulation:", err);
-    // cleanup : retirer marque si erreur locale
-    removeDeletedBooking(idStr);
-    removeDeletedBooking(`/api/bookings/${idStr}`);
-    // tenter reload pour resync
-    try { await loadAllUserTrajets(true); } catch (e) { console.warn('reload failed', e); }
+    // En cas d'erreur réseau grave, on conserve la marque pour la réconciliation ultérieure
+    try { await loadAllUserTrajets(true); } catch (e) { console.warn('reload failed after cancel error', e); }
   } finally {
-    // cleanup global
     isMutatingTrajets = false;
     window._deletingBookings.delete(idStr);
     if (globalLoader) globalLoader.style.display = 'none';

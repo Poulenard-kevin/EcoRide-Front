@@ -276,7 +276,7 @@ const MESSAGES = {
 
 (function () {
   const STORAGE_KEY = 'ecoride.profileAvatar';
-  const DEFAULT_SRC = 'images/default-avatar.png'; // adapte si nécessaire
+  const DEFAULT_SRC = '/images/default-avatar.png';
   const MAX_BYTES = 2 * 1024 * 1024; // 2 Mo
   const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
 
@@ -336,56 +336,111 @@ const MESSAGES = {
   }
 
   // global helper (single definition)
-async function tryUploadAvatarToBackend(dataURL, meta, file) {
-  if (!window.apiPersist || typeof window.apiPersist.uploadAvatar !== 'function') return;
-  try {
-    const userId = window.apiPersist.getCurrentUserIdFallback ? window.apiPersist.getCurrentUserIdFallback() : null;
-    if (!userId) {
-      console.warn('tryUploadAvatarToBackend: userId introuvable, upload annulé');
-      return;
+  async function tryUploadAvatarToBackend(dataURL, meta, file) {
+    if (!window.apiPersist || typeof window.apiPersist.uploadAvatar !== 'function') return;
+    try {
+      const userId = window.apiPersist.getCurrentUserIdFallback ? window.apiPersist.getCurrentUserIdFallback() : null;
+      if (!userId) {
+        console.warn('tryUploadAvatarToBackend: userId introuvable, upload annulé');
+        return;
+      }
+  
+      function dataURLtoFile(dataurl, filename = 'avatar.png') {
+        const arr = dataurl.split(',');
+        const mime = (arr[0].match(/:(.*?);/) || [])[1] || 'image/png';
+        const bstr = atob(arr[1] || '');
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) u8arr[n] = bstr.charCodeAt(n);
+        return new File([u8arr], filename, { type: mime });
+      }
+  
+      const fileToSend = (file instanceof File) ? file : (dataURL ? dataURLtoFile(dataURL, meta && meta.name ? meta.name : 'avatar.png') : null);
+      if (!fileToSend) {
+        console.warn('tryUploadAvatarToBackend: aucun fichier détecté pour upload');
+        return;
+      }
+  
+      const res = await window.apiPersist.uploadAvatar(userId, fileToSend);
+      console.log('Avatar upload backend OK', res);
+  
+      if (res && res.url) {
+        try {
+          const raw = localStorage.getItem('ecoride_user');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            parsed.photo = res.url;
+            localStorage.setItem('ecoride_user', JSON.stringify(parsed));
+            window.dispatchEvent(new CustomEvent('ecoride:userUpdated', { detail: { user: parsed } }));
+          }
+        } catch (e) { console.warn('maj ecoride_user après upload avatar failed', e); }
+        try {
+          const preview = document.querySelector('#profileAvatarPreview');
+          if (preview) preview.src = res.url;
+        } catch (e) { /* silent */ }
+      }
+  
+      return res;
+    } catch (err) {
+      console.warn('Upload avatar backend échoué (non bloquant)', err);
+      throw err;
     }
-
-    function dataURLtoFile(dataurl, filename = 'avatar.png') {
-      const arr = dataurl.split(',');
-      const mime = (arr[0].match(/:(.*?);/) || [])[1] || 'image/png';
-      const bstr = atob(arr[1] || '');
-      let n = bstr.length;
-      const u8arr = new Uint8Array(n);
-      while (n--) u8arr[n] = bstr.charCodeAt(n);
-      return new File([u8arr], filename, { type: mime });
-    }
-
-    const fileToSend = (file instanceof File) ? file : (dataURL ? dataURLtoFile(dataURL, meta && meta.name ? meta.name : 'avatar.png') : null);
-    if (!fileToSend) {
-      console.warn('tryUploadAvatarToBackend: aucun fichier détecté pour upload');
-      return;
-    }
-
-    const res = await window.apiPersist.uploadAvatar(userId, fileToSend);
-    console.log('Avatar upload backend OK', res);
-
-    if (res && res.url) {
-      try {
-        const raw = localStorage.getItem('ecoride_user');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          parsed.photo = res.url;
-          localStorage.setItem('ecoride_user', JSON.stringify(parsed));
-          window.dispatchEvent(new CustomEvent('ecoride:userUpdated', { detail: { user: parsed } }));
-        }
-      } catch (e) { console.warn('maj ecoride_user après upload avatar failed', e); }
-      try {
-        const preview = document.querySelector('#profileAvatarPreview');
-        if (preview) preview.src = res.url;
-      } catch (e) { /* silent */ }
-    }
-
-    return res;
-  } catch (err) {
-    console.warn('Upload avatar backend échoué (non bloquant)', err);
-    throw err;
   }
-}
+
+  async function handleProfileAvatarUpload(file) {
+    try {
+      const rawUser = localStorage.getItem('ecoride_user') || null;
+      const user = rawUser ? JSON.parse(rawUser) : null;
+      const userId = user?.id || user?._id || user?.userId || await window.apiPersist.getCurrentUserIdFallback?.();
+      if (!userId) throw new Error('Utilisateur non identifié');
+  
+      // Appelle l'API d'upload (window.apiPersist.uploadAvatar doit accepter un File)
+      const res = await window.apiPersist.uploadAvatar(userId, file);
+  
+      let avatarUrl = null;
+      if (!res) avatarUrl = null;
+      else if (res.avatar) avatarUrl = res.avatar;
+      else if (res.avatarUrl) avatarUrl = res.avatarUrl;
+      else if (res.filePath) avatarUrl = res.filePath;
+      else if (res.path) avatarUrl = res.path;
+      else if (res['@id']) avatarUrl = res['@id'];
+      else if (typeof res === 'string') avatarUrl = res;
+  
+      if (!avatarUrl && res?.user && (res.user.avatar || res.user.photo)) {
+        avatarUrl = res.user.avatar || res.user.photo;
+      }
+  
+      // fallback : re-fetch user si nécessaire (peu coûteux)
+      if (!avatarUrl && userId && typeof apiFetch === 'function') {
+        try {
+          const fresh = await apiFetch(`/users/${userId}`);
+          avatarUrl = fresh?.avatar || fresh?.avatarUrl || fresh?.photo || null;
+          if (fresh) localStorage.setItem('ecoride_user', JSON.stringify(fresh));
+        } catch (e) { /* ignore */ }
+      }
+  
+      // Si on a une URL canonique renvoyée par le backend, mettre à jour ecoride_user
+      if (avatarUrl) {
+        try {
+          const raw = localStorage.getItem('ecoride_user');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+              parsed.avatar = avatarUrl;
+              parsed.photo = parsed.photo || avatarUrl;
+              localStorage.setItem('ecoride_user', JSON.stringify(parsed));
+            }
+          }
+        } catch (e) { /* ignore */ }
+        window.dispatchEvent(new CustomEvent('ecoride:profileAvatarChanged', { detail: { avatar: avatarUrl } }));
+      }
+  
+      return avatarUrl;
+    } catch (err) {
+      console.error('handleProfileAvatarUpload error', err);
+      throw err;
+    }
+  }
 
   // Main init
   function initProfilePhotoForm(root = document) {
@@ -505,8 +560,28 @@ async function tryUploadAvatarToBackend(dataURL, meta, file) {
           window.dispatchEvent(new Event('userUpdated'));
           dispatchAvatarEvent('ecoride:avatarChanged', { dataURL, meta: currentFileMeta });
         
-          // passe le file si disponible (préférer l'envoi du File natif)
-          tryUploadAvatarToBackend(dataURL, currentFileMeta, file).catch(()=>{/* non bloquant */});
+          // upload vers backend : privilégier le File natif via handleProfileAvatarUpload
+          if (file) {
+            handleProfileAvatarUpload(file)
+              .then((avatarUrl) => {
+                console.log('Upload natif OK, avatarUrl =', avatarUrl);
+                // avatarUrl a déjà mis à jour localStorage dans handleProfileAvatarUpload
+                // Si tu veux, mettre à jour le preview/global immédiatement :
+                if (avatarUrl) {
+                  document.querySelectorAll('img.profile-photo, #detail-photo, [data-ecoride-avatar]').forEach(img => {
+                    if (img && img.tagName === 'IMG') img.src = (typeof resolveAvatarSrc === 'function') ? resolveAvatarSrc(avatarUrl) : avatarUrl;
+                  });
+                }
+              })
+              .catch((err) => {
+                console.warn('Upload natif échoué (non bloquant)', err);
+                // fallback : tenter la méthode existante si tu veux la conserver
+                try { tryUploadAvatarToBackend(dataURL, currentFileMeta, file).catch(()=>{}); } catch(e){}
+              });
+          } else {
+            // Pas de File natif (par ex. on a seulement dataURL) -> fallback à ta méthode existante
+            try { tryUploadAvatarToBackend(dataURL, currentFileMeta, file).catch(()=>{}); } catch(e){}
+          }
         
           if (btnConfirm) btnConfirm.disabled = true;
         }
@@ -614,6 +689,36 @@ async function tryUploadAvatarToBackend(dataURL, meta, file) {
     if (document.querySelector('#profile-photo-form')) {
       window.__ecoride_profilePhoto = initProfilePhotoForm(document);
     }
+  
+    // Synchroniser et appliquer l'avatar au chargement
+    (function syncAndApplyAvatar() {
+      try {
+        const profileAvatarRaw = localStorage.getItem('ecoride.profileAvatar');
+        if (!profileAvatarRaw) return;
+        const profileAvatar = JSON.parse(profileAvatarRaw);
+        if (!profileAvatar?.dataURL) return;
+  
+        const userRaw = localStorage.getItem('ecoride_user');
+        if (!userRaw) return;
+        const user = JSON.parse(userRaw);
+  
+        if (user.photo !== profileAvatar.dataURL) {
+          user.photo = profileAvatar.dataURL;
+          localStorage.setItem('ecoride_user', JSON.stringify(user));
+          console.log('Avatar synchronisé dans ecoride_user.photo');
+        }
+  
+        const avatarSrc = profileAvatar.dataURL;
+        document.querySelectorAll('img.profile-photo, #detail-photo, [data-ecoride-avatar], #headerAvatar, .header-avatar').forEach(img => {
+          if (img && img.tagName === 'IMG') {
+            img.src = avatarSrc;
+          }
+        });
+  
+      } catch (e) {
+        console.warn('Erreur lors de la synchronisation avatar:', e);
+      }
+    })();
   });
 
   // expose for manual init (if form is injected dynamically)
@@ -640,7 +745,35 @@ async function tryUploadAvatarToBackend(dataURL, meta, file) {
     mo.observe(document.body, { childList: true, subtree: true });
     setTimeout(() => { try { mo.disconnect(); } catch(_){}; }, 15000);
   })();
+
+  if (!window.__ecoride_profileAvatarChanged_listener_installed) {
+    window.addEventListener('ecoride:profileAvatarChanged', (ev) => {
+      try {
+        const src = ev?.detail?.avatar || null;
+        // si pas d'avatar fourni -> utiliser le fallback DEFAULT_SRC
+        const resolved = src
+          ? ((typeof resolveAvatarSrc === 'function') ? resolveAvatarSrc(src) : src)
+          : (typeof DEFAULT_SRC !== 'undefined' ? DEFAULT_SRC : '/images/default-avatar.png');
+  
+        document.querySelectorAll('img.profile-photo, #detail-photo, [data-ecoride-avatar], #headerAvatar, .header-avatar')
+          .forEach(img => {
+            if (img && img.tagName === 'IMG') {
+              try { img.src = resolved; } catch (_) { /* ignore per-image */ }
+            }
+          });
+  
+        if (typeof renderTrajetsInProgress === 'function') {
+          try { renderTrajetsInProgress(); } catch (e) { console.warn(e); }
+        }
+      } catch (err) {
+        console.warn('ecoride:profileAvatarChanged handler error', err);
+      }
+    });
+    window.__ecoride_profileAvatarChanged_listener_installed = true;
+  }
 })();
+
+
 
 // Delegation globale pour le bouton "Supprimer l'avatar"
 // idempotent : s'installe une seule fois même si le fichier est chargé plusieurs fois
@@ -785,6 +918,129 @@ if (!window.__ecoride_avatarDeleteDelegationAdded) {
       console.warn('[profile] initial credits refresh failed', e);
     }
   })();
+
+  // --- Sync avatar from API: place this after initialRefresh() or after setCanonicalUser/getCanonicalUser definitions
+  async function syncAvatarFromApi() {
+    try {
+      // get canonical user from helpers (fallback to localStorage)
+      const canonical = (typeof getCanonicalUser === 'function') ? getCanonicalUser() : null;
+      let user = canonical || null;
+      if (!user) {
+        try { user = JSON.parse(localStorage.getItem('ecoride_user') || 'null'); } catch(e){ user = null; }
+      }
+      if (!user || !user.id) return;
+
+      // If an apiPersist helper exists, prefer it
+      if (window.apiPersist && typeof window.apiPersist.fetchUser === 'function') {
+        try {
+          const resp = await window.apiPersist.fetchUser(user.id);
+          const apiUser = resp && (resp.user || resp);
+          if (apiUser) applyAvatarFromApiResponse(apiUser);
+          return;
+        } catch (e) { console.warn('apiPersist.fetchUser failed, fallback to fetch', e); }
+      }
+
+      // Fallback fetch: add Authorization if token present in localStorage under common keys
+      const headers = { 'Accept': 'application/json' };
+      const token = localStorage.getItem('api_token') || localStorage.getItem('ecoride_token') || localStorage.getItem('token') || null;
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const url = `/api/users/${encodeURIComponent(user.id)}`;
+      const res = await fetch(url, { method: 'GET', headers, credentials: token ? 'same-origin' : 'same-origin' });
+      if (!res.ok) {
+        // do not spam console for 401/403 in normal flows
+        if (res.status >= 500) console.warn('syncAvatarFromApi: server error', res.status);
+        return;
+      }
+      const data = await res.json();
+      const apiUser = data && (data.user || data);
+      applyAvatarFromApiResponse(apiUser);
+    } catch (err) {
+      console.warn('syncAvatarFromApi error', err);
+    }
+
+    function applyAvatarFromApiResponse(apiUser) {
+      try {
+        // normalise les formes possibles : { user: {...} } | { data: {...} } | {...}
+        const srcUser = (apiUser && (apiUser.user || apiUser.data)) ? (apiUser.user || apiUser.data) : apiUser;
+        if (!srcUser || typeof srcUser !== 'object') return false;
+    
+        // clés possibles d'avatar (ajoute-en si besoin)
+        const avatarUrl = srcUser.photo || srcUser.avatar || srcUser.image || srcUser.picture || srcUser.profilePicture || srcUser.avatarUrl || null;
+        if (!avatarUrl) return false;
+    
+        // charge le user stocké et merge proprement (sans écraser les autres champs)
+        let stored = {};
+        try {
+          const raw = localStorage.getItem('ecoride_user');
+          stored = raw ? JSON.parse(raw) : {};
+          if (!stored || typeof stored !== 'object') stored = {};
+        } catch (err) {
+          // parse fail -> recommence avec objet vide
+          stored = {};
+        }
+    
+        // si l'URL est identique, on ne fait rien (prévention de boucles/events inutiles)
+        if (stored.photo === avatarUrl) return false;
+    
+        // applique la nouvelle photo tout en préservant les autres champs
+        const updated = Object.assign({}, stored, { photo: avatarUrl });
+        try {
+          localStorage.setItem('ecoride_user', JSON.stringify(updated));
+        } catch (err) {
+          console.warn('applyAvatarFromApiResponse: impossible de sauvegarder dans localStorage', err);
+          // malgré l'échec de localStorage, on peut continuer à mettre à jour l'UI
+        }
+    
+        // si setCanonicalUser existe, appelle-le avec l'objet mis à jour
+        try {
+          if (typeof setCanonicalUser === 'function') setCanonicalUser(updated);
+        } catch (err) {
+          console.warn('applyAvatarFromApiResponse: setCanonicalUser a échoué', err);
+        }
+    
+        // dispatch événement userUpdated avec le payload standardisé
+        try {
+          window.dispatchEvent(new CustomEvent('ecoride:userUpdated', { detail: updated }));
+        } catch (err) {
+          console.warn('applyAvatarFromApiResponse: dispatch ecoride:userUpdated failed', err);
+        }
+    
+        // Mise à jour ciblée de l'UI : remplacer uniquement si différent
+        const selectors = ['#profileAvatarPreview', '#headerAvatar', '[data-ecoride-avatar]'];
+        selectors.forEach(sel => {
+          document.querySelectorAll(sel).forEach(el => {
+            try {
+              if (!el) return;
+              if (el.tagName === 'IMG') {
+                if (el.src !== avatarUrl) el.src = avatarUrl;
+              } else {
+                const current = (el.style && el.style.backgroundImage) ? el.style.backgroundImage.replace(/^url\(["']?|["']?\)$/g, '') : '';
+                // compare en enlevant les url("...") pour éviter des mismatches triviales
+                if (current !== avatarUrl) el.style.backgroundImage = `url("${avatarUrl}")`;
+              }
+            } catch (e) {
+              // ne pas bloquer la boucle pour une erreur sur un élément
+            }
+          });
+        });
+    
+        console.log('Avatar synchronisé depuis API:', avatarUrl);
+        return true;
+      } catch (e) {
+        console.warn('applyAvatarFromApiResponse error', e);
+        return false;
+      }
+    }
+  }
+
+  // call at load and when userUpdated event fires
+  document.addEventListener('DOMContentLoaded', () => {
+    try { syncAvatarFromApi(); } catch(e){ console.warn(e); }
+  });
+  window.addEventListener('ecoride:userUpdated', (ev) => {
+    try { syncAvatarFromApi(); } catch(e){ console.warn(e); }
+  });
 })();
 
 

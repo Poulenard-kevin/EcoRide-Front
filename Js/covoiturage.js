@@ -103,79 +103,59 @@ function renderStars(rating, max = 5) {
 
 // --- Fin utilitaires ---
 
+// 1. Cache global pour éviter de re-télécharger 50 fois la même photo de chauffeur
+window._driverAvatarCache = window._driverAvatarCache || new Map();
+
 function createTrajetCard(trajet) {
-  console.log('[covoiturage] createTrajetCard id=', trajet?.id, 'chauffeur=', trajet?.chauffeur, 'averageRating=', trajet?.chauffeur?.averageRating, 'rating=', trajet?.rating);
   const card = document.createElement('div');
   card.classList.add('result-card');
-  card.dataset.id = trajet.id;
+  card.dataset.id = trajet.id || '';
 
-  const remaining = (typeof trajet.remainingPlaces === 'number') ? trajet.remainingPlaces : 0;
-  const placesText = `${remaining} place${remaining > 1 ? 's' : ''} disponible${remaining > 1 ? 's' : ''}`;
-
-  // avatar
-  let avatarSrc = null;
-  if (trajet.chauffeur?.photo) avatarSrc = resolveAvatarSrc(trajet.chauffeur.photo);
-  try {
-    const currentUser = getCurrentUser();
-    if (currentUser && trajet.chauffeur?.pseudo === currentUser.pseudo) {
-      avatarSrc = getProfileAvatarFromStorage() || avatarSrc;
-    }
-  } catch (e) {
-    console.warn('Erreur lors de la vérification du currentUser', e);
-  }
-  if (!avatarSrc) avatarSrc = getProfileAvatarFromStorage() || '/images/default-avatar.png';
-
-  // type normalisé
-  const raw = trajet?.fuelType || trajet?.type || trajet?.vehicle?.type || '';
-  const typeKey = normalizeTypeKey(raw);
-  const label = labelFromTypeKey(typeKey);
-
-  // Determine driver id (try object id, '@id' IRI, or fallbacks)
-  const driverRaw = trajet.chauffeur || trajet.driver || null;
-  let driverId = '';
-  if (driverRaw) {
-    if (typeof driverRaw === 'object') {
-      driverId = driverRaw.id || (driverRaw['@id'] ? (String(driverRaw['@id']).match(/\/(\d+)$/) || [])[1] : '') || driverRaw.email || driverRaw.pseudo || '';
-    } else if (typeof driverRaw === 'string') {
-      const m = driverRaw.match(/\/(\d+)$/);
-      driverId = m ? m[1] : driverRaw;
-    }
+  // --- Logique Avatar ---
+  // On commence par l'avatar par défaut
+  let avatarSrc = '/images/default-avatar.png';
+  
+  // On récupère l'ID du chauffeur proprement
+  const chauffeurObj = trajet.chauffeur || trajet.driver || null;
+  let chauffeurId = '';
+  if (chauffeurObj && typeof chauffeurObj === 'object') {
+    chauffeurId = chauffeurObj.id || (chauffeurObj['@id'] ? chauffeurObj['@id'].split('/').pop() : '');
   }
 
-  // build rating value safely (may be blank)
-  const ratingValue = trajet.chauffeur?.averageRating ?? trajet.chauffeur?.rating ?? trajet.rating ?? trajet.chauffeurAverageRatingFallback ?? '';
-  const ratingTitle = ratingValue ? `${Number(ratingValue).toFixed(1)} / 5` : 'Pas de note';
+  // Si on a déjà cette photo en cache, on l'utilise tout de suite
+  if (chauffeurId && window._driverAvatarCache.has(String(chauffeurId))) {
+    avatarSrc = window._driverAvatarCache.get(String(chauffeurId));
+  } 
+  // Sinon, si l'API a exceptionnellement fourni la photo, on l'utilise
+  else if (chauffeurObj?.photo || chauffeurObj?.avatar) {
+    avatarSrc = resolveAvatarSrc(chauffeurObj.photo || chauffeurObj.avatar);
+  }
 
-  // set dataset driver id on card (useful for updateUserRatingUI selectors or later DOM updates)
-  if (driverId) card.dataset.driverId = String(driverId);
+  const remaining = trajet.remainingPlaces || 0;
+  const typeKey = (typeof normalizeTypeKey === 'function') ? normalizeTypeKey(trajet.type) : 'unknown';
+  const ratingValue = trajet.chauffeur?.averageRating || 0;
 
   card.innerHTML = `
     <div class="result-header">
-      <p class="date">${capitalizeFirst(formatFullFrDay(trajet.date))}</p>
+      <p class="date">${typeof capitalizeFirst === 'function' ? capitalizeFirst(formatFullFrDay(trajet.date)) : trajet.date}</p>
     </div>
     <div class="result-body">
       <div class="profile-column">
-        <img src="${avatarSrc}" alt="Profil ${trajet.chauffeur?.pseudo || ''}" class="profile-photo" onerror="this.onerror=null;this.src='/images/default-avatar.png'">
+        <img src="${avatarSrc}" class="profile-photo" onerror="this.src='/images/default-avatar.png'">
         <div class="pseudo-rating">
-          <p class="pseudo" ${driverId ? `data-user-id="${driverId}"` : ''}>${trajet.chauffeur?.pseudo || 'Inconnu'}</p>
-          <p class="rating" ${driverId ? `data-driver-id="${driverId}"` : ''} aria-hidden="true" title="${ratingTitle}">
-            ${renderStars(ratingValue)}
+          <p class="pseudo">${trajet.chauffeur?.pseudo || 'Inconnu'}</p>
+          <p class="rating" data-driver-id="${trajet.chauffeur?.id || ''}" data-user-id="${trajet.chauffeur?.id || ''}">
+            ${typeof renderStars === 'function' ? renderStars(ratingValue) : ''}
           </p>
         </div>
         <div class="column">
-          <p class="type type-${typeKey}">${label}</p>
-          <p class="places">${placesText}</p>
+          <p class="type type-${typeKey}">${typeof labelFromTypeKey === 'function' ? labelFromTypeKey(typeKey) : typeKey}</p>
+          <p class="places">${remaining} place${remaining > 1 ? 's' : ''} dispo.</p>
         </div>
       </div>
       <div class="details">
-        <div class="column">
-          <p>${trajet.depart}</p>
-          <p>${trajet.arrivee}</p>
-        </div>
-        <div class="column">
-          <p class="time">${trajet.heureDepart}</p>
-          <p class="time">${trajet.heureArrivee}</p>
-        </div>
+        <div class="column"><p>${trajet.depart}</p><p>${trajet.arrivee}</p></div>
+        <div class="column"><p class="time">${trajet.heureDepart}</p><p class="time">${trajet.heureArrivee}</p></div>
         <div class="column">
           <p class="price">${trajet.prix} crédits</p>
           <button class="detail-btn">Détail</button>
@@ -184,34 +164,31 @@ function createTrajetCard(trajet) {
     </div>
   `;
 
-  // corriger src d'image si besoin
-  const imgEl = card.querySelector('img.profile-photo');
-  if (imgEl) imgEl.src = avatarSrc;
-
-  // bouton détail
-  const btn = card.querySelector('.detail-btn');
-  if (btn) {
-    btn.addEventListener('click', () => {
-      if (!trajet.id) {
-        console.warn('Trajet sans id, impossible d ouvrir le detail', trajet);
-        return;
+  // --- Récupération asynchrone (Comme dans la page détail) ---
+  const imgEl = card.querySelector('.profile-photo');
+  if (imgEl && chauffeurId && avatarSrc.includes('default-avatar.png')) {
+    (async () => {
+      try {
+        // On appelle l'API user (qui marche dans ta page détail)
+        const user = await apiFetch(`/api/users/${chauffeurId}`);
+        const photo = user?.photo || user?.avatar;
+        if (photo) {
+          const finalUrl = resolveAvatarSrc(photo);
+          imgEl.src = finalUrl;
+          // On met en cache pour les autres cartes du même chauffeur
+          window._driverAvatarCache.set(String(chauffeurId), finalUrl);
+        }
+      } catch (err) {
+        // En cas d'erreur (403), on laisse l'avatar par défaut
       }
-
-      // Bloquer l'ouverture si le trajet est démarré
-      if (!isTripActive(trajet)) {
-        // comportement: alerte + redirection possible vers historique
-        alert("Ce trajet a déjà démarré et n'est plus consultable ici.");
-        // option : rediriger vers la page historique
-        // window.location.href = '/user/history';
-        return;
-      }
-
-      console.log('Navigation vers détail trajet id=', trajet.id);
-      const newPath = `/detail/${trajet.id}`;
-      window.history.pushState({}, "", newPath);
-      window.dispatchEvent(new Event("popstate"));
-    });
+    })();
   }
+
+  card.querySelector('.detail-btn').addEventListener('click', () => {
+    const newPath = `/detail/${trajet.id}`;
+    window.history.pushState({}, "", newPath);
+    window.dispatchEvent(new Event("popstate"));
+  });
 
   return card;
 }
@@ -649,7 +626,22 @@ document.addEventListener('pageContentLoaded', async () => {
   // ⏳ Chargement des notes en tâche de fond
   console.log('⏳ Chargement des notes en arrière-plan...');
   await loadAndInjectAveragesForList(trajets);
-  console.log('✅ Notes chargées');
+  console.log("✅ Notes chargées");
+
+  // Suppose que window.userRatings est un objet { "<​id>": average, ... }
+  const ratingEls = document.querySelectorAll('.rating[data-driver-id]');
+  ratingEls.forEach(el => {
+    const id = el.getAttribute('data-driver-id');
+    if (!id) return;
+    const avg = window.userRatings && window.userRatings[id];
+    if (typeof avg !== 'undefined' && avg !== null) {
+      // utiliser ta fonction existante (string id)
+      updateUserRatingUI(String(id), avg);
+    } else {
+      // si tu veux, tu peux aussi déclencher l'event pour que d'autres modules réagissent
+      // window.dispatchEvent(new CustomEvent('ecoride:ratingUpdated', { detail: { userId: id, averageRating: avg } }));
+    }
+  });
 
   // Copie desktop -> offcanvas (au chargement et à l'ouverture de l'offcanvas)
   function copyDesktopToOffcanvas() {

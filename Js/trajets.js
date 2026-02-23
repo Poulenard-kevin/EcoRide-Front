@@ -601,36 +601,117 @@ export async function loadAllUserTrajets(force = false) {
       combined = [...driverEntries, ...passengerEntries];
     }
 
+    // Normaliser mon id (format simple, sans /api/iri)
+    const meId = String(user.id).split('/').filter(Boolean).pop();
+    // Petit helper pour normaliser un id issu d'un objet ou d'une IRI
+    const extractSimpleId = v => {
+      if (!v && v !== 0) return '';
+      const s = String(v);
+      return s.includes('/') ? s.split('/').filter(Boolean).pop() : s;
+    };
+
+    // Si combined est rempli (venant de loadTrajetsFromApi ou fallback),
+    // on supprime toute entrée marquée "passager" qui n'a PAS une réservation
+    // explicitement liée à l'utilisateur connecté.
+    if (Array.isArray(combined) && combined.length) {
+      combined = combined.filter(item => {
+        try {
+          const role = String(item.role || '').toLowerCase();
+          if (role === 'passager' || role === 'passenger') {
+            // Extraire bookings possibles (plusieurs formes selon l'API)
+            const bookingsFromItem = Array.isArray(item.bookings)
+              ? item.bookings
+              : Array.isArray(item.raw?.bookings)
+                ? item.raw.bookings
+                : [];
+
+            // Vérifier si l'une des réservations a pour passager mon id
+            const hasMyBooking = bookingsFromItem.some(b => {
+              const pid = extractSimpleId(
+                b.passenger?.id ?? b.passenger ?? b.passengerIri ?? b.passengerId ?? b['@id'] ?? ''
+              );
+              // si la réservation elle-même a un id, on compare aussi par id de réservation côté serveur
+              const bookingIdNorm = extractSimpleId(b.id ?? b['@id'] ?? b.bookingId ?? '');
+              return pid === meId || bookingIdNorm === meId;
+            });
+
+            // Parfois l'entrée "passager" vient avec bookingId / bookingServerId directement
+            const declaredBookingId = extractSimpleId(item.bookingId ?? item.bookingServerId ?? item.bookingIri ?? '');
+            if (declaredBookingId === meId) return true;
+
+            if (!hasMyBooking) {
+              console.debug(`[loadAllUserTrajets] Filtre : suppression entrée passager non liée à moi (me=${meId})`, {
+                itemId: item.id, serverId: item.serverId, bookingId: item.bookingId, role: item.role
+              });
+              return false; // filtrer cette entrée
+            }
+          }
+        } catch (e) {
+          // en cas d'erreur de parsing, on préfère garder l'élément plutôt que de supprimer quelque chose par erreur
+          console.warn('[loadAllUserTrajets] erreur lors du filtre passager', e);
+          return true;
+        }
+        return true;
+      });
+    }
+
     // helper (utiliser l'extractServerId déjà défini dans le fichier)
     const normIdForCompare = v => {
       if (!v && v !== 0) return '';
       return String(v).includes('/') ? String(v).split('/').filter(Boolean).pop() : String(v);
     };
 
-    // --- INJECTION SÉCURISÉE DU LOCALSTORAGE (VERSION SOLIDE) ---
+    // --- INJECTION SÉCURISÉE DU LOCALSTORAGE (patch) ---
     try {
-      const store = LS.get();
+      const store = (typeof LS !== 'undefined' && typeof LS.get === 'function') ? LS.get() : JSON.parse(localStorage.getItem('eco_trajets_cache') || '[]');
       if (Array.isArray(store) && store.length) {
-        // utiliser extractServerId/normIdForCompare pour UNIFORMISER
         const existingNormIds = new Set((combined || []).map(c =>
           normIdForCompare(c.serverId || c.covoId || c.id || c['@id'] || '')
         ));
+
+        const extractSimpleId = v => {
+          if (!v && v !== 0) return '';
+          const s = String(v);
+          return s.includes('/') ? s.split('/').filter(Boolean).pop() : s;
+        };
 
         for (const s of store) {
           try {
             if (!s) continue;
 
             // normaliser l'id de l'item du store
-            const sid = normIdForCompare(s.serverId || s.covoId || '');
+            const sid = normIdForCompare(s.serverId || s.covoId || s['@id'] || s.id || '');
             if (!sid) continue; // skip si pas d'ID exploitable
 
-            // On n'injecte QUE les passagers (chauffeurs viennent de l'API)
+            // Ne traiter QUE les items passager ici (c'est ce que tu injectes)
             const role = String(s.role || (s.raw && s.raw.role) || '').toLowerCase();
             if (role !== 'passager' && role !== 'passenger') continue;
 
-            // hasData strict (évite chaînes vides)
-            const hasData = !!(s.depart && String(s.depart).trim() !== '') && !!(s.arrivee && String(s.arrivee).trim() !== '');
-            if (!hasData) continue;
+            // sécurité : vérifier que l'item stocké est bien à MOI (meId)
+            let belongsToMe = false;
+
+            // 1) vérifier bookings embarqués (plusieurs formes possibles)
+            const bookingsFromStore = Array.isArray(s.bookings) ? s.bookings :
+                                      Array.isArray(s.raw?.bookings) ? s.raw.bookings : [];
+
+            for (const b of bookingsFromStore) {
+              const passengerIdFromBooking = extractSimpleId(b.passenger?.id ?? b.passenger ?? b.passengerIri ?? b.passengerId ?? b.user?.id ?? '');
+              if (passengerIdFromBooking === meId) { belongsToMe = true; break; }
+
+              const bookingIdNorm = extractSimpleId(b.id ?? b['@id'] ?? b.bookingId ?? '');
+              if (bookingIdNorm && bookingIdNorm === meId) { belongsToMe = true; break; }
+            }
+
+            // 2) vérifier champ de haut niveau sur l'item stocké (bookingId / passengerId / userId)
+            const topBookingId = extractSimpleId(s.bookingId ?? s.bookingServerId ?? s.bookingIri ?? '');
+            const topPassenger = extractSimpleId(s.passengerId ?? s.userId ?? s.passenger?.id ?? s.raw?.passenger?.id ?? '');
+            if (topBookingId === meId || topPassenger === meId) belongsToMe = true;
+
+            // 3) si impossible de prouver l'appartenance -> SKIP (sécurité)
+            if (!belongsToMe) {
+              console.debug('[loadAllUserTrajets] SKIP injection store item non lié à moi', { sid, role, topBookingId, topPassenger });
+              continue;
+            }
 
             // skip si déjà présent dans les données API (même id canonique)
             if (existingNormIds.has(sid)) continue;
@@ -643,6 +724,8 @@ export async function loadAllUserTrajets(force = false) {
               depart: s.depart || s.departureLocation || s.raw?.departureLocation || '',
               arrivee: s.arrivee || s.arrivalLocation || s.raw?.arrivalLocation || '',
               date: s.date || s.departureDate || s.raw?.departureDate || null,
+              prix: s.prix ?? (s.raw?.price ?? 0),
+              bookings: Array.isArray(s.bookings) ? s.bookings : (Array.isArray(s.raw?.bookings) ? s.raw.bookings : []),
               placesReservees: Number(s.placesReservees ?? s.seats ?? s.places ?? 1),
               _injectedFromLocalStorage: true
             };
@@ -817,44 +900,19 @@ export function genId() {
   return 'id_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-const DEFAULT_LOCAL_AVATAR = '/images/default-avatar.png';
+const DEFAULT_LOCAL_AVATAR = window.DEFAULT_LOCAL_AVATAR || '/images/default-avatar.png';
 
 export function resolveAvatarSrc(raw) {
-  if (!raw) return DEFAULT_LOCAL_AVATAR;
-
+  const DEFAULT = DEFAULT_LOCAL_AVATAR;
+  if (!raw) return DEFAULT;
   raw = String(raw).trim();
-  if (!raw) return DEFAULT_LOCAL_AVATAR;
-
-  // données déjà formatées (base64 / data URL)
+  if (!raw) return DEFAULT;
   if (raw.startsWith('data:')) return raw;
-
-  // URLs absolues — on les retourne telles quelles
-  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('//')) return raw;
-
-  // Si c'est un chemin relatif absolu commençant par /uploads (backend)
-  // => prefixer avec API_BASE pour viser le backend sur le port 8000
-  if (raw.startsWith('/uploads')) {
-    return `${API_BASE}${raw}`;
-  }
-
-  // Si c'est /images/... (image de l'UI front, p.ex. default-avatar)
-  // on retourne tel quel (servi par le serveur front)
-  if (raw.startsWith('/images')) {
-    return raw;
-  }
-
-  // Si c'est un chemin commençant par / (autre chemin backend), prefixer backend
-  if (raw.startsWith('/')) {
-    return `${API_BASE}${raw}`;
-  }
-
-  // Si c'est juste un nom de fichier ou 'uploads/avatars/xxx.jpg'
-  // on suppose qu'il s'agit d'un upload côté backend et on construit l'URL complète
-  if (raw.startsWith('uploads/')) {
-    return `${API_BASE}/${raw}`;
-  }
-
-  // dernier recours — considérer comme un fichier dans uploads/avatars
+  if (/^https?:\/\//i.test(raw) || raw.startsWith('//')) return raw;
+  if (raw.startsWith('/uploads')) return `${API_BASE}${raw}`;
+  if (raw.startsWith('/images')) return raw;
+  if (raw.startsWith('/')) return `${API_BASE}${raw}`;
+  if (raw.startsWith('uploads/')) return `${API_BASE}/${raw}`;
   return `${API_BASE}/uploads/avatars/${raw}`;
 }
 
@@ -3720,30 +3778,86 @@ export function renderTrajetsInProgress() {
 
   // quick: si le trajet n'a pas de bookings mais l'ancien localStore a une réservation correspondante, 
   // fusionne-la pour affichage immédiat
-  // ✅ Injection LS uniquement si parent carpool connu
+  // === Injection sécurisée depuis localStorage (uniquement si item appartient au user courant) ===
   try {
     const store = LS.get();
     if (Array.isArray(store) && store.length) {
       for (const s of store) {
-        const sid = extractServerId(s.serverId || s.covoId);
-        if (!sid) continue; // ignore booking standalone
+        try {
+          const sid = extractServerId(s.serverId || s.covoId || s.id || '');
+          if (!sid) continue; // ignore si pas d'ID parent
 
-        if (!deDupedList.some(d =>
-          extractServerId(d.serverId || d.covoId || d.id) === sid
-        )) {
-          deDupedList.push(
-            Object.assign({}, s, {
-              _resolvedRole: 'passager',
-              _enriched: true
-            })
-          );
+          // Ne pas injecter si déjà présent
+          if (deDupedList.some(d => extractServerId(d.serverId || d.covoId || d.id) === sid)) continue;
+
+          // Sécurité : n'injecter QUE les items passager qui appartiennent réellement à l'utilisateur courant
+          const role = String(s.role || '').toLowerCase();
+          if (role !== 'passager' && role !== 'passenger') continue;
+
+          // Récupère l'id utilisateur courant (numérique, sans /api/...)
+          const meIdLocal = meId || (typeof getCurrentUserIdStr === 'function' ? getCurrentUserIdStr() : null);
+
+          // Helper local pour extraire id numérique simple
+          const ensureSimple = v => {
+            if (!v && v !== 0) return '';
+            const str = String(v);
+            return str.includes('/') ? str.split('/').filter(Boolean).pop() : str;
+          };
+
+          let belongsToMe = false;
+
+          // 1) vérifier champ top-level (bookingId, passengerId, userId)
+          const topPassenger = ensureSimple(s.passengerId ?? s.userId ?? s.bookingOwnerId ?? s.bookingServerId ?? '');
+          if (topPassenger && meIdLocal && topPassenger === String(meIdLocal)) belongsToMe = true;
+
+          // 2) vérifier bookings embarqués
+          const bookingsFromStore = Array.isArray(s.bookings) ? s.bookings : (Array.isArray(s.raw?.bookings) ? s.raw.bookings : []);
+          for (const b of bookingsFromStore) {
+            const pid = ensureSimple(b.passenger?.id ?? b.user?.id ?? b.passenger ?? b.user ?? b.passengerIri ?? b.userIri ?? '');
+            if (pid && meIdLocal && String(pid) === String(meIdLocal)) { belongsToMe = true; break; }
+            // aussi comparer id réservation si tu as enregistré bookingId côté local
+            const bookingIdNorm = ensureSimple(b.id ?? b['@id'] ?? b.bookingId ?? '');
+            if (bookingIdNorm && meIdLocal && String(bookingIdNorm) === String(meIdLocal)) { belongsToMe = true; break; }
+          }
+
+          if (!belongsToMe) {
+            // Skip : item LS non lié à l'utilisateur courant
+            console.debug('[renderTrajetsInProgress] SKIP store item (not mine)', { sid });
+            continue;
+          }
+
+          // Enfin on injecte l'item (marqué enriched pour l'affichage)
+          deDupedList.push(Object.assign({}, s, { _resolvedRole: 'passager', _enriched: true }));
+        } catch (e) {
+          console.warn('[renderTrajetsInProgress] inject store item failure', e);
         }
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn('[renderTrajetsInProgress] reading LS failed', e);
+  }
+
+  // =========================================================================
+  // FILTRE DE SÉCURITÉ RADICAL (BANNED IDS)
+  // On retire les IDs fantômes avant toute autre opération
+  // =========================================================================
+  const BANNED_IDS = ['116', 'booking-116', '/api/bookings/116']; 
+
+  const cleanedList = deDupedList.filter(t => {
+    const idStr = String(t.id || t.serverId || t.bookingId || t.covoId || t._myBookingId || '');
+    const isBanned = BANNED_IDS.some(banned => idStr.includes(banned));
+    if (isBanned) {
+      console.warn('[SECURITY] Carte bannie détectée et supprimée du rendu:', idStr);
+      return false;
+    }
+    return true;
+  });
+
+  // On remplace la liste par la liste nettoyée
+  const finalDisplayList = cleanedList; 
 
   // --- Normaliser _myBookingId pour les passagers AVANT le rendu/filtrage ---
-  deDupedList.forEach(t => {
+  finalDisplayList.forEach(t => {
     if (t._resolvedRole === 'passager' && !t._myBookingId) {
       // on essaie différentes sources possibles pour l'ID de réservation
       t._myBookingId = t.bookingId || t.id || (t.raw && t.raw.id) || null;
@@ -3755,7 +3869,7 @@ export function renderTrajetsInProgress() {
   // ----------------------
   // Filtrage : on retire les trajets qui doivent être en historique
   // ----------------------
-  const enCours = deDupedList.filter(t => {
+  const enCours = finalDisplayList.filter(t => {
     // Si la fonction isTrajetHistorique dit que c'est du passé, on l'enlève de "En cours"
     if (isTrajetHistorique(t)) {
         return false;
@@ -3898,62 +4012,61 @@ export function renderTrajetsInProgress() {
   // NOTE: on n'exclut plus les 'finished' pour le passager — il les verra et pourra valider
   // ----------------------
   const filteredEnCours = enCours.filter(t => {
+    const meId = getCurrentUserIdStr();
+    if (!meId) return false;
+
     const roleNorm = roleForCurrentUser(t);
     const statusNorm = normalizeStatus(t.status ?? (t.raw ? t.raw.status : ''));
-    const meId = getCurrentUserIdStr();
-
+  
+    // 1. Sécurité de base : exclure les annulés/archivés
     if (['archive', 'annule', 'archived', 'cancelled'].includes(statusNorm)) return false;
-
-    // --- LOGIQUE CHAUFFEUR ---
-    if (roleNorm === 'chauffeur') {
-      if (['finished', 'termine', 'completed', 'done'].includes(statusNorm)) {
-        // On ne le garde que si des passagers doivent encore valider
-        if (typeof allPassengersValidated === 'function') {
-          return !allPassengersValidated(t); 
-        }
-        return true; 
+  
+    let isMine = false;
+    let myBooking = null;
+  
+    // 2. Vérification Chauffeur (avec protection contre le null)
+    try {
+      const driver = t.driver ?? t.chauffeur ?? t.raw?.driver ?? t.raw?.chauffeur ?? null;
+      if (driver) {
+        // On utilise ?. pour éviter le crash si driver est null ou n'a pas d'id
+        const did = (typeof driver === 'object') 
+          ? String(driver.id ?? driver['@id'] ?? '').split('/').pop() 
+          : String(driver).split('/').pop();
+        
+        if (did && did === meId) isMine = true;
       }
-      return true; // actif / demarre
-    }
-
-    // --- LOGIQUE PASSAGER ---
-    if (roleNorm === 'passager') {
+    } catch (e) { console.warn("Erreur check chauffeur sur trajet", t.id, e); }
+  
+    // 3. Vérification Passager via bookings[] (Source fiable)
+    try {
       const bookings = Array.isArray(t.bookings) ? t.bookings : (Array.isArray(t.raw?.bookings) ? t.raw.bookings : []);
-
-      const myBooking = bookings.find(b => {
+      myBooking = bookings.find(b => {
         const p = b.passenger ?? b.user ?? b.passengerIri ?? b.userIri ?? null;
         if (!p) return false;
-        const pid = (typeof p === 'object') ? (String(p.id ?? p['@id'] ?? '').split('/').pop()) : String(p).split('/').pop();
+        const pid = (typeof p === 'object') ? String(p.id ?? p['@id'] ?? '').split('/').pop() : String(p).split('/').pop();
         return pid === meId;
       });
+      if (myBooking) isMine = true;
+    } catch (e) { console.warn("Erreur check passager sur trajet", t.id, e); }
 
-      // ✅ Fallback : si myBooking introuvable dans bookings[], 
-      // vérifier si l'entrée a quand même un bookingId (passager après dedupe)
-      if (!myBooking) {
-        const hasBookingId = !!(t.bookingId || t.bookingServerId || t._myBookingId);
-        if (!hasBookingId) return false;
-        // Pas encore validé → on garde la carte visible
-        const bStatus = normalizeStatus(t.status || '');
-        const hasPassengerValidated = ['validated', 'valide', 'confirmed'].includes(bStatus);
-        if (hasPassengerValidated) return false;
-        return true;
+    // --- SÉCURITÉ ABSOLUE : Si ce n'est pas à moi, on s'arrête là ---
+    if (!isMine) return false;
+  
+    // 4. Logique d'affichage finale
+    if (roleNorm === 'chauffeur') {
+      if (['finished', 'termine', 'completed', 'done'].includes(statusNorm)) {
+        return (typeof allPassengersValidated === 'function') ? !allPassengersValidated(t) : true;
       }
-
-      const myBookingId = extractId(myBooking.id || myBooking['@id']);
-      t._myBookingId = myBookingId;
-
-      const bStatus = normalizeStatus(myBooking.status || '');
-
-      // On cache la carte UNIQUEMENT si le passager a déjà validé (confirmé)
-      // Mais on la GARDE si le trajet est 'termine' par le chauffeur pour permettre au passager de cliquer sur "Valider"
-      const hasPassengerValidated = ['validated', 'valide', 'confirmed'].includes(bStatus);
-
-      if (hasPassengerValidated) return false;
-
-      // Si le trajet est terminé mais pas encore validé par moi, je DOIS voir la carte pour pouvoir valider
-      return true;
+      return true; // Affiche "Démarrer", "Modifier", etc.
     }
-
+  
+    if (roleNorm === 'passager' && myBooking) {
+      t._myBookingId = extractId(myBooking.id || myBooking['@id']);
+      const bStatus = normalizeStatus(myBooking.status || '');
+      // On cache si déjà validé, sinon on affiche
+      return !(['validated', 'valide', 'confirmed'].includes(bStatus));
+    }
+  
     return false;
   });
 

@@ -1,6 +1,4 @@
-// ===========================================================
-// Espace Utilisateur - Véhicules (version stable)
-// ===========================================================
+//user-space.js : gestion de l’espace utilisateur (profil, véhicules, trajets, historique)
 
 // -------------------- Variables globales --------------------
 let editingVehicleIndex = null;
@@ -1374,48 +1372,50 @@ function populateVehiclesSelect() {
 
 // === Apply stored avatar globally (applique l'avatar sauvegardé au chargement et sur injection SPA) ===
 (function applyStoredAvatarGlobal() {
-  const KEY = 'ecoride.profileAvatar';
-  let parsed;
+  const KEY_PROFILE = 'ecoride.profileAvatar';
+  const KEY_USER = 'ecoride_user';
+  let dataSrc = null;
+
+  // 1) priority : saved dataURL preview
   try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return;
-    parsed = JSON.parse(raw);
-    if (!parsed || !parsed.dataURL) return;
-  } catch (e) {
-    console.warn('applyStoredAvatarGlobal parse error', e);
-    return;
-  }
-  const dataURL = parsed.dataURL;
-
-  // Appliquer immédiatement aux emplacements connus
-  document.querySelectorAll('[data-ecoride-avatar], #headerAvatar, .header-avatar').forEach(img => {
-    if (img && img.tagName === 'IMG') img.src = dataURL;
-  });
-
-  // Appliquer au preview du profil si déjà présent
-  const preview = document.querySelector('#profileAvatarPreview');
-  if (preview && preview.tagName === 'IMG') preview.src = dataURL;
-
-  // Si le module expose une API pour recharger l'UI du profile, l'appeler
-  try {
-    if (window.__ecoride_profilePhoto && typeof window.__ecoride_profilePhoto.load === 'function') {
-      window.__ecoride_profilePhoto.load();
-    } else if (typeof window.initProfilePhotoForm === 'function') {
-      // initProfilePhotoForm peut être appelé de manière sûre (idempotent)
-      try { window.initProfilePhotoForm(document); } catch (err) { /* ignore */ }
+    const raw = localStorage.getItem(KEY_PROFILE);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.dataURL) dataSrc = parsed.dataURL;
     }
   } catch (e) { /* ignore */ }
 
-  // Observer le DOM pour appliquer l'avatar si la form est injectée plus tard (SPA)
+  // 2) fallback : ecoride_user.avatar | photo
+  if (!dataSrc) {
+    try {
+      const rawUser = localStorage.getItem(KEY_USER);
+      if (rawUser) {
+        const user = JSON.parse(rawUser);
+        const avatar = user?.avatar || user?.photo || null;
+        if (avatar) dataSrc = (typeof resolveAvatarSrc === 'function') ? resolveAvatarSrc(avatar) : avatar;
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  if (!dataSrc) return;
+
+  // Appliquer aux emplacements connus
+  document.querySelectorAll('[data-ecoride-avatar], #headerAvatar, .header-avatar, img.profile-photo, #detail-photo').forEach(img => {
+    if (img && img.tagName === 'IMG') img.src = dataSrc;
+  });
+
+  // preview
+  const preview = document.querySelector('#profileAvatarPreview');
+  if (preview && preview.tagName === 'IMG') preview.src = dataSrc;
+
+  // dispatch event (utile pour modules qui écoutent)
+  window.dispatchEvent(new CustomEvent('ecoride:profileAvatarApplied', { detail: { src: dataSrc } }));
+
+  // observer DOM pour appliquer plus tard si injection SPA
   const mo = new MutationObserver((mutations, obs) => {
     const p = document.querySelector('#profileAvatarPreview');
     if (p) {
-      p.src = dataURL;
-      try {
-        if (window.__ecoride_profilePhoto && typeof window.__ecoride_profilePhoto.load === 'function') {
-          window.__ecoride_profilePhoto.load();
-        }
-      } catch (e) {}
+      p.src = dataSrc;
       obs.disconnect();
     }
   });

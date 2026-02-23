@@ -120,6 +120,7 @@ function handleAvatarUpdateEvent(ev) {
 if (!window.__ecoride_avatar_listeners_installed) {
   window.addEventListener('userUpdated', handleAvatarUpdateEvent);
   window.addEventListener('ecoride:userUpdated', handleAvatarUpdateEvent);
+  window.addEventListener('ecoride:profileAvatarChanged', handleAvatarUpdateEvent); 
   window.__ecoride_avatar_listeners_installed = true;
 }
 
@@ -913,31 +914,26 @@ document.addEventListener("pageContentLoaded", async () => {
 
   const photoElement = document.getElementById("detail-photo");
   if (photoElement) {
-    let computedSrc = null;
+    // Priorité : avatar (API) -> photo (API) -> avatar/photo du profil local -> fallback
+    let computedSrc = trajet.chauffeur?.avatar || trajet.chauffeur?.photo || null;
 
-    // Priorité 1 : photo explicite du chauffeur
-    if (trajet.chauffeur?.photo) {
-      computedSrc = resolveAvatarSrc(trajet.chauffeur.photo);
-    }
-
-    // Priorité 2 : si le chauffeur est l'utilisateur actuel, utiliser l'avatar du profil
     try {
       const me = JSON.parse(localStorage.getItem('ecoride_user') || 'null');
-      if (me && me.pseudo && trajet.chauffeur?.pseudo && me.pseudo === trajet.chauffeur.pseudo) {
-        computedSrc = getProfileAvatarFromStorage() || computedSrc;
+      if (me && ( (trajet.chauffeur?.pseudo && me.pseudo && me.pseudo === trajet.chauffeur.pseudo)
+               || (trajet.chauffeur?.id && me.id && String(me.id) === String(trajet.chauffeur.id)) )) {
+        computedSrc = me.avatar || me.photo || computedSrc;
       }
     } catch (e) {
       console.warn('Erreur lors de la vérification du currentUser', e);
     }
 
-    // Priorité 3 : fallback global
     if (!computedSrc) {
-      computedSrc = getProfileAvatarFromStorage();
+      computedSrc = getProfileAvatarFromStorage() || DEFAULT_AVATAR || '/images/default-avatar.png';
     }
 
     console.log('Avatar src utilisé:', computedSrc);
-    photoElement.src = computedSrc || DEFAULT_AVATAR;
-    photoElement.onerror = () => { photoElement.onerror = null; photoElement.src = DEFAULT_AVATAR; };
+    photoElement.src = resolveAvatarSrc(computedSrc);
+    photoElement.onerror = () => { photoElement.onerror = null; photoElement.src = DEFAULT_AVATAR || '/images/default-avatar.png'; };
   }
 
   const pseudoElement = document.getElementById("detail-pseudo");
@@ -1685,6 +1681,34 @@ async function loadDriverReviews(driverId, containerEl = document.getElementById
 
     // Mettre à jour l'affichage de la note du conducteur
     updateUserRatingUI(String(driverId), average);
+
+    // === PATCH: mettre à jour aussi la page DÉTAIL si elle est affichée ===
+    try {
+      // Sélecteur étoiles (id utilisé dans ton code)
+      const detailStarsEl = document.getElementById('detail-rating');
+      if (detailStarsEl) {
+        const avgNum = Number(average) || 0;
+        const fullStars = Math.max(0, Math.min(5, Math.round(avgNum)));
+        detailStarsEl.textContent = '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars);
+      }
+
+      // Si tu as un élément texte pour la valeur numérique (optionnel)
+      const detailRatingValueEl = document.querySelector('.rating-value') || document.getElementById('detail-rating-value');
+      if (detailRatingValueEl) {
+        detailRatingValueEl.textContent = `${Number(average || 0).toFixed(1)}/5`;
+      }
+
+      // Mettre à jour l'objet trajet en mémoire pour que d'autres render reutilisent la valeur
+      if (window.__debug_trajet && window.__debug_trajet.chauffeur) {
+        window.__debug_trajet.chauffeur.averageRating = average;
+      }
+      if (trajet && trajet.chauffeur) {
+        trajet.chauffeur.averageRating = average;
+        window.__debug_trajet = trajet;
+      }
+    } catch (err) {
+      console.warn('Erreur mise à jour UI détail note', err);
+    }
 
     // 5) Afficher dans les slots #detail-review1 .. #detail-review3
     for (let i = 0; i < 3; i++) {

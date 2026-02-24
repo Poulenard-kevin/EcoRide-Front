@@ -435,38 +435,39 @@ document.addEventListener('pageContentLoaded', async () => {
     const { checkedTypes, prixMax, dureeMax, noteMini } = getDesktopFilters();
   
     const filtered = trajets.filter(trajet => {
+      // --- Extraction et Normalisation ---
+      const tDepart = normalizeStr(trajet.depart || '');
+      const tArrivee = normalizeStr(trajet.arrivee || '');
+      const tDate = (trajet.date || '').trim();
+      const tHeure = normalizeTimeToMinutes(trajet.heureDepart);
+      const tType = normalizeTypeKey(trajet.type || '');
+      const tPlaces = trajet.remainingPlaces ?? 0;
+      const tPrix = Number(trajet.prix) || 0;
+      const tDuree = Number(trajet.duree) || 0;
+      const tNote = trajet.chauffeur?.averageRating || 0;
+    
+      // --- Logique de filtrage SOUPLE (si vide = OK) ---
       
-      // --- Extraction des données du trajet ---
-      const tDepart = normalizeStr(trajet.depart || trajet.departure || '');
-      const tArrivee = normalizeStr(trajet.arrivee || trajet.arrival || '');
-      const tDate = (trajet.date || trajet.departureDate || '').trim();
-      const tHeure = normalizeTimeToMinutes(trajet.heureDepart || trajet.departureTime);
-      const tType = normalizeTypeKey(trajet.type || trajet.fuelType || trajet.vehicle?.type || '');
-  
-      const tPlaces = (typeof trajet.remainingPlaces === 'number')
-        ? trajet.remainingPlaces
-        : Number(trajet.places ?? trajet.capacity ?? trajet.vehicle?.places ?? trajet.car?.places) || 0;
-  
-      // --- Filtres de recherche ---
+      // Recherche principale
       const departOk = !iDepart || tDepart.includes(iDepart);
       const arriveeOk = !iArrivee || tArrivee.includes(iArrivee);
       const dateOk = !iDate || tDate === iDate;
       const heureOk = !iHeure || (tHeure !== null && tHeure >= iHeure);
-      const placesOk = iPassagers === 0 || tPlaces >= iPassagers;
+      const placesOk = tPlaces >= iPassagers;
       const typeRechercheOk = !iType || iType === 'non-specifie' || tType === iType;
-  
-  
-      // --- Filtres latéraux ---
+    
+      // Filtres latéraux (Checkboxes & Sliders)
+      // Si aucune case n'est cochée, on considère que l'utilisateur ne veut RIEN voir (ou tout voir, selon ta préférence)
+      // Ici : on vérifie si le type du trajet est dans la liste des types COCHÉS
       const typeFilterOk = (checkedTypes.length === 0) || checkedTypes.includes(tType);
-      const prixOk = (typeof trajet.prix === 'number' ? trajet.prix : Number(trajet.prix || Infinity)) <= prixMax;
-      const dureeOk = (typeof trajet.duree === 'number' ? trajet.duree : Infinity) <= dureeMax;
-      const noteOk = (typeof trajet.rating === 'number' ? trajet.rating : (trajet.chauffeur?.averageRating || 0)) >= noteMini;
-  
-      const accept = departOk && arriveeOk && dateOk && heureOk && placesOk && typeRechercheOk &&
-        typeFilterOk && prixOk && dureeOk && noteOk;
-  
-      console.log('  🎯 RÉSULTAT:', accept ? '✅ ACCEPTÉ' : '❌ REJETÉ');
-  
+      
+      const prixOk = tPrix <= prixMax;
+      const dureeOk = tDuree <= dureeMax;
+      const noteOk = tNote >= noteMini;
+    
+      const accept = departOk && arriveeOk && dateOk && heureOk && placesOk && 
+                     typeRechercheOk && typeFilterOk && prixOk && dureeOk && noteOk;
+    
       return accept;
     });
   
@@ -477,7 +478,7 @@ document.addEventListener('pageContentLoaded', async () => {
     hideLoader();
   }
 
-  // 1. Récupérer les éléments DOM immédiatement
+  // 1. Récupérer les éléments DOM immédiatement (MOVED BEFORE initial search)
   const inputDepart = document.getElementById('inputDepartCovoiturage');
   const inputArrivee = document.getElementById('inputArriveeCovoiturage');
   const inputDate = document.getElementById('date-depart-input');
@@ -485,12 +486,42 @@ document.addEventListener('pageContentLoaded', async () => {
   const inputPassagers = document.getElementById('nombre-passagers-input');
   const selectType = document.getElementById('type-trajet-select');
 
-  // 2. Récupérer les paramètres URL
+  function debounceWithFlush(fn, wait = 160) {
+    let t = null;
+    let lastArgs = null;
+    const wrapper = function(...args) {
+      lastArgs = args;
+      clearTimeout(t);
+      t = setTimeout(() => {
+        t = null;
+        lastArgs = null;
+        try { fn.apply(this, args); } catch (e) { console.error('[covoiturage] safeFilter error', e); displayTrajets(trajets); }
+      }, wait);
+    };
+    wrapper.flush = function() {
+      if (t) {
+        clearTimeout(t);
+        t = null;
+        try { fn.apply(this, lastArgs || []); } catch (e) { console.error('[covoiturage] safeFilter flush error', e); displayTrajets(trajets); }
+        lastArgs = null;
+      } else {
+        // nothing queued, run immediately
+        try { fn(); } catch (e) { console.error('[covoiturage] safeFilter immediate error', e); displayTrajets(trajets); }
+      }
+    };
+    return wrapper;
+  }
+
+  const safeFilter = debounceWithFlush(() => {
+    filterBySearchAndFilters();
+  }, 160);
+
+  // 2. Récupérer les paramètres URL (inchangé)
   const params = getQueryParams();
   const cameFromHome = params.from === 'home';
   const hasSearchParams = params.depart || params.arrivee;
 
-  // 3. Remplir les inputs TOUT DE SUITE
+  // 3. Remplir les inputs TOUT DE SUITE (inchangé)
   if (hasSearchParams) {
     if (params.depart && inputDepart) {
       inputDepart.value = decodeURIComponent(params.depart);
@@ -505,7 +536,8 @@ document.addEventListener('pageContentLoaded', async () => {
   // 4. Lancer la recherche SANS ATTENDRE les notes
   if (cameFromHome && hasSearchParams) {
     console.log('🚀 Recherche automatique instantanée');
-    filterBySearchAndFilters();
+    // utilise safeFilter (débounce + try/catch)
+    safeFilter();
   } else {
     displayTrajets(trajets);
   }
@@ -686,22 +718,26 @@ document.addEventListener('pageContentLoaded', async () => {
     });
   }
 
-  // Quand on modifie un filtre desktop, applique directement le filtre (sans toucher à offcanvas)
-  document.querySelectorAll('.filters input, .filters select').forEach(el => {
-    el.addEventListener('change', () => {
-      filterBySearchAndFilters();
-    });
+  // binding plus permissif : écoute 'input' pour les champs textes/number et 'change' pour les selects,
+  // mais route tout vers safeFilter (debounced)
+  document.querySelectorAll('.filters input').forEach(el => {
+    // pour les types texte / number / range : input
+    el.addEventListener('input', safeFilter, { passive: true });
+    // pour les checkboxes on veut réaction instantanée (click-change), aussi OK
+    el.addEventListener('change', safeFilter, { passive: true });
+  });
+  document.querySelectorAll('.filters select').forEach(el => {
+    el.addEventListener('change', safeFilter, { passive: true });
   });
 
   // Bouton Appliquer offcanvas : copie offcanvas -> desktop, applique filtre, ferme offcanvas
   document.querySelectorAll('.apply-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const isOffcanvasShown = offcanvasEl.classList.contains('show'); // Vérifie si offcanvas est ouvert
-
+      const isOffcanvasShown = offcanvasEl.classList.contains('show');
       if (isOffcanvasShown) {
         copyOffcanvasToDesktop();
       }
-      filterBySearchAndFilters();
+      safeFilter(); // debounce + try/catch
       const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvasEl);
       if (offcanvasInstance) offcanvasInstance.hide();
     });
@@ -722,7 +758,7 @@ document.addEventListener('pageContentLoaded', async () => {
       document.getElementById('duree-max-offcanvas').value = '';
       document.getElementById('note-mini-offcanvas').value = '1';
 
-      filterBySearchAndFilters();
+      filterBySearchAndFilters(); 
       const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvasEl);
       if (offcanvasInstance) offcanvasInstance.hide();
     });
@@ -745,8 +781,9 @@ document.addEventListener('pageContentLoaded', async () => {
   // Bouton Recherche lance la recherche combinée
   const btnReserver = document.querySelector('.search-btn.reserve-btn');
   if (btnReserver) {
-    btnReserver.addEventListener('click', () => {
-      filterBySearchAndFilters();
+    btnReserver.addEventListener('click', (ev) => {
+      if (ev && ev.preventDefault) ev.preventDefault();
+      safeFilter();
     });
   }
 
@@ -769,10 +806,10 @@ document.addEventListener('pageContentLoaded', async () => {
         console.log('[DEBUG] Recherche button clicked (selector:', sel, ')', ev);
         // Empêche le submit si le bouton est dans un <form>
         if (ev && ev.preventDefault) ev.preventDefault();
-        filterBySearchAndFilters();
+        safeFilter();
       });
       bound = true;
-      console.log('[DEBUG] Bound filterBySearchAndFilters to', sel);
+      console.log('[DEBUG] Bound safeFilter to', sel);
     }
   }
 
@@ -781,9 +818,8 @@ document.addEventListener('pageContentLoaded', async () => {
     const btnText = Array.from(document.querySelectorAll('button')).find(b => b.textContent && b.textContent.trim().toLowerCase().includes('recherche'));
     if (btnText) {
       btnText.addEventListener('click', (ev) => {
-        console.log('[DEBUG] Recherche button clicked (fallback by text)');
         ev.preventDefault();
-        filterBySearchAndFilters();
+        safeFilter();
       });
       console.log('[DEBUG] Bound filterBySearchAndFilters to button found by text "Recherche".');
       bound = true;
@@ -801,7 +837,7 @@ document.addEventListener('pageContentLoaded', async () => {
       if (submitBtnText.includes('recherche') || submitBtnText.includes('chercher')) {
         console.log('[DEBUG] form submit intercepte par texte du submiter:', submitBtnText);
         ev.preventDefault();
-        filterBySearchAndFilters();
+        safeFilter();
       }
     });
   });
@@ -854,14 +890,9 @@ document.addEventListener('pageContentLoaded', async () => {
       const existingCard = document.querySelector(`.result-card[data-id="${id}"]`);
     
       if (idx === -1) {
-        // si la card existe et que le trajet est désormais démarré -> la supprimer
-        const temp = { ...(d.updated) }; // normaliser pour !isTripActive
-        if (!isTripActive(temp)) {
-          if (existingCard) existingCard.remove();
-          window.dispatchEvent(new CustomEvent('ecoride:carpoolRemovedLocal', { detail: { id } }));
-          filterBySearchAndFilters();
-        }
-        return;
+        if (existingCard) existingCard.remove();
+        window.dispatchEvent(new CustomEvent('ecoride:carpoolRemovedLocal', { detail: { id } }));
+        safeFilter();
       }
     
       // Merge léger (préserve champs calculés déjà présents)
@@ -897,7 +928,7 @@ document.addEventListener('pageContentLoaded', async () => {
         // notifier éventuellement d'autres modules
         window.dispatchEvent(new CustomEvent('ecoride:carpoolRemovedLocal', { detail: { id } }));
         // rafraîchir l'affichage
-        filterBySearchAndFilters();
+        safeFilter();
         return; // on a déjà traité la suppression
       }
     

@@ -75,7 +75,9 @@ function getProfileAboutFromStorage() {
 
 
 // update DOM pour le texte "À propos"
-function updateDriverAboutDom() {
+// Ne met le profil local que si l'utilisateur connecté est le conducteur du trajet affiché.
+// Si trajetParam n'est pas fourni elle tente d'utiliser window.__debug_trajet ou la variable trajet globale.
+function updateDriverAboutDom(trajetParam) {
   const el = ensureAboutEl();
   if (!el) return;
 
@@ -88,11 +90,37 @@ function updateDriverAboutDom() {
     return;
   }
 
-  const about = getProfileAboutFromStorage();
-  const output = about && about.trim() ? about.trim() : NO_DESCRIPTION_MSG;
-  el.textContent = output;
-  if (output === NO_DESCRIPTION_MSG) el.classList.add('text-muted');
-  else el.classList.remove('text-muted');
+  // Résoudre le trajet à vérifier : priorité param, puis debug global, puis variable locale
+  const t = trajetParam || window.__debug_trajet || (typeof trajet !== 'undefined' ? trajet : null);
+
+  // Si on ne connaît pas le trajet affiché, on ne met le profil local QUE si l'utilisateur est explicitement sur sa page profil.
+  // Par sécurité, si pas de trajet, on applique le comportement legacy (optionnel).
+  if (!t) {
+    const aboutLegacy = getProfileAboutFromStorage ? getProfileAboutFromStorage() : null;
+    const outputLegacy = (aboutLegacy && String(aboutLegacy).trim()) ? String(aboutLegacy).trim() : NO_DESCRIPTION_MSG;
+    el.textContent = outputLegacy;
+    if (outputLegacy === NO_DESCRIPTION_MSG) el.classList.add('text-muted');
+    else el.classList.remove('text-muted');
+    return;
+  }
+
+  // Si l'utilisateur connecté EST le conducteur du trajet affiché : autoriser l'affichage du profil local.
+  // Sinon : ne rien écrire (laisser ce que renderDriverAbout a éventuellement écrit).
+  try {
+    if (isCurrentUserDriver(t)) {
+      const about = getProfileAboutFromStorage ? getProfileAboutFromStorage() : null;
+      const output = about && about.trim() ? about.trim() : NO_DESCRIPTION_MSG;
+      el.textContent = output;
+      if (output === NO_DESCRIPTION_MSG) el.classList.add('text-muted'); else el.classList.remove('text-muted');
+      console.log('updateDriverAboutDom: affichage profile local car current user est conducteur du trajet');
+    } else {
+      console.log('updateDriverAboutDom: utilisateur connecté n\'est pas le conducteur -> aucune écriture');
+      // Ne rien faire : soit renderDriverAbout a déjà écrit le "À propos" du chauffeur,
+      // soit il n'y a rien à afficher (dans ce cas on garde l'état courant).
+    }
+  } catch (err) {
+    console.warn('updateDriverAboutDom error', err);
+  }
 }
 
 if (!window.__ecoride_about_listeners_installed) {
@@ -1081,76 +1109,71 @@ document.addEventListener("pageContentLoaded", async () => {
   function renderDriverAbout(trajetParam) {
     const NO_DESCRIPTION_MSG = 'Aucune description fournie.';
 
-    function looksLikeARoleString(s) {
-      if (!s || typeof s !== 'string') return false;
-      const norm = s.trim().toLowerCase();
-      return ['chauffeur','passager','driver','passenger','both','les deux'].includes(norm)
-        || (/^[a-z]{1,20}$/i.test(norm));
-    }
+    // 1. CETTE FONCTION EST LA CLÉ : Elle extrait le "À propos" du chauffeur du trajet
+    function getDriverAboutFromTrajet(t) {
+      if (!t) return null;
+    
+      // On récupère l'objet chauffeur
+      const chauffeur = t.chauffeur || t.driver;
+      if (!chauffeur) return null;
 
-    function getDriverAboutFromTrajet(pTrajet) {
-      try {
-        const drv = pTrajet ? (pTrajet.chauffeur || pTrajet.driver || null) : null;
-        if (!drv) return null;
-        const fields = ['about','bio','description','text'];
-        for (const f of fields) {
-          if (typeof drv[f] === 'string' && drv[f].trim()) return drv[f].trim();
+      console.log("DEBUG Données chauffeur reçues pour ce trajet:", chauffeur);
+    
+      // Liste exhaustive des champs où peut se trouver la description
+      const fields = [
+        'about', 
+        'bio', 
+        'description', 
+        'text', 
+        'comment', 
+        'presentation',
+        'profilDescription'
+      ];
+
+      for (const field of fields) {
+        if (chauffeur[field] && String(chauffeur[field]).trim().length > 0) {
+          return String(chauffeur[field]).trim();
         }
-        if (drv.role && typeof drv.role === 'object') {
-          if (typeof drv.role.description === 'string' && drv.role.description.trim()) return drv.role.description.trim();
-          if (typeof drv.role.text === 'string' && drv.role.text.trim()) return drv.role.text.trim();
-        }
-        if (typeof drv.role === 'string' && drv.role.trim().length > 30 && !looksLikeARoleString(drv.role)) {
-          return drv.role.trim();
-        }
-        return null;
-      } catch (e) {
-        console.warn('getDriverAboutFromTrajet error', e);
-        return null;
       }
+      
+      // Si on ne trouve rien dans le chauffeur, on regarde si le message est 
+      // directement à la racine du trajet (certaines API font ça)
+      if (t.comment && String(t.comment).trim().length > 0) return t.comment.trim();
+      if (t.description && String(t.description).trim().length > 0) return t.description.trim();
+    
+      return null;
     }
 
     function writeToDom(text) {
       const el = ensureAboutEl();
-      if (!el) {
-        console.warn('renderDriverAbout: élément cible introuvable');
-        return;
-      }
+      if (!el) return;
+      
       const output = (text && String(text).trim()) ? String(text).trim() : NO_DESCRIPTION_MSG;
       el.textContent = output;
+      
       if (output === NO_DESCRIPTION_MSG) el.classList.add('text-muted');
       else el.classList.remove('text-muted');
     }
 
+    // LOGIQUE DE DÉCISION
+    // On récupère le texte du chauffeur du trajet
     const aboutFromTrajet = getDriverAboutFromTrajet(trajetParam);
-    const aboutFromProfil = getProfileAboutFromStorage ? getProfileAboutFromStorage() : '';
-
-    console.log('renderDriverAbout -> aboutFromTrajet:', aboutFromTrajet, 'aboutFromProfil:', aboutFromProfil);
-
-    if (trajetParam && typeof trajetParam === 'object') {
-      const chosen = aboutFromTrajet || aboutFromProfil || '';
-      writeToDom(chosen);
-      return;
+    
+    // On ne regarde le profil local (id 1) QUE si on est soi-même le chauffeur 
+    // ou si le trajet n'a aucune donnée (fallback de sécurité)
+    if (aboutFromTrajet) {
+      console.log(`✅ Affichage du "À propos" du chauffeur (ID: ${trajetParam.chauffeur?.id})`);
+      writeToDom(aboutFromTrajet);
+    } else {
+      // Si le chauffeur n'a rien écrit, on met le message par défaut
+      console.log('ℹ️ Le chauffeur n\'a pas de description, affichage message vide.');
+      writeToDom(NO_DESCRIPTION_MSG);
     }
-
-    writeToDom(aboutFromProfil || '');
-
-    // installer un MutationObserver simple pour debug (idempotent)
-    try {
-      const tgt = document.getElementById('driver-about-text');
-      if (tgt && !window.__ecoride_about_mut_observer_installed) {
-        const mo = new MutationObserver((muts) => {
-          console.log('Mutation on #driver-about-text', muts);
-        });
-        mo.observe(tgt, { childList: true, characterData: true, subtree: true });
-        window.__ecoride_about_mut_observer_installed = true;
-      }
-    } catch (e) { /* ignore */ }
   }
 
   // appel : juste après que `trajet` soit défini dans ton code
   renderDriverAbout(trajet);
-  updateDriverAboutDom();
+  updateDriverAboutDom(trajet);
 
     /*const reviews = trajet.reviews || ["Aucun avis disponible pour ce conducteur.", "", ""];
     ['detail-review1', 'detail-review2', 'detail-review3'].forEach((id, index) => {

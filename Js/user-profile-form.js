@@ -394,7 +394,6 @@ const MESSAGES = {
       const userId = user?.id || user?._id || user?.userId || await window.apiPersist.getCurrentUserIdFallback?.();
       if (!userId) throw new Error('Utilisateur non identifié');
   
-      // Appelle l'API d'upload (window.apiPersist.uploadAvatar doit accepter un File)
       const res = await window.apiPersist.uploadAvatar(userId, file);
   
       let avatarUrl = null;
@@ -403,35 +402,26 @@ const MESSAGES = {
       else if (res.avatarUrl) avatarUrl = res.avatarUrl;
       else if (res.filePath) avatarUrl = res.filePath;
       else if (res.path) avatarUrl = res.path;
-      else if (res['@id']) avatarUrl = res['@id'];
       else if (typeof res === 'string') avatarUrl = res;
   
-      if (!avatarUrl && res?.user && (res.user.avatar || res.user.photo)) {
-        avatarUrl = res.user.avatar || res.user.photo;
-      }
-  
-      // fallback : re-fetch user si nécessaire (peu coûteux)
-      if (!avatarUrl && userId && typeof apiFetch === 'function') {
-        try {
-          const fresh = await apiFetch(`/users/${userId}`);
-          avatarUrl = fresh?.avatar || fresh?.avatarUrl || fresh?.photo || null;
-          if (fresh) localStorage.setItem('ecoride_user', JSON.stringify(fresh));
-        } catch (e) { /* ignore */ }
-      }
-  
-      // Si on a une URL canonique renvoyée par le backend, mettre à jour ecoride_user
       if (avatarUrl) {
+        // --- AJOUT : Mise à jour immédiate du preview et du localStorage ---
+        const base = 'http://127.0.0.1:8000';
+        const fullUrl = avatarUrl.startsWith('http') ? avatarUrl : base + avatarUrl;
+        
+        const preview = document.querySelector('#profileAvatarPreview');
+        if (preview) preview.src = fullUrl + '?t=' + Date.now();
+
         try {
           const raw = localStorage.getItem('ecoride_user');
           if (raw) {
             const parsed = JSON.parse(raw);
-            if (parsed && typeof parsed === 'object') {
-              parsed.avatar = avatarUrl;
-              parsed.photo = parsed.photo || avatarUrl;
-              localStorage.setItem('ecoride_user', JSON.stringify(parsed));
-            }
+            parsed.avatar = avatarUrl; // On stocke l'URL relative
+            parsed.photo = avatarUrl;
+            localStorage.setItem('ecoride_user', JSON.stringify(parsed));
           }
-        } catch (e) { /* ignore */ }
+        } catch (e) { console.warn('Erreur maj ecoride_user', e); }
+
         window.dispatchEvent(new CustomEvent('ecoride:profileAvatarChanged', { detail: { avatar: avatarUrl } }));
       }
   
@@ -477,10 +467,26 @@ const MESSAGES = {
     }
 
     // load existing
-    const saved = loadAvatarFromStorage();
-    if (saved) {
+    const saved = loadAvatarFromStorage(); // Cherche le Base64 local (édition en cours)
+    const rawUser = localStorage.getItem('ecoride_user');
+    const user = rawUser ? JSON.parse(rawUser) : null;
+
+    if (saved && saved.dataURL) {
+      // 1. Priorité à l'image en cours d'édition (Base64 non encore validée)
       updateUIForLoadedAvatar(saved.dataURL, saved.meta);
+    } else if (user && (user.avatar || user.photo)) {
+      // 2. Fallback sur l'image de l'API (URL stockée dans ecoride_user)
+      const avatarPath = user.avatar || user.photo;
+      const base = window.location.origin.includes('127.0.0.1') || window.location.origin.includes('localhost') 
+             ? 'http://127.0.0.1:8000' 
+             : window.location.origin;
+      const fullUrl = avatarPath.startsWith('http') ? avatarPath : base + avatarPath;
+      
+      updateUIForLoadedAvatar(fullUrl + '?t=' + Date.now(), { name: 'Profil API' });
+      if (btnRemove) btnRemove.disabled = false;
+      if (btnConfirm) btnConfirm.disabled = true; // Déjà sauvegardé sur serveur
     } else {
+      // 3. Image par défaut
       updateUIForLoadedAvatar(DEFAULT_SRC, null);
       if (btnConfirm) btnConfirm.disabled = true;
       if (btnRemove) btnRemove.disabled = true;

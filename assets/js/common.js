@@ -68,31 +68,115 @@
 
   async function fetchMe() {
     const token = getToken();
-    if (!token) return null;
+    if (!token) {
+      // Pas de token -> s'assurer qu'il n'y a pas de profil stale
+      localStorage.removeItem('ecoride_user');
+      return null;
+    }
+  
+    // Utilise API_BASE si défini, sinon fallback vers l'URL absolue
+    const base = (typeof API_BASE !== 'undefined' && API_BASE) ? API_BASE : 'http://127.0.0.1:8000/api';
+    const url = base + '/me';
+  
     try {
-      const res = await fetch(API_BASE + '/me', {
+      const res = await fetch(url, {
         method: 'GET',
-        headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + token }
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer ' + token
+        }
       });
-      if (res.status === 401) { setToken(null); return null; }
-      if (res.status === 204) return null;
+  
+      if (res.status === 401) {
+        // Token invalide : nettoyer et retourner null
+        setToken(null);
+        localStorage.removeItem('ecoride_user');
+        return null;
+      }
+      if (res.status === 204) {
+        // Pas de contenu
+        localStorage.removeItem('ecoride_user');
+        return null;
+      }
+  
       const ct = (res.headers.get('content-type') || '').toLowerCase();
       const text = await res.text();
-      if (ct.includes('application/json') && text) {
-        try { return JSON.parse(text); } catch (e) { return null; }
+  
+      if (!ct.includes('application/json')) {
+        console.warn('[fetchMe] réponse non JSON pour', url, 'content-type=', ct);
+        localStorage.removeItem('ecoride_user');
+        return null;
       }
-      return null;
+  
+      let user;
+      try {
+        user = JSON.parse(text);
+      } catch (e) {
+        console.warn('[fetchMe] JSON invalide reçu:', e);
+        localStorage.removeItem('ecoride_user');
+        return null;
+      }
+  
+      // Si l'avatar est absent, tentative de fallback sur /users/{id}
+      if (user && user.id && (!user.avatar || !String(user.avatar).trim())) {
+        try {
+          const resFull = await fetch(`${base}/users/${user.id}`, {
+            headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + token }
+          });
+          if (resFull.ok) {
+            const userFull = await resFull.json();
+            if (userFull && userFull.avatar) {
+              user.avatar = userFull.avatar;
+              console.log('[fetchMe] avatar récupéré via /users/:', user.avatar);
+            }
+          } else {
+            console.debug('[fetchMe] fallback /users/ returned', resFull.status);
+          }
+        } catch (e) {
+          console.warn('[fetchMe] fallback fetch user failed', e);
+        }
+      }
+  
+      // Sauvegarde locale du profil (si on a bien un objet user)
+      if (user && typeof user === 'object' && Object.keys(user).length > 0) {
+        try {
+          localStorage.setItem('ecoride_user', JSON.stringify(user));
+        } catch (e) {
+          console.warn('fetchMe: impossible d\'écrire localStorage', e);
+        }
+        console.log('[fetchMe] Profil chargé (id=' + user.id + ') avatar=', user.avatar || 'n/a');
+      } else {
+        localStorage.removeItem('ecoride_user');
+        return null;
+      }
+  
+      return user;
     } catch (e) {
       console.error('fetchMe error', e);
-      // Ne pas déconnecter immédiatement, juste retourner null
+      // En cas d'erreur réseau on supprime le profil stale pour éviter l'affichage d'un ancien avatar
+      localStorage.removeItem('ecoride_user');
       return null;
     }
   }
 
   function doLogout(redirect = true) {
+    // 1. On supprime le token
     setToken(null);
-    if (redirect) window.location.href = LOGIN_URL;
-    else refreshAuthUI();
+    
+    // 2. ON SUPPRIME LES DONNÉES UTILISATEUR (C'est ça qui manquait !)
+    localStorage.removeItem('ecoride_user');
+    localStorage.removeItem('ecoride_trajets_cache');
+    
+    // 3. On vide aussi le cache de session par sécurité
+    sessionStorage.clear();
+
+    console.log('[Auth] Déconnexion : LocalStorage nettoyé.');
+
+    if (redirect) {
+      window.location.href = LOGIN_URL;
+    } else {
+      refreshAuthUI();
+    }
   }
 
   function replaceWithClone(el) {
@@ -327,23 +411,40 @@
   }
 
   async function refreshAuthUI() {
-    const user = await fetchMe();
+    // Optionnel : définir un état neutre immédiat pour éviter l'affichage d'un ancien avatar
+    const avatarEl = document.querySelector('.user-avatar-img');
+    if (avatarEl) {
+      avatarEl.src = '/assets/default-avatar.png';
+    }
+  
+    const user = await fetchMe(); // fetchMe mettra à jour localStorage si OK
     const isAuthenticated = !!user;
-
+  
     if (isAuthenticated) {
       hideRegisterLinks();
       setLoginToLogout();
-
+  
       const displayName = getDisplayNameFromUser(user);
       setDropdownTogglesToName(displayName);
-
+  
+      // Mettre à jour l'avatar — on force un cache-bust pour être certain de récupérer la bonne image
+      if (avatarEl) {
+        if (user.avatar) {
+          // évite d'ajouter plusieurs fois la query si déjà présente
+          const url = user.avatar.split('?')[0];
+          avatarEl.src = url + '?t=' + Date.now();
+        } else {
+          avatarEl.src = '/assets/default-avatar.png';
+        }
+      }
+  
       applyMenuVisibilityResponsive(isAuthenticated, user);
     } else {
       showRegisterLinks();
       restoreLoginLinks();
       restoreDropdownTogglesToMenu();
       applyMenuVisibilityResponsive(isAuthenticated, user);
-
+  
       if (!isPathPublic(location.pathname)) {
         if (!normalizePath(location.pathname).startsWith(normalizePath('/auth'))) {
           window.location.href = LOGIN_URL;
@@ -377,11 +478,20 @@
   document.addEventListener('click', function (e) {
     const btn = e.target.closest && e.target.closest('#logoutBtn, .logout-btn');
     if (!btn) return;
+    
+    console.log('[DEBUG] Clic sur Déconnexion détecté');
     e.preventDefault();
+
+    // NETTOYAGE RADICAL ICI
+    localStorage.clear(); // On vide TOUT le localStorage pour être sûr
+    sessionStorage.clear(); // On vide aussi la session au cas où
+    
     if (window.ecoAuth && typeof window.ecoAuth.logout === 'function') {
       window.ecoAuth.logout();
     } else {
-      doLogout(true);
+      // Fallback direct
+      localStorage.removeItem('api_token');
+      window.location.href = '/auth?tab=login';
     }
   });
 })();

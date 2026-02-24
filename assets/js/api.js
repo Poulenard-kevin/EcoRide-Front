@@ -3,14 +3,11 @@
 // Détermine automatiquement la base API en dev (frontend dev server :3000 -> backend :8000)
 // En production, on garde les chemins relatifs (API_BASE = '') pour que le backend qui sert le front gère les routes.
 export const API_BASE = (function() {
-  try {
-    const host = window.location.hostname;
-    const port = window.location.port;
-    if ((host === '127.0.0.1' || host === 'localhost') && port === '3000') {
-      return 'http://127.0.0.1:8000';
-    }
-  } catch (e) {
-    // safe fallback
+  const h = window.location.hostname;
+  const p = window.location.port;
+  // Si on est sur le port 3000 (Front), on vise le 8000 (Back)
+  if (p === '3000') {
+    return `http://${h}:8000`; // Utilise le même hostname (localhost ou 127.0.0.1)
   }
   return '';
 })();

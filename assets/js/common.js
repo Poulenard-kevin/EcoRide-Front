@@ -6,10 +6,8 @@
 
   const PUBLIC_PATHS = ['/', '/accueil', '/contact', '/auth'];
 
-  // appelé au chargement des pages sensibles (admin/employee)
   (async function ensureRoleOnProtectedPage() {
     try {
-      // attend jusqu'à 2s que window.ecoAuth.fetchMe soit disponible
       const waitForEcoAuth = (timeout = 2000, interval = 50) => new Promise((resolve) => {
         const start = Date.now();
         (function check() {
@@ -30,7 +28,7 @@
         const user = await window.ecoAuth.fetchMe();
         const roles = (user && user.roles) || [];
         if (!roles.map(r => r.toUpperCase()).includes('ROLE_ADMIN')) {
-          window.location.href = '/'; // ou '/auth?tab=login' ou '/403.html'
+          window.location.href = '/';
           return;
         }
       }
@@ -69,12 +67,10 @@
   async function fetchMe() {
     const token = getToken();
     if (!token) {
-      // Pas de token -> s'assurer qu'il n'y a pas de profil stale
       localStorage.removeItem('ecoride_user');
       return null;
     }
   
-    // Utilise API_BASE si défini, sinon fallback vers l'URL absolue
     const base = (typeof API_BASE !== 'undefined' && API_BASE) ? API_BASE : 'http://127.0.0.1:8000/api';
     const url = base + '/me';
   
@@ -88,13 +84,11 @@
       });
   
       if (res.status === 401) {
-        // Token invalide : nettoyer et retourner null
         setToken(null);
         localStorage.removeItem('ecoride_user');
         return null;
       }
       if (res.status === 204) {
-        // Pas de contenu
         localStorage.removeItem('ecoride_user');
         return null;
       }
@@ -104,8 +98,7 @@
   
       if (!ct.includes('application/json')) {
         console.warn('[fetchMe] réponse non JSON pour', url, 'content-type=', ct);
-        localStorage.removeItem('ecoride_user');
-        return null;
+        return undefined;
       }
   
       let user;
@@ -113,11 +106,9 @@
         user = JSON.parse(text);
       } catch (e) {
         console.warn('[fetchMe] JSON invalide reçu:', e);
-        localStorage.removeItem('ecoride_user');
-        return null;
+        return undefined;
       }
   
-      // Si l'avatar est absent, tentative de fallback sur /users/{id}
       if (user && user.id && (!user.avatar || !String(user.avatar).trim())) {
         try {
           const resFull = await fetch(`${base}/users/${user.id}`, {
@@ -125,49 +116,32 @@
           });
           if (resFull.ok) {
             const userFull = await resFull.json();
-            if (userFull && userFull.avatar) {
-              user.avatar = userFull.avatar;
-              console.log('[fetchMe] avatar récupéré via /users/:', user.avatar);
-            }
-          } else {
-            console.debug('[fetchMe] fallback /users/ returned', resFull.status);
+            if (userFull && userFull.avatar) user.avatar = userFull.avatar;
           }
         } catch (e) {
-          console.warn('[fetchMe] fallback fetch user failed', e);
+          console.debug('[fetchMe] fallback /users/ failed', e);
         }
       }
   
-      // Sauvegarde locale du profil (si on a bien un objet user)
       if (user && typeof user === 'object' && Object.keys(user).length > 0) {
-        try {
-          localStorage.setItem('ecoride_user', JSON.stringify(user));
-        } catch (e) {
-          console.warn('fetchMe: impossible d\'écrire localStorage', e);
-        }
+        try { localStorage.setItem('ecoride_user', JSON.stringify(user)); }
+        catch (e) { console.warn('fetchMe: impossible d\'écrire localStorage', e); }
         console.log('[fetchMe] Profil chargé (id=' + user.id + ') avatar=', user.avatar || 'n/a');
+        return user;
       } else {
         localStorage.removeItem('ecoride_user');
         return null;
       }
-  
-      return user;
     } catch (e) {
-      console.error('fetchMe error', e);
-      // En cas d'erreur réseau on supprime le profil stale pour éviter l'affichage d'un ancien avatar
-      localStorage.removeItem('ecoride_user');
-      return null;
+      console.error('fetchMe error (network?)', e);
+      return undefined;
     }
   }
 
   function doLogout(redirect = true) {
-    // 1. On supprime le token
     setToken(null);
-    
-    // 2. ON SUPPRIME LES DONNÉES UTILISATEUR (C'est ça qui manquait !)
     localStorage.removeItem('ecoride_user');
     localStorage.removeItem('ecoride_trajets_cache');
-    
-    // 3. On vide aussi le cache de session par sécurité
     sessionStorage.clear();
 
     console.log('[Auth] Déconnexion : LocalStorage nettoyé.');
@@ -189,13 +163,10 @@
   function setLoginToLogout() {
     const loginEls = Array.from(document.querySelectorAll('#dropdown-login'));
     loginEls.forEach(loginEl => {
-      // si on a déjà remplacé, on skip
       if (loginEl.dataset.logoutAttached === 'true') return;
   
-      // remplace par un clone et transforme en bouton accessible
       const newLogin = replaceWithClone(loginEl);
       newLogin.textContent = 'Déconnexion';
-      // si c'est un <a>, transforme en button pour éviter navigation
       if (newLogin.tagName === 'A') {
         const btn = document.createElement('button');
         btn.id = 'logoutBtn';
@@ -203,20 +174,16 @@
         btn.className = newLogin.className || 'logout-btn';
         btn.textContent = 'Déconnexion';
         newLogin.parentNode && newLogin.parentNode.replaceChild(btn, newLogin);
-        // marque pour éviter double attach
         btn.dataset.logoutAttached = 'true';
       } else {
-        // si déjà un bouton ou autre, on attribue l'id et dataset
         newLogin.id = newLogin.id || 'logoutBtn';
         newLogin.dataset.logoutAttached = 'true';
       }
   
-      // direct listener (fallback) — il appellera la logique centrale
       const target = document.getElementById('logoutBtn') || newLogin;
       if (target && !target._logoutHandlerAttached) {
         target.addEventListener('click', function (e) {
           e.preventDefault();
-          // appeler la logique centrale (doLogout ou window.ecoAuth)
           if (window.ecoAuth && typeof window.ecoAuth.logout === 'function') {
             window.ecoAuth.logout();
           } else {
@@ -228,7 +195,6 @@
     });
   }
   function restoreLoginLinks() {
-    // Cherche partout les boutons de logout et recrée des liens "Connexion"
     const btns = Array.from(document.querySelectorAll('#logoutBtn, .logout-btn'));
     if (btns.length) {
       btns.forEach(b => {
@@ -242,13 +208,11 @@
       return;
     }
   
-    // fallback: si on a des éléments #dropdown-login (ancres/clones), restore leur href/text
     const loginEls = Array.from(document.querySelectorAll('#dropdown-login'));
     loginEls.forEach(loginEl => {
       const newLogin = replaceWithClone(loginEl);
       newLogin.textContent = 'Connexion';
       newLogin.setAttribute('href', LOGIN_URL);
-      // remove flags if any
       delete newLogin.dataset.logoutAttached;
       newLogin._logoutHandlerAttached = false;
     });
@@ -284,9 +248,6 @@
   }
 
   function hideProtectedMenuItemsResponsive() {
-    // On applique toujours le filtre sur les deux conteneurs (navbar + offcanvas)
-    // pour s'assurer que seuls les liens publics restent visibles quand on est
-    // non authentifié, quelle que soit la taille d'écran.
     const navRoot = document.querySelector('.navbar .navbar-nav');
     const offcanvasNav = document.querySelector('.offcanvas-body .navbar-nav');
 
@@ -308,7 +269,6 @@
     }
   }
 
-  // utilitaire pour déterminer les rôles (utiliser les noms exacts définis en PHP)
   function computeRoles(user) {
     const roles = Array.isArray(user && user.roles) ? user.roles.map(r => String(r).toUpperCase()) : [];
     return {
@@ -320,10 +280,8 @@
   }
 
   function applyMenuVisibilityResponsive(isAuthenticated, user) {
-    // calcul des rôles
     const { isAdmin, isEmployee } = user ? computeRoles(user) : { isAdmin: false, isEmployee: false };
   
-    // sélecteurs couvrant navbar, offcanvas, dropdown-items — ajoute variantes si nécessaire
     const adminSelector = [
       'a[href="/espace-administrateur"]',
       'a[href="/espace-administrateur/"]'
@@ -337,36 +295,24 @@
     const employeeEls = Array.from(document.querySelectorAll(employeeSelector));
   
     if (isAuthenticated) {
-      // 1) Montrer d'abord les éléments généraux (navbar/offcanvas)
       showAllMenuItemsResponsive();
-  
-      // 2) Masquer l'inscription
       hideRegisterLinks();
-  
-      // 3) Appliquer règles fines :
-      // - Admin uniquement : montre adminEls seulement si isAdmin
       adminEls.forEach(a => {
         const parentItem = a.closest('.nav-item, .dropdown-item');
         if (parentItem) parentItem.style.display = isAdmin ? '' : 'none';
         else a.style.display = isAdmin ? '' : 'none';
       });
-  
-      // - Employé (ou admin) : montre employeeEls seulement si isEmployee OR isAdmin
-      //   (ici on autorise admin aussi à voir l'espace employé)
       const showEmployee = isEmployee || isAdmin;
       employeeEls.forEach(a => {
         const parentItem = a.closest('.nav-item, .dropdown-item');
         if (parentItem) parentItem.style.display = showEmployee ? '' : 'none';
         else a.style.display = showEmployee ? '' : 'none';
       });
-  
     } else {
-      // non authentifié : masquer les éléments protégés selon le comportement responsive existant
       hideProtectedMenuItemsResponsive();
     }
   }
 
-  // utils affichage prénom
   function getDisplayNameFromUser(user) {
     if (!user) return 'Utilisateur';
     const candidates = [
@@ -400,6 +346,44 @@
       t.setAttribute('title', name);
     });
   }
+
+  /**
+   * Affichage instantané depuis localStorage pour une UX immédiate.
+   * Ne remplace pas la vérification serveur : refreshAuthUI() viendra corriger si nécessaire.
+   */
+  function applyImmediateAuth() {
+    try {
+      const raw = localStorage.getItem('ecoride_user');
+      if (!raw) return;
+      const user = JSON.parse(raw);
+      if (!user) return;
+
+      const name = user.firstName || user.firstname || user.first_name || user.username || user.name || (user.email && user.email.split('@')[0]) || 'Mon Compte';
+
+      // Applique le prénom tout de suite
+      const toggles = Array.from(document.querySelectorAll('.nav-item.dropdown .dropdown-toggle, #dropdownMenuButton'));
+      toggles.forEach(t => {
+        try { t.textContent = name; } catch (e) { /* ignore */ }
+      });
+
+      const loginLink = document.getElementById('dropdown-login');
+      if (loginLink) {
+        // Affiche "Déconnexion" visuellement — le listener de logout gèrera l'action réelle
+        loginLink.textContent = 'Déconnexion';
+        loginLink.setAttribute('href', '#');
+      }
+
+      const regs = document.querySelectorAll('#dropdown-register');
+      regs.forEach(e => { e.style.display = 'none'; });
+
+    } catch (err) {
+      console.debug('[applyImmediateAuth] erreur lecture cache', err);
+    }
+  }
+
+  // Appliquer immédiatement au chargement du script (common.js est chargé en defer)
+  applyImmediateAuth();
+
   function restoreDropdownTogglesToMenu() {
     const toggles = Array.from(document.querySelectorAll('.nav-item.dropdown .dropdown-toggle, #dropdownMenuButton'));
     toggles.forEach(t => {
@@ -411,33 +395,32 @@
   }
 
   async function refreshAuthUI() {
-    // Optionnel : définir un état neutre immédiat pour éviter l'affichage d'un ancien avatar
+    // petit feedback visuel pendant la mise à jour distante
+    const toggles = Array.from(document.querySelectorAll('.nav-item.dropdown .dropdown-toggle, #dropdownMenuButton'));
+    toggles.forEach(t => t.classList.add('updating'));
+
     const avatarEl = document.querySelector('.user-avatar-img');
-    if (avatarEl) {
-      avatarEl.src = '/assets/default-avatar.png';
+    if (avatarEl) avatarEl.src = '/assets/default-avatar.png';
+  
+    const user = await fetchMe();
+  
+    if (user === undefined) {
+      console.warn('[refreshAuthUI] fetchMe returned undefined (network/CORS). Conserver état actuel.');
+      // retirer auth-loading pour que la page ne reste pas bloquée visuellement
+      document.body.classList.remove('auth-loading');
+      return;
     }
   
-    const user = await fetchMe(); // fetchMe mettra à jour localStorage si OK
     const isAuthenticated = !!user;
   
     if (isAuthenticated) {
       hideRegisterLinks();
       setLoginToLogout();
-  
       const displayName = getDisplayNameFromUser(user);
       setDropdownTogglesToName(displayName);
-  
-      // Mettre à jour l'avatar — on force un cache-bust pour être certain de récupérer la bonne image
       if (avatarEl) {
-        if (user.avatar) {
-          // évite d'ajouter plusieurs fois la query si déjà présente
-          const url = user.avatar.split('?')[0];
-          avatarEl.src = url + '?t=' + Date.now();
-        } else {
-          avatarEl.src = '/assets/default-avatar.png';
-        }
+        avatarEl.src = (user.avatar ? user.avatar.split('?')[0] + '?t=' + Date.now() : '/assets/default-avatar.png');
       }
-  
       applyMenuVisibilityResponsive(isAuthenticated, user);
     } else {
       showRegisterLinks();
@@ -445,17 +428,37 @@
       restoreDropdownTogglesToMenu();
       applyMenuVisibilityResponsive(isAuthenticated, user);
   
-      if (!isPathPublic(location.pathname)) {
+      const token = getToken();
+      if (!token && !isPathPublic(location.pathname)) {
         if (!normalizePath(location.pathname).startsWith(normalizePath('/auth'))) {
           window.location.href = LOGIN_URL;
           return;
         }
+      } else if (token && !isPathPublic(location.pathname)) {
+        window.location.href = LOGIN_URL;
+        return;
       }
     }
+
+    // Retirer le masque d'auth à la fin (toujours)
+    document.documentElement.classList.remove('auth-loading');
+    document.body.classList.remove('auth-loading');
+
+    // retirer le feedback visuel 'updating'
+    toggles.forEach(t => t.classList.remove('updating'));
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', refreshAuthUI);
-  else refreshAuthUI();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        refreshAuthUI().finally(() => {
+            document.documentElement.classList.remove('auth-loading');
+        });
+    });
+  } else {
+      refreshAuthUI().finally(() => {
+          document.documentElement.classList.remove('auth-loading');
+      });
+  }
 
   let _resizeTimer;
   window.addEventListener('resize', () => {
@@ -474,23 +477,21 @@
     fetchMe
   };
 
-  // délégation globale : capture clics sur éléments créés dynamiquement
   document.addEventListener('click', function (e) {
     const btn = e.target.closest && e.target.closest('#logoutBtn, .logout-btn');
     if (!btn) return;
-    
+  
     console.log('[DEBUG] Clic sur Déconnexion détecté');
     e.preventDefault();
-
-    // NETTOYAGE RADICAL ICI
-    localStorage.clear(); // On vide TOUT le localStorage pour être sûr
-    sessionStorage.clear(); // On vide aussi la session au cas où
-    
+  
+    localStorage.removeItem('api_token');
+    localStorage.removeItem('ecoride_user');
+    localStorage.removeItem('ecoride_trajets_cache');
+    sessionStorage.clear();
+  
     if (window.ecoAuth && typeof window.ecoAuth.logout === 'function') {
       window.ecoAuth.logout();
     } else {
-      // Fallback direct
-      localStorage.removeItem('api_token');
       window.location.href = '/auth?tab=login';
     }
   });

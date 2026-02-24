@@ -12469,10 +12469,6 @@ body.spa-ready #main-page {
 .covoiturage-search-bar .input-group {
   display: flex;
   align-items: center;
-  /* Style de base (placeholder visuel gris) */
-  /* En vert quand rempli (pas empty) */
-  /* Placeholder (gris) */
-  /* Sélection valide (vert) */
 }
 .covoiturage-search-bar .input-group label {
   width: 140px;
@@ -12493,6 +12489,15 @@ body.spa-ready #main-page {
   -webkit-appearance: none;
      -moz-appearance: none;
           appearance: none;
+}
+.covoiturage-search-bar .input-group input[type=date]::-webkit-calendar-picker-indicator, .covoiturage-search-bar .input-group input[type=date]::-webkit-clear-button,
+.covoiturage-search-bar .input-group input[type=time]::-webkit-calendar-picker-indicator,
+.covoiturage-search-bar .input-group input[type=time]::-webkit-clear-button {
+  filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
+  /* filtre pour approx #7a8a6f, à ajuster si besoin */
+}
+.covoiturage-search-bar .input-group input[type=date],
+.covoiturage-search-bar .input-group input[type=time] {
   padding: 12px 20px;
   border-left: none;
   font-size: 16px;
@@ -12501,12 +12506,6 @@ body.spa-ready #main-page {
   height: 48px;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
   color: #7a8a6f;
-}
-.covoiturage-search-bar .input-group input[type=date]::-webkit-calendar-picker-indicator, .covoiturage-search-bar .input-group input[type=date]::-webkit-clear-button,
-.covoiturage-search-bar .input-group input[type=time]::-webkit-calendar-picker-indicator,
-.covoiturage-search-bar .input-group input[type=time]::-webkit-clear-button {
-  filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
-  /* filtre pour approx #7a8a6f, à ajuster si besoin */
 }
 .covoiturage-search-bar .input-group input[type=date]:focus,
 .covoiturage-search-bar .input-group input[type=time]:focus {
@@ -12517,6 +12516,9 @@ body.spa-ready #main-page {
 .covoiturage-search-bar .input-group input[type=time]:valid {
   color: #1F4924;
 }
+.covoiturage-search-bar .input-group {
+  /* Style de base (placeholder visuel gris) */
+}
 .covoiturage-search-bar .input-group input[type=date].empty::-webkit-datetime-edit,
 .covoiturage-search-bar .input-group input[type=time].empty::-webkit-datetime-edit,
 .covoiturage-search-bar .input-group input[type=date].empty::-webkit-datetime-edit-text,
@@ -12524,6 +12526,9 @@ body.spa-ready #main-page {
 .covoiturage-search-bar .input-group input[type=date].empty::-webkit-datetime-edit-fields-wrapper,
 .covoiturage-search-bar .input-group input[type=time].empty::-webkit-datetime-edit-fields-wrapper {
   color: #7a8a6f;
+}
+.covoiturage-search-bar .input-group {
+  /* En vert quand rempli (pas empty) */
 }
 .covoiturage-search-bar .input-group input[type=date]:not(.empty)::-webkit-datetime-edit,
 .covoiturage-search-bar .input-group input[type=time]:not(.empty)::-webkit-datetime-edit,
@@ -12533,8 +12538,14 @@ body.spa-ready #main-page {
 .covoiturage-search-bar .input-group input[type=time]:not(.empty)::-webkit-datetime-edit-fields-wrapper {
   color: #1F4924;
 }
+.covoiturage-search-bar .input-group {
+  /* Placeholder (gris) */
+}
 .covoiturage-search-bar .input-group select.empty {
   color: #7a8a6f;
+}
+.covoiturage-search-bar .input-group {
+  /* Sélection valide (vert) */
 }
 .covoiturage-search-bar .input-group select:not(.empty) {
   color: #1F4924;
@@ -12558,11 +12569,13 @@ body.spa-ready #main-page {
   background-repeat: no-repeat;
   background-position: right 18px center; /* 👈 décale la flèche vers la gauche */
   background-size: 25px;
-  /* Placeholder (option sélectionnée vide) */
 }
 .covoiturage-search-bar #type-trajet-select:focus {
   background-color: #F8F0E5;
   box-shadow: 0 0 5px 2px #1F4924;
+}
+.covoiturage-search-bar #type-trajet-select {
+  /* Placeholder (option sélectionnée vide) */
 }
 .covoiturage-search-bar #type-trajet-select:has(option[value=""]:checked) {
   color: #7a8a6f;
@@ -12623,10 +12636,6 @@ body.spa-ready #main-page {
   /* === FILTRES === */
   /* === FILTRES === */
   /* === FILTRES === */
-  /* === Liste === */
-  /* === Liste === */
-  /* === Liste === */
-  /* === Liste === */
 }
 .covoiturage-results .results-container .filters {
   flex: 1; /* Les filtres occupent 1 part de l'espace disponible */
@@ -12797,6 +12806,12 @@ body.spa-ready #main-page {
     display: block; /* Affiche le bouton "Filtres" pour les petits écrans */
     margin: 10px 20px; /* Centre le bouton horizontalement */
   }
+}
+.covoiturage-results .results-container {
+  /* === Liste === */
+  /* === Liste === */
+  /* === Liste === */
+  /* === Liste === */
 }
 .covoiturage-results .results-container .results {
   flex: 2; /* Les résultats occupent 2 parts de l'espace disponible */
@@ -13150,11 +13165,13 @@ body.spa-ready #main-page {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     transition: background-color 0.3s ease;
     font-size: 20px;
-    /* Positionnement à droite */
   }
   .filters-toggle:hover {
     background-color: #1F4924;
     color: #F1E7D1;
+  }
+  .filters-toggle {
+    /* Positionnement à droite */
   }
 }
 @media (max-width: 1290px) and (max-width: 1290px) {
@@ -13743,9 +13760,6 @@ body.spa-ready #main-page {
   margin-bottom: 1.5rem;
 }
 @media (max-width: 990px) {
-  .detail-container {
-    /* Déplacer Avis du conducteur et driver-reviews en dessous */
-  }
   .detail-container .vehicle-info {
     margin-left: 0px;
     margin-right: 0px;
@@ -13823,6 +13837,9 @@ body.spa-ready #main-page {
     order: 6;
     width: 100%;
     max-width: 100%;
+  }
+  .detail-container {
+    /* Déplacer Avis du conducteur et driver-reviews en dessous */
   }
   .detail-container h1:nth-of-type(3), .detail-container .h1:nth-of-type(3) {
     order: 7; /* Place le titre Avis du conducteur après les autres sections */
@@ -13979,31 +13996,6 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
     font-size: 20px; /* Réduit la taille des titres h1 */
   }
 }
-#user-profile-form {
-  /* Style de base (placeholder visuel gris) */
-  /* En vert quand rempli (pas empty) */
-  /* Aligner les radios horizontalement */
-  /* Cercle contenant le montant */
-  /* Optionnel : animation légère quand on met à jour */
-  /* classe si tu veux cibler juste cette textarea */
-  /* sur mobile, agrandir la zone */
-  /* ecoride-credits-modal.css
-   Styles légers pour les packs et états actifs (Bootstrap gère le reste).
-  */
-  /* léger effet tactile */
-  /* état "sélectionné" — harmonisé avec la palette verte */
-  /* input personnalisé */
-  /* si tu veux réduire la largeur des boutons dans les petits écrans */
-  /* Validation Bootstrap personnalisée */
-  /* Enlever uniquement la bordure colorée de Bootstrap quand .is-invalid / .is-valid est active,
-   mais garder le halo (box-shadow) pour l'indication visuelle. */
-  /* même chose pour l'état valide */
-  /* cas des inputs dans des input-groups */
-  /* si tu utilises des inputs personnalisés ou d'autres variantes, cible-les aussi */
-  /* ======== Exemple pour textarea spécifique ======== */
-  /* Remplace #profileBio par ton id ou .ta-classe */
-  /* WebKit (Chrome, Edge, Safari) */
-}
 #user-profile-form h1, #user-profile-form .h1 {
   text-align: center;
   margin: 35px;
@@ -14137,11 +14129,13 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   background-repeat: no-repeat;
   background-position: right 20px center; /* 👈 décale la flèche vers la gauche */
   background-size: 25px;
-  /* Placeholder (option sélectionnée vide) */
 }
 #user-profile-form select.form-input:focus {
   background-color: #F8F0E5;
   box-shadow: 0 0 5px 2px #1F4924;
+}
+#user-profile-form select.form-input {
+  /* Placeholder (option sélectionnée vide) */
 }
 #user-profile-form select.form-input:has(option[value=""]:checked) {
   color: #7a8a6f;
@@ -14202,6 +14196,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-profile-form input[type=time]::-webkit-calendar-picker-indicator {
   filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
 }
+#user-profile-form {
+  /* Style de base (placeholder visuel gris) */
+}
 #user-profile-form input[type=date].empty::-webkit-datetime-edit,
 #user-profile-form input[type=time].empty::-webkit-datetime-edit,
 #user-profile-form input[type=date].empty::-webkit-datetime-edit-text,
@@ -14209,6 +14206,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-profile-form input[type=date].empty::-webkit-datetime-edit-fields-wrapper,
 #user-profile-form input[type=time].empty::-webkit-datetime-edit-fields-wrapper {
   color: #7a8a6f;
+}
+#user-profile-form {
+  /* En vert quand rempli (pas empty) */
 }
 #user-profile-form input[type=date]:not(.empty)::-webkit-datetime-edit,
 #user-profile-form input[type=time]:not(.empty)::-webkit-datetime-edit,
@@ -14253,6 +14253,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   gap: 30px;
   flex-wrap: wrap; /* permet le retour à la ligne sur petit écran */
 }
+#user-profile-form {
+  /* Aligner les radios horizontalement */
+}
 #user-profile-form #role-form .role-group {
   display: flex;
   gap: 20px; /* espace entre chaque option */
@@ -14283,6 +14286,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-profile-form .form-fields-role {
   margin-top: 20px;
 }
+#user-profile-form {
+  /* Cercle contenant le montant */
+}
 #user-profile-form .eco-circle {
   display: inline-flex;
   flex-direction: column;
@@ -14306,6 +14312,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   #user-profile-form .ecoride-credit-number, #user-profile-form .ecoride-credit-label {
     font-size: 14px;
   }
+}
+#user-profile-form {
+  /* Optionnel : animation légère quand on met à jour */
 }
 #user-profile-form .eco-circle.pop {
   animation: eco-pop 360ms cubic-bezier(0.2, 0.9, 0.3, 1);
@@ -14350,15 +14359,26 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
     gap: 10px;
   }
 }
+#user-profile-form {
+  /* classe si tu veux cibler juste cette textarea */
+}
 #user-profile-form #profileBio {
   min-height: 100px; /* desktop par défaut */
   box-sizing: border-box;
+}
+#user-profile-form {
+  /* sur mobile, agrandir la zone */
 }
 @media (max-width: 576px) {
   #user-profile-form #profileBio {
     min-height: 130px;
     font-size: 12px;
   }
+}
+#user-profile-form {
+  /* ecoride-credits-modal.css
+   Styles légers pour les packs et états actifs (Bootstrap gère le reste).
+  */
 }
 #user-profile-form .ecoride-credit-packs {
   display: flex;
@@ -14380,8 +14400,14 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   background: #f8f9fa; /* light */
   color: #212529;
 }
+#user-profile-form {
+  /* léger effet tactile */
+}
 #user-profile-form .ecoride-pack:active {
   transform: translateY(1px);
+}
+#user-profile-form {
+  /* état "sélectionné" — harmonisé avec la palette verte */
 }
 #user-profile-form .ecoride-pack.active,
 #user-profile-form .ecoride-pack.active.btn-outline-secondary {
@@ -14390,8 +14416,14 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   border-color: #2f7a39 !important;
   box-shadow: 0 6px 18px rgba(47, 122, 57, 0.12);
 }
+#user-profile-form {
+  /* input personnalisé */
+}
 #user-profile-form .ecoride-custom-input {
   max-width: 160px;
+}
+#user-profile-form {
+  /* si tu veux réduire la largeur des boutons dans les petits écrans */
 }
 @media (max-width: 420px) {
   #user-profile-form .ecoride-pack {
@@ -14408,6 +14440,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   font-size: 14px;
   margin-top: 0px !important;
 }
+#user-profile-form {
+  /* Validation Bootstrap personnalisée */
+}
 #user-profile-form .form-control.is-valid {
   border-color: #4B8A47 !important; /* vert */
   box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25) !important; /* ombre verte */
@@ -14418,11 +14453,18 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25) !important; /* ombre rouge */
   /* background-image est géré par Bootstrap, donc icône visible */
 }
+#user-profile-form {
+  /* Enlever uniquement la bordure colorée de Bootstrap quand .is-invalid / .is-valid est active,
+   mais garder le halo (box-shadow) pour l'indication visuelle. */
+}
 #user-profile-form .form-control.is-invalid,
 #user-profile-form .was-validated .form-control:invalid,
 #user-profile-form .form-select.is-invalid,
 #user-profile-form textarea.is-invalid {
   border-color: transparent !important; /* cache la bordure rouge */
+}
+#user-profile-form {
+  /* même chose pour l'état valide */
 }
 #user-profile-form .form-control.is-valid,
 #user-profile-form .was-validated .form-control:valid,
@@ -14430,9 +14472,15 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-profile-form textarea.is-valid {
   border-color: transparent !important; /* cache la bordure verte/noire */
 }
+#user-profile-form {
+  /* cas des inputs dans des input-groups */
+}
 #user-profile-form .input-group .form-control.is-invalid,
 #user-profile-form .input-group .form-control.is-valid {
   border-color: transparent !important;
+}
+#user-profile-form {
+  /* si tu utilises des inputs personnalisés ou d'autres variantes, cible-les aussi */
 }
 #user-profile-form input[type=password].is-invalid,
 #user-profile-form input[type=password].is-valid {
@@ -14450,6 +14498,10 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-profile-form .form-control.is-invalid ~ .invalid-feedback {
   display: block;
   color: #D64545;
+}
+#user-profile-form {
+  /* ======== Exemple pour textarea spécifique ======== */
+  /* Remplace #profileBio par ton id ou .ta-classe */
 }
 #user-profile-form #profileBio {
   overflow-y: auto; /* s'assure que le scroll peut apparaître */
@@ -14473,6 +14525,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
     height: 220px;
   }
 }
+#user-profile-form {
+  /* WebKit (Chrome, Edge, Safari) */
+}
 #user-profile-form #profileBio::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -14491,10 +14546,6 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   background-color: #3a6a37;
 }
 
-#user-trajects-form {
-  /* Style de base (placeholder visuel gris) */
-  /* En vert quand rempli (pas empty) */
-}
 #user-trajects-form h1, #user-trajects-form .h1 {
   text-align: center;
   margin: 35px;
@@ -14567,11 +14618,13 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   background-repeat: no-repeat;
   background-position: right 20px center; /* 👈 décale la flèche vers la gauche */
   background-size: 25px;
-  /* Placeholder (option sélectionnée vide) */
 }
 #user-trajects-form select.form-select:focus {
   background-color: #F8F0E5;
   box-shadow: 0 0 5px 2px #1F4924;
+}
+#user-trajects-form select.form-select {
+  /* Placeholder (option sélectionnée vide) */
 }
 #user-trajects-form select.form-select:has(option[value=""]:checked) {
   color: #7a8a6f;
@@ -14649,6 +14702,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-trajects-form input[type=time]::-webkit-calendar-picker-indicator {
   filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
 }
+#user-trajects-form {
+  /* Style de base (placeholder visuel gris) */
+}
 #user-trajects-form input[type=date].empty::-webkit-datetime-edit,
 #user-trajects-form input[type=time].empty::-webkit-datetime-edit,
 #user-trajects-form input[type=date].empty::-webkit-datetime-edit-text,
@@ -14656,6 +14712,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-trajects-form input[type=date].empty::-webkit-datetime-edit-fields-wrapper,
 #user-trajects-form input[type=time].empty::-webkit-datetime-edit-fields-wrapper {
   color: #7a8a6f;
+}
+#user-trajects-form {
+  /* En vert quand rempli (pas empty) */
 }
 #user-trajects-form input[type=date]:not(.empty)::-webkit-datetime-edit,
 #user-trajects-form input[type=time]:not(.empty)::-webkit-datetime-edit,
@@ -14911,11 +14970,6 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   color: #4B8A47;
 }
 
-#user-vehicles-form {
-  /* Style de base (placeholder visuel gris) */
-  /* En vert quand rempli (pas empty) */
-  /* Fallback léger pour inert */
-}
 #user-vehicles-form h1, #user-vehicles-form .h1 {
   text-align: center;
   margin: 35px;
@@ -15138,11 +15192,13 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   background-repeat: no-repeat;
   background-position: right 20px center; /* 👈 décale la flèche vers la gauche */
   background-size: 25px;
-  /* Placeholder (option sélectionnée vide) */
 }
 #user-vehicles-form select.form-input:focus {
   background-color: #F8F0E5;
   box-shadow: 0 0 5px 2px #1F4924;
+}
+#user-vehicles-form select.form-input {
+  /* Placeholder (option sélectionnée vide) */
 }
 #user-vehicles-form select.form-input:has(option[value=""]:checked) {
   color: #7a8a6f;
@@ -15208,6 +15264,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-vehicles-form input[type=time]::-webkit-calendar-picker-indicator {
   filter: brightness(0) saturate(100%) invert(38%) sepia(12%) saturate(0%) hue-rotate(81deg) brightness(90%) contrast(85%);
 }
+#user-vehicles-form {
+  /* Style de base (placeholder visuel gris) */
+}
 #user-vehicles-form input[type=date].empty::-webkit-datetime-edit,
 #user-vehicles-form input[type=time].empty::-webkit-datetime-edit,
 #user-vehicles-form input[type=date].empty::-webkit-datetime-edit-text,
@@ -15216,6 +15275,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-vehicles-form input[type=time].empty::-webkit-datetime-edit-fields-wrapper {
   color: #7a8a6f;
 }
+#user-vehicles-form {
+  /* En vert quand rempli (pas empty) */
+}
 #user-vehicles-form input[type=date]:not(.empty)::-webkit-datetime-edit,
 #user-vehicles-form input[type=time]:not(.empty)::-webkit-datetime-edit,
 #user-vehicles-form input[type=date]:not(.empty)::-webkit-datetime-edit-text,
@@ -15223,6 +15285,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 #user-vehicles-form input[type=date]:not(.empty)::-webkit-datetime-edit-fields-wrapper,
 #user-vehicles-form input[type=time]:not(.empty)::-webkit-datetime-edit-fields-wrapper {
   color: #1F4924;
+}
+#user-vehicles-form {
+  /* Fallback léger pour inert */
 }
 #user-vehicles-form [inert] {
   pointer-events: none;
@@ -15512,9 +15577,6 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   overflow-y: auto; /* scroll vertical si dépassement */
   padding-right: 10px;
   /* Scrollbar pour WebKit (Chrome, Safari, Edge) */
-  /* Scrollbar pour Firefox */
-  scrollbar-width: thin;
-  scrollbar-color: #4B8A47 #F8F0E5;
 }
 #user-history-form .trajets-historique::-webkit-scrollbar {
   width: 8px; /* largeur scrollbar verticale */
@@ -15530,6 +15592,11 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 }
 #user-history-form .trajets-historique::-webkit-scrollbar-thumb:hover {
   background: rgb(47.54784689, 87.4880382775, 45.0119617225);
+}
+#user-history-form .trajets-historique {
+  /* Scrollbar pour Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #4B8A47 #F8F0E5;
 }
 @media (max-width: 576px) {
   #user-history-form .btn {
@@ -15574,18 +15641,6 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   }
 }
 
-#auth {
-  /* style basique si tu n'utilises pas Bootstrap */
-  /*#register-form input.valid {
-    border: 1px solid #28a745;
-    box-shadow: 0 0 0 0.12rem rgba(40,167,69,0.15);
-  }
-  #register-form input.invalid {
-    border: 1px solid #dc3545;
-    box-shadow: 0 0 0 0.12rem rgba(220,53,69,0.08);
-  }*/
-  /* Garder le fond beige clair sur tous les inputs, même au focus et avec validation */
-}
 #auth .auth-form {
   display: none;
 }
@@ -15942,6 +15997,18 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
     padding: 8px 16px; /* Réduit l'espace interne des onglets */
   }
 }
+#auth {
+  /* style basique si tu n'utilises pas Bootstrap */
+  /*#register-form input.valid {
+    border: 1px solid #28a745;
+    box-shadow: 0 0 0 0.12rem rgba(40,167,69,0.15);
+  }
+  #register-form input.invalid {
+    border: 1px solid #dc3545;
+    box-shadow: 0 0 0 0.12rem rgba(220,53,69,0.08);
+  }*/
+  /* Garder le fond beige clair sur tous les inputs, même au focus et avec validation */
+}
 #auth .auth-input-container input.form-control,
 #auth .auth-input-container input.form-control:focus,
 #auth .auth-input-container input.form-control.is-valid,
@@ -16044,12 +16111,6 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
     font-size: 18px;
     padding: 10px 16px;
   }
-}
-.page-contact {
-  /* état invalide */
-  /* ======== Exemple pour textarea spécifique ======== */
-  /* Remplace #contact-message par ton id ou .ta-classe */
-  /* WebKit (Chrome, Edge, Safari) */
 }
 .page-contact .contact-section {
   background-color: #CACFAA;
@@ -16265,6 +16326,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   border-color: #4B8A47 !important; /* vert */
   box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25) !important;
 }
+.page-contact {
+  /* état invalide */
+}
 .page-contact .contact-form input.form-control.is-invalid,
 .page-contact .contact-form textarea.form-control.is-invalid {
   border-color: #dc3545 !important; /* rouge */
@@ -16280,12 +16344,19 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   font-size: 1.4rem; /* Ajuste la taille selon ton besoin */
   margin-top: 0px !important;
 }
+.page-contact {
+  /* ======== Exemple pour textarea spécifique ======== */
+  /* Remplace #contact-message par ton id ou .ta-classe */
+}
 .page-contact #contact-message {
   overflow-y: auto; /* s'assure que le scroll peut apparaître */
   max-height: 300px; /* juste pour test si tu veux forcer le scroll */
   /* Firefox */
   scrollbar-width: thin;
   scrollbar-color: #4B8A47 #F8F0E5; /* thumb, track */
+}
+.page-contact {
+  /* WebKit (Chrome, Edge, Safari) */
 }
 .page-contact #contact-message::-webkit-scrollbar {
   width: 10px;
@@ -16313,10 +16384,6 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   margin: 0 100px;
   max-width: calc(100% - 200px);
   box-sizing: border-box;
-  /* Custom Scrollbar */
-  /* Pour Firefox */
-  /* Croix de fermeture */
-  /* Titres */
 }
 @media (max-width: 768px) {
   .employee-space-section.container {
@@ -16503,6 +16570,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 .employee-space-section.container .trajets-signales {
   overflow-x: auto;
 }
+.employee-space-section.container {
+  /* Custom Scrollbar */
+}
 .employee-space-section.container .trajets-signales::-webkit-scrollbar {
   height: 8px; /* épaisseur du scroll horizontal */
 }
@@ -16516,6 +16586,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 }
 .employee-space-section.container .trajets-signales::-webkit-scrollbar-thumb:hover {
   background: #1F4924;
+}
+.employee-space-section.container {
+  /* Pour Firefox */
 }
 .employee-space-section.container .trajets-signales {
   scrollbar-width: thin;
@@ -16659,9 +16732,6 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   overflow-y: auto; /* scroll vertical si dépassement */
   padding: 8px;
   /* Scrollbar pour WebKit (Chrome, Safari, Edge) */
-  /* Scrollbar pour Firefox */
-  scrollbar-width: thin;
-  scrollbar-color: #4B8A47 #F8F0E5;
 }
 .employee-space-section.container .avis-list-wrapper::-webkit-scrollbar {
   width: 8px; /* largeur scrollbar verticale */
@@ -16677,6 +16747,11 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 }
 .employee-space-section.container .avis-list-wrapper::-webkit-scrollbar-thumb:hover {
   background: rgb(47.54784689, 87.4880382775, 45.0119617225);
+}
+.employee-space-section.container .avis-list-wrapper {
+  /* Scrollbar pour Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #4B8A47 #F8F0E5;
 }
 .employee-space-section.container .modal {
   display: none;
@@ -16707,6 +16782,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   z-index: 1000;
   background: rgba(0, 0, 0, 0.5);
 }
+.employee-space-section.container {
+  /* Croix de fermeture */
+}
 .employee-space-section.container .close-btn {
   position: absolute;
   top: 10px;
@@ -16719,6 +16797,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 .employee-space-section.container .close-btn:hover {
   color: #1F4924;
   transform: scale(1.2);
+}
+.employee-space-section.container {
+  /* Titres */
 }
 .employee-space-section.container .modal-content h2, .employee-space-section.container .modal-content .h2 {
   margin-bottom: 15px;
@@ -16774,7 +16855,6 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 
 .dashboard-section.container {
   padding: 0px;
-  /* Assurez-vous que les deux cartes partagent les mêmes classes */
 }
 .dashboard-section.container h1, .dashboard-section.container .h1 {
   text-align: center;
@@ -16862,6 +16942,9 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   font-size: 12px;
   opacity: 0.85;
 }
+.dashboard-section.container {
+  /* Assurez-vous que les deux cartes partagent les mêmes classes */
+}
 .dashboard-section.container .card.chart-card.covoits .totaux-row,
 .dashboard-section.container .card.chart-card.credits .totaux-row {
   margin-top: var(--totaux-sp);
@@ -16942,9 +17025,6 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch; /* scroll fluide iOS */
   /* Scrollbar WebKit */
-  /* Scrollbar Firefox */
-  scrollbar-width: thin;
-  scrollbar-color: #4B8A47 #F8F0E5;
 }
 .accounts-section.container .table-wrapper::-webkit-scrollbar {
   height: 8px; /* hauteur de la scrollbar horizontale */
@@ -16959,6 +17039,11 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
 }
 .accounts-section.container .table-wrapper::-webkit-scrollbar-thumb:hover {
   background: #1F4924; /* couleur au survol */
+}
+.accounts-section.container .table-wrapper {
+  /* Scrollbar Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #4B8A47 #F8F0E5;
 }
 @media (max-width: 576px) {
   .accounts-section.container .form-comptes {

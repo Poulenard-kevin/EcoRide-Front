@@ -471,3 +471,21 @@ input:disabled,
      margin-bottom: 0px !important; /* Espace sous les icônes */
   }
 }
+
+#main-page.preload-hidden {
+  visibility: hidden;
+}
+
+/* Quand la SPA est prête */
+body.spa-ready #main-page {
+  visibility: visible;
+}
+
+.detail-container {
+  opacity: 0;
+  transition: opacity 0.25s ease-in-out;
+}
+
+.detail-container.loaded {
+  opacity: 1;
+}

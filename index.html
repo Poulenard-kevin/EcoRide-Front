@@ -4,27 +4,70 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.css">
+    <style>
+      #main-page.spa-preload {
+        visibility: hidden;
+      }
+    </style>
+    <script>
+      // On marque main-page en preload dès que possible
+      document.addEventListener('DOMContentLoaded', function () {
+        var main = document.getElementById('main-page');
+        if (main) {
+          main.classList.add('spa-preload');
+        }
+      });
+    </script>
+
+    <script>
+      (function() {
+        try {
+          // Sauvegarde l'original (si présent) pour pouvoir restaurer si besoin
+          window._origConsoleDebug = (typeof console.debug === 'function') ? console.debug.bind(console) : function() {};
+
+          // Activation conditionnelle : n'affiche debug que si window.DEBUG truthy
+          if (!window.DEBUG) {
+            console.debug = function() {};
+          } else {
+            // restore immediately if DEBUG true at load
+            console.debug = window._origConsoleDebug;
+            console.debug('console.debug active (DEBUG=true)');
+          }
+
+          // Activation via param d'URL (ex: ?debug=1)
+          try {
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('debug')) {
+              window.DEBUG = true;
+              console.debug = window._origConsoleDebug;
+              console.debug('Debug activé via param ?debug=1');
+            }
+          } catch (e) { /* ignore if URL parsing not allowed */ }
+        } catch (err) {
+          // Pas de panique si console n'existe pas (environnements exotiques)
+          // On ne veut jamais casser le chargement de la page.
+        }
+      })();
+    </script>
+    
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Roboto:wght@400&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="scss/_custom.scss">
-    <link rel="stylesheet" href="scss/main.css">
-   
-    
 
+    <!-- ✅ TON CSS GLOBAL COMPILÉ PAR LIVE SASS -->
+    <link rel="stylesheet" href="/css/main.css">
    
     <title>Document</title>
 </head>
+<script>document.documentElement.classList.add('auth-loading');</script>
 <body class="page-index">
-
     <header style="background-color: #F1E7D1;">
       <nav class="navbar navbar-expand-lg" data-bs-theme="light" aria-label="Main navigation">
-        <a class="navbar-brand" href="#">
-          <img src="images/Logo-EcoRide.PNG" alt="EcoRide Logo" class="logo">
+        <a class="navbar-brand" href="/covoiturage">
+          <img src="/images/Logo-EcoRide.PNG" alt="EcoRide Logo" class="logo">
           EcoRide
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -47,10 +90,10 @@
               </button>
               <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                 <li><a class="dropdown-item connexion" id="dropdown-register" href="/auth?tab=register">Inscription</a></li>
-                <li><a class="dropdown-item" id="dropdown-login" href="/auth?tab=login">Connexion</a></li>
                 <li><a class="dropdown-item" href="/espace-employe">Espace employé</a></li>
                 <li><a class="dropdown-item" href="/espace-administrateur">Espace administrateur</a></li>
                 <li><a class="dropdown-item" href="/contact">Contact</a></li>
+                <li><a class="dropdown-item" id="dropdown-login" href="/auth?tab=login">Connexion</a></li>
               </ul>
             </li>
           </ul>
@@ -78,9 +121,6 @@
             <a class="dropdown-item connexion" id="dropdown-register" href="/auth?tab=register">Inscription</a>
           </li>
           <li class="nav-item">
-            <a class="dropdown-item" id="dropdown-login" href="/auth?tab=login">Connexion</a>
-          </li>
-          <li class="nav-item">
             <a class="nav-link" href="/contact">Contact</a>
           </li>
           <li class="nav-item">
@@ -89,11 +129,14 @@
           <li class="nav-item">
             <a class="nav-link" href="/espace-administrateur">Espace administrateur</a>
           </li>
+          <li class="nav-item">
+            <a class="dropdown-item" id="dropdown-login" href="/auth?tab=login">Connexion</a>
+          </li>
         </ul>
       </div>
     </div>
 
-    <main id="main-page">
+    <main id="main-page" class="preload-hidden">
       <div id="loader-overlay" style="
         display:none; /* Caché par défaut */
         position: fixed;
@@ -123,19 +166,32 @@
       <div class="mentions navigation-text">
         <a href="/mentions-legales.html">Mentions légales</a>
       </div>
+      <script src="/assets/js/common.js" defer></script>
     </footer>
 
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
-    <script type="module" src="Router/router.js"></script>
-    <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="Js/search.js"></script>
-    <script type="module" src="/Js/trajets.js"></script>
-    <script type="module" src="/Js/covoiturage.js"></script>
-   
-    
+    <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 
-    
+  <!-- Router SPA (doit rester) -->
+  <script type="module" src="/Router/router.js"></script>
+
+  <!-- bootstrap + autres scripts non-module -->
+  <script src="/node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/Js/search.js"></script>
+  <script src="/assets/js/api-persist.js" defer></script>
+  <script src="/assets/js/common.js" defer></script>
+  <script src="/assets/js/cars-api.js" defer></script>
+
+  <!-- modules page-specific (si tu veux les charger globalement) -->
+  <script type="module" src="/Js/reviews-mongo-api.js"></script>
+  <script type="module" src="/Js/credits.js"></script>
+  <script type="module" src="/Js/trajets.js"></script>
+  <script type="module" src="/Js/pending-reviews.js"></script>
+  <script type="module" src="/Js/covoiturage.js"></script>
+  <script type="module" src="/Js/detail.js"></script>
+  
+  
 </body>
 </html>

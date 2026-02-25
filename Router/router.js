@@ -24,11 +24,25 @@ const getRouteByUrl = (url) => {
 
 const getRouteByPathname = (pathname) => {
   if (!pathname || pathname === "") pathname = "/";
+  
+  // Recherche exacte d'abord
   const exact = allRoutes.find(r => r.url === pathname);
   if (exact) return exact;
+  
+  // Gestion spécifique pour les routes /detail/{id}
+  if (pathname.startsWith('/detail/') && pathname.length > 8) {
+    const detailRoute = allRoutes.find(r => r.url === "/detail");
+    if (detailRoute) {
+      console.log('Route detail avec ID détectée:', pathname);
+      return detailRoute;
+    }
+  }
+  
+  // Gestion des autres sous-routes
   for (const r of allRoutes) {
     if (r.url !== "/" && pathname.startsWith(r.url + "/")) return r;
   }
+  
   return route404;
 };
 
@@ -45,10 +59,28 @@ const attachDetailBtnListeners = () => {
     a.addEventListener('click', (e) => {
       e.preventDefault();
       const href = a.getAttribute('href');
-      const u = new URL(href, window.location.origin);
-      window.history.pushState({}, "", u.pathname + u.search);
-      LoadContentPage();
+      if (href) {
+        const u = new URL(href, window.location.origin);
+        window.history.pushState({}, "", u.pathname + u.search);
+        LoadContentPage();
+      }
     });
+  });
+  
+  // Ajouter aussi les liens normaux qui commencent par /detail
+  document.querySelectorAll('a[href^="/detail/"]').forEach(a => {
+    if (!a.hasAttribute('data-link')) {
+      a.setAttribute('data-link', '');
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const href = a.getAttribute('href');
+        if (href) {
+          const u = new URL(href, window.location.origin);
+          window.history.pushState({}, "", u.pathname + u.search);
+          LoadContentPage();
+        }
+      });
+    }
   });
 };
 
@@ -82,6 +114,20 @@ const loadScripts = async (scripts) => {
 const LoadContentPage = async () => {
   const pathname = window.location.pathname;
   const queryParams = new URLSearchParams(window.location.search);
+
+  // 🔒 Sécurité de route : /detail sans ID -> /covoiturage
+  if (pathname === '/detail' || pathname === '/detail/') {
+    console.warn('Route /detail sans ID, redirection vers /covoiturage côté router');
+    window.history.replaceState({}, '', '/covoiturage');
+    setTimeout(() => LoadContentPage(), 0);
+    return;
+  }
+
+  // ✅ Permettre les routes /detail/{id}
+  if (pathname.startsWith('/detail/') && pathname.length > 8) {
+    // C'est une route detail avec ID, on continue normalement
+    console.log('Route detail avec ID acceptée:', pathname);
+  }
 
   const route = (typeof getRouteByPathname === 'function')
     ? getRouteByPathname(pathname)
@@ -199,5 +245,25 @@ window.route = routeEvent;
 
 // Chargement initial au DOMContentLoaded
 window.addEventListener('DOMContentLoaded', () => {
-  LoadContentPage();
+  // Ajoute spa-preload sur #main-page dès le début
+  const mainPageEl = document.getElementById('main-page');
+  if (mainPageEl) {
+    mainPageEl.classList.add('spa-preload');
+  }
+
+  LoadContentPage()
+    .catch(err => {
+      console.error('Erreur initiale LoadContentPage', err);
+    })
+    .finally(() => {
+      // Marque le body comme "SPA prête"
+      document.body.classList.add('spa-ready');
+
+      // Enlève les classes de préchargement sur #main-page
+      const mainPageEl = document.getElementById('main-page');
+      if (mainPageEl) {
+        mainPageEl.classList.remove('preload-hidden');
+        mainPageEl.classList.remove('spa-preload');
+      }
+    });
 });

@@ -13,6 +13,21 @@
   margin-left: 100px;
   margin-right: 100px;
 
+  .driver-info-message {
+    display: inline-block;
+    max-width: 520px;
+    margin: 10px auto 0 auto;
+    padding: 10px 18px;
+    border-radius: 30px;              /* pill comme tes badges */
+    background-color: $color-light-beige;          /* vert très clair */
+    color: $color-dark-green;                    /* vert foncé lisible */
+    font-weight: 500;
+    font-size: 24px;
+    font-family: $font-title !important;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+  }
+
   @media (max-width: 990px) {
     margin-left: 50px; /* Ajuste la marge pour les écrans de tablette */
     margin-right: 50px;
@@ -93,7 +108,7 @@
     padding: 8px 16px; /* Ajuste le padding des boutons */
   }
 
-  .badge-economique, .badge-electrique, .badge-thermique, .badge-hybride {
+  .badge-electrique, .badge-thermique, .badge-hybride {
     font-size: 16px !important; /* Réduit la taille des badges */
   }
 
@@ -159,7 +174,7 @@
       gap: 5rem; /* Ajoute un espace entre le bouton et le badge */
     }
 
-    .badge-economique, .badge-electrique, .badge-thermique, .badge-hybride {
+    .badge-electrique, .badge-thermique, .badge-hybride {
       background-color: $color-light-beige !important;
       padding: 0.5rem 1.5rem !important;
       border-radius: 5px !important;
@@ -169,7 +184,7 @@
       color: $color-dark-green !important;
     }
 
-    .type-economique, .type-electrique, .type-thermique, .type-hybride {
+    .type-electrique, .type-thermique, .type-hybride {
       background-color: $color-light-beige !important;
       padding: 0.5rem 1.5rem !important;
       border-radius: 5px !important;
@@ -178,7 +193,16 @@
       font-size: $font-size-h3 !important;
       color: $color-dark-green !important;
     }
-
+    
+    .type-non-specifie {
+      background-color: $color-light-beige !important;
+      padding: 0.5rem 1.5rem !important;
+      border-radius: 5px !important;
+      font-family: $font-title !important;
+      font-weight: $weight-medium !important;
+      font-size: $font-size-h3 !important;
+      color: $color-dark-green !important;
+    }
     .search-btn {
       width: 200px; /* Fixe la largeur du bouton */
       padding: 12px 30px; /* Ajuste le padding pour un bon rendu */
@@ -356,7 +380,8 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       font-family: $font-body;
       font-weight: $weight-regular;
-      font-size: $font-size-body;
+      font-size: $font-size-h3;
+      text-align: center;
       margin-bottom: 1.5rem;
       
     }

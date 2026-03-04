@@ -1,13 +1,62 @@
-const API_BASE = (typeof window !== 'undefined' && window.API_BASE) ? window.API_BASE.replace(/\/+$/, '') : 'http://127.0.0.1:8000';
+// assets/js/your-file-name.js
+// Remplacement de l'ancien usage d'API_BASE par des helpers runtime
 
+// Helper runtime pour récupérer la base API (sans '/api' final)
+// Priorité : window.getApiBase() si exposée, puis window.__API_BASE / window.API_BASE,
+// sinon chaîne vide (urls relatives).
+function getApiBase() {
+  try {
+    if (typeof window !== 'undefined' && typeof window.getApiBase === 'function') {
+      return String(window.getApiBase() || '').replace(/\/+$/, '').replace(/\/api$/i, '');
+    }
+  } catch (e) { /* ignore */ }
+
+  try {
+    const maybe = (typeof window !== 'undefined' && (window.__API_BASE || window.API_BASE));
+    if (maybe) return String(maybe).replace(/\/+$/, '').replace(/\/api$/i, '');
+  } catch (e) { /* ignore */ }
+
+  return '';
+}
+
+// Construit une URL vers l'API en ajoutant '/api' et en évitant les doublons.
+// endpoint peut être '/reviews' ou 'reviews' ou '/bookings/1'
+function buildApiUrl(endpoint) {
+  const base = getApiBase();
+  const normalizedEndpoint = endpoint ? (endpoint.startsWith('/') ? endpoint : `/${endpoint}`) : '/';
+  const apiPrefix = '/api';
+  if (!base) return `${apiPrefix}${normalizedEndpoint}`;
+  return `${base}${apiPrefix}${normalizedEndpoint}`;
+}
+
+// Récupération centralisée du token (priorité aux helpers exposés si disponibles)
+function getToken() {
+  try {
+    if (typeof window !== 'undefined' && typeof window.getToken === 'function') {
+      const t = window.getToken();
+      if (t) return t;
+    }
+  } catch (e) { /* ignore */ }
+  try {
+    if (typeof window !== 'undefined' && typeof window.getAuthToken === 'function') {
+      const t2 = window.getAuthToken();
+      if (t2) return t2;
+    }
+  } catch (e) { /* ignore */ }
+
+  try {
+    return localStorage.getItem('api_token') || localStorage.getItem('ecoride_token') || null;
+  } catch (e) { return null; }
+}
+
+// fetch helper that tries to parse JSON error body
 async function fetchWithJsonError(url, options = {}) {
-  const resp = await fetch(url, options);
+  const opts = Object.assign({ credentials: 'include' }, options);
+  const resp = await fetch(url, opts);
   if (!resp.ok) {
-    // essaie de parser le JSON d'erreur, sinon récupère le texte brut
     let errorBody = null;
-    try {
-      errorBody = await resp.json();
-    } catch (e) {
+    try { errorBody = await resp.json(); }
+    catch (e) {
       try { errorBody = await resp.text(); } catch (e2) { errorBody = null; }
     }
     console.warn('fetchWithJsonError: API error', { url, status: resp.status, statusText: resp.statusText, body: errorBody });
@@ -26,7 +75,7 @@ export async function saveReviewDoubleStorage({
   reservationObj = null,
   mongoId = null
 } = {}) {
-  const token = localStorage.getItem('api_token') || localStorage.getItem('ecoride_token') || null;
+  const token = getToken();
   const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
 
   const buildIri = (type, v) => {
@@ -38,10 +87,9 @@ export async function saveReviewDoubleStorage({
     return `/api/${type}/${id}`;
   };
 
-  // ----- LOG D'ENTRÉE -----
   console.log('saveReviewDoubleStorage: entry', { rating, comment, bookingIri, carpoolIri, userId, reservationId, reservationObj });
 
-  // 1) Résolution initiale depuis reservationObj
+  // 1) Resolution initiale depuis reservationObj
   if (reservationObj) {
     bookingIri = bookingIri || reservationObj.serverBookingIri || reservationObj.bookingIri || reservationObj.serverId || reservationObj['@id'] || null;
     if (bookingIri && !String(bookingIri).startsWith('/api/')) bookingIri = buildIri('bookings', bookingIri);
@@ -90,7 +138,8 @@ export async function saveReviewDoubleStorage({
       let bookingPath = String(bookingIri);
       if (bookingPath.startsWith('/api/')) bookingPath = bookingPath.replace(/^\/api/, '');
       if (!bookingPath.startsWith('/')) bookingPath = '/' + bookingPath.replace(/^\/+/, '');
-      const { ok, resp } = await fetchWithJsonError(`${API_BASE}${bookingPath}`, { headers });
+      const url = `${getApiBase() || ''}${bookingPath}`;
+      const { ok, resp } = await fetchWithJsonError(url, { headers });
       if (ok) {
         const booking = await resp.json();
         if (booking && booking.carpool) {
@@ -110,13 +159,13 @@ export async function saveReviewDoubleStorage({
     carpoolIri = `/api/carpools/${String(reservationObj.covoId)}`;
   }
 
-  // ----- FORCING: fetch canonical booking -> carpool (après toutes les résolutions locales) -----
+  // Forcing: fetch canonical booking -> carpool (après toutes les résolutions locales)
   if (reservationId && (!carpoolIri || String(carpoolIri).endsWith(`/${reservationId}`) || !/\/carpools\/\d+/.test(String(carpoolIri || '')))) {
     try {
-      // normaliser reservationId en nombre / id
       const rId = String(reservationId).replace(/^\/api\/bookings\//, '').split('/').pop();
       if (/^\d+$/.test(rId)) {
-        const { ok, resp } = await fetchWithJsonError(`${API_BASE}/api/bookings/${rId}`, { headers });
+        const url = buildApiUrl(`/bookings/${rId}`);
+        const { ok, resp } = await fetchWithJsonError(url, { headers });
         if (ok) {
           const bJson = await resp.json();
           if (bJson && bJson.carpool) {
@@ -137,9 +186,9 @@ export async function saveReviewDoubleStorage({
     }
   }
 
-  // 5) CORRECTION CRUCIALE : si bookingIri pointe par erreur vers un carpool -> corriger
+  // 5) Correction : si bookingIri pointe par erreur vers un carpool -> corriger
   if (bookingIri && String(bookingIri).includes('/carpools/')) {
-    console.warn('saveReviewDoubleStorage: bookingIri semble être une IRI de carpool — correction automatique', bookingIri);
+    console.warn('saveReviewDoubleStorage: bookingIri seems to be a carpool IRI — correction automatic', bookingIri);
     if (!carpoolIri) {
       carpoolIri = bookingIri;
     }
@@ -161,7 +210,6 @@ export async function saveReviewDoubleStorage({
     userId: (() => {
       if (userId) return Number(userId);
       if (reservationObj?.userId) return Number(reservationObj.userId);
-      // Fallback : récupérer depuis getCurrentUser ou window.currentUser
       try {
         const me = (typeof getCurrentUser === 'function' ? getCurrentUser() : null) || window.currentUser || null;
         if (me) {
@@ -178,11 +226,12 @@ export async function saveReviewDoubleStorage({
 
   console.log('saveReviewDoubleStorage: Mongo payload', mongoPayload);
 
-  // 7) POST Mongo (toujours tenté) -> mais ne bloque plus la suite si fail
+  // 7) POST Mongo (toujours tenté)
   let mongoJson = null;
   let mongoResult = { ok: false };
   try {
-    const { ok, resp, errorBody } = await fetchWithJsonError(`${API_BASE}/api/mongo/reviews`, {
+    const url = buildApiUrl('/mongo/reviews');
+    const { ok, resp, errorBody } = await fetchWithJsonError(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(mongoPayload)
@@ -212,11 +261,9 @@ export async function saveReviewDoubleStorage({
   Object.keys(sqlPayload).forEach(k => sqlPayload[k] === undefined && delete sqlPayload[k]);
 
   console.log('saveReviewDoubleStorage: SQL payload', sqlPayload);
-
-  // ----- LOG RÉSOLU (avant décision SQL) -----
   console.log('saveReviewDoubleStorage: resolved', { bookingIri, carpoolIri, reservationId });
 
-  // 9) Si carpool absent -> skip SQL (on renvoie le résultat mongo)
+  // 9) Si carpool absent -> skip SQL
   if (!sqlPayload.carpool) {
     return {
       sql: { ok: false, skipped: true, reason: 'missing-carpool' },
@@ -227,7 +274,8 @@ export async function saveReviewDoubleStorage({
   // 10) POST SQL
   let sqlJson = null;
   {
-    const { ok, resp, errorBody } = await fetchWithJsonError(`${API_BASE}/api/reviews`, {
+    const url = buildApiUrl('/reviews');
+    const { ok, resp, errorBody } = await fetchWithJsonError(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(sqlPayload)
@@ -245,7 +293,8 @@ export async function saveReviewDoubleStorage({
   try {
     const patchBody = { sqlId: sqlJson['@id'] || sqlJson.id || null };
     if (patchBody.sqlId && mongoJson && mongoJson.id) {
-      const { ok, resp } = await fetchWithJsonError(`${API_BASE}/api/mongo/reviews/${mongoJson.id}`, {
+      const url = buildApiUrl(`/mongo/reviews/${mongoJson.id}`);
+      const { ok, resp } = await fetchWithJsonError(url, {
         method: 'PATCH',
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify(patchBody)
@@ -258,7 +307,6 @@ export async function saveReviewDoubleStorage({
     console.warn('saveReviewDoubleStorage: error patching mongo', e);
   }
 
-  // ----- LOG FINAL AVANT RETOUR -----
   console.log('saveReviewDoubleStorage: finished', { sqlJson, mongoResult });
 
   try {
@@ -283,11 +331,10 @@ export async function saveReviewDoubleStorage({
 export async function canCreateReview(bookingIri) {
   if (!bookingIri) return false;
 
-  const token = localStorage.getItem('api_token') || localStorage.getItem('ecoride_token') || null;
-  const headers = { 'Accept': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const token = getToken();
+  const headers = { 'Accept': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
 
-  const url = `${API_BASE}/api/reviews?booking=${encodeURIComponent(bookingIri)}`;
+  const url = buildApiUrl(`/reviews?booking=${encodeURIComponent(bookingIri)}`);
 
   const extractId = (v) => {
     if (!v) return null;
@@ -303,41 +350,37 @@ export async function canCreateReview(bookingIri) {
 
   try {
     console.debug('canCreateReview: GET', url, { tokenPresent: !!token });
-    const resp = await fetch(url, { headers, method: 'GET' });
-    console.debug('canCreateReview: status', resp.status);
+    const respFetch = await fetch(url, { headers, method: 'GET', credentials: 'include' });
+    console.debug('canCreateReview: status', respFetch.status);
 
-    if (resp.status === 401 || resp.status === 403) {
-      console.warn('canCreateReview: auth issue (status)', resp.status);
+    if (respFetch.status === 401 || respFetch.status === 403) {
+      console.warn('canCreateReview: auth issue (status)', respFetch.status);
       return true;
     }
-    if (!resp.ok) {
-      console.warn('canCreateReview: non-ok response', resp.status, await resp.text().catch(() => '<no-body>'));
+    if (!respFetch.ok) {
+      console.warn('canCreateReview: non-ok response', respFetch.status, await respFetch.text().catch(() => '<no-body>'));
       return true;
     }
 
-    const body = await resp.json().catch(() => null);
+    const body = await respFetch.json().catch(() => null);
     console.debug('canCreateReview: raw body', body);
     try { console.debug('canCreateReview: body stringify', JSON.stringify(body)); } catch (e) {}
 
-    // normalize candidate array
     let candidates = [];
     if (Array.isArray(body)) candidates = body;
     else if (body && Array.isArray(body['hydra:member'])) candidates = body['hydra:member'];
     else if (body && Array.isArray(body.items)) candidates = body.items;
     else if (body && Array.isArray(body.data)) candidates = body.data;
 
-    // if nothing array-like found, be permissive but log
     if (!Array.isArray(candidates)) {
       console.warn('canCreateReview: unknown response shape, allowing creation by default');
       return true;
     }
 
-    if (candidates.length === 0) return true; // no reviews returned
+    if (candidates.length === 0) return true;
 
-    // ONLY consider a returned item a duplicate if its booking matches the requested booking
     const matchesBooking = (r) => {
       if (!r || typeof r !== 'object') return false;
-      // prefer an explicit booking field
       const bookingField = r.booking || r.bookingIri || r.booking_id || r.bookingId || r.reservation?.booking || null;
       if (bookingField) {
         const b = (typeof bookingField === 'string') ? bookingField : (bookingField['@id'] || bookingField.id || null);
@@ -346,14 +389,13 @@ export async function canCreateReview(bookingIri) {
         if (String(b) === String(bookingIri)) return true;
         return false;
       }
-      // If item has no booking info, do NOT assume it's a match (avoid false positives)
       return false;
     };
 
     for (const item of candidates) {
       if (matchesBooking(item)) {
         console.warn('canCreateReview: found matching review candidate', item);
-        return false; // duplicate found for this booking
+        return false;
       }
     }
 

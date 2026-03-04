@@ -1,8 +1,16 @@
 // assets/js/trips-api.js
-import { apiFetch } from './api.js';
+import { apiFetch, API_BASE as RUNTIME_API_BASE } from './api.js';
 import { normalizeTypeKey } from './type-utils.js';
 
-const API_BASE = window.ecoConfig?.apiBase || 'http://localhost:8000';
+function normalizeBaseCandidate(v) {
+  if (!v && v !== 0) return '';
+  const s = String(v);
+  // supprime slash final(s) et supprime un éventuel '/api' final (insensible à la casse)
+  return s.replace(/\/+$/, '').replace(/\/api$/i, '');
+}
+
+const candidate = (typeof window !== 'undefined' && (window.__API_BASE || window.API_BASE)) || RUNTIME_API_BASE || '';
+const API_BASE = normalizeBaseCandidate(candidate) || 'http://localhost:8000';
 
 /**
  * Helpers

@@ -160,134 +160,161 @@ $line-height-loose: 1.5;
     color: $color-light-beige; // Couleur du texte
   }
 
-  /* === RESPONSIVES HEADER + NAVBAR === */
+/* === RESPONSIVES HEADER + NAVBAR === */
 
-  
-/* Ajoute de l'espace entre les éléments de la navbar */
+/* Espacement entre les éléments de la navbar (Desktop) */
 .navbar .nav-item {
-    margin-right: 10px; /* Ajoute un espace de 20px entre chaque élément */
-    
+  margin-right: 10px;
 }
 
-/* Style pour les liens de la navbar */
 $transition-default: color 0.3s ease, transform 0.3s ease;
 
+/* Style général des liens de la navbar */
 .navbar .nav-link {
-    font-family: $font-title;
-    font-weight: $weight-medium;
-    font-size: $font-size-h3; /* Taille pour les textes de la navbar */
-    line-height: $line-height-normal;
-    color: $color-dark-green;
-    transition: $transition-default;
-    white-space: nowrap; /* Empêche les retours à la ligne */
-}
-
-.navbar .nav-link:hover {
-    color: $color-medium-green; /* Couleur au survol */
-    transform: scale(1.1); /* Zoom de 10% au survol */
-}
-
-/* Style pour la marque (brand) */
-.navbar-brand {
-    margin: 0;
-    padding: 0;
-    align-items: center; /* Centre verticalement le logo et le texte */
-    gap: 20px; /* Ajoute un espace entre le logo et le texte */
-    font-family: $font-display; /* Exemple de police différente */
-    color: $color-dark-green; /* Couleur de la marque */
-    font-weight: $weight-regular; // Regular
-    font-size: 40px; /* Taille de la police */
-}
-
-
-.navbar-brand:hover {
-    color: $color-medium-green; /* Couleur au survol */
-    transform: scale(1.03); /* Zoom de 10% au survol */
-    transition: $transition-default;
-}
-
-/* Style pour le logo */
-.logo {
-    width: 100px; /* Largeur du logo */
-    height: 100px; /* Hauteur du logo */
-    border-radius: 50%; /* Rend le conteneur circulaire */
-    box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25); /* Ombre */
-    
-}
-
-/* Style pour le menu déroulant */
-.dropdown-menu {
-    background-color: $color-light-beige; /* Utilise la variable définie pour #F1E7D1 */
-    border: none; /* Supprime la bordure si nécessaire */
-    z-index: 1050 !important;
-    font-size: $font-size-nav;
-    padding: 5px 5px; /* Ajuste le padding pour un meilleur espacement */
-}
-
-.dropdown-menu:hover {
-  transform: scale(1.1); /* Zoom de 10% au survol */
+  font-family: $font-title;
+  font-weight: $weight-medium;
+  font-size: $font-size-h3;
+  line-height: $line-height-normal;
+  color: $color-dark-green !important;
   transition: $transition-default;
+  white-space: nowrap;
+
+  &:hover {
+      color: $color-medium-green;
+      transform: scale(1.1);
+  }
 }
 
-/* Style pour les éléments du menu déroulant au survol */
-.dropdown-item:hover {
-    background-color: $color-very-light-beige; /* Couleur légèrement différente au survol */
-    color: $color-dark-green; /* Couleur du texte au survol */
+/* Style pour la marque (brand) et logo */
+.navbar-brand {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-family: $font-display;
+  color: $color-dark-green;
+  font-weight: $weight-regular;
+  font-size: 40px;
+  transition: $transition-default;
+
+  &:hover {
+      color: $color-medium-green;
+      transform: scale(1.03);
+  }
+
+  .logo {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+  }
 }
 
-.offcanvas .nav-link:hover {
-  background-color: $color-very-light-beige; /* Couleur légèrement différente au survol */
-  color: $color-dark-green; /* Couleur du texte au survol */
-}
+/* Style pour le menu déroulant (Dropdown) */
+.dropdown-menu {
+  background-color: $color-light-beige;
+  border: none;
+  z-index: 1050 !important;
+  font-size: $font-size-nav;
+  padding: 5px;
+  transition: $transition-default;
 
-button.nav-link.dropdown-toggle {
-    color: $color-dark-green !important; /* Couleur par défaut en vert foncé */
-    font-family: 'Poppins', sans-serif; /* Harmonisation avec le reste du site */
-    font-size: $font-size-h3; /* Taille du texte */
-    transition: color 0.3s ease; /* Animation fluide */
-}
-
-button.nav-link.dropdown-toggle:hover {
-    color: $color-medium-green !important; /* Couleur au survol */
-}
-
-button.nav-link.dropdown-toggle:focus:not(.show),
-button.nav-link.dropdown-toggle:active:not(.show) {
-    color: $color-dark-green !important; /* Rétablit la couleur par défaut lorsque la liste est fermée */
-}
-
-/* Priorité au hover sur focus et active */
-button.nav-link.dropdown-toggle:hover:focus,
-button.nav-link.dropdown-toggle:hover:active {
-    color: $color-medium-green !important; /* Couleur au survol */
-}
-
-.navbar-toggler {
-    margin-left: auto; /* Place le bouton à droite */
-}
-
-.offcanvas-title {
-    
-    font-size: $font-size-nav; /* Taille pour les titres de l'offcanvas */
-   
-}
-
-.offcanvas-body {
-    background-color: $color-light-beige; /* Utilise la variable définie pour #F1E7D1 */
-    font-size: $font-size-small;
+  &:hover {
+      transform: scale(1.05);
+  }
 }
 
 .dropdown-item {
-  padding: 5px 0px; /* Ajuste le padding pour un meilleur espacement */
+  color: $color-dark-green;
+  padding: 10px 10px;
+  border-radius: 30px;
+  background: transparent;
+  transition: all 0.3s ease;
+  display: inline-block; 
+  width: fit-content; 
+  margin-bottom: 5px;   
+
+  // État ACTIF (le bouton vert de ta capture)
+  &.active {
+      background-color: $color-medium-green !important;
+      color: $color-light-beige !important;
+  }
+
+  // État HOVER
+  &:hover {
+      background-color: $color-dark-green;
+      color: $color-light-beige !important;
+  }
 }
 
+/* Style pour le lien actif dans la barre de navigation Desktop (SANS CADRE) */
+.navbar-nav {
+  .nav-link.active {
+      background-color: transparent !important; // Supprime le fond bleu/vert
+      color: $color-medium-green !important;               // Met le texte en vert foncé (ou ta variable $color-dark-green)
+      font-weight: 600;                         // Optionnel : mettre en gras pour bien voir l'état actif
+  }
+}
 
-@media (max-width: 1100px) { // breakpoint personnalisé
+/* Pour le menu mobile (Offcanvas), si tu veux AUSSI enlever le cadre vert */
+.offcanvas-body {
+  .nav-link.active {
+      background-color: transparent !important; 
+      color: $color-medium-green !important; // Utilise la couleur medium green pour l'état actif sur mobile
+      font-weight: 600;
+  }
+}
+
+/* === STYLE SPECIFIQUE OFFCANVAS (MENU MOBILE) === */
+.offcanvas {
+  .offcanvas-title {
+      font-size: $font-size-nav;
+  }
+
+  .offcanvas-body {
+      background-color: $color-light-beige;
+      font-size: $font-size-body;
+      padding: 20px;
+
+      // On applique ici le style "bouton arrondi"
+      .nav-link {
+          color: $color-dark-green;
+          padding: 10px 10px;
+          border-radius: 30px;
+          background: transparent;
+          transition: all 0.3s ease;
+          display: inline-block; 
+          width: fit-content; 
+          margin-bottom: 5px;   
+
+          // État ACTIF (le bouton vert de ta capture)
+          &.active {
+              background-color: $color-medium-green !important;
+              color: $color-light-beige !important;
+          }
+
+          // État HOVER
+          &:hover {
+              background-color: $color-dark-green;
+              color: $color-light-beige !important;
+          }
+      }
+  }
+}
+
+/* Bouton Toggler (Hamburger) */
+.navbar-toggler {
+  margin-left: auto;
+}
+
+/* Breakpoint personnalisé pour forcer le menu mobile à 1100px */
+@media (max-width: 1100px) {
   .navbar-expand-lg .navbar-collapse {
-    display: none !important;
+      display: none !important;
   }
   .navbar-expand-lg .navbar-toggler {
-    display: block !important;
+      display: block !important;
   }
 }
  

@@ -1,6 +1,14 @@
 // /assets/js/common.js
 (function () {
-  const API_BASE = 'http://127.0.0.1:8000/api';
+  // Host configurable via public/config.js (window.__API_BASE), fallback en local
+  const getApiHost = () => {
+    if (typeof window !== 'undefined' && typeof window.getApiBase === 'function') {
+      return window.getApiBase().replace(/\/+$/, '').replace(/\/api$/i, '');
+    }
+    return (typeof window !== 'undefined' && (window.__API_BASE || window.API_BASE)) || 'http://127.0.0.1:8000';
+  };
+
+  const API_BASE = getApiHost().replace(/\/+$/, '') + '/api';
   const LOGIN_URL = '/auth?tab=login';
   const AUTH_PATH_PREFIX = '/auth';
 
@@ -71,8 +79,7 @@
       return null;
     }
   
-    const base = (typeof API_BASE !== 'undefined' && API_BASE) ? API_BASE : 'http://127.0.0.1:8000/api';
-    const url = base + '/me';
+    const url = API_BASE + '/me';
   
     try {
       const res = await fetch(url, {
@@ -111,8 +118,12 @@
   
       if (user && user.id && (!user.avatar || !String(user.avatar).trim())) {
         try {
-          const resFull = await fetch(`${base}/users/${user.id}`, {
-            headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + token }
+          // Correction ici : on utilise API_BASE au lieu de base
+          const resFull = await fetch(`${API_BASE}/users/${user.id}`, {
+            headers: { 
+              'Accept': 'application/json', 
+              'Authorization': 'Bearer ' + token 
+            }
           });
           if (resFull.ok) {
             const userFull = await resFull.json();

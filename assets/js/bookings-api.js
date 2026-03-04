@@ -1,5 +1,3 @@
-// assets/js/bookings-api.js
-
 import { apiFetch } from '/assets/js/api.js';
 
 export async function createBooking(carpoolId, seats = 1) {
@@ -22,11 +20,13 @@ export async function createBooking(carpoolId, seats = 1) {
     }
   
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/bookings', {
+      const base = (typeof window !== 'undefined' && (window.__API_BASE || window.API_BASE)) ? String((window.__API_BASE || window.API_BASE)).replace(/\/+$/, '') : '';
+      const url = base ? `${base}/api/bookings` : '/api/bookings';
+
+      const res = await fetch(url, {
         method: 'POST',
         headers,
-        // si tu utilises token stateless => tu peux omettre credentials
-        // si tu utilises cookie-based session => uncomment credentials below
+        // décommente si tu utilises cookie-based sessions
         // credentials: 'include',
         body: JSON.stringify(payload)
       });

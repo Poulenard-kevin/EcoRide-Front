@@ -12087,117 +12087,132 @@ p {
 }
 
 /* === RESPONSIVES HEADER + NAVBAR === */
-/* Ajoute de l'espace entre les éléments de la navbar */
+/* Espacement entre les éléments de la navbar (Desktop) */
 .navbar .nav-item {
-  margin-right: 10px; /* Ajoute un espace de 20px entre chaque élément */
+  margin-right: 10px;
 }
 
-/* Style pour les liens de la navbar */
+/* Style général des liens de la navbar */
 .navbar .nav-link {
   font-family: "Poppins", sans-serif;
   font-weight: 500;
-  font-size: 24px; /* Taille pour les textes de la navbar */
+  font-size: 24px;
   line-height: 1.3;
-  color: #1F4924;
+  color: #1F4924 !important;
   transition: color 0.3s ease, transform 0.3s ease;
-  white-space: nowrap; /* Empêche les retours à la ligne */
+  white-space: nowrap;
 }
-
 .navbar .nav-link:hover {
-  color: #4B8A47; /* Couleur au survol */
-  transform: scale(1.1); /* Zoom de 10% au survol */
+  color: #4B8A47;
+  transform: scale(1.1);
 }
 
-/* Style pour la marque (brand) */
+/* Style pour la marque (brand) et logo */
 .navbar-brand {
   margin: 0;
   padding: 0;
-  align-items: center; /* Centre verticalement le logo et le texte */
-  gap: 20px; /* Ajoute un espace entre le logo et le texte */
-  font-family: "Playfair Display", sans-serif; /* Exemple de police différente */
-  color: #1F4924; /* Couleur de la marque */
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-family: "Playfair Display", sans-serif;
+  color: #1F4924;
   font-weight: 400;
-  font-size: 40px; /* Taille de la police */
-}
-
-.navbar-brand:hover {
-  color: #4B8A47; /* Couleur au survol */
-  transform: scale(1.03); /* Zoom de 10% au survol */
+  font-size: 40px;
   transition: color 0.3s ease, transform 0.3s ease;
 }
-
-/* Style pour le logo */
-.logo {
-  width: 100px; /* Largeur du logo */
-  height: 100px; /* Hauteur du logo */
-  border-radius: 50%; /* Rend le conteneur circulaire */
-  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25); /* Ombre */
+.navbar-brand:hover {
+  color: #4B8A47;
+  transform: scale(1.03);
+}
+.navbar-brand .logo {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
 }
 
-/* Style pour le menu déroulant */
+/* Style pour le menu déroulant (Dropdown) */
 .dropdown-menu {
-  background-color: #F1E7D1; /* Utilise la variable définie pour #F1E7D1 */
-  border: none; /* Supprime la bordure si nécessaire */
+  background-color: #F1E7D1;
+  border: none;
   z-index: 1050 !important;
   font-size: 16px;
-  padding: 5px 5px; /* Ajuste le padding pour un meilleur espacement */
-}
-
-.dropdown-menu:hover {
-  transform: scale(1.1); /* Zoom de 10% au survol */
+  padding: 5px;
   transition: color 0.3s ease, transform 0.3s ease;
 }
-
-/* Style pour les éléments du menu déroulant au survol */
-.dropdown-item:hover {
-  background-color: #F8F0E5; /* Couleur légèrement différente au survol */
-  color: #1F4924; /* Couleur du texte au survol */
-}
-
-.offcanvas .nav-link:hover {
-  background-color: #F8F0E5; /* Couleur légèrement différente au survol */
-  color: #1F4924; /* Couleur du texte au survol */
-}
-
-button.nav-link.dropdown-toggle {
-  color: #1F4924 !important; /* Couleur par défaut en vert foncé */
-  font-family: "Poppins", sans-serif; /* Harmonisation avec le reste du site */
-  font-size: 24px; /* Taille du texte */
-  transition: color 0.3s ease; /* Animation fluide */
-}
-
-button.nav-link.dropdown-toggle:hover {
-  color: #4B8A47 !important; /* Couleur au survol */
-}
-
-button.nav-link.dropdown-toggle:focus:not(.show),
-button.nav-link.dropdown-toggle:active:not(.show) {
-  color: #1F4924 !important; /* Rétablit la couleur par défaut lorsque la liste est fermée */
-}
-
-/* Priorité au hover sur focus et active */
-button.nav-link.dropdown-toggle:hover:focus,
-button.nav-link.dropdown-toggle:hover:active {
-  color: #4B8A47 !important; /* Couleur au survol */
-}
-
-.navbar-toggler {
-  margin-left: auto; /* Place le bouton à droite */
-}
-
-.offcanvas-title {
-  font-size: 16px; /* Taille pour les titres de l'offcanvas */
-}
-
-.offcanvas-body {
-  background-color: #F1E7D1; /* Utilise la variable définie pour #F1E7D1 */
-  font-size: 14px;
+.dropdown-menu:hover {
+  transform: scale(1.05);
 }
 
 .dropdown-item {
-  padding: 5px 0px; /* Ajuste le padding pour un meilleur espacement */
+  color: #1F4924;
+  padding: 10px 10px;
+  border-radius: 30px;
+  background: transparent;
+  transition: all 0.3s ease;
+  display: inline-block;
+  width: -moz-fit-content;
+  width: fit-content;
+  margin-bottom: 5px;
+}
+.dropdown-item.active {
+  background-color: #4B8A47 !important;
+  color: #F1E7D1 !important;
+}
+.dropdown-item:hover {
+  background-color: #1F4924;
+  color: #F1E7D1 !important;
 }
 
+/* Style pour le lien actif dans la barre de navigation Desktop (SANS CADRE) */
+.navbar-nav .nav-link.active {
+  background-color: transparent !important;
+  color: #4B8A47 !important;
+  font-weight: 600;
+}
+
+/* Pour le menu mobile (Offcanvas), si tu veux AUSSI enlever le cadre vert */
+.offcanvas-body .nav-link.active {
+  background-color: transparent !important;
+  color: #4B8A47 !important;
+  font-weight: 600;
+}
+
+/* === STYLE SPECIFIQUE OFFCANVAS (MENU MOBILE) === */
+.offcanvas .offcanvas-title {
+  font-size: 16px;
+}
+.offcanvas .offcanvas-body {
+  background-color: #F1E7D1;
+  font-size: 20px;
+  padding: 20px;
+}
+.offcanvas .offcanvas-body .nav-link {
+  color: #1F4924;
+  padding: 10px 10px;
+  border-radius: 30px;
+  background: transparent;
+  transition: all 0.3s ease;
+  display: inline-block;
+  width: -moz-fit-content;
+  width: fit-content;
+  margin-bottom: 5px;
+}
+.offcanvas .offcanvas-body .nav-link.active {
+  background-color: #4B8A47 !important;
+  color: #F1E7D1 !important;
+}
+.offcanvas .offcanvas-body .nav-link:hover {
+  background-color: #1F4924;
+  color: #F1E7D1 !important;
+}
+
+/* Bouton Toggler (Hamburger) */
+.navbar-toggler {
+  margin-left: auto;
+}
+
+/* Breakpoint personnalisé pour forcer le menu mobile à 1100px */
 @media (max-width: 1100px) {
   .navbar-expand-lg .navbar-collapse {
     display: none !important;
@@ -14690,13 +14705,30 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
   font-size: 16px;
   background-color: #F8F0E5;
   transition: border-color 0.3s ease;
+  /* --- AJOUTS POUR IPHONE --- */
   height: 48px;
+  min-height: 48px;
+  -moz-appearance: none;
+       appearance: none;
+  -webkit-appearance: none;
+  display: flex;
+  align-items: start;
+  /* -------------------------- */
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 #user-trajects-form input[type=date]:focus,
 #user-trajects-form input[type=time]:focus {
   background-color: #F8F0E5;
   box-shadow: 0 0 5px 2px #1F4924;
+}
+#user-trajects-form {
+  /* Force l'alignement du texte interne sur Safari Mobile */
+}
+#user-trajects-form input[type=date]::-webkit-datetime-edit,
+#user-trajects-form input[type=time]::-webkit-datetime-edit {
+  display: flex;
+  align-items: start;
+  height: 100%;
 }
 #user-trajects-form input[type=date]::-webkit-calendar-picker-indicator,
 #user-trajects-form input[type=time]::-webkit-calendar-picker-indicator {
@@ -14732,9 +14764,12 @@ button.cancel-reservation-btn.btn.btn-danger:hover {
     font-size: 16px;
     padding: 8px 16px;
   }
-  #user-trajects-form .form-control {
+  #user-trajects-form .form-control,
+  #user-trajects-form input[type=date],
+  #user-trajects-form input[type=time] {
     padding: 8px 15px;
-    font-size: 12px;
+    font-size: 16px !important;
+    min-height: 40px;
   }
   #user-trajects-form label {
     font-size: 16px;

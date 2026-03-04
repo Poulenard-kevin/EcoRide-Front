@@ -406,7 +406,8 @@ const MESSAGES = {
   
       if (avatarUrl) {
         // --- AJOUT : Mise à jour immédiate du preview et du localStorage ---
-        const base = 'http://127.0.0.1:8000';
+        const API_HOST = (typeof window !== 'undefined' && window.__API_BASE) || 'http://127.0.0.1:8000';
+        const base = API_HOST.replace(/\/+$/, '');
         const fullUrl = avatarUrl.startsWith('http') ? avatarUrl : base + avatarUrl;
         
         const preview = document.querySelector('#profileAvatarPreview');
@@ -475,16 +476,30 @@ const MESSAGES = {
       // 1. Priorité à l'image en cours d'édition (Base64 non encore validée)
       updateUIForLoadedAvatar(saved.dataURL, saved.meta);
     } else if (user && (user.avatar || user.photo)) {
-      // 2. Fallback sur l'image de l'API (URL stockée dans ecoride_user)
       const avatarPath = user.avatar || user.photo;
-      const base = window.location.origin.includes('127.0.0.1') || window.location.origin.includes('localhost') 
-             ? 'http://127.0.0.1:8000' 
-             : window.location.origin;
-      const fullUrl = avatarPath.startsWith('http') ? avatarPath : base + avatarPath;
-      
+    
+      // Récupère la base API connue (préférer __API_BASE / API_BASE si définis)
+      const apiBaseCandidate = (typeof window !== 'undefined') 
+        ? (window.__API_BASE || window.API_BASE) 
+        : null;
+      const API_HOST = String(apiBaseCandidate || 'http://127.0.0.1:8000').replace(/\/+$/, '');
+    
+      // Si avatarPath est une URL complète ou un data-uri, on l'utilise tel quel
+      const isFullUrl = /^data:|^https?:\/\//i.test(avatarPath);
+      let fullUrl;
+      if (isFullUrl) {
+        fullUrl = avatarPath;
+      } else {
+        // s'assurer que le path commence par un slash
+        const path = avatarPath.startsWith('/') ? avatarPath : `/${avatarPath}`;
+        fullUrl = `${API_HOST}${path}`;
+      }
+    
+      // ajoute un cache-buster si nécessaire
       updateUIForLoadedAvatar(fullUrl + '?t=' + Date.now(), { name: 'Profil API' });
+    
       if (btnRemove) btnRemove.disabled = false;
-      if (btnConfirm) btnConfirm.disabled = true; // Déjà sauvegardé sur serveur
+      if (btnConfirm) btnConfirm.disabled = true; // déjà sauvegardé sur serveur
     } else {
       // 3. Image par défaut
       updateUIForLoadedAvatar(DEFAULT_SRC, null);

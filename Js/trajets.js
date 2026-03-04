@@ -1,5 +1,5 @@
 // trajets.js
-import { apiFetch, API_BASE } from '/assets/js/api.js';
+import { apiFetch, getApiBase, getToken } from '/assets/js/api.js';
 import { createCarIfNeeded, saveCarpoolApi, deleteCarpoolApi, carOwnedBy, updateBookingStatus } from '/assets/js/trips-api.js';
 import { normalizeTypeKey, labelFromTypeKey } from '/assets/js/type-utils.js';
 import { addPendingReview, retryPendingReviews } from './pending-reviews.js';
@@ -366,11 +366,15 @@ function markTrajetAsFinishedUI(id, serverResponse = {}, options = {}) {
 // declaration hoistée, doit être en haut pour éviter ReferenceError
 async function getMe() {
   try {
-    // Appel direct en HTTP au backend en dev
+    // On utilise la base dynamique injectée par le ConfigController
+    const apiBase = getApiBase();
     const token = localStorage.getItem('api_token');
-    const res = await fetch('http://127.0.0.1:8000/api/me', {
-      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
-      // credentials: 'include' // décommente si tu utilises des cookies/sessions
+    
+    const res = await fetch(`${apiBase}/api/me`, {
+      headers: { 
+        'Authorization': `Bearer ${token}`, 
+        'Accept': 'application/json' 
+      }
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
@@ -909,11 +913,11 @@ export function resolveAvatarSrc(raw) {
   if (!raw) return DEFAULT;
   if (raw.startsWith('data:')) return raw;
   if (/^https?:\/\//i.test(raw) || raw.startsWith('//')) return raw;
-  if (raw.startsWith('/uploads')) return `${API_BASE}${raw}`;
+  if (raw.startsWith('/uploads')) return `${getApiBase()}${raw}`;
   if (raw.startsWith('/images')) return raw;
-  if (raw.startsWith('/')) return `${API_BASE}${raw}`;
-  if (raw.startsWith('uploads/')) return `${API_BASE}/${raw}`;
-  return `${API_BASE}/uploads/avatars/${raw}`;
+  if (raw.startsWith('/')) return (getApiBase() ? `${getApiBase()}${raw}` : raw);
+  if (raw.startsWith('uploads/')) return (getApiBase() ? `${getApiBase()}/${raw}` : `/${raw}`);
+  return `${getApiBase()}/uploads/avatars/${raw}`;
 }
 
 export function getProfileAvatarFromStorage() {
@@ -2497,14 +2501,20 @@ export async function reserverPlace(trajetId, placesDemandees = 1) {
         body: { places: Number(placesDemandees) || 1 }
       });
     } catch (err) {
-      // fallback fetch (garde comportement précédent mais mieux parser)
-      const token = localStorage.getItem('api_token') || null;
-      const fallbackRes = await fetch(`${API_BASE}/carpools/${encodeURIComponent(trajetId)}/book`, {
+      // fallback fetch : utilise getApiBase() dynamiquement et getToken()
+      const base = getApiBase();
+      const fallbackUrl = base
+        ? `${base}/api/carpools/${encodeURIComponent(trajetId)}/book`
+        : `/api/carpools/${encodeURIComponent(trajetId)}/book`;
+
+      const token = getToken();
+      const fallbackRes = await fetch(fallbackUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
+        credentials: 'include',
         body: JSON.stringify({ places: Number(placesDemandees) || 1 })
       });
 
@@ -2703,8 +2713,7 @@ async function createReviewApi({ reservationObj, rating, comment } = {}) {
   } catch (err) {
     console.warn('createReviewApi apiFetch failed, fallback fetch', err);
     const token = localStorage.getItem('api_token') || localStorage.getItem('ecoride_token') || null;
-    const API_BASE = (typeof window !== 'undefined' && window.API_BASE) ? window.API_BASE.replace(/\/+$/,'') : '';
-    const fullUrl = API_BASE ? `${API_BASE}/api/reviews` : '/api/reviews';
+    const fullUrl = getApiBase() ? `${getApiBase()}/api/reviews` : '/api/reviews';
 
     const res = await fetch(fullUrl, {
       method: 'POST',
@@ -2780,7 +2789,8 @@ async function deleteBookingApi(bookingOrIri, covoId = null) {
       }
 
       // Construire URL complète
-      const fullUrl = url.startsWith('/api/') ? `${API_BASE}${url}` : (url.startsWith('http') ? url : `${API_BASE}/${url.replace(/^\//,'')}`);
+      const base = getApiBase();
+      const fullUrl = url.startsWith('http') ? url : (url.startsWith('/api/') ? (base ? `${base}${url}` : url) : (base ? `${base}/${url.replace(/^\//,'')}` : `/${url.replace(/^\//,'')}`));
 
       console.log('[deleteBookingApi] trying DELETE', fullUrl);
 
@@ -5072,11 +5082,16 @@ window.ensureCarpoolIriFromBooking = ensureCarpoolIriFromBooking;
 // 1. Wrapper simple pour l'appel API
 async function deleteBookingApiSimple(id) {
   const token = localStorage.getItem('api_token');
-  const res = await fetch(`${API_BASE}/api/bookings/${id}`, {
+  const path = `/api/bookings/${encodeURIComponent(id)}`;
+  const base = getApiBase();
+  const url = base ? `${base}${path}` : path;
+
+  const res = await fetch(url, {
     method: 'DELETE',
     headers: {
       'Authorization': token ? `Bearer ${token}` : ''
-    }
+    },
+    credentials: 'include'
   });
   return { status: res.status, ok: res.ok };
 }

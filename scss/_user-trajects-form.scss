@@ -143,13 +143,30 @@
     font-size: 16px;
     background-color: $color-very-light-beige;
     transition: border-color 0.3s ease;
-    height: 48px;  
+    
+    /* --- AJOUTS POUR IPHONE --- */
+    height: 48px;           // Garde ta hauteur fixe
+    min-height: 48px;       // FORCE Safari à ne pas réduire le champ
+    appearance: none;          // Supprime le style interne
+    -webkit-appearance: none;  // Supprime le style interne iOS
+    display: flex;          // Aligne le texte verticalement
+    align-items: start;
+    /* -------------------------- */
+
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
 
     &:focus {
       background-color: $color-very-light-beige;
       box-shadow: 0 0 5px 2px $color-dark-green;
     }
+  }
+
+  /* Force l'alignement du texte interne sur Safari Mobile */
+  input[type="date"]::-webkit-datetime-edit,
+  input[type="time"]::-webkit-datetime-edit {
+    display: flex;
+    align-items: start;
+    height: 100%;
   }
 
   input[type="date"]::-webkit-calendar-picker-indicator,
@@ -183,7 +200,13 @@
     .trajet-card .trajet-body {
       .btn-trajet { font-size: $font-size-nav; padding: 8px 16px; }
     }
-    .form-control { padding: 8px 15px; font-size: 12px; }
+    .form-control, 
+    input[type="date"], 
+    input[type="time"] { 
+      padding: 8px 15px; 
+      font-size: 16px !important; // ⚠️ Important : 16px minimum sur iPhone pour éviter le zoom auto
+      min-height: 40px; 
+    }
 
     label { font-size: $font-size-nav; }
 

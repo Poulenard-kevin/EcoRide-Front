@@ -59,7 +59,25 @@
 
     <!-- ✅ TON CSS GLOBAL COMPILÉ PAR LIVE SASS -->
     <link rel="stylesheet" href="/css/main.css">
-   
+    
+    <script>
+      (function() {
+        // 1. Détection du serveur Backend
+        // Si on est en local (localhost ou 127.0.0.1), on pointe vers le port 8000 de Symfony
+        // Sinon (en prod), on utilise le chemin relatif /config.js
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const configUrl = isLocal ? 'http://127.0.0.1:8000/config.js' : '/config.js';
+    
+        // 2. Chargement dynamique du script de config
+        const script = document.createElement('script');
+        script.src = configUrl;
+        script.async = false; // On veut qu'il charge avant les autres
+        document.head.appendChild(script);
+        
+        console.log('[Config] Chargement depuis :', configUrl);
+      })();
+    </script>
+
     <title>Document</title>
 </head>
 <script>document.documentElement.classList.add('auth-loading');</script>
@@ -191,6 +209,88 @@
   <script type="module" src="/Js/pending-reviews.js"></script>
   <script type="module" src="/Js/covoiturage.js"></script>
   <script type="module" src="/Js/detail.js"></script>
+
+  <script>
+    (function () {
+      function normalizePath(p) { return (p || "").replace(/\/$/, "") || "/"; }
+    
+      function markActiveMainNav() {
+        try {
+          const current = normalizePath(window.location.pathname);
+    
+          // On cible nav-link + dropdown-item (desktop + offcanvas)
+          const selectors = [
+            '.navbar .nav-link',
+            '.offcanvas .nav-link',
+            '.navbar .dropdown-item',
+            '.offcanvas .dropdown-item'
+          ].join(',');
+          const elems = Array.from(document.querySelectorAll(selectors));
+    
+          // D'abord retire toutes les classes active existantes (nettoyage)
+          elems.forEach(el => el.classList.remove('active'));
+          // Aussi retire active du dropdown-toggle si présent
+          document.querySelectorAll('.dropdown-toggle.active').forEach(el => el.classList.remove('active'));
+    
+          elems.forEach(el => {
+            const href = el.getAttribute('href');
+            if (!href) return;
+    
+            let pathname = "/";
+            try {
+              pathname = new URL(href, window.location.origin).pathname;
+            } catch (e) {
+              pathname = href.split(/[?#]/)[0];
+            }
+            pathname = normalizePath(pathname);
+    
+            // match principal + cas Accueil <-> /
+            const isMatch = pathname === current ||
+                            (current === "/" && pathname === "/accueil") ||
+                            (current === "/accueil" && pathname === "/");
+    
+            if (isMatch) {
+              el.classList.add('active');
+    
+              // Si l'élément est un dropdown-item, marque aussi le toggle parent (desktop)
+              if (el.classList.contains('dropdown-item')) {
+                // cherche l'ancêtre qui est .dropdown (ou .nav-item.dropdown)
+                const dropdownRoot = el.closest('.dropdown, .nav-item.dropdown');
+                if (dropdownRoot) {
+                  // cherche un toggle à l'intérieur (button ou a)
+                  const toggle = dropdownRoot.querySelector('.dropdown-toggle');
+                  if (toggle) toggle.classList.add('active');
+                }
+              }
+    
+              // Si l'élément est un nav-link INSIDE dropdown toggle (rare), aussi
+              if (el.classList.contains('dropdown-toggle')) {
+                el.classList.add('active');
+              }
+            } else {
+              el.classList.remove('active');
+            }
+          });
+    
+        } catch (err) {
+          console.error('markActiveMainNav error', err);
+        }
+      }
+    
+      // Exécution initiale / fallback / SPA hooks
+      document.addEventListener('DOMContentLoaded', markActiveMainNav);
+      markActiveMainNav();
+      window.addEventListener('popstate', markActiveMainNav);
+      document.addEventListener('pageContentLoaded', markActiveMainNav);
+    
+      // Fallback observer (si offcanvas injecté dynamiquement)
+      const oc = document.getElementById('offcanvasNavbar');
+      if (oc) {
+        const mo = new MutationObserver((m, obs) => { markActiveMainNav(); obs.disconnect(); });
+        mo.observe(oc, { childList: true, subtree: true });
+      }
+    })();
+    </script>
   
   
 </body>

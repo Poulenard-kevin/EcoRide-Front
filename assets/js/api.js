@@ -3,6 +3,11 @@
 // Détermine automatiquement la base API en dev (frontend dev server :3000 -> backend :8000)
 // En production, on garde les chemins relatifs (API_BASE = '') pour que le backend qui sert le front gère les routes.
 export const API_BASE = (function() {
+  // Priorise la valeur fournie par public/config.js si présente
+  if (typeof window !== 'undefined' && window.__API_BASE) {
+    return String(window.__API_BASE).replace(/\/+$/, '');
+  }
+
   const h = window.location.hostname;
   const p = window.location.port;
   // Si on est sur le port 3000 (Front), on vise le 8000 (Back)
@@ -11,6 +16,31 @@ export const API_BASE = (function() {
   }
   return '';
 })();
+
+// --- Exposer une valeur runtime cohérente pour le front ---
+// On n'écrase pas window.__API_BASE si /config.js l'a déjà défini.
+// On expose aussi window.API_BASE pour compatibilité avec du code existant.
+if (typeof window !== 'undefined') {
+  const normalized = API_BASE ? String(API_BASE).replace(/\/+$/, '') : '';
+  if (!window.__API_BASE) {
+    window.__API_BASE = normalized;
+  }
+  if (!window.API_BASE) {
+    window.API_BASE = window.__API_BASE;
+  }
+}
+
+// retourne la base API la plus à jour au moment de l'appel
+export function getApiBase() {
+  const maybe = (typeof window !== 'undefined' && (window.__API_BASE || window.API_BASE));
+  const base = maybe ? String(maybe) : API_BASE || '';
+  return base.replace(/\/+$/, '');
+}
+
+// debug helper (optionnel)
+if (typeof window !== 'undefined') {
+  window.getApiBase = getApiBase;
+}
 
 const API_PREFIX = '/api'; // préfixe automatique pour toutes les routes API Platform
 
@@ -68,8 +98,8 @@ export async function apiFetch(path, { method = 'GET', body, headers = {}, useAp
 
   // Construire l'URL finale
   const url = normalizedPath.startsWith('http')
-    ? normalizedPath
-    : (API_BASE ? `${API_BASE}${normalizedPath}` : normalizedPath);
+  ? normalizedPath
+  : (getApiBase() ? `${getApiBase()}${normalizedPath}` : normalizedPath);
 
   const h = { Accept: 'application/json', ...headers };
 
@@ -105,7 +135,9 @@ export async function apiFetch(path, { method = 'GET', body, headers = {}, useAp
 export function initReviewsCleanup({ backendBaseOverride = null, intervalMinutes = 60, useCredentials = false } = {}) {
   if (typeof window === 'undefined') return; // SSR safe
 
-  const DEFAULT_BACKEND_BASE = (typeof window !== 'undefined' && window.API_BASE) ? window.API_BASE.replace(/\/+$/,'') : '';
+  const DEFAULT_BACKEND_BASE = (typeof window !== 'undefined' && (window.__API_BASE || window.API_BASE))
+  ? (window.__API_BASE || window.API_BASE).replace(/\/+$/,'')
+  : (typeof API_BASE !== 'undefined' && API_BASE ? String(API_BASE).replace(/\/+$/,'') : '');
   function getToken() { return localStorage.getItem('api_token') || localStorage.getItem('ecoride_token') || null; }
   function buildBackendBase(override) {
     if (override) return override.replace(/\/+$/,'');
